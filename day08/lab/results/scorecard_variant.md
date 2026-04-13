@@ -1,26 +1,26 @@
 # Scorecard: variant_hybrid_rerank
-Generated: 2026-04-13 16:52
+Generated: 2026-04-13 17:41
 
 ## Summary
 
 | Metric | Average Score |
 |--------|--------------|
-| Faithfulness | 1.00/5 |
-| Relevance | 1.00/5 |
-| Context Recall | 1.40/5 |
-| Completeness | 1.00/5 |
+| Faithfulness | 4.30/5 |
+| Relevance | 4.60/5 |
+| Context Recall | 5.00/5 |
+| Completeness | 3.40/5 |
 
 ## Per-Question Results
 
 | ID | Category | Faithful | Relevant | Recall | Complete | Notes |
 |----|----------|----------|----------|--------|----------|-------|
-| q01 | SLA | 1 | 1 | 1 | 1 | Error calling judge: Error code: 401 - {'error': { |
-| q02 | Refund | 1 | 1 | 1 | 1 | Error calling judge: Error code: 401 - {'error': { |
-| q03 | Access Control | 1 | 1 | 1 | 1 | Error calling judge: Error code: 401 - {'error': { |
-| q04 | Refund | 1 | 1 | 1 | 1 | Error calling judge: Error code: 401 - {'error': { |
-| q05 | IT Helpdesk | 1 | 1 | 1 | 1 | Error calling judge: Error code: 401 - {'error': { |
-| q06 | SLA | 1 | 1 | 1 | 1 | Error calling judge: Error code: 401 - {'error': { |
-| q07 | Access Control | 1 | 1 | 1 | 1 | Error calling judge: Error code: 401 - {'error': { |
-| q08 | HR Policy | 1 | 1 | 1 | 1 | Error calling judge: Error code: 401 - {'error': { |
-| q09 | Insufficient Context | 1 | 1 | 5 | 1 | Error calling judge: Error code: 401 - {'error': { |
-| q10 | Refund | 1 | 1 | 1 | 1 | Error calling judge: Error code: 401 - {'error': { |
+| gq01 | SLA | 5 | 5 | 5 | 3 | The answer accurately reflects the information pro |
+| gq02 | Cross-Document | 5 | 5 | 5 | 3 | The answer accurately reflects the information pro |
+| gq03 | Refund | 5 | 5 | 5 | 4 | The answer accurately reflects the conditions for  |
+| gq04 | Refund | 5 | 5 | 5 | 4 | The answer accurately reflects information from th |
+| gq05 | Access Control | 2 | 5 | 5 | 3 | The answer includes information about the process  |
+| gq06 | Cross-Document | 5 | 5 | 5 | 4 | The answer accurately summarizes the escalation pr |
+| gq07 | Insufficient Context | 1 | 1 | 5 | 1 | The answer 'Tôi không biết' does not provide any i |
+| gq08 | HR Policy | 5 | 5 | 5 | 5 | The answer accurately reflects the information pro |
+| gq09 | IT Helpdesk | 5 | 5 | 5 | 3 | The answer accurately reflects the information pro |
+| gq10 | Refund | 5 | 5 | 5 | 4 | The answer accurately reflects the information fro |
