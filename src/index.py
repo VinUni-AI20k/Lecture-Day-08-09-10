@@ -234,7 +234,7 @@ def get_embedding(text: str) -> List[float]:
     }
     data = {
         "model": "jina-embeddings-v5-text-small",
-        "task": "retrieval.query",
+        "task": "retrieval.passage",
         "normalized": True,
         "input": [text]
     }
