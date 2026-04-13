@@ -63,6 +63,31 @@ lab/
 
 ## Setup
 
+### Quick Start (copy/paste)
+Chay nhanh tren Windows PowerShell:
+
+```powershell
+cd "e:\AI thuc chien\DAY8\Lab08-Lab9-Lab10_C401_E3\day08\lab"
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+copy .env.example .env
+python index.py build
+python rag_answer.py
+```
+
+Neu chay tren macOS/Linux:
+
+```bash
+cd /path/to/Lab08-Lab9-Lab10_C401_E3/day08/lab
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+cp .env.example .env
+python index.py build
+python rag_answer.py
+```
+
 ### 1. Cài dependencies
 ```bash
 pip install -r requirements.txt
