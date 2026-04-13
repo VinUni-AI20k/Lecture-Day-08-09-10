@@ -33,7 +33,9 @@ from rag_answer import rag_answer
 # =============================================================================
 
 TEST_QUESTIONS_PATH = Path(__file__).parent / "data" / "test_questions.json"
+GRADING_QUESTIONS_PATH = Path(__file__).parent / "data" / "grading_questions.json"
 RESULTS_DIR = Path(__file__).parent / "results"
+LOGS_DIR = Path(__file__).parent / "logs"
 
 # Cấu hình baseline (Sprint 2)
 BASELINE_CONFIG = {
@@ -695,6 +697,77 @@ Generated: {timestamp}
     return md
 
 
+def generate_grading_run_log(
+    output_filename: str = "grading_run.json",
+    questions_path: Optional[Path] = None,
+    config: Optional[Dict[str, Any]] = None,
+) -> Path:
+    """
+    Tạo file logs/grading_run.json theo format yêu cầu trong SCORING.md.
+
+    Quy tắc chọn input questions:
+      1) Nếu questions_path được truyền vào -> dùng file đó.
+      2) Nếu có data/grading_questions.json -> dùng file này.
+      3) Fallback về data/test_questions.json.
+    """
+    cfg = config or BASELINE_CONFIG
+
+    if questions_path is not None:
+        selected_questions_path = questions_path
+    elif GRADING_QUESTIONS_PATH.exists():
+        selected_questions_path = GRADING_QUESTIONS_PATH
+    else:
+        selected_questions_path = TEST_QUESTIONS_PATH
+
+    with open(selected_questions_path, "r", encoding="utf-8") as f:
+        questions = json.load(f)
+
+    log_rows = []
+    for q in questions:
+        qid = q.get("id", "unknown")
+        query = q.get("question", "")
+
+        try:
+            result = rag_answer(
+                query=query,
+                retrieval_mode=cfg.get("retrieval_mode", "dense"),
+                top_k_search=cfg.get("top_k_search", 10),
+                top_k_select=cfg.get("top_k_select", 3),
+                use_rerank=cfg.get("use_rerank", False),
+                verbose=False,
+            )
+            answer = result.get("answer", "")
+            sources = result.get("sources", [])
+            chunks_retrieved = len(result.get("chunks_used", []))
+            retrieval_mode = result.get("config", {}).get("retrieval_mode", cfg.get("retrieval_mode", "dense"))
+        except Exception as e:
+            answer = f"ERROR: {e}"
+            sources = []
+            chunks_retrieved = 0
+            retrieval_mode = cfg.get("retrieval_mode", "dense")
+
+        log_rows.append(
+            {
+                "id": qid,
+                "question": query,
+                "answer": answer,
+                "sources": sources,
+                "chunks_retrieved": chunks_retrieved,
+                "retrieval_mode": retrieval_mode,
+                "timestamp": datetime.now().isoformat(timespec="seconds"),
+            }
+        )
+
+    LOGS_DIR.mkdir(parents=True, exist_ok=True)
+    output_path = LOGS_DIR / output_filename
+    output_path.write_text(json.dumps(log_rows, ensure_ascii=False, indent=2), encoding="utf-8")
+
+    print(f"\nGrading log lưu tại: {output_path}")
+    print(f"Số dòng log: {len(log_rows)}")
+    print(f"Nguồn câu hỏi: {selected_questions_path}")
+    return output_path
+
+
 # =============================================================================
 # MAIN — Chạy evaluation
 # =============================================================================
@@ -760,6 +833,10 @@ if __name__ == "__main__":
             variant_results,
             output_csv="ab_comparison.csv"
         )
+
+    # --- Grading run log ---
+    print("\n--- Tạo grading log ---")
+    generate_grading_run_log(config=BASELINE_CONFIG)
 
     print("\n\nViệc cần làm Sprint 4:")
     print("  1. Hoàn thành Sprint 2 + 3 trước")
