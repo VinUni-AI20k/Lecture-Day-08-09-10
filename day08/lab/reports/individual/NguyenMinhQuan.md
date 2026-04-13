@@ -1,6 +1,6 @@
 # Báo Cáo Cá Nhân — Lab Day 08: RAG Pipeline
 
-**Họ và tên:** Nguyễn Minh Quân 
+**Họ và tên:** Nguyễn Minh Quân - 2A202600181
 **Vai trò trong nhóm:** Eval Owner
 **Ngày nộp:** 13/04/2026  
 **Độ dài yêu cầu:** 500–800 từ
