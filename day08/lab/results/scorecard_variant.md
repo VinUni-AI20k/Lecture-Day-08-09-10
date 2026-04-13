@@ -1,5 +1,5 @@
 # Scorecard — Variant Hybrid
-**Thời gian chạy:** 2026-04-13 16:58 
+**Thời gian chạy:** 2026-04-13 17:20 
 
 ## RAGAS Metrics
 | Metric | Score | Target | Status |
@@ -7,8 +7,8 @@
 | Faithfulness | 0.84 | > 0.90 | ❌ |
 | Relevance | 0.84 | > 0.85 | ❌ |
 | Context Recall | 0.96 | > 0.80 | ✅ |
-| Completeness | 0.70 | > 0.80 | ❌ |
-| Abstain Accuracy | 0.00 | = 1.00 | ❌ |
+| Completeness | 0.62 | > 0.80 | ❌ |
+| Abstain Accuracy | 1.00 | = 1.00 | ✅ |
 
 ## Per-question Results
 | ID | Category | Expected | Got | Pass? |

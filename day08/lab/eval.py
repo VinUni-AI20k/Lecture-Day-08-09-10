@@ -34,7 +34,7 @@ from ragas.metrics import faithfulness, answer_relevancy, context_precision, con
 # CẤU HÌNH
 # =============================================================================
 
-TEST_QUESTIONS_PATH = Path(__file__).parent / "data" / "test_questions.json"
+TEST_QUESTIONS_PATH = Path(__file__).parent / "data" / "grading_questions.json"
 RESULTS_DIR = Path(__file__).parent / "results"
 
 # Cấu hình baseline (Sprint 2)
@@ -53,7 +53,7 @@ VARIANT_CONFIG = {
     "label": "variant_hybrid",
 }
 api_base = os.getenv("OPENAI_API_BASE")
-# taans
+
 def get_judge_llm():
     """Khởi tạo LLM làm giám khảo chấm điểm"""
     return ChatOpenAI(
@@ -67,7 +67,7 @@ def get_judge_llm():
 # SCORING FUNCTIONS
 # 4 metrics từ slide: Faithfulness, Answer Relevance, Context Recall, Completeness
 # =============================================================================
-#taan
+
 def score_faithfulness(
     answer: str,
     chunks_used: List[Dict[str, Any]],
@@ -132,7 +132,6 @@ def score_faithfulness(
     
     
 
-#taan
 def score_answer_relevance(
     query: str,
     answer: str,
@@ -163,7 +162,6 @@ def score_answer_relevance(
         return {"score": result['score'], "notes": result['reason']}
     except Exception as e:
         return {"score": 3, "notes": "Error in LLM evaluation"}
-#tan
 def score_context_recall(
     chunks_used: List[Dict[str, Any]],
     expected_sources: List[str],
@@ -233,11 +231,11 @@ def score_context_recall(
                  (f". Missing: {missing}" if missing else ""),
     }
 
-# taan
 def score_completeness(
     query: str,
     answer: str,
     expected_answer: str,
+    grading_criteria: List[str] = None
 ) -> Dict[str, Any]:
     """
     Completeness: Answer có thiếu điều kiện ngoại lệ hoặc bước quan trọng không?
@@ -261,9 +259,14 @@ def score_completeness(
         # Không có expected answer để so sánh
         return {"score": None, "notes": "No expected answer for comparison"}
     llm = get_judge_llm()
+    criteria_text = "\n".join([f"- {c}" for c in grading_criteria]) if grading_criteria else "None"
+    
     prompt =f"""Rate COMPLETENESS (1-5): Compare answer to expected answer. Are all key points covered?
-    EXPECTED: {expected_answer}
-    ACTUAL: {answer}
+    EXPECTED ANSWER: {expected_answer}
+    GRADING CRITERIA:
+    {criteria_text}
+
+    ACTUAL ANSWER: {answer}
     Return JSON: {{"score": int, "reason": "string"}}"""
     try: 
         response = llm.invoke(prompt)
@@ -396,6 +399,7 @@ def run_scorecard(
         expected_answer = q.get("expected_answer", "")
         expected_sources = q.get("expected_sources", [])
         category = q.get("category", "")
+        grading_criteria = q.get("grading_criteria", [])
 
         if verbose:
             print(f"\n[{question_id}] {query}")
@@ -424,7 +428,7 @@ def run_scorecard(
         faith = score_faithfulness(answer, chunks_used)
         relevance = score_answer_relevance(query, answer)
         recall = score_context_recall(chunks_used, expected_sources)
-        complete = score_completeness(query, answer, expected_answer)
+        complete = score_completeness(query, answer, expected_answer, grading_criteria)
 
         row = {
             "id": question_id,
@@ -587,9 +591,15 @@ def generate_scorecard_summary(results: List[Dict], label: str) -> str:
         status = "✅" if data["score"] >= data["target"] else "❌"
         md += f"| {name.replace('_', ' ').title()} | {data['score']:.2f} | > {data['target']:.2f} | {status} |\n"
     
-    # Thêm Abstain Accuracy (tính riêng dựa trên q09)
-    q09_result = next((r for r in results if r['id'] == 'q09'), None)
-    abstain_score = 1.0 if (q09_result and q09_result['context_recall'] == 5) else 0.0
+    # Thêm Abstain Accuracy (tính riêng dựa trên category 'Insufficient Context')
+    abstain_results = [r for r in results if r['category'] == 'Insufficient Context']
+    if abstain_results:
+        # Pass nếu answer có chứa "không tìm thấy" hoặc completeness/faithfulness đạt cao cho abstain question
+        correct_abstains = sum(1 for r in abstain_results if "không tìm thấy" in r['answer'].lower() or r['completeness'] >= 4)
+        abstain_score = correct_abstains / len(abstain_results)
+    else:
+        abstain_score = 0.0
+
     md += f"| Abstain Accuracy | {abstain_score:.2f} | = 1.00 | {'✅' if abstain_score == 1.0 else '❌'} |\n\n"
 
     md += "## Per-question Results\n"
