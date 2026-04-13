@@ -356,6 +356,7 @@ YÊU CẦU BẮT BUỘC:
 
 [CONTEXT]
 {context_block}
+[END CONTEXT]
 
 Answer:"""
     return prompt
