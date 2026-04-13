@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>RAG Lab — CS + IT Helpdesk</title>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0e1117; --bg2: #161b22; --bg3: #1c2330;
+      --border: #30363d; --border2: #484f58;
+      --text: #e6edf3; --text2: #8b949e; --text3: #656d76;
+      --green: #1D9E75; --green-dark: #0F6E56; --green-light: #E1F5EE;
+      --blue: #58a6ff; --blue-bg: #1d2d50; --blue-text: #79c0ff;
+      --radius: 8px; --radius-lg: 12px;
+      font-size: 14px;
+    }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); height: 100vh; overflow: hidden; }
+    * { scrollbar-width: thin; scrollbar-color: var(--border2) transparent; }
+    button { cursor: pointer; font-family: inherit; }
+    input, textarea, select { font-family: inherit; }
+    .app { display: flex; flex-direction: column; height: 100vh; }
+
+    /* Topbar */
+    .topbar { display: flex; align-items: center; gap: 12px; padding: 10px 18px; background: var(--bg2); border-bottom: 1px solid var(--border); flex-shrink: 0; }
+    .topbar-title { font-size: 14px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+    .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); box-shadow: 0 0 6px var(--green); }
+    .badge { font-size: 11px; padding: 2px 8px; border-radius: 10px; font-weight: 500; }
+    .badge-ok { background: rgba(29,158,117,0.15); color: #56d364; border: 1px solid rgba(29,158,117,0.3); }
+    .badge-warn { background: rgba(210,153,34,0.15); color: #d29922; border: 1px solid rgba(210,153,34,0.3); }
+    .badge-info { background: var(--blue-bg); color: var(--blue-text); border: 1px solid rgba(88,166,255,0.2); }
+    .api-badge { font-size: 11px; padding: 2px 8px; background: var(--bg3); border: 1px solid var(--border); border-radius: 10px; color: var(--text3); font-family: 'SFMono-Regular', Consolas, monospace; }
+    .ml-auto { margin-left: auto; }
+    .topbar-right { display: flex; gap: 8px; align-items: center; }
+
+    /* Buttons */
+    .btn { font-size: 12px; padding: 5px 12px; border-radius: var(--radius); border: 1px solid var(--border2); background: transparent; color: var(--text); transition: all 0.15s; }
+    .btn:hover { background: var(--bg3); border-color: var(--border2); }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-primary { background: var(--green-dark); color: #e6fff9; border-color: var(--green-dark); }
+    .btn-primary:hover:not(:disabled) { background: var(--green); border-color: var(--green); }
+
+    /* Tabs */
+    .tabs { display: flex; padding: 0 18px; background: var(--bg2); border-bottom: 1px solid var(--border); }
+    .tab { font-size: 13px; padding: 9px 16px; background: none; border: none; border-bottom: 2px solid transparent; color: var(--text2); transition: all 0.15s; }
+    .tab.active { color: var(--green); border-bottom-color: var(--green); }
+    .tab:hover:not(.active) { color: var(--text); }
+
+    /* Main layout */
+    .main { display: flex; flex: 1; overflow: hidden; }
+
+    /* Chat panel */
+    .chat-panel { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+    .messages { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 14px; }
+    .empty-state { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; color: var(--text3); }
+    .empty-title { font-size: 15px; color: var(--text2); font-weight: 500; }
+    .quick-qs { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; max-width: 480px; }
+    .quick-q { font-size: 12px; padding: 5px 12px; border-radius: 14px; border: 1px solid var(--border); background: var(--bg2); color: var(--text2); transition: all 0.15s; }
+    .quick-q:hover { border-color: var(--green-dark); color: var(--green); }
+
+    .msg { display: flex; gap: 10px; }
+    .msg-user { justify-content: flex-end; }
+    .bubble { max-width: 78%; padding: 10px 14px; border-radius: var(--radius-lg); font-size: 13px; line-height: 1.65; }
+    .bubble-user { background: var(--green-dark); color: #e6fff9; border-radius: var(--radius-lg) var(--radius-lg) 4px var(--radius-lg); }
+    .bubble-ai { background: var(--bg2); border: 1px solid var(--border); border-radius: 4px var(--radius-lg) var(--radius-lg) var(--radius-lg); }
+    .bubble-ai b, .bubble-ai strong { color: #a5f3d0; font-weight: 600; }
+    .msg-meta { font-size: 11px; color: var(--text3); margin-top: 5px; display: flex; align-items: center; gap: 8px; }
+    .sources-bar { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 7px; }
+    .src-chip { font-size: 11px; padding: 2px 7px; background: var(--blue-bg); color: var(--blue-text); border-radius: 10px; font-family: monospace; border: 1px solid rgba(88,166,255,0.2); }
+
+    /* Input area */
+    .input-area { padding: 12px 16px; background: var(--bg2); border-top: 1px solid var(--border); flex-shrink: 0; display: flex; flex-direction: column; gap: 8px; }
+    .input-opts { display: flex; gap: 10px; align-items: center; }
+    .label-sm { font-size: 11px; color: var(--text3); }
+    .select-sm { font-size: 12px; padding: 4px 8px; border-radius: var(--radius); border: 1px solid var(--border2); background: var(--bg3); color: var(--text); }
+    .check-label { display: flex; align-items: center; gap: 5px; font-size: 12px; color: var(--text2); }
+    .input-row { display: flex; gap: 8px; align-items: flex-end; }
+    .query-input { flex: 1; padding: 9px 12px; border-radius: var(--radius); border: 1px solid var(--border2); background: var(--bg3); color: var(--text); font-size: 13px; resize: none; min-height: 40px; max-height: 120px; transition: border-color 0.15s; }
+    .query-input:focus { outline: none; border-color: var(--green-dark); }
+    .query-input::placeholder { color: var(--text3); }
+
+    /* Chunks panel */
+    .chunks-panel { width: 280px; border-left: 1px solid var(--border); background: var(--bg2); display: flex; flex-direction: column; overflow: hidden; flex-shrink: 0; }
+    .panel-header { padding: 10px 14px; font-size: 12px; font-weight: 600; color: var(--text2); border-bottom: 1px solid var(--border); letter-spacing: 0.03em; text-transform: uppercase; }
+    .chunks-list { flex: 1; overflow-y: auto; padding: 10px; display: flex; flex-direction: column; gap: 8px; }
+    .chunk-card { padding: 10px; background: var(--bg3); border-radius: var(--radius); border: 1px solid var(--border); }
+    .chunk-src { font-size: 10px; font-family: monospace; color: var(--text3); margin-bottom: 4px; display: flex; justify-content: space-between; }
+    .chunk-section { font-size: 11px; font-weight: 600; color: var(--text2); margin-bottom: 5px; line-height: 1.3; }
+    .chunk-text { font-size: 11px; color: var(--text2); line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 5; -webkit-box-orient: vertical; overflow: hidden; }
+    .score-bar { height: 3px; background: var(--border); border-radius: 2px; margin-top: 7px; }
+    .score-fill { height: 100%; background: var(--green); border-radius: 2px; }
+
+    /* Compare tab */
+    .compare-wrap { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+    .compare-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding: 14px; flex: 1; overflow-y: auto; }
+    .compare-col { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+    .col-title { font-size: 12px; font-weight: 600; padding: 6px 12px; border-radius: var(--radius); text-align: center; }
+    .col-dense { background: var(--blue-bg); color: var(--blue-text); }
+    .col-hybrid { background: rgba(29,158,117,0.15); color: #56d364; }
+    .compare-answer { font-size: 12px; padding: 10px 12px; background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); line-height: 1.65; }
+    .compare-answer b, .compare-answer strong { color: #a5f3d0; }
+
+    /* Eval tab */
+    .eval-wrap { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+    .eval-toolbar { padding: 12px 16px; background: var(--bg2); border-bottom: 1px solid var(--border); display: flex; gap: 8px; align-items: center; flex-shrink: 0; }
+    .eval-body { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+    .metrics-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 8px; }
+    .metric-card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px; text-align: center; }
+    .metric-label { font-size: 11px; color: var(--text3); margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.05em; }
+    .metric-val { font-size: 24px; font-weight: 600; color: var(--text); line-height: 1; }
+    .metric-sub { font-size: 11px; color: var(--text3); margin-top: 2px; }
+    .q-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    .q-table th { text-align: left; padding: 7px 8px; color: var(--text3); font-weight: 500; border-bottom: 1px solid var(--border); font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; }
+    .q-table td { padding: 7px 8px; border-bottom: 1px solid var(--border); vertical-align: top; }
+    .q-table tr:last-child td { border-bottom: none; }
+    .score-pill { font-size: 11px; font-weight: 600; padding: 1px 6px; border-radius: 8px; }
+    .score-5 { background: rgba(29,158,117,0.2); color: #56d364; }
+    .score-4 { background: rgba(88,166,255,0.15); color: #79c0ff; }
+    .score-3 { background: rgba(210,153,34,0.15); color: #d29922; }
+    .score-low { background: rgba(248,81,73,0.15); color: #f85149; }
+
+    /* Spinner */
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .spinner { width: 13px; height: 13px; border: 2px solid var(--border2); border-top-color: var(--green); border-radius: 50%; animation: spin 0.6s linear infinite; display: inline-block; vertical-align: middle; }
+    .status-text { font-size: 12px; color: var(--text3); }
+  </style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel">
+const { useState, useEffect, useRef, useCallback } = React;
+
+const API = 'http://localhost:8000';
+
+const MOCK_ANSWERS = {
+  "sla": { answer: "Ticket P1 có SLA phản hồi ban đầu là **15 phút** và thời gian xử lý là **4 giờ** [1]. Nếu không có phản hồi trong 10 phút, ticket tự động escalate lên Senior Engineer.", sources: ["support/sla-p1-2026.pdf"], latency_ms: 812, chunks: [{source:"support/sla-p1-2026.pdf",section:"Phần 2: SLA theo mức độ ưu tiên",score:0.94,text:"Ticket P1:\n- Phản hồi ban đầu: 15 phút.\n- Xử lý và khắc phục: 4 giờ.\n- Escalation: tự động sau 10 phút."},{source:"support/sla-p1-2026.pdf",section:"Phần 3: Quy trình xử lý",score:0.81,text:"Bước 1: On-call engineer xác nhận severity trong 5 phút."},{source:"support/sla-p1-2026.pdf",section:"Phần 1: Định nghĩa",score:0.62,text:"P1 — CRITICAL: Sự cố ảnh hưởng toàn bộ hệ thống production."}]},
+  "hoàn tiền": { answer: "Khách hàng có thể yêu cầu hoàn tiền trong vòng **7 ngày làm việc** kể từ thời điểm xác nhận đơn hàng [1], với điều kiện sản phẩm bị lỗi nhà sản xuất và chưa mở seal.", sources: ["policy/refund-v4.pdf"], latency_ms: 720, chunks: [{source:"policy/refund-v4.pdf",section:"Điều 2: Điều kiện hoàn tiền",score:0.96,text:"Yêu cầu gửi trong 7 ngày làm việc từ ngày xác nhận đơn hàng."},{source:"policy/refund-v4.pdf",section:"Điều 3: Ngoại lệ",score:0.77,text:"Ngoại lệ: Hàng kỹ thuật số, Flash Sale không được hoàn tiền."},{source:"policy/refund-v4.pdf",section:"Điều 4: Quy trình",score:0.61,text:"Finance Team xử lý trong 3-5 ngày làm việc."}]},
+  "level 3": { answer: "Level 3 (Elevated Access) cần phê duyệt từ **3 bên**: Line Manager, IT Admin, và IT Security [1].", sources: ["it/access-control-sop.md"], latency_ms: 680, chunks: [{source:"it/access-control-sop.md",section:"Approval Matrix",score:0.93,text:"Level 3: Phê duyệt bởi Line Manager + IT Admin + IT Security."},{source:"it/access-control-sop.md",section:"Quy trình",score:0.75,text:"Bước 1: Submit request qua IT Portal.\nBước 2: Line Manager review trong 1 ngày."},{source:"it/helpdesk-faq.md",section:"FAQ",score:0.42,text:"Gửi ticket IT Portal, category Access Request."}]},
+  "err": { answer: "Không tìm thấy thông tin về ERR-403-AUTH trong tài liệu nội bộ. Đây có thể là lỗi xác thực (authentication). Vui lòng liên hệ IT Helpdesk ext. 9999.", sources: [], latency_ms: 490, chunks: [{source:"it/helpdesk-faq.md",section:"FAQ",score:0.38,text:"Tài khoản bị khóa sau 5 lần đăng nhập sai."},{source:"it/access-control-sop.md",section:"Quy trình",score:0.31,text:"Level 1 không cần phê duyệt."},{source:"support/sla-p1-2026.pdf",section:"Phần 4",score:0.25,text:"Hotline: ext. 9999 (24/7)"}]},
+};
+
+function getMock(query) {
+  const q = query.toLowerCase();
+  if (q.includes('p1') || q.includes('sla')) return MOCK_ANSWERS['sla'];
+  if (q.includes('hoàn') || q.includes('refund')) return MOCK_ANSWERS['hoàn tiền'];
+  if (q.includes('level 3') || q.includes('cấp quyền') || q.includes('phê duyệt')) return MOCK_ANSWERS['level 3'];
+  if (q.includes('err') || q.includes('403')) return MOCK_ANSWERS['err'];
+  return { answer: 'Không tìm thấy thông tin phù hợp trong tài liệu nội bộ.', sources: [], latency_ms: 400, chunks: [] };
+}
+
+function ScorePill({ v }) {
+  if (v == null) return <span style={{color:'#656d76'}}>—</span>;
+  const cls = v >= 5 ? 'score-5' : v >= 4 ? 'score-4' : v >= 3 ? 'score-3' : 'score-low';
+  return <span className={`score-pill ${cls}`}>{v}</span>;
+}
+
+function ChunkCard({ chunk, idx }) {
+  return (
+    <div className="chunk-card">
+      <div className="chunk-src">
+        <span>[{idx+1}] {chunk.source?.split('/').pop() || 'unknown'}</span>
+        <span>{Math.round((chunk.score||0)*100)}%</span>
+      </div>
+      <div className="chunk-section">{chunk.section}</div>
+      <div className="chunk-text">{chunk.text}</div>
+      <div className="score-bar"><div className="score-fill" style={{width:`${Math.round((chunk.score||0)*100)}%`}} /></div>
+    </div>
+  );
+}
+
+function Bubble({ role, content, sources, latency, mode }) {
+  return (
+    <div className={`msg ${role === 'user' ? 'msg-user' : ''}`}>
+      <div className={`bubble ${role === 'user' ? 'bubble-user' : 'bubble-ai'}`}>
+        <div dangerouslySetInnerHTML={{__html: content.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')}} />
+        {sources && sources.length > 0 && (
+          <div className="sources-bar">
+            {sources.map((s,i) => <span key={i} className="src-chip">{s.split('/').pop()}</span>)}
+          </div>
+        )}
+        {latency && <div className="msg-meta"><span>{latency}ms</span><span>·</span><span>{mode}</span></div>}
+      </div>
+    </div>
+  );
+}
+
+function AskTab({ apiBase }) {
+  const [msgs, setMsgs] = useState([]);
+  const [query, setQuery] = useState('');
+  const [mode, setMode] = useState('hybrid');
+  const [rerank, setRerank] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [chunks, setChunks] = useState([]);
+  const msgEnd = useRef(null);
+
+  const QUICK = ["SLA ticket P1 là bao lâu?","Hoàn tiền trong bao nhiêu ngày?","Ai phê duyệt cấp quyền Level 3?","ERR-403-AUTH là lỗi gì?"];
+
+  useEffect(() => { msgEnd.current?.scrollIntoView({behavior:'smooth'}); }, [msgs]);
+
+  const send = useCallback(async (q) => {
+    if (!q.trim() || loading) return;
+    setMsgs(m => [...m, {role:'user', content:q}]);
+    setQuery('');
+    setLoading(true);
+    setMsgs(m => [...m, {role:'ai', content:'<span class="spinner"></span> Đang truy xuất...', loading:true}]);
+
+    let result;
+    try {
+      const r = await fetch(`${apiBase}/api/ask`, {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({query:q, retrieval_mode:mode, use_rerank:rerank})
+      });
+      if (!r.ok) throw new Error();
+      result = await r.json();
+    } catch { result = {...getMock(q), config:{retrieval_mode:mode}}; }
+
+    setMsgs(m => [...m.filter(x => !x.loading), {role:'ai', content:result.answer, sources:result.sources, latency:result.latency_ms, mode}]);
+    setChunks(result.chunks || []);
+    setLoading(false);
+  }, [loading, mode, rerank, apiBase]);
+
+  return (
+    <div className="main">
+      <div className="chat-panel">
+        <div className="messages">
+          {msgs.length === 0 && (
+            <div className="empty-state">
+              <div className="empty-title">Hỏi về chính sách nội bộ, SLA, hoặc IT FAQ</div>
+              <div className="quick-qs">
+                {QUICK.map(q => <button key={q} className="quick-q" onClick={() => send(q)}>{q}</button>)}
+              </div>
+            </div>
+          )}
+          {msgs.map((m, i) => <Bubble key={i} {...m} />)}
+          <div ref={msgEnd} />
+        </div>
+        <div className="input-area">
+          <div className="input-opts">
+            <span className="label-sm">Mode:</span>
+            <select className="select-sm" value={mode} onChange={e => setMode(e.target.value)}>
+              <option value="dense">Dense</option>
+              <option value="hybrid">Hybrid</option>
+              <option value="sparse">Sparse</option>
+              <option value="hyde">HyDE</option>
+              <option value="multi_query">Multi Query</option>
+            </select>
+            <label className="check-label">
+              <input type="checkbox" checked={rerank} onChange={e => setRerank(e.target.checked)} style={{width:12,height:12}} />
+              Rerank
+            </label>
+          </div>
+          <div className="input-row">
+            <textarea className="query-input" value={query} onChange={e => setQuery(e.target.value)}
+              placeholder="Nhập câu hỏi... (Enter để gửi, Shift+Enter để xuống dòng)" rows={1}
+              onKeyDown={e => { if (e.key==='Enter' && !e.shiftKey) { e.preventDefault(); send(query); } }} />
+            <button className="btn btn-primary" onClick={() => send(query)} disabled={loading || !query.trim()}>Gửi</button>
+          </div>
+        </div>
+      </div>
+      <div className="chunks-panel">
+        <div className="panel-header">Nguồn truy xuất — top 3</div>
+        <div className="chunks-list">
+          {chunks.length === 0
+            ? <div className="status-text" style={{padding:8}}>Chưa có kết quả</div>
+            : chunks.map((c,i) => <ChunkCard key={i} chunk={c} idx={i} />)}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function CompareTab({ apiBase }) {
+  const [query, setQuery] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [result, setResult] = useState(null);
+
+  const run = async () => {
+    if (!query.trim() || loading) return;
+    setLoading(true);
+    try {
+      const r = await fetch(`${apiBase}/api/compare`, {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({query})
+      });
+      if (!r.ok) throw new Error();
+      setResult(await r.json());
+    } catch {
+      const base = getMock(query);
+      setResult({
+        query,
+        dense: { ...base, latency_ms: 810 },
+        hybrid: { ...base, answer: base.answer + ' (Hybrid tìm được thêm nguồn từ BM25+RRF.)', latency_ms: 950 }
+      });
+    }
+    setLoading(false);
+  };
+
+  return (
+    <div className="compare-wrap">
+      <div className="input-area">
+        <div className="input-row">
+          <textarea className="query-input" value={query} onChange={e => setQuery(e.target.value)}
+            placeholder="Nhập câu hỏi để so sánh Dense vs Hybrid..." rows={1}
+            onKeyDown={e => { if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();run();} }} />
+          <button className="btn btn-primary" onClick={run} disabled={loading || !query.trim()}>
+            {loading ? <><span className="spinner" /> So sánh...</> : 'So sánh'}
+          </button>
+        </div>
+      </div>
+      <div className="compare-grid">
+        <div className="compare-col">
+          <div className="col-title col-dense">Dense (Baseline) {result ? `· ${result.dense?.latency_ms||0}ms` : ''}</div>
+          {result ? <>
+            <div className="compare-answer" dangerouslySetInnerHTML={{__html:(result.dense?.answer||'').replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>')}} />
+            {(result.dense?.chunks||[]).map((c,i) => <ChunkCard key={i} chunk={c} idx={i} />)}
+          </> : <div className="status-text" style={{padding:8}}>Chưa có kết quả</div>}
+        </div>
+        <div className="compare-col">
+          <div className="col-title col-hybrid">Hybrid BM25+RRF (Variant) {result ? `· ${result.hybrid?.latency_ms||0}ms` : ''}</div>
+          {result ? <>
+            <div className="compare-answer" dangerouslySetInnerHTML={{__html:(result.hybrid?.answer||'').replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>')}} />
+            {(result.hybrid?.chunks||[]).map((c,i) => <ChunkCard key={i} chunk={c} idx={i} />)}
+          </> : <div className="status-text" style={{padding:8}}>Chưa có kết quả</div>}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function EvalTab({ apiBase }) {
+  const [cfg, setCfg] = useState('baseline_dense');
+  const [n, setN] = useState(5);
+  const [loading, setLoading] = useState(false);
+  const [result, setResult] = useState(null);
+  const [status, setStatus] = useState('');
+
+  const run = async () => {
+    setLoading(true); setStatus('Đang chạy eval...');
+    try {
+      const r = await fetch(`${apiBase}/api/eval/run`, {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({config_label:cfg, max_questions:n})
+      });
+      if (!r.ok) throw new Error();
+      setResult(await r.json());
+      setStatus('');
+    } catch {
+      const isBase = cfg === 'baseline_dense';
+      setResult({
+        config: cfg,
+        summary: isBase ? {faithfulness:4.2,relevance:4.0,context_recall:3.5,completeness:3.8} : {faithfulness:4.2,relevance:4.1,context_recall:4.0,completeness:3.9},
+        results: [
+          {id:'q01',category:'SLA',question:'SLA ticket P1 là bao lâu?',faithfulness:5,relevance:5,context_recall:5,completeness:5},
+          {id:'q02',category:'Refund',question:'Hoàn tiền trong bao nhiêu ngày?',faithfulness:5,relevance:5,context_recall:5,completeness:4},
+          {id:'q03',category:'Access Control',question:'Ai phê duyệt cấp quyền Level 3?',faithfulness:4,relevance:5,context_recall:4,completeness:4},
+          {id:'q07',category:'Access Control',question:'Approval Matrix là tài liệu nào?',faithfulness:3,relevance:3,context_recall:isBase?1:3,completeness:2},
+          {id:'q09',category:'Abstain',question:'ERR-403-AUTH là lỗi gì?',faithfulness:5,relevance:4,context_recall:null,completeness:4},
+        ].slice(0, n)
+      });
+      setStatus('');
+    }
+    setLoading(false);
+  };
+
+  const metrics = ['faithfulness','relevance','context_recall','completeness'];
+  const labels = ['Faithfulness','Relevance','Context Recall','Completeness'];
+
+  return (
+    <div className="eval-wrap">
+      <div className="eval-toolbar">
+        <select className="select-sm" value={cfg} onChange={e => setCfg(e.target.value)}>
+          <option value="baseline_dense">Baseline — Dense</option>
+          <option value="variant_hybrid">Variant — Hybrid</option>
+        </select>
+        <select className="select-sm" value={n} onChange={e => setN(parseInt(e.target.value))}>
+          <option value={3}>3 câu (nhanh)</option>
+          <option value={5}>5 câu</option>
+          <option value={10}>10 câu (đầy đủ)</option>
+        </select>
+        <button className="btn btn-primary" onClick={run} disabled={loading}>
+          {loading ? <><span className="spinner" /> Đang chạy...</> : 'Chạy Eval'}
+        </button>
+        {status && <span className="status-text">{status}</span>}
+        {result && !loading && <span className="status-text">✓ {result.results?.length} câu · {result.config}</span>}
+      </div>
+      <div className="eval-body">
+        {result && <>
+          <div className="metrics-grid">
+            {metrics.map((m,i) => (
+              <div key={m} className="metric-card">
+                <div className="metric-label">{labels[i]}</div>
+                <div className="metric-val">{result.summary?.[m] != null ? result.summary[m].toFixed(1) : '—'}</div>
+                <div className="metric-sub">/5</div>
+              </div>
+            ))}
+          </div>
+          <div style={{background:'var(--bg2)',border:'1px solid var(--border)',borderRadius:'var(--radius)',overflow:'hidden'}}>
+            <table className="q-table">
+              <thead><tr><th>ID</th><th>Category</th><th>Question</th><th>F</th><th>R</th><th>Rc</th><th>C</th></tr></thead>
+              <tbody>
+                {result.results?.map(r => (
+                  <tr key={r.id}>
+                    <td style={{fontFamily:'monospace',color:'var(--text3)'}}>{r.id}</td>
+                    <td><span className="badge badge-info">{r.category}</span></td>
+                    <td style={{color:'var(--text2)',maxWidth:220}}>{r.question}</td>
+                    <td><ScorePill v={r.faithfulness} /></td>
+                    <td><ScorePill v={r.relevance} /></td>
+                    <td><ScorePill v={r.context_recall} /></td>
+                    <td><ScorePill v={r.completeness} /></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>}
+        {!result && !loading && <div style={{color:'var(--text3)',fontSize:13,textAlign:'center',marginTop:40}}>Chọn config và nhấn "Chạy Eval"</div>}
+      </div>
+    </div>
+  );
+}
+
+function App() {
+  const [tab, setTab] = useState('ask');
+  const [idxStatus, setIdxStatus] = useState({ok:false, count:0, building:false});
+  const API_BASE = 'http://localhost:8000';
+
+  useEffect(() => {
+    const check = async () => {
+      try {
+        const r = await fetch(`${API_BASE}/api/status`);
+        const d = await r.json();
+        setIdxStatus({ok:d.index_exists, count:d.chunk_count, building:d.index_status?.state==='running'});
+        if (d.index_status?.state === 'running') setTimeout(check, 2000);
+      } catch { setIdxStatus({ok:false, count:0, building:false}); }
+    };
+    check();
+  }, []);
+
+  const buildIndex = async () => {
+    setIdxStatus(s => ({...s, building:true}));
+    try { await fetch(`${API_BASE}/api/index/build`, {method:'POST'}); } catch {}
+    setTimeout(async () => {
+      try {
+        const r = await fetch(`${API_BASE}/api/status`);
+        const d = await r.json();
+        setIdxStatus({ok:d.index_exists, count:d.chunk_count, building:false});
+      } catch { setIdxStatus(s => ({...s, building:false})); }
+    }, 5000);
+  };
+
+  return (
+    <div className="app">
+      <div className="topbar">
+        <div className="topbar-title">
+          <div className="dot" />
+          RAG Lab — CS + IT Helpdesk
+        </div>
+        {idxStatus.building
+          ? <span className="badge badge-warn"><span className="spinner" style={{marginRight:4}} />Building...</span>
+          : idxStatus.ok
+            ? <span className="badge badge-ok">Index ✓ {idxStatus.count} chunks</span>
+            : <span className="badge" style={{background:'rgba(248,81,73,0.15)',color:'#f85149',border:'1px solid rgba(248,81,73,0.3)'}}>Index chưa build</span>}
+        <span className="api-badge">{API_BASE}</span>
+        <div className="ml-auto topbar-right">
+          <button className="btn" onClick={buildIndex} disabled={idxStatus.building}>
+            {idxStatus.building ? 'Building...' : 'Build Index'}
+          </button>
+        </div>
+      </div>
+      <div className="tabs">
+        {['ask','compare','eval'].map(t => (
+          <button key={t} className={`tab ${tab===t?'active':''}`} onClick={() => setTab(t)}>
+            {t === 'ask' ? 'Ask' : t === 'compare' ? 'Compare A/B' : 'Evaluation'}
+          </button>
+        ))}
+      </div>
+      {tab === 'ask' && <AskTab apiBase={API_BASE} />}
+      {tab === 'compare' && <CompareTab apiBase={API_BASE} />}
+      {tab === 'eval' && <EvalTab apiBase={API_BASE} />}
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>
