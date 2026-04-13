@@ -1,0 +1,5 @@
+invalid type: string "Ticket system: Jira (project IT-SUPPORT)\nSlack channel: #incident-p1, #incident-p2\nPagerDuty: Tự động nhắn on-call khi P1 ticket mới\nHotline on-call: ext. 9999 (24/7)", expected a booleang có phản hồi trong 10 phút.
+- Thông báo stakeholder: Ngay khi nhận ticket, update mỗi 30 phút cho đến khi resolve.
+
+Ticket P2:
+- Phản hồi ban đầu: 2 giờ.
