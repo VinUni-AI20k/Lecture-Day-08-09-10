@@ -1,0 +1,84 @@
+[
+  {
+    "id": "nq01",
+    "question": "Store credit khi hoàn tiền có giá trị bao nhiêu phần trăm so với số tiền hoàn?",
+    "expected_answer": "Khách hàng có thể chọn nhận store credit với giá trị 110% so với số tiền hoàn.",
+    "expected_sources": ["policy/refund-v4.pdf"],
+    "difficulty": "easy",
+    "category": "Refund"
+  },
+  {
+    "id": "nq02",
+    "question": "SLA P1 hiện tại đã thay đổi thế nào so với phiên bản trước đó?",
+    "expected_answer": "Ở phiên bản v2026.1 có hiệu lực từ 2026-01-15, SLA xử lý ticket P1 đã được cập nhật từ 6 giờ xuống còn 4 giờ.",
+    "expected_sources": ["support/sla-p1-2026.pdf"],
+    "difficulty": "hard",
+    "category": "SLA"
+  },
+  {
+    "id": "nq03",
+    "question": "Contractor cần Admin Access thì ai phê duyệt và còn yêu cầu thêm gì?",
+    "expected_answer": "Level 4 Admin Access áp dụng cho DevOps, SRE và IT Admin; cần phê duyệt từ IT Manager và CISO, thời gian xử lý là 5 ngày làm việc, đồng thời phải hoàn thành training bắt buộc về security policy.",
+    "expected_sources": ["it/access-control-sop.md"],
+    "difficulty": "hard",
+    "category": "Access Control"
+  },
+  {
+    "id": "nq04",
+    "question": "Nếu cần cấp quyền tạm thời để xử lý sự cố P1 ngoài quy trình thường, quyền đó tối đa bao lâu và phải làm gì sau đó?",
+    "expected_answer": "Trong trường hợp escalation khẩn cấp cho sự cố P1, on-call IT Admin có thể cấp quyền tạm thời tối đa 24 giờ sau khi được Tech Lead phê duyệt bằng lời. Sau 24 giờ phải có ticket chính thức hoặc quyền sẽ bị thu hồi tự động, và mọi quyền tạm thời phải được ghi log vào hệ thống Security Audit.",
+    "expected_sources": ["it/access-control-sop.md"],
+    "difficulty": "hard",
+    "category": "Access Control"
+  },
+  {
+    "id": "nq05",
+    "question": "Nhân viên remote cần đáp ứng những yêu cầu kỹ thuật nào và có được dùng bao nhiêu thiết bị VPN cùng lúc?",
+    "expected_answer": "Khi remote, nhân viên bắt buộc phải kết nối VPN để làm việc với hệ thống nội bộ và phải bật camera trong các cuộc họp team. Theo FAQ IT Helpdesk, mỗi tài khoản được kết nối VPN trên tối đa 2 thiết bị cùng lúc.",
+    "expected_sources": ["hr/leave-policy-2026.pdf", "support/helpdesk-faq.md"],
+    "difficulty": "hard",
+    "category": "HR Policy"
+  },
+  {
+    "id": "nq06",
+    "question": "Muốn xin nghỉ phép năm thì cần gửi yêu cầu trước bao lâu và quản lý phải phản hồi trong bao lâu?",
+    "expected_answer": "Nhân viên phải gửi yêu cầu nghỉ phép qua HR Portal ít nhất 3 ngày làm việc trước ngày nghỉ, và Line Manager phải phê duyệt hoặc từ chối trong vòng 1 ngày làm việc.",
+    "expected_sources": ["hr/leave-policy-2026.pdf"],
+    "difficulty": "medium",
+    "category": "HR Policy"
+  },
+  {
+    "id": "nq07",
+    "question": "Helpdesk hỗ trợ trong giờ hành chính qua kênh nào, còn ngoài giờ khẩn cấp liên hệ số nào?",
+    "expected_answer": "Trong giờ hành chính, IT Helpdesk hỗ trợ qua hotline ext. 9000, email helpdesk@company.internal, Jira project IT-SUPPORT và Slack #it-helpdesk. Trường hợp khẩn cấp ngoài giờ có thể gọi ext. 9999.",
+    "expected_sources": ["support/helpdesk-faq.md"],
+    "difficulty": "medium",
+    "category": "IT Helpdesk"
+  },
+  {
+    "id": "nq08",
+    "question": "Tài liệu Approval Matrix for System Access hiện nay là tài liệu nào và hệ thống IAM được dùng là gì?",
+    "expected_answer": "Tài liệu trước đây có tên 'Approval Matrix for System Access' hiện nay là 'Access Control SOP'. Hệ thống IAM được sử dụng là Okta.",
+    "expected_sources": ["it/access-control-sop.md"],
+    "difficulty": "hard",
+    "category": "Access Control",
+    "note": "Query alias/tên cũ + fact extraction"
+  },
+  {
+    "id": "nq09",
+    "question": "Nếu nghỉ ốm hơn 3 ngày liên tiếp thì cần giấy tờ gì và phải báo cho ai trước mấy giờ?",
+    "expected_answer": "Nếu nghỉ ốm trên 3 ngày liên tiếp, nhân viên cần giấy tờ y tế từ bệnh viện và phải thông báo cho Line Manager trước 9:00 sáng ngày nghỉ.",
+    "expected_sources": ["hr/leave-policy-2026.pdf"],
+    "difficulty": "medium",
+    "category": "HR Policy"
+  },
+  {
+    "id": "nq10",
+    "question": "Chính sách có nói mức phạt tiền cụ thể nếu vi phạm SLA P1 không?",
+    "expected_answer": "Không tìm thấy thông tin về mức phạt tiền cụ thể khi vi phạm SLA P1 trong các tài liệu hiện có. Tài liệu SLA chỉ mô tả mức ưu tiên, thời gian phản hồi, thời gian xử lý và quy trình escalation.",
+    "expected_sources": [],
+    "difficulty": "hard",
+    "category": "Insufficient Context",
+    "note": "Cau hoi kiem tra abstain/anti-hallucination"
+  }
+]
