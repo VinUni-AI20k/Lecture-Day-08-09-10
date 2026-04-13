@@ -429,15 +429,21 @@ def call_llm(prompt: str) -> str:
 
     Lưu ý: Dùng temperature=0 hoặc thấp để output ổn định cho evaluation.
     """
-    import google.generativeai as genai
-    genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
-    model = genai.GenerativeModel("gemini-2.0-flash")
-    response = model.generate_content(prompt)
-    return response.text
-    raise NotImplementedError(
-        "TODO Sprint 2: Implement call_llm().\n"
-        "Chọn Option A (OpenAI) hoặc Option B (Gemini) trong TODO comment."
+    from openai import OpenAI
+
+    client = OpenAI(
+        api_key=os.getenv("OLLAMA_API_KEY"),
+        base_url=os.getenv("OLLAMA_BASE_URL")
     )
+
+    response = client.chat.completions.create(
+        model=os.getenv("OLLAMA_MODEL"),
+        messages=[
+            {"role":"user","content":prompt}
+        ],
+    )
+
+    return response.choices[0].message.content
 
 
 def rag_answer(
