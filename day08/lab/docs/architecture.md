@@ -21,28 +21,27 @@
 > TODO: Mô tả hệ thống trong 2-3 câu. Nhóm xây gì? Cho ai dùng? Giải quyết vấn đề gì?
 
 ---
-
 ## 2. Indexing Pipeline (Sprint 1)
 
 ### Tài liệu được index
 | File | Nguồn | Department | Số chunk |
 |------|-------|-----------|---------|
-| `policy_refund_v4.txt` | policy/refund-v4.pdf | CS | TODO |
-| `sla_p1_2026.txt` | support/sla-p1-2026.pdf | IT | TODO |
-| `access_control_sop.txt` | it/access-control-sop.md | IT Security | TODO |
-| `it_helpdesk_faq.txt` | support/helpdesk-faq.md | IT | TODO |
-| `hr_leave_policy.txt` | hr/leave-policy-2026.pdf | HR | TODO |
+| `policy_refund_v4.txt` | policy/refund-v4.pdf | CS | 6 |
+| `sla_p1_2026.txt` | support/sla-p1-2026.pdf | IT | 5 |
+| `access_control_sop.txt` | it/access-control-sop.md | IT Security | 7 |
+| `it_helpdesk_faq.txt` | support/helpdesk-faq.md | IT | 6 |
+| `hr_leave_policy.txt` | hr/leave-policy-2026.pdf | HR | 5 |
 
 ### Quyết định chunking
 | Tham số | Giá trị | Lý do |
-|---------|---------|-------|
-| Chunk size | TODO tokens | TODO |
-| Overlap | TODO tokens | TODO |
-| Chunking strategy | Heading-based / paragraph-based | TODO |
-| Metadata fields | source, section, effective_date, department, access | Phục vụ filter, freshness, citation |
+| --- | --- | --- |
+| Chunk size | 400 | Kích thước 400 token đủ nhỏ để đảm bảo độ chính xác khi truy vấn, nhưng vẫn đủ lớn để giữ ngữ cảnh liền mạch. |
+| Overlap | 80 | Đặt overlap 80 token giúp tránh mất thông tin ở ranh giới giữa các chunk, đảm bảo câu hoặc đoạn không bị cắt rời. |
+| Chunking strategy | paragraph-based | Chiến lược theo đoạn văn giữ nguyên cấu trúc logic và ngữ nghĩa, phù hợp với tài liệu có bố cục rõ ràng. |
+| Metadata fields | source, section, effective_date, department, access | Các trường metadata này hỗ trợ lọc, đảm bảo tính mới (freshness), và trích dẫn chính xác nguồn gốc thông tin. |
 
 ### Embedding model
-- **Model**: TODO (OpenAI text-embedding-3-small / paraphrase-multilingual-MiniLM-L12-v2)
+- **Model**: text-embedding-3-small (OpenAI) - Giúp vector hóa ngôn ngữ tự nhiên tốt và tiết kiệm chi phí.
 - **Vector store**: ChromaDB (PersistentClient)
 - **Similarity metric**: Cosine
 
@@ -61,16 +60,16 @@
 ### Variant (Sprint 3)
 | Tham số | Giá trị | Thay đổi so với baseline |
 |---------|---------|------------------------|
-| Strategy | TODO (hybrid / dense) | TODO |
-| Top-k search | TODO | TODO |
-| Top-k select | TODO | TODO |
-| Rerank | TODO (cross-encoder / MMR) | TODO |
-| Query transform | TODO (expansion / HyDE / decomposition) | TODO |
+| Strategy | hybrid | dense |
+| Top-k search | 5 | 10 |
+| Top-k select | 5 | 3 |
+| Rerank | False | False |
+| Query transform | None | None |
 
 **Lý do chọn variant này:**
 > TODO: Giải thích tại sao chọn biến này để tune.
 > Ví dụ: "Chọn hybrid vì corpus có cả câu tự nhiên (policy) lẫn mã lỗi và tên chuyên ngành (SLA ticket P1, ERR-403)."
-
+- Nhóm chọn Hybrid Search (kết hợp Keyword BM25) để đảm bảo các từ khóa quan trọng được khớp chính xác tuyệt đối (Exact Match). Đồng thời, việc tăng top_k_select từ 3 lên 5 giúp LLM có thêm bối cảnh để thực hiện Cross-Document Reasoning (như câu gq02 và gq06 vốn cần thông tin từ nhiều nguồn khác nhau).
 ---
 
 ## 4. Generation (Sprint 2)
@@ -96,7 +95,7 @@ Answer:
 ### LLM Configuration
 | Tham số | Giá trị |
 |---------|---------|
-| Model | TODO (gpt-4o-mini / gemini-1.5-flash) |
+| Model | gpt-4o-mini |
 | Temperature | 0 (để output ổn định cho eval) |
 | Max tokens | 512 |
 

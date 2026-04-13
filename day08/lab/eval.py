@@ -479,6 +479,28 @@ def ask_llm_judge(prompt: str) -> Dict[str, Any]:
     except Exception as e:
         return {"score": 1, "reason": f"Error calling judge: {e}"}
 
+
+def save_raw_logs(results: List[Dict[str, Any]], filename: str):
+    """Lưu lại dữ liệu thô để phục vụ việc viết Tuning Log trong báo cáo."""
+    LOGS_DIR = Path(__file__).parent / "logs"
+    LOGS_DIR.mkdir(parents=True, exist_ok=True)
+    
+    log_data = []
+    for r in results:
+        log_data.append({
+            "id": r["id"],
+            "question": r["query"],
+            "answer": r["answer"],
+            "config": r["config_label"],
+            "timestamp": datetime.now().isoformat(),
+        })
+    
+    log_path = LOGS_DIR / filename
+    with open(log_path, "w", encoding="utf-8") as f:
+        json.dump(log_data, f, ensure_ascii=False, indent=2)
+    print(f"Đã lưu log tại: {log_path}")
+
+
 # =============================================================================
 # MAIN — Chạy evaluation
 # =============================================================================
@@ -513,6 +535,7 @@ if __name__ == "__main__":
             test_questions=test_questions,
             verbose=True,
         )
+        save_raw_logs(baseline_results, "baseline_run.json")
 
         # Save scorecard
         RESULTS_DIR.mkdir(parents=True, exist_ok=True)
@@ -533,6 +556,8 @@ if __name__ == "__main__":
         test_questions=test_questions,
         verbose=True,
     )
+    save_raw_logs(variant_results, "variant_run.json")
+    
     variant_md = generate_scorecard_summary(variant_results, VARIANT_CONFIG["label"])
     (RESULTS_DIR / "scorecard_variant.md").write_text(variant_md, encoding="utf-8")
 
