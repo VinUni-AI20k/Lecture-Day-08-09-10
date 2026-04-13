@@ -79,19 +79,26 @@ Nhóm phát triển một hệ thống RAG nội bộ giúp tra cứu và trả 
 ### Grounded Prompt Template
 ```
 Answer only from the retrieved context below.
-If the context is insufficient, say you do not know.
-Cite the source field when possible.
-Keep your answer short, clear, and factual.
+If the context contains enough information:
+- Provide a short, clear, factual answer.
+- Cite the source field (in brackets like [1]) when possible.
+
+If the context does NOT contain enough information:
+- DO NOT guess or fabricate.
+- Instead, respond in a helpful way:
+  + State that you could not find the answer in the provided context.
+  + Suggest 1-2 concrete next steps (e.g., refine keywords, search broader documents, contact relevant department).
+  + Optionally suggest related keywords or what information is missing.
+
+Additional rules:
+- Respond in the same language as the question.
+- If there is conflict between documents, list all conflicting sources and point out where they differ.
+- Do not infer information not explicitly stated in the context.
 
 Question: {query}
 
 Context:
-[1] {source} | {section} | score={score}
-{chunk_text}
-
-[2] ...
-
-Answer:
+{context_block}
 ```
 
 ### LLM Configuration
@@ -105,15 +112,18 @@ Answer:
 
 ## 5. Failure Mode Checklist
 
-> Dùng khi debug — kiểm tra lần lượt: index → retrieval → generation
+> Dùng khi debug — kiểm tra lần lượt theo thứ tự: **index → retrieval → generation**
 
-| Failure Mode | Triệu chứng | Cách kiểm tra |
-|-------------|-------------|---------------|
-| Index lỗi | Retrieve về docs cũ / sai version | `inspect_metadata_coverage()` trong index.py |
-| Chunking tệ | Chunk cắt giữa điều khoản | `list_chunks()` và đọc text preview |
-| Retrieval lỗi | Không tìm được expected source | `score_context_recall()` trong eval.py |
-| Generation lỗi | Answer không grounded / bịa | `score_faithfulness()` trong eval.py |
-| Token overload | Context quá dài → lost in the middle | Kiểm tra độ dài context_block |
+| # | Failure Mode | Triệu chứng | Nguyên nhân thường gặp | Cách kiểm tra / Fix |
+|---|-------------|-------------|----------------------|---------------------|
+| 1 | **Index lỗi / outdated** | Retrieve về nội dung cũ hoặc thiếu tài liệu | Quên chạy lại `build_index()` sau khi sửa docs | Chạy `inspect_metadata_coverage()` trong `index.py`, kiểm tra `effective_date` |
+| 2 | **Chunking tệ** | Chunk cắt giữa điều khoản, thiếu ngữ cảnh | `CHUNK_SIZE` quá nhỏ hoặc split không theo heading | Chạy `list_chunks()`, đọc text preview từng chunk |
+| 3 | **Metadata source sai** | `source` log ra tên file `.txt` thay vì tên tài liệu gốc | File `.txt` thiếu dòng `Source: ...` ở header | Kiểm tra 5 dòng đầu của mỗi file trong `data/docs/` |
+| 4 | **Context Recall thấp** | Đúng câu hỏi nhưng source sai / không retrieve được expected doc | Dense search yếu với exact term (mã lỗi, tên riêng) | Xem `score_context_recall()` trong `eval.py`; thử chuyển sang hybrid |
+| 5 | **Faithfulness thấp** | Answer chứa thông tin không có trong context | LLM dùng prior knowledge ngoài retrieved chunks | Xem `score_faithfulness()` trong `eval.py`; kiểm tra prompt có đủ constraint không |
+| 6 | **Completeness thấp** | Answer đúng nhưng thiếu số liệu / điều kiện / ngoại lệ | Prompt có `"short"` khiến LLM tóm tắt quá mức | Kiểm tra prompt trong `build_grounded_prompt()`; bỏ instruction về độ ngắn |
+| 7 | **Abstain sai** | Câu không có trong docs nhưng LLM vẫn trả lời | Retriever tìm được chunk liên quan xa, LLM đoán thêm | Kiểm tra score của candidates; thêm score threshold filter |
+| 8 | **Token overload** | Answer bị cắt giữa chừng hoặc context bị truncate | `top_k_select` quá cao, chunk quá dài | Giảm `TOP_K_SELECT`, kiểm tra độ dài `context_block` trước khi gửi LLM |
 
 ---
 

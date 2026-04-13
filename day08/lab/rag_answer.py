@@ -303,12 +303,22 @@ def build_grounded_prompt(query: str, context_block: str) -> str:
     - Điều chỉnh tone phù hợp với use case (CS helpdesk, IT support)
     """
     prompt = f"""Answer only from the retrieved context below.
-If the context is insufficient to answer the question, say you do not know and do not make up information. 
-Cite the source field (in brackets like [1]) when possible.
-Keep your answer short, clear, and factual.
-Respond in the same language as the question.
-If there is conflict between different documents, list all conflicting information and point out the discrepancies.
-Do not infer information that is not explicitly stated in the context.
+
+If the context contains enough information:
+- Provide a short, clear, factual answer.
+- Cite the source field (in brackets like [1]) when possible.
+
+If the context does NOT contain enough information:
+- DO NOT guess or fabricate.
+- Instead, respond in a helpful way:
+  + State that you could not find the answer in the provided context.
+  + Suggest 1-2 concrete next steps (e.g., refine keywords, search broader documents, contact relevant department).
+  + Optionally suggest related keywords or what information is missing.
+
+Additional rules:
+- Respond in the same language as the question.
+- If there is conflict between documents, list all conflicting sources and point out where they differ.
+- Do not infer information not explicitly stated in the context.
 
 Question: {query}
 
@@ -316,6 +326,7 @@ Context:
 {context_block}
 
 Answer:"""
+
     return prompt
 
 
