@@ -35,6 +35,7 @@ load_dotenv()
 
 TEST_QUESTIONS_PATH = Path(__file__).parent / "data" / "grading_questions.json"
 RESULTS_DIR = Path(__file__).parent / "results"
+LOGS_DIR = Path(__file__).parent / "logs"
 
 # Cấu hình baseline (Sprint 2)
 BASELINE_CONFIG = {
@@ -838,6 +839,44 @@ Generated: {timestamp}
     return md
 
 
+def generate_grading_run_log(
+    questions: List[Dict[str, Any]],
+    config: Dict[str, Any],
+    output_path: Path,
+) -> None:
+    """
+    Chạy bộ grading questions và lưu log theo format yêu cầu.
+
+    Dùng config tốt nhất hiện tại của nhóm để tạo log nộp bài.
+    """
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+
+    log = []
+    for q in questions:
+        result = rag_answer(
+            q["question"],
+            retrieval_mode=config.get("retrieval_mode", "dense"),
+            top_k_search=config.get("top_k_search", 10),
+            top_k_select=config.get("top_k_select", 3),
+            use_rerank=config.get("use_rerank", False),
+            verbose=False,
+        )
+        log.append({
+            "id": q["id"],
+            "question": q["question"],
+            "answer": result["answer"],
+            "sources": result["sources"],
+            "chunks_retrieved": len(result["chunks_used"]),
+            "retrieval_mode": result["config"]["retrieval_mode"],
+            "timestamp": datetime.now().isoformat(),
+        })
+
+    output_path.write_text(
+        json.dumps(log, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
+
+
 # =============================================================================
 # MAIN — Chạy evaluation
 # =============================================================================
@@ -903,6 +942,15 @@ if __name__ == "__main__":
             variant_results,
             output_csv="ab_comparison.csv"
         )
+
+    # --- Export grading run log ---
+    best_config = VARIANT_CONFIG if variant_results else BASELINE_CONFIG
+    official_log_path = LOGS_DIR / "grading_run.json"
+    results_log_path = RESULTS_DIR / "grading_run.json"
+    generate_grading_run_log(test_questions, best_config, official_log_path)
+    generate_grading_run_log(test_questions, best_config, results_log_path)
+    print(f"\nGrading log lưu tại: {official_log_path}")
+    print(f"Copy grading log trong results tại: {results_log_path}")
 
     print("\n\nViệc cần làm Sprint 4:")
     print("  1. Hoàn thành Sprint 2 + 3 trước")
