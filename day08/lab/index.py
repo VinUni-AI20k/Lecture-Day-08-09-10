@@ -20,6 +20,9 @@ from pathlib import Path
 from typing import List, Dict, Any, Optional
 from dotenv import load_dotenv
 
+from sentence_transformers import SentenceTransformer
+model = SentenceTransformer("paraphrase-multilingual-MiniLM-L12-v2")
+
 load_dotenv()
 
 # =============================================================================
@@ -31,14 +34,15 @@ CHROMA_DB_DIR = Path(__file__).parent / "chroma_db"
 
 # TODO Sprint 1: Điều chỉnh chunk size và overlap theo quyết định của nhóm
 # Gợi ý từ slide: chunk 300-500 tokens, overlap 50-80 tokens
-CHUNK_SIZE = 400       # tokens (ước lượng bằng số ký tự / 4)
-CHUNK_OVERLAP = 80     # tokens overlap giữa các chunk
+CHUNK_SIZE = 400  # tokens (ước lượng bằng số ký tự / 4)
+CHUNK_OVERLAP = 80  # tokens overlap giữa các chunk
 
 
 # =============================================================================
 # STEP 1: PREPROCESS
 # Làm sạch text trước khi chunk và embed
 # =============================================================================
+
 
 def preprocess_document(raw_text: str, filepath: str) -> Dict[str, Any]:
     """
@@ -109,6 +113,7 @@ def preprocess_document(raw_text: str, filepath: str) -> Dict[str, Any]:
 # STEP 2: CHUNK
 # Chia tài liệu thành các đoạn nhỏ theo cấu trúc tự nhiên
 # =============================================================================
+
 
 def chunk_document(doc: Dict[str, Any]) -> List[Dict[str, Any]]:
     """
@@ -186,10 +191,12 @@ def _split_by_size(
     """
     if len(text) <= chunk_chars:
         # Toàn bộ section vừa một chunk
-        return [{
-            "text": text,
-            "metadata": {**base_metadata, "section": section},
-        }]
+        return [
+            {
+                "text": text,
+                "metadata": {**base_metadata, "section": section},
+            }
+        ]
 
     # TODO: Implement split theo paragraph với overlap
     # Gợi ý:
@@ -220,6 +227,7 @@ def _split_by_size(
 # Embed các chunk và lưu vào ChromaDB
 # =============================================================================
 
+
 def get_embedding(text: str) -> List[float]:
     """
     Tạo embedding vector cho một đoạn text.
@@ -237,15 +245,19 @@ def get_embedding(text: str) -> List[float]:
         return response.data[0].embedding
 
     Option B — Sentence Transformers (chạy local, không cần API key):
-        from sentence_transformers import SentenceTransformer
-        model = SentenceTransformer("paraphrase-multilingual-MiniLM-L12-v2")
-        return model.encode(text).tolist()
     """
+
+    return model.encode(text).tolist()
+
     raise NotImplementedError(
         "TODO: Implement get_embedding().\n"
         "Chọn Option A (OpenAI) hoặc Option B (Sentence Transformers) trong TODO comment."
     )
 
+def get_embedding(texts: List[str]) -> List[List[float]]:
+    """Phiên bản batch của get_embedding() cho nhiều đoạn text cùng lúc (nếu dùng Sentence Transformers)."""
+    
+    return model.encode(texts).tolist()
 
 def build_index(docs_dir: Path = DOCS_DIR, db_dir: Path = CHROMA_DB_DIR) -> None:
     """
@@ -275,8 +287,10 @@ def build_index(docs_dir: Path = DOCS_DIR, db_dir: Path = CHROMA_DB_DIR) -> None
     db_dir.mkdir(parents=True, exist_ok=True)
 
     # TODO: Khởi tạo ChromaDB
-    # client = chromadb.PersistentClient(path=str(db_dir))
-    # collection = client.get_or_create_collection(...)
+    client = chromadb.PersistentClient(path=str(db_dir))
+    collection = client.get_or_create_collection(
+        name="rag_lab", metadata={"hnsw:space": "cosine"}
+    )
 
     total_chunks = 0
     doc_files = list(docs_dir.glob("*.txt"))
@@ -290,12 +304,13 @@ def build_index(docs_dir: Path = DOCS_DIR, db_dir: Path = CHROMA_DB_DIR) -> None
         raw_text = filepath.read_text(encoding="utf-8")
 
         # TODO: Gọi preprocess_document
-        # doc = preprocess_document(raw_text, str(filepath))
+        doc = preprocess_document(raw_text, str(filepath))
 
         # TODO: Gọi chunk_document
-        # chunks = chunk_document(doc)
+        chunks = chunk_document(doc)
 
         # TODO: Embed và lưu từng chunk vào ChromaDB
+        # METHOD 1
         # for i, chunk in enumerate(chunks):
         #     chunk_id = f"{filepath.stem}_{i}"
         #     embedding = get_embedding(chunk["text"])
@@ -305,22 +320,36 @@ def build_index(docs_dir: Path = DOCS_DIR, db_dir: Path = CHROMA_DB_DIR) -> None
         #         documents=[chunk["text"]],
         #         metadatas=[chunk["metadata"]],
         #     )
-        # total_chunks += len(chunks)
-
-        # Placeholder để code không lỗi khi chưa implement
-        doc = preprocess_document(raw_text, str(filepath))
-        chunks = chunk_document(doc)
-        print(f"    → {len(chunks)} chunks (embedding chưa implement)")
+        
+        # METHOD 2
+        texts = [chunk["text"] for chunk in chunks]
+        embeddings = get_embedding(texts)
+        for i, (chunk, embedding) in enumerate(zip(chunks, embeddings)):
+            chunk_id = f"{filepath.stem}_{i}"
+            collection.upsert(
+                ids=[chunk_id],
+                embeddings=[embedding],
+                documents=[chunk["text"]],
+                metadatas=[chunk["metadata"]],
+            )
+            
         total_chunks += len(chunks)
 
+        # Placeholder để code không lỗi khi chưa implement
+        # doc = preprocess_document(raw_text, str(filepath))
+        # chunks = chunk_document(doc)
+        # print(f"    → {len(chunks)} chunks (embedding chưa implement)")
+        # total_chunks += len(chunks)
+
     print(f"\nHoàn thành! Tổng số chunks: {total_chunks}")
-    print("Lưu ý: Embedding chưa được implement. Xem TODO trong get_embedding() và build_index().")
+    # print("Lưu ý: Embedding chưa được implement. Xem TODO trong get_embedding() và build_index().")
 
 
 # =============================================================================
 # STEP 4: INSPECT / KIỂM TRA
 # Dùng để debug và kiểm tra chất lượng index
 # =============================================================================
+
 
 def list_chunks(db_dir: Path = CHROMA_DB_DIR, n: int = 5) -> None:
     """
@@ -335,12 +364,15 @@ def list_chunks(db_dir: Path = CHROMA_DB_DIR, n: int = 5) -> None:
     """
     try:
         import chromadb
+
         client = chromadb.PersistentClient(path=str(db_dir))
         collection = client.get_collection("rag_lab")
         results = collection.get(limit=n, include=["documents", "metadatas"])
 
         print(f"\n=== Top {n} chunks trong index ===\n")
-        for i, (doc, meta) in enumerate(zip(results["documents"], results["metadatas"])):
+        for i, (doc, meta) in enumerate(
+            zip(results["documents"], results["metadatas"])
+        ):
             print(f"[Chunk {i+1}]")
             print(f"  Source: {meta.get('source', 'N/A')}")
             print(f"  Section: {meta.get('section', 'N/A')}")
@@ -365,6 +397,7 @@ def inspect_metadata_coverage(db_dir: Path = CHROMA_DB_DIR) -> None:
     """
     try:
         import chromadb
+
         client = chromadb.PersistentClient(path=str(db_dir))
         collection = client.get_collection("rag_lab")
         results = collection.get(include=["metadatas"])
@@ -407,7 +440,7 @@ if __name__ == "__main__":
 
     # Bước 2: Test preprocess và chunking (không cần API key)
     print("\n--- Test preprocess + chunking ---")
-    for filepath in doc_files[:1]:  # Test với 1 file đầu
+    for filepath in doc_files[1:2]:  # Test với 1 file đầu
         raw = filepath.read_text(encoding="utf-8")
         doc = preprocess_document(raw, str(filepath))
         chunks = chunk_document(doc)
@@ -422,7 +455,7 @@ if __name__ == "__main__":
     print("\n--- Build Full Index ---")
     print("Lưu ý: Cần implement get_embedding() trước khi chạy bước này!")
     # Uncomment dòng dưới sau khi implement get_embedding():
-    # build_index()
+    build_index()
 
     # Bước 4: Kiểm tra index
     # Uncomment sau khi build_index() thành công:
@@ -434,4 +467,6 @@ if __name__ == "__main__":
     print("  1. Implement get_embedding() - chọn OpenAI hoặc Sentence Transformers")
     print("  2. Implement phần TODO trong build_index()")
     print("  3. Chạy build_index() và kiểm tra với list_chunks()")
-    print("  4. Nếu chunking chưa tốt: cải thiện _split_by_size() để split theo paragraph")
+    print(
+        "  4. Nếu chunking chưa tốt: cải thiện _split_by_size() để split theo paragraph"
+    )

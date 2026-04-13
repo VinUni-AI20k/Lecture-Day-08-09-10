@@ -21,12 +21,16 @@ Definition of Done Sprint 3:
   ✓ Giải thích được tại sao chọn biến đó để tune
 """
 
+from operator import index
 import os
 from typing import List, Dict, Any, Optional, Tuple
 from dotenv import load_dotenv
-
+from rank_bm25 import BM25Okapi
+from sentence_transformers import CrossEncoder
 load_dotenv()
-
+import json
+import chromadb
+from index import CHROMA_DB_DIR
 # =============================================================================
 # CẤU HÌNH
 # =============================================================================
@@ -86,7 +90,7 @@ def retrieve_dense(query: str, top_k: int = TOP_K_SEARCH) -> List[Dict[str, Any]
 # RETRIEVAL — SPARSE / BM25 (Keyword Search)
 # Dùng cho Sprint 3 Variant hoặc kết hợp Hybrid
 # =============================================================================
-
+'''
 def retrieve_sparse(query: str, top_k: int = TOP_K_SEARCH) -> List[Dict[str, Any]]:
     """
     Sparse retrieval: tìm kiếm theo keyword (BM25).
@@ -113,12 +117,51 @@ def retrieve_sparse(query: str, top_k: int = TOP_K_SEARCH) -> List[Dict[str, Any
     # Tạm thời return empty list
     print("[retrieve_sparse] Chưa implement — Sprint 3")
     return []
+'''
+BM25_INDEX = None
+BM25_CHUNKS = []
 
+def retrieve_sparse(query: str, top_k: int = TOP_K_SEARCH) -> List[Dict[str, Any]]:
+    global BM25_INDEX, BM25_CHUNKS
 
+    if BM25_INDEX is None:
+        print("[BM25] Building index...")
+
+        # ⚠️ Lấy toàn bộ chunk từ Chroma
+        
+
+        client = chromadb.PersistentClient(path=str(CHROMA_DB_DIR))
+        collection = client.get_collection("rag_lab")
+
+        data = collection.get(include=["documents", "metadatas"])
+
+        BM25_CHUNKS = [
+            {"text": doc, "metadata": meta}
+            for doc, meta in zip(data["documents"], data["metadatas"])
+        ]
+
+        corpus = [c["text"] for c in BM25_CHUNKS]
+        tokenized = [doc.lower().split() for doc in corpus]
+
+        BM25_INDEX = BM25Okapi(tokenized)
+
+    tokenized_query = query.lower().split()
+    scores = BM25_INDEX.get_scores(tokenized_query)
+
+    top_indices = sorted(
+        range(len(scores)), key=lambda i: scores[i], reverse=True
+    )[:top_k]
+
+    results = []
+    for i in top_indices:
+        chunk = BM25_CHUNKS[i].copy()
+        chunk["score"] = float(scores[i])
+        results.append(chunk)
+    return results
 # =============================================================================
 # RETRIEVAL — HYBRID (Dense + Sparse với Reciprocal Rank Fusion)
 # =============================================================================
-
+'''
 def retrieve_hybrid(
     query: str,
     top_k: int = TOP_K_SEARCH,
@@ -152,13 +195,53 @@ def retrieve_hybrid(
     # Tạm thời fallback về dense
     print("[retrieve_hybrid] Chưa implement RRF — fallback về dense")
     return retrieve_dense(query, top_k)
+'''
+def retrieve_hybrid(
+    query: str,
+    top_k: int = TOP_K_SEARCH,
+    dense_weight: float = 0.6,
+    sparse_weight: float = 0.4,
+) -> List[Dict[str, Any]]:
 
+    dense_results = retrieve_dense(query, top_k)
+    sparse_results = retrieve_sparse(query, top_k)
+
+    def rank_map(results):
+        return {c["text"]: i+1 for i, c in enumerate(results)}
+
+    d_rank = rank_map(dense_results)
+    s_rank = rank_map(sparse_results)
+
+    all_keys = set(d_rank) | set(s_rank)
+
+    fused = []
+
+    for key in all_keys:
+        dr = d_rank.get(key, 1e6)
+        sr = s_rank.get(key, 1e6)
+
+        score = (
+            dense_weight * (1 / (60 + dr)) +
+            sparse_weight * (1 / (60 + sr))
+        )
+
+        chunk = next(
+            (c for c in dense_results + sparse_results if c["text"] == key),
+            None
+        )
+
+        if chunk:
+            c = chunk.copy()
+            c["score"] = score
+            fused.append(c)
+
+    return sorted(fused, key=lambda x: x["score"], reverse=True)[:top_k]
 
 # =============================================================================
 # RERANK (Sprint 3 alternative)
 # Cross-encoder để chấm lại relevance sau search rộng
 # =============================================================================
-
+'''
 def rerank(
     query: str,
     candidates: List[Dict[str, Any]],
@@ -192,12 +275,44 @@ def rerank(
     # TODO Sprint 3: Implement rerank
     # Tạm thời trả về top_k đầu tiên (không rerank)
     return candidates[:top_k]
+'''
 
+
+RERANK_MODEL = None
+
+def rerank(
+    query: str,
+    candidates: List[Dict[str, Any]],
+    top_k: int = TOP_K_SELECT,
+) -> List[Dict[str, Any]]:
+
+    global RERANK_MODEL
+
+    if RERANK_MODEL is None:
+        print("[Rerank] Loading model...")
+        RERANK_MODEL = CrossEncoder("cross-encoder/ms-marco-MiniLM-L-6-v2")
+
+    pairs = [[query, c["text"]] for c in candidates]
+    scores = RERANK_MODEL.predict(pairs)
+
+    ranked = sorted(
+        zip(candidates, scores),
+        key=lambda x: x[1],
+        reverse=True
+    )
+
+    results = []
+    for chunk, score in ranked[:top_k]:
+        c = chunk.copy()
+        c["score"] = float(score)
+        results.append(c)
+
+    return results
 
 # =============================================================================
 # QUERY TRANSFORMATION (Sprint 3 alternative)
 # =============================================================================
-
+'''
 def transform_query(query: str, strategy: str = "expansion") -> List[str]:
     """
     Biến đổi query để tăng recall.
@@ -227,8 +342,25 @@ def transform_query(query: str, strategy: str = "expansion") -> List[str]:
     # TODO Sprint 3: Implement query transformation
     # Tạm thời trả về query gốc
     return [query]
+'''
 
 
+def transform_query(query: str, strategy: str = "expansion") -> List[str]:
+    if strategy == "none":
+        return [query]
+
+    prompt = f"""
+Given the query: "{query}"
+Generate 2 alternative phrasings or related search terms.
+Return JSON array of strings.
+"""
+
+    try:
+        raw = call_llm(prompt)
+        queries = json.loads(raw)
+        return [query] + queries
+    except:
+        return [query]
 # =============================================================================
 # GENERATION — GROUNDED ANSWER FUNCTION
 # =============================================================================

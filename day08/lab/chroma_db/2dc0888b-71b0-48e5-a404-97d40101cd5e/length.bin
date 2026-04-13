@@ -1,0 +1,1 @@
+invalid type: string "Hoàn tiền — Điều kiện áp dụng:\nYêu cầu được gửi trong vòng 7 ngày kể từ thời điểm xác nhận đơn hàng.\n\nNgoại lệ không được hoàn tiền:\n- Sản phẩm thuộc danh mục hàng kỹ thuật số (license key, subscription).\nông có, tạo ticket P2 kèm địa chỉ email gửi và thời gian gửi.", expected f64oolean a 
