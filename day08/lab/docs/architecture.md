@@ -18,7 +18,7 @@
 ```
 
 **Mô tả ngắn gọn:**
-> TODO: Mô tả hệ thống trong 2-3 câu. Nhóm xây gì? Cho ai dùng? Giải quyết vấn đề gì?
+> Pipeline RAG trả lời câu hỏi nội bộ về chính sách hoàn tiền, SLA P1, Access Control, FAQ IT và HR — chỉ dựa trên 5 file trong `data/docs/`. Người dùng: CS/IT Helpdesk. Vector store cục bộ (ChromaDB) + LLM grounded có trích dẫn `[n]`.
 
 ---
 
@@ -27,24 +27,27 @@
 ### Tài liệu được index
 | File | Nguồn | Department | Số chunk |
 |------|-------|-----------|---------|
-| `policy_refund_v4.txt` | policy/refund-v4.pdf | CS | TODO |
-| `sla_p1_2026.txt` | support/sla-p1-2026.pdf | IT | TODO |
-| `access_control_sop.txt` | it/access-control-sop.md | IT Security | TODO |
-| `it_helpdesk_faq.txt` | support/helpdesk-faq.md | IT | TODO |
-| `hr_leave_policy.txt` | hr/leave-policy-2026.pdf | HR | TODO |
+| `policy_refund_v4.txt` | policy/refund-v4.pdf | CS | 6 |
+| `sla_p1_2026.txt` | support/sla-p1-2026.pdf | IT | 5 |
+| `access_control_sop.txt` | it/access-control-sop.md | IT Security | 7 |
+| `it_helpdesk_faq.txt` | support/helpdesk-faq.md | IT | 6 |
+| `hr_leave_policy.txt` | hr/leave-policy-2026.pdf | HR | 5 |
+
+**Tổng:** 29 chunk (sau `python index.py build`).
 
 ### Quyết định chunking
 | Tham số | Giá trị | Lý do |
 |---------|---------|-------|
-| Chunk size | TODO tokens | TODO |
-| Overlap | TODO tokens | TODO |
-| Chunking strategy | Heading-based / paragraph-based | TODO |
-| Metadata fields | source, section, effective_date, department, access | Phục vụ filter, freshness, citation |
+| Chunk size | ~400 tokens (~1600 ký tự) | Cân bằng ngữ cảnh vs độ dài prompt |
+| Overlap | ~80 tokens (~320 ký tự) | Giữ liền mạch giữa các chunk kế cận |
+| Chunking strategy | Theo heading `=== ... ===`, sau đó gom đoạn văn + cắt mềm tại ranh giới câu/đoạn | Tránh cắt giữa điều khoản |
+| Metadata fields | source, section, effective_date, department, access | Citation, freshness, filter |
 
 ### Embedding model
-- **Model**: TODO (OpenAI text-embedding-3-small / paraphrase-multilingual-MiniLM-L12-v2)
-- **Vector store**: ChromaDB (PersistentClient)
-- **Similarity metric**: Cosine
+- **Model (mặc định):** OpenAI `text-embedding-3-small` khi `EMBEDDING_PROVIDER=openai`
+- **Local:** `paraphrase-multilingual-MiniLM-L12-v2` khi `EMBEDDING_PROVIDER=local` (khớp với lúc build index)
+- **Vector store**: ChromaDB (`PersistentClient`, collection `rag_lab`)
+- **Similarity metric**: Cosine (`hnsw:space: cosine`)
 
 ---
 
@@ -61,15 +64,14 @@
 ### Variant (Sprint 3)
 | Tham số | Giá trị | Thay đổi so với baseline |
 |---------|---------|------------------------|
-| Strategy | TODO (hybrid / dense) | TODO |
-| Top-k search | TODO | TODO |
-| Top-k select | TODO | TODO |
-| Rerank | TODO (cross-encoder / MMR) | TODO |
-| Query transform | TODO (expansion / HyDE / decomposition) | TODO |
+| Strategy | Hybrid (dense + BM25, RRF k=60) | + sparse + rank fusion |
+| Top-k search | 10 | Giữ như baseline |
+| Top-k select | 3 | Giữ như baseline |
+| Rerank | Có — `cross-encoder/ms-marco-MiniLM-L-6-v2` | Lọc nhiễu trước khi đưa vào LLM |
+| Query transform | Không (mặc định) | Có thể bật sau nếu cần alias |
 
 **Lý do chọn variant này:**
-> TODO: Giải thích tại sao chọn biến này để tune.
-> Ví dụ: "Chọn hybrid vì corpus có cả câu tự nhiên (policy) lẫn mã lỗi và tên chuyên ngành (SLA ticket P1, ERR-403)."
+> Hybrid RRF giúp vừa bắt từ khóa (P1, ERR-403, Flash Sale) vừa giữ ngữ nghĩa (alias như “Approval Matrix” → Access Control SOP). Rerank cross-encoder chọn top-3 chunk sát câu hỏi nhất sau khi search rộng.
 
 ---
 
@@ -96,7 +98,7 @@ Answer:
 ### LLM Configuration
 | Tham số | Giá trị |
 |---------|---------|
-| Model | TODO (gpt-4o-mini / gemini-1.5-flash) |
+| Model | `gpt-4o-mini` (hoặc Gemini nếu `LLM_PROVIDER=gemini`) |
 | Temperature | 0 (để output ổn định cho eval) |
 | Max tokens | 512 |
 
@@ -116,9 +118,7 @@ Answer:
 
 ---
 
-## 6. Diagram (tùy chọn)
-
-> TODO: Vẽ sơ đồ pipeline nếu có thời gian. Có thể dùng Mermaid hoặc drawio.
+## 6. Diagram
 
 ```mermaid
 graph LR

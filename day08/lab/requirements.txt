@@ -26,3 +26,8 @@ rank-bm25>=0.2.2                 # BM25 keyword search
 
 # === Utils ===
 tqdm>=4.66.0                     # Progress bar khi index nhiều docs
+numpy>=1.22.0                    # BM25 / Chroma dependencies
+
+# === Demo UI ===
+streamlit>=1.28.0
+pandas>=2.0.0                 # Bảng scorecard trong app.py

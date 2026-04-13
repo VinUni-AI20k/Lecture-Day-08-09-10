@@ -1,0 +1,130 @@
+{
+  "total_raw_estimate": 98.0,
+  "max_raw": 98.0,
+  "projected_grading_30pts": 30.0,
+  "formula": "(98.00 / 98.0) * 30",
+  "per_question": [
+    {
+      "id": "gq01",
+      "verdict": "Full",
+      "points": 10.0,
+      "max_points": 10.0,
+      "reason": "Câu trả lời đã nêu rõ thời gian xử lý/khắc phục của P1 và có căn cứ từ tài liệu SLA. Không có thông tin nào bị bịa đặt.",
+      "criteria_met": [
+        true,
+        true
+      ],
+      "hallucination": false
+    },
+    {
+      "id": "gq02",
+      "verdict": "Full",
+      "points": 10.0,
+      "max_points": 10.0,
+      "reason": "Câu trả lời nêu rõ nhân viên remote cần VPN khi làm việc với hệ thống nội bộ và giới hạn tối đa 2 thiết bị kết nối VPN cùng lúc.",
+      "criteria_met": [
+        true,
+        true
+      ],
+      "hallucination": false
+    },
+    {
+      "id": "gq03",
+      "verdict": "Full",
+      "points": 10.0,
+      "max_points": 10.0,
+      "reason": "Câu trả lời đúng với chính sách hoàn tiền và không bỏ sót điều kiện nào. Thông tin được cung cấp chính xác và đầy đủ.",
+      "criteria_met": [
+        true,
+        true
+      ],
+      "hallucination": false
+    },
+    {
+      "id": "gq04",
+      "verdict": "Full",
+      "points": 8.0,
+      "max_points": 8.0,
+      "reason": "Câu trả lời nêu đúng 110% giá trị so với số tiền hoàn khi chọn store credit. Không có thông tin nào bị bịa đặt.",
+      "criteria_met": [
+        true
+      ],
+      "hallucination": false
+    },
+    {
+      "id": "gq05",
+      "verdict": "Full",
+      "points": 10.0,
+      "max_points": 10.0,
+      "reason": "Câu trả lời đáp ứng đầy đủ các tiêu chí yêu cầu. Không có thông tin nào bị bịa đặt.",
+      "criteria_met": [
+        true,
+        true,
+        true
+      ],
+      "hallucination": false
+    },
+    {
+      "id": "gq06",
+      "verdict": "Full",
+      "points": 12.0,
+      "max_points": 12.0,
+      "reason": "Câu trả lời đã đáp ứng đầy đủ tất cả các tiêu chí yêu cầu. Không có thông tin nào bị bịa đặt.",
+      "criteria_met": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "hallucination": false
+    },
+    {
+      "id": "gq07",
+      "verdict": "Full",
+      "points": 10.0,
+      "max_points": 10.0,
+      "reason": "Câu trả lời rõ ràng nêu không có thông tin về mức phạt trong tài liệu. Không có bất kỳ con số hay quy định nào được bịa đặt.",
+      "criteria_met": [
+        true,
+        true
+      ],
+      "hallucination": false
+    },
+    {
+      "id": "gq08",
+      "verdict": "Full",
+      "points": 10.0,
+      "max_points": 10.0,
+      "reason": "Câu trả lời đã phân biệt rõ ràng giữa nghỉ phép năm và nghỉ ốm, đồng thời nêu rõ điều kiện cần có giấy tờ y tế nếu nghỉ ốm trên 3 ngày. Không có thông tin nào bị bịa đặt.",
+      "criteria_met": [
+        true,
+        true
+      ],
+      "hallucination": false
+    },
+    {
+      "id": "gq09",
+      "verdict": "Full",
+      "points": 8.0,
+      "max_points": 8.0,
+      "reason": "Câu trả lời đúng với cả hai tiêu chí đã đề ra. Không có thông tin nào bị bịa đặt.",
+      "criteria_met": [
+        true,
+        true
+      ],
+      "hallucination": false
+    },
+    {
+      "id": "gq10",
+      "verdict": "Full",
+      "points": 10.0,
+      "max_points": 10.0,
+      "reason": "Câu trả lời đúng với nội dung chính sách hoàn tiền v4. Không có thông tin nào bị bịa đặt.",
+      "criteria_met": [
+        true,
+        true
+      ],
+      "hallucination": false
+    }
+  ]
+}

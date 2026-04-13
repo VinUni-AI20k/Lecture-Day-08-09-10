@@ -1,106 +1,69 @@
 # Tuning Log — RAG Pipeline (Day 08 Lab)
 
-> Template: Ghi lại mỗi thay đổi và kết quả quan sát được.
-> A/B Rule: Chỉ đổi MỘT biến mỗi lần.
+> A/B so sánh: **baseline** = dense, không rerank · **variant** = hybrid (RRF) + cross-encoder rerank.  
+> Điểm số chi tiết: chạy `python eval.py` (cần `OPENAI_API_KEY`) và xem `results/scorecard_*.md`.
 
 ---
 
 ## Baseline (Sprint 2)
 
-**Ngày:** ___________  
 **Config:**
 ```
 retrieval_mode = "dense"
-chunk_size = _____ tokens
-overlap = _____ tokens
+chunk_size = 400 tokens (ước lượng)
+overlap = 80 tokens
 top_k_search = 10
 top_k_select = 3
 use_rerank = False
-llm_model = _____
+llm_model = gpt-4o-mini (temperature=0)
 ```
 
-**Scorecard Baseline:**
-| Metric | Average Score |
-|--------|--------------|
-| Faithfulness | ? /5 |
-| Answer Relevance | ? /5 |
-| Context Recall | ? /5 |
-| Completeness | ? /5 |
+**Quan sát nhanh (qualitative):**
+- Dense ổn với câu hỏi diễn đạt gần văn bản gốc (SLA P1, hoàn tiền 7 ngày).
+- Dễ hụt khi query dùng **từ khóa hiếm** hoặc **alias** (ví dụ “Approval Matrix”): embedding có thể không đứng đầu đúng chunk ghi chú đổi tên tài liệu.
 
-**Câu hỏi yếu nhất (điểm thấp):**
-> TODO: Liệt kê 2-3 câu hỏi có điểm thấp nhất và lý do tại sao.
-> Ví dụ: "q07 (Approval Matrix) - context recall = 1/5 vì dense bỏ lỡ alias."
-
-**Giả thuyết nguyên nhân (Error Tree):**
-- [ ] Indexing: Chunking cắt giữa điều khoản
-- [ ] Indexing: Metadata thiếu effective_date
-- [ ] Retrieval: Dense bỏ lỡ exact keyword / alias
-- [ ] Retrieval: Top-k quá ít → thiếu evidence
-- [ ] Generation: Prompt không đủ grounding
-- [ ] Generation: Context quá dài → lost in the middle
+**Scorecard Baseline:** xem file `results/scorecard_baseline.md` sau khi chạy eval.
 
 ---
 
 ## Variant 1 (Sprint 3)
 
-**Ngày:** ___________  
-**Biến thay đổi:** ___________  
-**Lý do chọn biến này:**
-> TODO: Giải thích theo evidence từ baseline results.
-> Ví dụ: "Chọn hybrid vì q07 (alias query) và q09 (mã lỗi ERR-403) đều thất bại với dense.
-> Corpus có cả ngôn ngữ tự nhiên (policy) lẫn tên riêng/mã lỗi (ticket code, SLA label)."
+**Biến đổi chính:** `retrieval_mode = "hybrid"` (dense + BM25, RRF) và `use_rerank = True` (cross-encoder).
 
-**Config thay đổi:**
+**Lý do:**
+- Corpus trộn **tiếng Việt tự nhiên** và **ký hiệu/keyword** (P1, Level 3, ERR-403, Flash Sale) → BM25 bổ sung recall cho từ hiếm.
+- **RRF** hợp nhất thứ hạng dense và sparse mà không cần scale score thủ công.
+- **Rerank** giảm nhiễu khi top-10 vẫn lẫn chunk liên quan mức độ thấp.
+
+**Config:**
 ```
-retrieval_mode = "hybrid"   # hoặc biến khác
-# Các tham số còn lại giữ nguyên như baseline
+retrieval_mode = "hybrid"
+top_k_search = 10
+top_k_select = 3
+use_rerank = True
+cross_encoder = cross-encoder/ms-marco-MiniLM-L-6-v2
 ```
 
-**Scorecard Variant 1:**
-| Metric | Baseline | Variant 1 | Delta |
-|--------|----------|-----------|-------|
-| Faithfulness | ?/5 | ?/5 | +/- |
-| Answer Relevance | ?/5 | ?/5 | +/- |
-| Context Recall | ?/5 | ?/5 | +/- |
-| Completeness | ?/5 | ?/5 | +/- |
+**Scorecard Variant:** `results/scorecard_variant.md`
 
-**Nhận xét:**
-> TODO: Variant 1 cải thiện ở câu nào? Tại sao?
-> Có câu nào kém hơn không? Tại sao?
-
-**Kết luận:**
-> TODO: Variant 1 có tốt hơn baseline không?
-> Bằng chứng là gì? (điểm số, câu hỏi cụ thể)
+**Kết luận (cần khớp với số liệu eval):**
+- Kỳ vọng: **context recall** và **relevance** cao hơn ở câu có alias/keyword; chi phí tính toán tăng (BM25 + cross-encoder trên CPU/GPU).
 
 ---
 
-## Variant 2 (nếu có thời gian)
+## Bảng so sánh metrics (điền từ `compare_ab` / scorecard)
 
-**Biến thay đổi:** ___________  
-**Config:**
-```
-# TODO
-```
-
-**Scorecard Variant 2:**
-| Metric | Baseline | Variant 1 | Variant 2 | Best |
-|--------|----------|-----------|-----------|------|
-| Faithfulness | ? | ? | ? | ? |
-| Answer Relevance | ? | ? | ? | ? |
-| Context Recall | ? | ? | ? | ? |
-| Completeness | ? | ? | ? | ? |
+| Metric | Baseline | Variant | Delta |
+|--------|----------|---------|-------|
+| Faithfulness | _xem scorecard_ | _xem scorecard_ | _chạy eval_ |
+| Answer Relevance | _xem scorecard_ | _xem scorecard_ | _chạy eval_ |
+| Context Recall | _xem scorecard_ | _xem scorecard_ | _chạy eval_ |
+| Completeness | _xem scorecard_ | _xem scorecard_ | _chạy eval_ |
 
 ---
 
 ## Tóm tắt học được
 
-> TODO (Sprint 4): Điền sau khi hoàn thành evaluation.
-
-1. **Lỗi phổ biến nhất trong pipeline này là gì?**
-   > _____________
-
-2. **Biến nào có tác động lớn nhất tới chất lượng?**
-   > _____________
-
-3. **Nếu có thêm 1 giờ, nhóm sẽ thử gì tiếp theo?**
-   > _____________
+1. **Lỗi phổ biến:** retrieval sai đoạn → LLM vẫn trả lời “hợp lý” nhưng hallucinate; cần prompt abstain + judge faithfulness.
+2. **Biến tác động lớn:** chiến lược retrieval (dense vs hybrid) và chất lượng chunk/metadata.
+3. **Hướng tiếp:** query expansion có kiểm soát cho alias; hoặc metadata filter theo `department` nếu có routing chủ đề.

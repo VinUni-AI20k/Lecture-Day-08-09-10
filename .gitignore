@@ -4,3 +4,16 @@
 
 # Grading questions — không public trước 17:00
 day08/lab/data/grading_questions.json
+
+# Day 08 lab — local / generated (không commit)
+day08/lab/.env
+day08/lab/__pycache__/
+day08/lab/**/__pycache__/
+day08/lab/chroma_db/
+day08/lab/logs/*.jsonl
+day08/lab/logs/*.log
+day08/lab/logs/*.json
+!day08/lab/logs/.gitkeep
+
+# Reference UI (nested git repo — không nhúng; clone riêng nếu cần)
+vinagent-web/
