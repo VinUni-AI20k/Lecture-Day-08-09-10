@@ -474,40 +474,54 @@ def compare_ab(
 def generate_scorecard_summary(results: List[Dict], label: str) -> str:
     """
     Tạo báo cáo tóm tắt scorecard dạng markdown.
-
-    TODO Sprint 4: Cập nhật template này theo kết quả thực tế của nhóm.
     """
-    metrics = ["faithfulness", "relevance", "context_recall", "completeness"]
-    averages = {}
-    for metric in metrics:
-        scores = [r[metric] for r in results if r[metric] is not None]
-        averages[metric] = sum(scores) / len(scores) if scores else None
+    # 1. Tính toán điểm trung bình
+    metrics = {
+        "faithfulness": {"target": 0.90, "score": 0.0},
+        "relevance": {"target": 0.85, "score": 0.0},
+        "context_recall": {"target": 0.80, "score": 0.0},
+        "completeness": {"target": 0.80, "score": 0.0}
+    }
+    
+    for m in metrics:
+        scores = [r[m] for r in results if r[m] is not None]
+        # Chuyển thang điểm 1-5 sang 0.0-1.0 (ví dụ 4/5 = 0.8)
+        avg = (sum(scores) / len(scores) / 5) if scores else 0.0
+        metrics[m]["score"] = avg
 
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M")
 
-    md = f"""# Scorecard: {label}
-Generated: {timestamp}
+    # 2. Xây dựng nội dung Markdown
+    md = f"# Scorecard — {label.replace('_', ' ').title()}\n"
+    md += f"**Thời gian chạy:** {timestamp} \n\n"
+    
+    md += "## RAGAS Metrics\n"
+    md += "| Metric | Score | Target | Status |\n"
+    md += "|---|---|---|---|---|\n"
+    
+    for name, data in metrics.items():
+        status = "✅" if data["score"] >= data["target"] else "❌"
+        md += f"| {name.replace('_', ' ').title()} | {data['score']:.2f} | > {data['target']:.2f} | {status} |\n"
+    
+    # Thêm Abstain Accuracy (tính riêng dựa trên q09)
+    q09_result = next((r for r in results if r['id'] == 'q09'), None)
+    abstain_score = 1.0 if (q09_result and q09_result['context_recall'] == 5) else 0.0
+    md += f"| Abstain Accuracy | {abstain_score:.2f} | = 1.00 | {'✅' if abstain_score == 1.0 else '❌'} |\n\n"
 
-## Summary
-
-| Metric | Average Score |
-|--------|--------------|
-"""
-    for metric, avg in averages.items():
-        avg_str = f"{avg:.2f}/5" if avg else "N/A"
-        md += f"| {metric.replace('_', ' ').title()} | {avg_str} |\n"
-
-    md += "\n## Per-Question Results\n\n"
-    md += "| ID | Category | Faithful | Relevant | Recall | Complete | Notes |\n"
-    md += "|----|----------|----------|----------|--------|----------|-------|\n"
+    md += "## Per-question Results\n"
+    md += "| ID | Category | Expected | Got | Pass? |\n"
+    md += "|---|---|---|---|---|\n"
 
     for r in results:
-        md += (f"| {r['id']} | {r['category']} | {r.get('faithfulness', 'N/A')} | "
-               f"{r.get('relevance', 'N/A')} | {r.get('context_recall', 'N/A')} | "
-               f"{r.get('completeness', 'N/A')} | {r.get('faithfulness_notes', '')[:50]} |\n")
+        # Check pass/fail dựa trên tổng điểm (ví dụ > 3 là pass)
+        is_pass = "✅" if (r.get('faithfulness', 0) or 0) >= 4 else "❌"
+        # Rút ngắn câu trả lời để bảng đẹp
+        got_short = r['answer'][:50].replace('\n', ' ') + "..."
+        exp_short = r['expected_answer'][:50].replace('\n', ' ') + "..."
+        
+        md += f"| {r['id']} | {r['category']} | {exp_short} | {got_short} | {is_pass} |\n"
 
     return md
-
 
 # =============================================================================
 # MAIN — Chạy evaluation
@@ -557,23 +571,23 @@ if __name__ == "__main__":
 
     # --- Chạy Variant (sau khi Sprint 3 hoàn thành) ---
     # TODO Sprint 4: Uncomment sau khi implement variant trong rag_answer.py
-    # print("\n--- Chạy Variant ---")
-    # variant_results = run_scorecard(
-    #     config=VARIANT_CONFIG,
-    #     test_questions=test_questions,
-    #     verbose=True,
-    # )
-    # variant_md = generate_scorecard_summary(variant_results, VARIANT_CONFIG["label"])
-    # (RESULTS_DIR / "scorecard_variant.md").write_text(variant_md, encoding="utf-8")
+    print("\n--- Chạy Variant ---")
+    variant_results = run_scorecard(
+        config=VARIANT_CONFIG,
+        test_questions=test_questions,
+        verbose=True,
+    )
+    variant_md = generate_scorecard_summary(variant_results, VARIANT_CONFIG["label"])
+    (RESULTS_DIR / "scorecard_variant.md").write_text(variant_md, encoding="utf-8")
 
     # --- A/B Comparison ---
     # TODO Sprint 4: Uncomment sau khi có cả baseline và variant
-    # if baseline_results and variant_results:
-    #     compare_ab(
-    #         baseline_results,
-    #         variant_results,
-    #         output_csv="ab_comparison.csv"
-    #     )
+    if baseline_results and variant_results:
+        compare_ab(
+            baseline_results,
+            variant_results,
+            output_csv="ab_comparison.csv"
+        )
 
     print("\n\nViệc cần làm Sprint 4:")
     print("  1. Hoàn thành Sprint 2 + 3 trước")
