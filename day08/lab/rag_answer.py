@@ -22,6 +22,8 @@ Definition of Done Sprint 3:
 """
 
 import os
+import importlib
+import re
 from typing import List, Dict, Any, Optional, Tuple
 from dotenv import load_dotenv
 
@@ -36,6 +38,39 @@ TOP_K_SELECT = 3     # Số chunk gửi vào prompt sau rerank/select (top-3 swe
 
 # LLM_MODEL = os.getenv("LLM_MODEL", "gpt-4o-mini")
 LLM_MODEL = os.getenv("LLM_MODEL", "gemini-2.5-flash")
+
+_SPARSE_INDEX_CACHE: Dict[str, Any] = {}
+
+
+def _tokenize_for_bm25(text: str) -> List[str]:
+    """Tokenize text cho BM25 theo cách đơn giản, giữ được Unicode/tiếng Việt."""
+    return re.findall(r"\w+", text.lower(), flags=re.UNICODE)
+
+
+def _load_sparse_corpus() -> List[Dict[str, Any]]:
+    """Load toàn bộ chunks từ ChromaDB để dùng cho BM25 sparse retrieval."""
+    chromadb = importlib.import_module("chromadb")
+    from index import CHROMA_DB_DIR
+
+    client = chromadb.PersistentClient(path=str(CHROMA_DB_DIR))
+    collection = client.get_collection("rag_lab")
+    results = collection.get(include=["documents", "metadatas"])
+
+    documents = results.get("documents", []) or []
+    metadatas = results.get("metadatas", []) or []
+    ids = results.get("ids", []) or []
+
+    corpus = []
+    for idx, (doc, meta) in enumerate(zip(documents, metadatas)):
+        corpus.append(
+            {
+                "id": ids[idx] if idx < len(ids) else f"chunk_{idx}",
+                "text": doc or "",
+                "metadata": meta or {},
+            }
+        )
+
+    return corpus
 
 # =============================================================================
 # RETRIEVAL — DENSE (Vector Search)
@@ -76,7 +111,7 @@ def retrieve_dense(query: str, top_k: int = TOP_K_SEARCH) -> List[Dict[str, Any]
         # Lưu ý: distances trong ChromaDB cosine = 1 - similarity
         # Score = 1 - distance
     """
-    import chromadb
+    chromadb = importlib.import_module("chromadb")
     from index import get_embedding, CHROMA_DB_DIR
 
     client = chromadb.PersistentClient(path=str(CHROMA_DB_DIR))
@@ -141,10 +176,47 @@ def retrieve_sparse(query: str, top_k: int = TOP_K_SEARCH) -> List[Dict[str, Any
         scores = bm25.get_scores(tokenized_query)
         top_indices = sorted(range(len(scores)), key=lambda i: scores[i], reverse=True)[:top_k]
     """
-    # TODO Sprint 3: Implement BM25 search
-    # Tạm thời return empty list
-    print("[retrieve_sparse] Chưa implement — Sprint 3")
-    return []
+    cache_key = "default"
+
+    BM25Okapi = importlib.import_module("rank_bm25").BM25Okapi
+
+    if cache_key not in _SPARSE_INDEX_CACHE:
+        corpus = _load_sparse_corpus()
+        tokenized_corpus = [_tokenize_for_bm25(chunk["text"]) for chunk in corpus]
+        _SPARSE_INDEX_CACHE[cache_key] = {
+            "corpus": corpus,
+            "bm25": BM25Okapi(tokenized_corpus),
+        }
+
+    cache = _SPARSE_INDEX_CACHE[cache_key]
+    corpus = cache["corpus"]
+    bm25 = cache["bm25"]
+
+    if not corpus:
+        return []
+
+    tokenized_query = _tokenize_for_bm25(query)
+    if not tokenized_query:
+        return []
+
+    scores = bm25.get_scores(tokenized_query)
+    ranked_indices = sorted(range(len(scores)), key=lambda i: scores[i], reverse=True)[:top_k]
+
+    results: List[Dict[str, Any]] = []
+    for idx in ranked_indices:
+        score = float(scores[idx])
+        if score <= 0:
+            continue
+        chunk = corpus[idx]
+        results.append(
+            {
+                "text": chunk["text"],
+                "metadata": chunk["metadata"],
+                "score": score,
+            }
+        )
+
+    return results
 
 
 # =============================================================================
@@ -354,38 +426,25 @@ def call_llm(prompt: str) -> str:
 
     Lưu ý: Dùng temperature=0 hoặc thấp để output ổn định cho evaluation.
     """
-    from google import genai
-    from google.genai import types
+    import google.generativeai as genai
 
     api_key = os.getenv("GOOGLE_API_KEY")
     if not api_key:
         raise ValueError("Thiếu GOOGLE_API_KEY trong file .env")
 
-    client = genai.Client(api_key=api_key)
-
-    response = client.models.generate_content(
-        model=LLM_MODEL,
-        contents=prompt,
-        config=types.GenerateContentConfig(
-            temperature=0,
-            max_output_tokens=512,
-        ),
+    genai.configure(api_key=api_key)
+    model = genai.GenerativeModel(LLM_MODEL)
+    response = model.generate_content(
+        prompt,
+        generation_config={
+            "temperature": 0,
+            "max_output_tokens": 512,
+        },
     )
 
     text = getattr(response, "text", None)
     if text and text.strip():
         return text.strip()
-
-    # fallback nếu response.text rỗng
-    try:
-        candidates = response.candidates or []
-        if candidates:
-            parts = candidates[0].content.parts
-            combined = "".join(getattr(p, "text", "") for p in parts if getattr(p, "text", None))
-            if combined.strip():
-                return combined.strip()
-    except Exception:
-        pass
 
     return "Không đủ dữ liệu."
     # raise NotImplementedError(

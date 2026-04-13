@@ -292,13 +292,20 @@ def build_index(docs_dir: Path = DOCS_DIR, db_dir: Path = CHROMA_DB_DIR) -> None
         )
     """
     import chromadb
-    
+
     print(f"Đang build index từ: {docs_dir}")
     db_dir.mkdir(parents=True, exist_ok=True)
 
-    # TODO: Khởi tạo ChromaDB
-    # client = chromadb.PersistentClient(path=str(db_dir))
-    # collection = client.get_or_create_collection(...)
+    client = chromadb.PersistentClient(path=str(db_dir))
+    try:
+        client.delete_collection("rag_lab")
+    except Exception:
+        # Collection chưa tồn tại hoặc DB trống, cứ tạo mới.
+        pass
+    collection = client.get_or_create_collection(
+        name="rag_lab",
+        metadata={"hnsw:space": "cosine"}
+    )
 
     total_chunks = 0
     doc_files = list(docs_dir.glob("*.txt"))
@@ -329,12 +336,6 @@ def build_index(docs_dir: Path = DOCS_DIR, db_dir: Path = CHROMA_DB_DIR) -> None
         #     )
         # total_chunks += len(chunks)
 
-        # Placeholder để code không lỗi khi chưa implement
-        client = chromadb.PersistentClient(path=str(db_dir))
-        collection = client.get_or_create_collection(
-            name="rag_lab",
-            metadata={"hnsw:space": "cosine"}
-        )
         doc = preprocess_document(raw_text, str(filepath))
         chunks = chunk_document(doc)
         for i, chunk in enumerate(chunks):
