@@ -33,7 +33,6 @@ CHROMA_DB_DIR = Path(__file__).resolve().parent.parent / "chroma_db"
 # Gợi ý từ slide: chunk 300-500 tokens, overlap 50-80 tokens
 CHUNK_SIZE = 400       # tokens (ước lượng bằng số ký tự / 4)
 CHUNK_OVERLAP = 80     # tokens overlap giữa các chunk
-EMBEDDING_KEY = os.getenv("AUTHORIZATION_JINA")
 
 # =============================================================================
 # STEP 1: PREPROCESS
@@ -217,31 +216,80 @@ def _split_by_size(
 # Embed các chunk và lưu vào ChromaDB
 # =============================================================================
 
+def _embedding_api_base_url() -> str:
+    """
+    Base URL cho OpenAI-compatible /v1/embeddings (độc lập với CHAT_BASE_URL).
+    Để trống = https://api.openai.com/v1.
+    """
+    return (os.getenv("EMBEDDING_BASE_URL") or "").strip()
+
+
+def _openai_embedding_client():
+    """OpenAI SDK cho embeddings — chỉ EMBEDDING_BASE_URL (không dùng URL của chat)."""
+    from openai import OpenAI
+
+    api_key = os.getenv("OPENAI_API_KEY") or "ollama"
+    base_url = _embedding_api_base_url()
+    default_headers = None
+    if base_url and "ngrok" in base_url.lower():
+        # Tránh trang cảnh báo của tunnel ngrok (free tier) khi gọi API
+        default_headers = {"ngrok-skip-browser-warning": "true"}
+    kwargs: Dict[str, Any] = {"api_key": api_key}
+    if base_url:
+        kwargs["base_url"] = base_url
+    if default_headers:
+        kwargs["default_headers"] = default_headers
+    return OpenAI(**kwargs)
+
+
 def get_embedding(text: str, task: str = "retrieval.passage") -> List[float]:
     """
     Tạo embedding vector cho một đoạn text.
 
-    TODO Sprint 1:
-    Chọn một trong hai:
+    Model: EMBEDDING_MODEL (không dùng CHAT_MODEL).
 
-    Option A — OpenAI Embeddings (cần OPENAI_API_KEY):
-        from openai import OpenAI
-        client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-        response = client.embeddings.create(
-            input=text,
-            model="text-embedding-3-small"
-        )
-        return response.data[0].embedding
-
-    Option B — Sentence Transformers (chạy local, không cần API key):
-        from sentence_transformers import SentenceTransformer
-        model = SentenceTransformer("paraphrase-multilingual-MiniLM-L12-v2")
-        return model.encode(text).tolist()
+    EMBEDDING_PROVIDER:
+      - openai (mặc định): OpenAI API hoặc tương thích; base URL: chỉ EMBEDDING_BASE_URL.
+      - jina: Jina AI API (cần AUTHORIZATION_JINA).
     """
-    raise NotImplementedError(
-        "TODO: Implement get_embedding().\n"
-        "Chọn Option A (OpenAI) hoặc Option B (Sentence Transformers) trong TODO comment."
-    )
+    provider = (os.getenv("EMBEDDING_PROVIDER") or "openai").strip().lower()
+
+    if provider == "jina":
+        import requests
+
+        api_key = os.getenv("AUTHORIZATION_JINA")
+        if not api_key:
+            raise ValueError("AUTHORIZATION_JINA not found in environment. Please add to .env")
+
+        url = "https://api.jina.ai/v1/embeddings"
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {api_key}",
+        }
+        data = {
+            "model": "jina-embeddings-v5-text-small",
+            "task": task,
+            "normalized": True,
+            "input": [text],
+        }
+
+        try:
+            response = requests.post(url, headers=headers, json=data, timeout=60)
+            response.raise_for_status()
+            return response.json()["data"][0]["embedding"]
+        except Exception as e:
+            print(f"Lỗi khi gọi JINA API: {e}")
+            raise e
+
+    # OpenAI-compatible (OpenAI cloud, Ollama /v1/embeddings, …)
+    model = os.getenv("EMBEDDING_MODEL", "text-embedding-3-small")
+    client = _openai_embedding_client()
+    try:
+        r = client.embeddings.create(model=model, input=text)
+        return list(r.data[0].embedding)
+    except Exception as e:
+        print(f"Lỗi khi gọi embeddings API: {e}")
+        raise e
 
 
 def build_index(docs_dir: Path = DOCS_DIR, db_dir: Path = CHROMA_DB_DIR) -> None:
