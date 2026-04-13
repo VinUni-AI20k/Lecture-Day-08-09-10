@@ -1,0 +1,907 @@
+[
+  {
+    "id": "q01",
+    "question": "SLA xử lý ticket P1 là bao lâu?",
+    "results": {
+      "dense": {
+        "answer": "SLA xử lý ticket P1 là 4 giờ cho việc khắc phục và 15 phút cho phản hồi ban đầu [1].",
+        "sources": [
+          "support/sla-p1-2026.pdf",
+          "policy/refund-v4.pdf"
+        ],
+        "chunks_retrieved": 3
+      },
+      "sparse": {
+        "answer": "SLA xử lý ticket P1 là 4 giờ [2].",
+        "sources": [
+          "support/sla-p1-2026.pdf",
+          "policy/refund-v4.pdf"
+        ],
+        "chunks_retrieved": 3
+      },
+      "hybrid": {
+        "answer": "SLA xử lý ticket P1 là 15 phút cho phản hồi ban đầu và 4 giờ cho xử lý và khắc phục [1].",
+        "sources": [
+          "support/sla-p1-2026.pdf",
+          "policy/refund-v4.pdf"
+        ],
+        "chunks_retrieved": 3
+      }
+    },
+    "timestamp": "2026-04-13T15:25:06"
+  },
+  {
+    "id": "q02",
+    "question": "Khách hàng có thể yêu cầu hoàn tiền trong bao nhiêu ngày?",
+    "results": {
+      "dense": {
+        "answer": "Khách hàng có thể yêu cầu hoàn tiền trong vòng 7 ngày làm việc kể từ thời điểm xác nhận đơn hàng [1].",
+        "sources": [
+          "policy/refund-v4.pdf"
+        ],
+        "chunks_retrieved": 3
+      },
+      "sparse": {
+        "answer": "Khách hàng có thể yêu cầu hoàn tiền trong vòng 7 ngày làm việc kể từ thời điểm xác nhận đơn hàng [2].",
+        "sources": [
+          "policy/refund-v4.pdf"
+        ],
+        "chunks_retrieved": 3
+      },
+      "hybrid": {
+        "answer": "Khách hàng có thể yêu cầu hoàn tiền trong vòng 7 ngày làm việc kể từ thời điểm xác nhận đơn hàng [1].",
+        "sources": [
+          "policy/refund-v4.pdf"
+        ],
+        "chunks_retrieved": 3
+      }
+    },
+    "timestamp": "2026-04-13T15:25:13"
+  },
+  {
+    "id": "q03",
+    "question": "Ai phải phê duyệt để cấp quyền Level 3?",
+    "results": {
+      "dense": {
+        "answer": "Để cấp quyền Level 3, cần có sự phê duyệt của Line Manager, IT Admin và IT Security [1].",
+        "sources": [
+          "hr/leave-policy-2026.pdf",
+          "it/access-control-sop.md"
+        ],
+        "chunks_retrieved": 3
+      },
+      "sparse": {
+        "answer": "Để cấp quyền Level 3, yêu cầu phải được phê duyệt bởi Line Manager trong bước 2 của quy trình yêu cầu cấp quyền [2].",
+        "sources": [
+          "support/helpdesk-faq.md",
+          "it/access-control-sop.md"
+        ],
+        "chunks_retrieved": 3
+      },
+      "hybrid": {
+        "answer": "Để cấp quyền Level 3, yêu cầu phải được phê duyệt bởi Line Manager, IT Admin và IT Security [2].",
+        "sources": [
+          "it/access-control-sop.md"
+        ],
+        "chunks_retrieved": 3
+      }
+    },
+    "timestamp": "2026-04-13T15:25:18"
+  },
+  {
+    "id": "q04",
+    "question": "Sản phẩm kỹ thuật số có được hoàn tiền không?",
+    "results": {
+      "dense": {
+        "answer": "Sản phẩm kỹ thuật số không được hoàn tiền, trừ khi có lỗi do nhà sản xuất và đáp ứng các điều kiện khác [1].",
+        "sources": [
+          "policy/refund-v4.pdf"
+        ],
+        "chunks_retrieved": 3
+      },
+      "sparse": {
+        "answer": "Sản phẩm kỹ thuật số không được hoàn tiền, trừ khi có lỗi do nhà sản xuất và đáp ứng các điều kiện khác [1].",
+        "sources": [
+          "policy/refund-v4.pdf"
+        ],
+        "chunks_retrieved": 3
+      },
+      "hybrid": {
+        "answer": "Sản phẩm kỹ thuật số không được hoàn tiền, trừ khi có lỗi do nhà sản xuất và đáp ứng các điều kiện khác [1].",
+        "sources": [
+          "policy/refund-v4.pdf"
+        ],
+        "chunks_retrieved": 3
+      }
+    },
+    "timestamp": "2026-04-13T15:25:24"
+  },
+  {
+    "id": "q05",
+    "question": "Tài khoản bị khóa sau bao nhiêu lần đăng nhập sai?",
+    "results": {
+      "dense": {
+        "answer": "Tài khoản bị khóa sau 5 lần đăng nhập sai liên tiếp. Để mở khóa, liên hệ IT Helpdesk hoặc tự reset qua portal SSO [1].",
+        "sources": [
+          "support/helpdesk-faq.md",
+          "it/access-control-sop.md"
+        ],
+        "chunks_retrieved": 3
+      },
+      "sparse": {
+        "answer": "Tài khoản bị khóa sau 5 lần đăng nhập sai liên tiếp. Để mở khóa, liên hệ IT Helpdesk hoặc tự reset qua portal SSO [1].",
+        "sources": [
+          "support/helpdesk-faq.md"
+        ],
+        "chunks_retrieved": 3
+      },
+      "hybrid": {
+        "answer": "Tài khoản bị khóa sau 5 lần đăng nhập sai liên tiếp. Để mở khóa, liên hệ IT Helpdesk hoặc tự reset qua portal SSO [1].",
+        "sources": [
+          "support/helpdesk-faq.md",
+          "policy/refund-v4.pdf"
+        ],
+        "chunks_retrieved": 3
+      }
+    },
+    "timestamp": "2026-04-13T15:25:33"
+  },
+  {
+    "id": "q06",
+    "question": "Escalation trong sự cố P1 diễn ra như thế nào?",
+    "results": {
+      "dense": {
+        "answer": "Quy trình escalation trong sự cố P1 diễn ra như sau:\n\n1. On-call IT Admin có thể cấp quyền tạm thời (max 24 giờ) sau khi được Tech Lead phê duyệt bằng lời.\n2. Sau 24 giờ, phải có ticket chính thức hoặc quyền bị thu hồi tự động.\n3. Mọi quyền tạm thời phải được ghi log vào hệ thống Security Audit [1]. \n\nNgoài ra, nếu không có phản hồi trong 10 phút, ticket P1 sẽ tự động escalate lên Senior Engineer [3].",
+        "sources": [
+          "support/sla-p1-2026.pdf",
+          "it/access-control-sop.md"
+        ],
+        "chunks_retrieved": 3
+      },
+      "sparse": {
+        "answer": "Quy trình escalation khẩn cấp trong sự cố P1 diễn ra như sau: On-call IT Admin có thể cấp quyền tạm thời (tối đa 24 giờ) sau khi được Tech Lead phê duyệt bằng lời. Sau 24 giờ, phải có ticket chính thức hoặc quyền sẽ bị thu hồi tự động. Mọi quyền tạm thời phải được ghi log vào hệ thống Security Audit [2].",
+        "sources": [
+          "support/sla-p1-2026.pdf",
+          "support/helpdesk-faq.md",
+          "it/access-control-sop.md"
+        ],
+        "chunks_retrieved": 3
+      },
+      "hybrid": {
+        "answer": "Quy trình escalation khẩn cấp trong sự cố P1 diễn ra như sau: \n\n1. On-call IT Admin có thể cấp quyền tạm thời (tối đa 24 giờ) sau khi được Tech Lead phê duyệt bằng lời.\n2. Sau 24 giờ, phải có ticket chính thức hoặc quyền sẽ bị thu hồi tự động.\n3. Mọi quyền tạm thời phải được ghi log vào hệ thống Security Audit [1].",
+        "sources": [
+          "support/sla-p1-2026.pdf",
+          "it/access-control-sop.md"
+        ],
+        "chunks_retrieved": 3
+      }
+    },
+    "timestamp": "2026-04-13T15:25:43"
+  },
+  {
+    "id": "q07",
+    "question": "Approval Matrix để cấp quyền hệ thống là tài liệu nào?",
+    "results": {
+      "dense": {
+        "answer": "Không có thông tin này trong tài liệu.",
+        "sources": [
+          "it/access-control-sop.md"
+        ],
+        "chunks_retrieved": 3
+      },
+      "sparse": {
+        "answer": "Không có thông tin này trong tài liệu.",
+        "sources": [
+          "support/helpdesk-faq.md",
+          "it/access-control-sop.md"
+        ],
+        "chunks_retrieved": 3
+      },
+      "hybrid": {
+        "answer": "Không có thông tin này trong tài liệu.",
+        "sources": [
+          "it/access-control-sop.md"
+        ],
+        "chunks_retrieved": 3
+      }
+    },
+    "timestamp": "2026-04-13T15:25:48"
+  },
+  {
+    "id": "q08",
+    "question": "Nhân viên được làm remote tối đa mấy ngày mỗi tuần?",
+    "results": {
+      "dense": {
+        "answer": "Nhân viên được làm remote tối đa 2 ngày mỗi tuần [1].",
+        "sources": [
+          "hr/leave-policy-2026.pdf",
+          "it/access-control-sop.md"
+        ],
+        "chunks_retrieved": 3
+      },
+      "sparse": {
+        "answer": "Nhân viên được làm remote tối đa 2 ngày mỗi tuần [1].",
+        "sources": [
+          "hr/leave-policy-2026.pdf",
+          "support/helpdesk-faq.md"
+        ],
+        "chunks_retrieved": 3
+      },
+      "hybrid": {
+        "answer": "Nhân viên được làm remote tối đa 2 ngày mỗi tuần [1].",
+        "sources": [
+          "hr/leave-policy-2026.pdf",
+          "it/access-control-sop.md"
+        ],
+        "chunks_retrieved": 3
+      }
+    },
+    "timestamp": "2026-04-13T15:25:53"
+  },
+  {
+    "id": "q09",
+    "question": "ERR-403-AUTH là lỗi gì và cách xử lý?",
+    "results": {
+      "dense": {
+        "answer": "Không có thông tin này trong tài liệu.",
+        "sources": [
+          "support/helpdesk-faq.md",
+          "it/access-control-sop.md"
+        ],
+        "chunks_retrieved": 3
+      },
+      "sparse": {
+        "answer": "Không có thông tin này trong tài liệu.",
+        "sources": [
+          "support/sla-p1-2026.pdf",
+          "support/helpdesk-faq.md",
+          "policy/refund-v4.pdf"
+        ],
+        "chunks_retrieved": 3
+      },
+      "hybrid": {
+        "answer": "Không có thông tin này trong tài liệu.",
+        "sources": [
+          "support/sla-p1-2026.pdf",
+          "support/helpdesk-faq.md",
+          "it/access-control-sop.md"
+        ],
+        "chunks_retrieved": 3
+      }
+    },
+    "timestamp": "2026-04-13T15:25:59"
+  },
+  {
+    "id": "q10",
+    "question": "Nếu cần hoàn tiền khẩn cấp cho khách hàng VIP, quy trình có khác không?",
+    "results": {
+      "dense": {
+        "answer": "Không có thông tin này trong tài liệu.",
+        "sources": [
+          "policy/refund-v4.pdf"
+        ],
+        "chunks_retrieved": 3
+      },
+      "sparse": {
+        "answer": "Không có thông tin này trong tài liệu.",
+        "sources": [
+          "policy/refund-v4.pdf",
+          "it/access-control-sop.md"
+        ],
+        "chunks_retrieved": 3
+      },
+      "hybrid": {
+        "answer": "Không có thông tin này trong tài liệu.",
+        "sources": [
+          "it/access-control-sop.md",
+          "policy/refund-v4.pdf"
+        ],
+        "chunks_retrieved": 3
+      }
+    },
+    "timestamp": "2026-04-13T15:26:04"
+  },
+  {
+    "id": "q11",
+    "question": "SLA xử lý ticket P1 là bao lâu?",
+    "results": {
+      "dense": {
+        "answer": "SLA xử lý ticket P1 là 4 giờ cho việc khắc phục và 15 phút cho phản hồi ban đầu [1].",
+        "sources": [
+          "support/sla-p1-2026.pdf",
+          "policy/refund-v4.pdf"
+        ],
+        "chunks_retrieved": 3
+      },
+      "sparse": {
+        "answer": "SLA xử lý ticket P1 là 4 giờ [2].",
+        "sources": [
+          "support/sla-p1-2026.pdf",
+          "policy/refund-v4.pdf"
+        ],
+        "chunks_retrieved": 3
+      },
+      "hybrid": {
+        "answer": "SLA xử lý ticket P1 là 4 giờ cho việc khắc phục sau phản hồi ban đầu trong 15 phút [1].",
+        "sources": [
+          "support/sla-p1-2026.pdf",
+          "policy/refund-v4.pdf"
+        ],
+        "chunks_retrieved": 3
+      }
+    },
+    "timestamp": "2026-04-13T15:26:10"
+  },
+  {
+    "id": "q12",
+    "question": "Nếu ticket P1 không có phản hồi trong 10 phút thì hệ thống xử lý thế nào?",
+    "results": {
+      "dense": {
+        "answer": "Nếu ticket P1 không có phản hồi trong 10 phút, hệ thống sẽ tự động escalate lên Senior Engineer [1].",
+        "sources": [
+          "support/sla-p1-2026.pdf"
+        ],
+        "chunks_retrieved": 3
+      },
+      "sparse": {
+        "answer": "Nếu ticket P1 không có phản hồi trong 10 phút, hệ thống sẽ tự động escalate lên Senior Engineer [1].",
+        "sources": [
+          "support/sla-p1-2026.pdf",
+          "support/helpdesk-faq.md"
+        ],
+        "chunks_retrieved": 3
+      },
+      "hybrid": {
+        "answer": "Nếu ticket P1 không có phản hồi trong 10 phút, hệ thống sẽ tự động escalate lên Senior Engineer [1].",
+        "sources": [
+          "support/sla-p1-2026.pdf",
+          "policy/refund-v4.pdf"
+        ],
+        "chunks_retrieved": 3
+      }
+    },
+    "timestamp": "2026-04-13T15:26:16"
+  },
+  {
+    "id": "q13",
+    "question": "Sau khi xử lý xong sự cố P1, phải viết incident report trong bao lâu?",
+    "results": {
+      "dense": {
+        "answer": "Sau khi khắc phục sự cố P1, phải viết incident report trong vòng 24 giờ [1].",
+        "sources": [
+          "support/sla-p1-2026.pdf",
+          "support/helpdesk-faq.md"
+        ],
+        "chunks_retrieved": 3
+      },
+      "sparse": {
+        "answer": "Sau khi khắc phục sự cố P1, phải viết incident report trong vòng 24 giờ [1].",
+        "sources": [
+          "support/sla-p1-2026.pdf",
+          "it/access-control-sop.md"
+        ],
+        "chunks_retrieved": 3
+      },
+      "hybrid": {
+        "answer": "Sau khi khắc phục sự cố P1, phải viết incident report trong vòng 24 giờ [1].",
+        "sources": [
+          "support/sla-p1-2026.pdf",
+          "support/helpdesk-faq.md"
+        ],
+        "chunks_retrieved": 3
+      }
+    },
+    "timestamp": "2026-04-13T15:26:22"
+  },
+  {
+    "id": "q14",
+    "question": "Khách hàng có thể yêu cầu hoàn tiền trong bao nhiêu ngày làm việc kể từ lúc xác nhận đơn hàng?",
+    "results": {
+      "dense": {
+        "answer": "Khách hàng có thể yêu cầu hoàn tiền trong vòng 7 ngày làm việc kể từ thời điểm xác nhận đơn hàng [1].",
+        "sources": [
+          "policy/refund-v4.pdf"
+        ],
+        "chunks_retrieved": 3
+      },
+      "sparse": {
+        "answer": "Khách hàng có thể yêu cầu hoàn tiền trong vòng 7 ngày làm việc kể từ thời điểm xác nhận đơn hàng [1].",
+        "sources": [
+          "policy/refund-v4.pdf"
+        ],
+        "chunks_retrieved": 3
+      },
+      "hybrid": {
+        "answer": "Khách hàng có thể yêu cầu hoàn tiền trong vòng 7 ngày làm việc kể từ thời điểm xác nhận đơn hàng [1].",
+        "sources": [
+          "policy/refund-v4.pdf"
+        ],
+        "chunks_retrieved": 3
+      }
+    },
+    "timestamp": "2026-04-13T15:26:28"
+  },
+  {
+    "id": "q15",
+    "question": "Sản phẩm license key hoặc subscription có được hoàn tiền không?",
+    "results": {
+      "dense": {
+        "answer": "Sản phẩm license key hoặc subscription không được hoàn tiền theo ngoại lệ trong chính sách hoàn tiền [1].",
+        "sources": [
+          "support/helpdesk-faq.md",
+          "policy/refund-v4.pdf"
+        ],
+        "chunks_retrieved": 3
+      },
+      "sparse": {
+        "answer": "Sản phẩm license key hoặc subscription không được hoàn tiền theo chính sách ngoại lệ [1].",
+        "sources": [
+          "policy/refund-v4.pdf"
+        ],
+        "chunks_retrieved": 3
+      },
+      "hybrid": {
+        "answer": "Sản phẩm license key hoặc subscription không được hoàn tiền theo chính sách hoàn tiền, vì chúng thuộc danh mục hàng kỹ thuật số [1].",
+        "sources": [
+          "support/helpdesk-faq.md",
+          "policy/refund-v4.pdf"
+        ],
+        "chunks_retrieved": 3
+      }
+    },
+    "timestamp": "2026-04-13T15:26:34"
+  },
+  {
+    "id": "q16",
+    "question": "Đơn hàng đã áp dụng Flash Sale có được hoàn tiền không?",
+    "results": {
+      "dense": {
+        "answer": "Đơn hàng đã áp dụng mã giảm giá đặc biệt theo chương trình khuyến mãi Flash Sale sẽ không được hoàn tiền [1].",
+        "sources": [
+          "policy/refund-v4.pdf"
+        ],
+        "chunks_retrieved": 3
+      },
+      "sparse": {
+        "answer": "Đơn hàng đã áp dụng mã giảm giá đặc biệt theo chương trình khuyến mãi Flash Sale sẽ không được hoàn tiền [1].",
+        "sources": [
+          "policy/refund-v4.pdf"
+        ],
+        "chunks_retrieved": 3
+      },
+      "hybrid": {
+        "answer": "Đơn hàng đã áp dụng mã giảm giá đặc biệt theo chương trình khuyến mãi Flash Sale sẽ không được hoàn tiền [1].",
+        "sources": [
+          "policy/refund-v4.pdf"
+        ],
+        "chunks_retrieved": 3
+      }
+    },
+    "timestamp": "2026-04-13T15:26:40"
+  },
+  {
+    "id": "q17",
+    "question": "Đơn hàng đặt trước ngày 01/02/2026 sẽ theo chính sách nào?",
+    "results": {
+      "dense": {
+        "answer": "Đơn hàng đặt trước ngày 01/02/2026 sẽ áp dụng theo chính sách hoàn tiền phiên bản 3 [1].",
+        "sources": [
+          "policy/refund-v4.pdf"
+        ],
+        "chunks_retrieved": 3
+      },
+      "sparse": {
+        "answer": "Đơn hàng đặt trước ngày 01/02/2026 sẽ áp dụng theo chính sách hoàn tiền phiên bản 3 [1].",
+        "sources": [
+          "policy/refund-v4.pdf"
+        ],
+        "chunks_retrieved": 3
+      },
+      "hybrid": {
+        "answer": "Đơn hàng đặt trước ngày 01/02/2026 sẽ áp dụng theo chính sách hoàn tiền phiên bản 3 [1].",
+        "sources": [
+          "policy/refund-v4.pdf"
+        ],
+        "chunks_retrieved": 3
+      }
+    },
+    "timestamp": "2026-04-13T15:26:46"
+  },
+  {
+    "id": "q18",
+    "question": "Approval Matrix for System Access là tài liệu nào hiện nay?",
+    "results": {
+      "dense": {
+        "answer": "Không có thông tin này trong tài liệu.",
+        "sources": [
+          "it/access-control-sop.md"
+        ],
+        "chunks_retrieved": 3
+      },
+      "sparse": {
+        "answer": "Không có thông tin này trong tài liệu.",
+        "sources": [
+          "support/helpdesk-faq.md",
+          "it/access-control-sop.md"
+        ],
+        "chunks_retrieved": 3
+      },
+      "hybrid": {
+        "answer": "Không có thông tin này trong tài liệu.",
+        "sources": [
+          "it/access-control-sop.md"
+        ],
+        "chunks_retrieved": 3
+      }
+    },
+    "timestamp": "2026-04-13T15:26:50"
+  },
+  {
+    "id": "q19",
+    "question": "Nhân viên phải tạo access request ticket ở đâu và bước nào có IT Security review?",
+    "results": {
+      "dense": {
+        "answer": "Nhân viên phải tạo Access Request ticket trên Jira (project IT-ACCESS) và IT Security review diễn ra ở Bước 4 [1].",
+        "sources": [
+          "it/access-control-sop.md"
+        ],
+        "chunks_retrieved": 3
+      },
+      "sparse": {
+        "answer": "Nhân viên phải tạo Access Request ticket trên Jira (project IT-ACCESS). Bước có IT Security review là Bước 4, khi IT Security review với Level 3 và Level 4 [1].",
+        "sources": [
+          "hr/leave-policy-2026.pdf",
+          "it/access-control-sop.md"
+        ],
+        "chunks_retrieved": 3
+      },
+      "hybrid": {
+        "answer": "Nhân viên phải tạo Access Request ticket trên Jira (project IT-ACCESS) và IT Security review diễn ra ở Bước 4 [1].",
+        "sources": [
+          "it/access-control-sop.md"
+        ],
+        "chunks_retrieved": 3
+      }
+    },
+    "timestamp": "2026-04-13T15:26:57"
+  },
+  {
+    "id": "q20",
+    "question": "Level 1 đến Level 4 cần ai phê duyệt và mất bao lâu?",
+    "results": {
+      "dense": {
+        "answer": "Level 1 cần phê duyệt bởi Line Manager và mất 1 ngày làm việc. Level 2 cần phê duyệt bởi Line Manager + IT Admin và mất 2 ngày làm việc. Level 3 cần phê duyệt bởi Line Manager + IT Admin + IT Security và mất 3 ngày làm việc. Level 4 cần phê duyệt bởi IT Manager + CISO và mất 5 ngày làm việc [1].",
+        "sources": [
+          "hr/leave-policy-2026.pdf",
+          "it/access-control-sop.md"
+        ],
+        "chunks_retrieved": 3
+      },
+      "sparse": {
+        "answer": "Level 1 cần Line Manager phê duyệt và mất 1 ngày làm việc. Level 2 cần Line Manager và IT Admin phê duyệt, mất 2 ngày làm việc. Level 3 cần Line Manager, IT Admin và IT Security phê duyệt, mất 3 ngày làm việc. Level 4 cần IT Manager và CISO phê duyệt, mất 5 ngày làm việc [2].",
+        "sources": [
+          "support/helpdesk-faq.md",
+          "it/access-control-sop.md"
+        ],
+        "chunks_retrieved": 3
+      },
+      "hybrid": {
+        "answer": "Level 1 cần phê duyệt bởi Line Manager và mất 1 ngày làm việc. Level 2 cần phê duyệt bởi Line Manager + IT Admin và mất 2 ngày làm việc. Level 3 cần phê duyệt bởi Line Manager + IT Admin + IT Security và mất 3 ngày làm việc. Level 4 cần phê duyệt bởi IT Manager + CISO và mất 5 ngày làm việc [1].",
+        "sources": [
+          "support/sla-p1-2026.pdf",
+          "hr/leave-policy-2026.pdf",
+          "it/access-control-sop.md"
+        ],
+        "chunks_retrieved": 3
+      }
+    },
+    "timestamp": "2026-04-13T15:27:06"
+  },
+  {
+    "id": "q21",
+    "question": "Khi có sự cố P1, quyền tạm thời tối đa được cấp bao lâu, cần ai phê duyệt, và có phải log không?",
+    "results": {
+      "dense": {
+        "answer": "Khi có sự cố P1, quyền tạm thời tối đa được cấp là 24 giờ, cần phê duyệt bằng lời của Tech Lead, và mọi quyền tạm thời phải được ghi log vào hệ thống Security Audit [1].",
+        "sources": [
+          "hr/leave-policy-2026.pdf",
+          "it/access-control-sop.md"
+        ],
+        "chunks_retrieved": 3
+      },
+      "sparse": {
+        "answer": "Quyền tạm thời tối đa được cấp trong sự cố P1 là 24 giờ, cần có sự phê duyệt bằng lời của Tech Lead, và mọi quyền tạm thời phải được ghi log vào hệ thống Security Audit [1].",
+        "sources": [
+          "support/sla-p1-2026.pdf",
+          "support/helpdesk-faq.md",
+          "it/access-control-sop.md"
+        ],
+        "chunks_retrieved": 3
+      },
+      "hybrid": {
+        "answer": "Quyền tạm thời tối đa được cấp trong sự cố P1 là 24 giờ, cần được Tech Lead phê duyệt bằng lời, và mọi quyền tạm thời phải được ghi log vào hệ thống Security Audit [1].",
+        "sources": [
+          "support/sla-p1-2026.pdf",
+          "support/helpdesk-faq.md",
+          "it/access-control-sop.md"
+        ],
+        "chunks_retrieved": 3
+      }
+    },
+    "timestamp": "2026-04-13T15:27:14"
+  },
+  {
+    "id": "q22",
+    "question": "Quyền truy cập bị thu hồi trong các trường hợp nghỉ việc, hết hạn contract, và chuyển bộ phận như thế nào?",
+    "results": {
+      "dense": {
+        "answer": "Quyền truy cập bị thu hồi trong các trường hợp như sau:\n- Nhân viên nghỉ việc: Thu hồi ngay trong ngày cuối.\n- Hết hạn contract: Thu hồi đúng ngày hết hạn.\n- Chuyển bộ phận: Điều chỉnh trong 3 ngày làm việc [1].",
+        "sources": [
+          "hr/leave-policy-2026.pdf",
+          "it/access-control-sop.md"
+        ],
+        "chunks_retrieved": 3
+      },
+      "sparse": {
+        "answer": "Quyền truy cập bị thu hồi trong các trường hợp như sau:\n- Nhân viên nghỉ việc: Thu hồi ngay trong ngày cuối.\n- Hết hạn contract: Thu hồi đúng ngày hết hạn.\n- Chuyển bộ phận: Điều chỉnh trong 3 ngày làm việc [1].",
+        "sources": [
+          "support/helpdesk-faq.md",
+          "it/access-control-sop.md"
+        ],
+        "chunks_retrieved": 3
+      },
+      "hybrid": {
+        "answer": "Quyền truy cập bị thu hồi trong các trường hợp như sau:\n- Nhân viên nghỉ việc: Thu hồi ngay trong ngày cuối.\n- Hết hạn contract: Thu hồi đúng ngày hết hạn.\n- Chuyển bộ phận: Điều chỉnh trong 3 ngày làm việc [1].",
+        "sources": [
+          "support/helpdesk-faq.md",
+          "it/access-control-sop.md"
+        ],
+        "chunks_retrieved": 3
+      }
+    },
+    "timestamp": "2026-04-13T15:27:21"
+  },
+  {
+    "id": "q23",
+    "question": "IT Security review access mỗi bao lâu một lần và bất thường phải báo trong bao lâu?",
+    "results": {
+      "dense": {
+        "answer": "IT Security thực hiện access review mỗi 6 tháng. Mọi bất thường phải được báo cáo lên CISO trong vòng 24 giờ [1].",
+        "sources": [
+          "support/helpdesk-faq.md",
+          "it/access-control-sop.md"
+        ],
+        "chunks_retrieved": 3
+      },
+      "sparse": {
+        "answer": "IT Security thực hiện access review mỗi 6 tháng. Mọi bất thường phải được báo cáo lên CISO trong vòng 24 giờ [1].",
+        "sources": [
+          "support/helpdesk-faq.md",
+          "it/access-control-sop.md"
+        ],
+        "chunks_retrieved": 3
+      },
+      "hybrid": {
+        "answer": "IT Security thực hiện access review mỗi 6 tháng. Mọi bất thường phải được báo cáo lên CISO trong vòng 24 giờ [1].",
+        "sources": [
+          "support/helpdesk-faq.md",
+          "it/access-control-sop.md"
+        ],
+        "chunks_retrieved": 3
+      }
+    },
+    "timestamp": "2026-04-13T15:27:30"
+  },
+  {
+    "id": "q24",
+    "question": "Nhân viên có 4 năm kinh nghiệm được bao nhiêu ngày annual leave và được carry over tối đa bao nhiêu ngày?",
+    "results": {
+      "dense": {
+        "answer": "Nhân viên có 4 năm kinh nghiệm được 15 ngày annual leave và có thể carry over tối đa 5 ngày sang năm tiếp theo [1].",
+        "sources": [
+          "hr/leave-policy-2026.pdf",
+          "it/access-control-sop.md"
+        ],
+        "chunks_retrieved": 3
+      },
+      "sparse": {
+        "answer": "Nhân viên có 4 năm kinh nghiệm được 15 ngày nghỉ phép năm và có thể carry over tối đa 5 ngày sang năm tiếp theo [1].",
+        "sources": [
+          "hr/leave-policy-2026.pdf",
+          "support/helpdesk-faq.md"
+        ],
+        "chunks_retrieved": 3
+      },
+      "hybrid": {
+        "answer": "Nhân viên có 4 năm kinh nghiệm được 15 ngày annual leave và có thể carry over tối đa 5 ngày sang năm tiếp theo [1].",
+        "sources": [
+          "hr/leave-policy-2026.pdf",
+          "it/access-control-sop.md"
+        ],
+        "chunks_retrieved": 3
+      }
+    },
+    "timestamp": "2026-04-13T15:27:36"
+  },
+  {
+    "id": "q25",
+    "question": "Nghỉ ốm được trả lương bao nhiêu ngày, phải báo trước lúc nào, và nếu nghỉ trên 3 ngày liên tiếp thì cần gì?",
+    "results": {
+      "dense": {
+        "answer": "Nghỉ ốm được trả lương 10 ngày/năm, cần thông báo cho Line Manager trước 9:00 sáng ngày nghỉ. Nếu nghỉ trên 3 ngày liên tiếp, cần giấy tờ y tế từ bệnh viện [1].",
+        "sources": [
+          "hr/leave-policy-2026.pdf",
+          "it/access-control-sop.md"
+        ],
+        "chunks_retrieved": 3
+      },
+      "sparse": {
+        "answer": "Nghỉ ốm được trả lương 10 ngày/năm. Cần thông báo cho Line Manager trước 9:00 sáng ngày nghỉ. Nếu nghỉ trên 3 ngày liên tiếp, cần giấy tờ y tế từ bệnh viện [1].",
+        "sources": [
+          "hr/leave-policy-2026.pdf",
+          "support/helpdesk-faq.md"
+        ],
+        "chunks_retrieved": 3
+      },
+      "hybrid": {
+        "answer": "Nghỉ ốm được trả lương 10 ngày/năm. Nhân viên phải thông báo cho Line Manager trước 9:00 sáng ngày nghỉ. Nếu nghỉ trên 3 ngày liên tiếp, cần có giấy tờ y tế từ bệnh viện [1].",
+        "sources": [
+          "hr/leave-policy-2026.pdf"
+        ],
+        "chunks_retrieved": 3
+      }
+    },
+    "timestamp": "2026-04-13T15:27:43"
+  },
+  {
+    "id": "q26",
+    "question": "Nhân viên sau probation có thể làm remote tối đa bao nhiêu ngày/tuần, onsite bắt buộc ngày nào, và có yêu cầu gì khi remote?",
+    "results": {
+      "dense": {
+        "answer": "Nhân viên sau probation có thể làm remote tối đa 2 ngày/tuần. Ngày onsite bắt buộc là Thứ 3 và Thứ 5. Yêu cầu khi remote bao gồm kết nối VPN bắt buộc và bật camera trong các cuộc họp team [1].",
+        "sources": [
+          "hr/leave-policy-2026.pdf",
+          "it/access-control-sop.md"
+        ],
+        "chunks_retrieved": 3
+      },
+      "sparse": {
+        "answer": "Nhân viên sau probation có thể làm remote tối đa 2 ngày/tuần. Ngày onsite bắt buộc là Thứ 3 và Thứ 5 theo lịch team. Yêu cầu khi remote bao gồm kết nối VPN bắt buộc và bật camera trong các cuộc họp team [1].",
+        "sources": [
+          "hr/leave-policy-2026.pdf",
+          "it/access-control-sop.md"
+        ],
+        "chunks_retrieved": 3
+      },
+      "hybrid": {
+        "answer": "Nhân viên sau probation có thể làm remote tối đa 2 ngày/tuần. Ngày onsite bắt buộc là Thứ 3 và Thứ 5. Yêu cầu khi remote bao gồm kết nối VPN và bật camera trong các cuộc họp team [1].",
+        "sources": [
+          "hr/leave-policy-2026.pdf",
+          "it/access-control-sop.md"
+        ],
+        "chunks_retrieved": 3
+      }
+    },
+    "timestamp": "2026-04-13T15:27:51"
+  },
+  {
+    "id": "q27",
+    "question": "Làm thêm giờ phải được phê duyệt như thế nào và hệ số lương ngày thường, cuối tuần, ngày lễ là bao nhiêu?",
+    "results": {
+      "dense": {
+        "answer": "Làm thêm giờ phải được Line Manager phê duyệt trước bằng văn bản. Hệ số lương làm thêm là 150% lương giờ tiêu chuẩn cho ngày thường, 200% cho ngày cuối tuần, và 300% cho ngày lễ [1].",
+        "sources": [
+          "hr/leave-policy-2026.pdf"
+        ],
+        "chunks_retrieved": 3
+      },
+      "sparse": {
+        "answer": "Làm thêm giờ phải được Line Manager phê duyệt trước bằng văn bản. Hệ số lương làm thêm là 150% lương giờ tiêu chuẩn cho ngày thường, 200% cho ngày cuối tuần, và 300% cho ngày lễ [1].",
+        "sources": [
+          "hr/leave-policy-2026.pdf",
+          "support/helpdesk-faq.md"
+        ],
+        "chunks_retrieved": 3
+      },
+      "hybrid": {
+        "answer": "Làm thêm giờ phải được Line Manager phê duyệt trước bằng văn bản. Hệ số lương cho làm thêm giờ là: \n- Ngày thường: 150% lương giờ tiêu chuẩn.\n- Ngày cuối tuần: 200% lương giờ tiêu chuẩn.\n- Ngày lễ: 300% lương giờ tiêu chuẩn [1].",
+        "sources": [
+          "hr/leave-policy-2026.pdf"
+        ],
+        "chunks_retrieved": 3
+      }
+    },
+    "timestamp": "2026-04-13T15:27:59"
+  },
+  {
+    "id": "q28",
+    "question": "Quên mật khẩu thì làm gì, và tài khoản bị khóa sau bao nhiêu lần đăng nhập sai liên tiếp?",
+    "results": {
+      "dense": {
+        "answer": "Nếu bạn quên mật khẩu, hãy truy cập https://sso.company.internal/reset hoặc liên hệ Helpdesk qua ext. 9000. Mật khẩu mới sẽ được gửi qua email công ty trong vòng 5 phút. Tài khoản bị khóa sau 5 lần đăng nhập sai liên tiếp. Để mở khóa, liên hệ IT Helpdesk hoặc tự reset qua portal SSO [1].",
+        "sources": [
+          "support/helpdesk-faq.md",
+          "it/access-control-sop.md"
+        ],
+        "chunks_retrieved": 3
+      },
+      "sparse": {
+        "answer": "Nếu bạn quên mật khẩu, hãy truy cập https://sso.company.internal/reset hoặc liên hệ Helpdesk qua ext. 9000. Mật khẩu mới sẽ được gửi qua email công ty trong vòng 5 phút. Tài khoản sẽ bị khóa sau 5 lần đăng nhập sai liên tiếp. Để mở khóa, bạn có thể liên hệ IT Helpdesk hoặc tự reset qua portal SSO [1].",
+        "sources": [
+          "support/helpdesk-faq.md"
+        ],
+        "chunks_retrieved": 3
+      },
+      "hybrid": {
+        "answer": "Nếu bạn quên mật khẩu, hãy truy cập https://sso.company.internal/reset hoặc liên hệ Helpdesk qua ext. 9000. Mật khẩu mới sẽ được gửi qua email công ty trong vòng 5 phút. Tài khoản sẽ bị khóa sau 5 lần đăng nhập sai liên tiếp. Để mở khóa, bạn có thể liên hệ IT Helpdesk hoặc tự reset qua portal SSO [1].",
+        "sources": [
+          "support/helpdesk-faq.md"
+        ],
+        "chunks_retrieved": 3
+      }
+    },
+    "timestamp": "2026-04-13T15:28:07"
+  },
+  {
+    "id": "q29",
+    "question": "Công ty dùng VPN nào, mỗi tài khoản được kết nối tối đa bao nhiêu thiết bị, và nếu VPN lỗi liên tục thì làm gì?",
+    "results": {
+      "dense": {
+        "answer": "Công ty sử dụng VPN Cisco AnyConnect, mỗi tài khoản được kết nối tối đa 2 thiết bị cùng lúc. Nếu VPN lỗi liên tục, cần kiểm tra kết nối Internet trước, nếu vẫn lỗi thì tạo ticket P3 với log file VPN đính kèm [1].",
+        "sources": [
+          "hr/leave-policy-2026.pdf",
+          "support/helpdesk-faq.md"
+        ],
+        "chunks_retrieved": 3
+      },
+      "sparse": {
+        "answer": "Công ty sử dụng VPN Cisco AnyConnect, mỗi tài khoản được kết nối tối đa 2 thiết bị cùng lúc. Nếu VPN lỗi liên tục, cần kiểm tra kết nối Internet trước, nếu vẫn lỗi thì tạo ticket P3 với log file VPN đính kèm [1].",
+        "sources": [
+          "hr/leave-policy-2026.pdf",
+          "support/helpdesk-faq.md"
+        ],
+        "chunks_retrieved": 3
+      },
+      "hybrid": {
+        "answer": "Công ty sử dụng VPN Cisco AnyConnect, mỗi tài khoản được kết nối tối đa 2 thiết bị cùng lúc. Nếu VPN lỗi liên tục, cần kiểm tra kết nối Internet trước, nếu vẫn lỗi thì tạo ticket P3 với log file VPN đính kèm [1].",
+        "sources": [
+          "hr/leave-policy-2026.pdf",
+          "support/helpdesk-faq.md"
+        ],
+        "chunks_retrieved": 3
+      }
+    },
+    "timestamp": "2026-04-13T15:28:18"
+  },
+  {
+    "id": "q30",
+    "question": "ERR-403-AUTH là lỗi gì và cách xử lý thế nào?",
+    "results": {
+      "dense": {
+        "answer": "Không có thông tin này trong tài liệu.",
+        "sources": [
+          "support/helpdesk-faq.md",
+          "it/access-control-sop.md"
+        ],
+        "chunks_retrieved": 3
+      },
+      "sparse": {
+        "answer": "Không có thông tin này trong tài liệu.",
+        "sources": [
+          "support/sla-p1-2026.pdf",
+          "policy/refund-v4.pdf"
+        ],
+        "chunks_retrieved": 3
+      },
+      "hybrid": {
+        "answer": "Không có thông tin này trong tài liệu.",
+        "sources": [
+          "support/sla-p1-2026.pdf",
+          "support/helpdesk-faq.md"
+        ],
+        "chunks_retrieved": 3
+      }
+    },
+    "timestamp": "2026-04-13T15:28:24"
+  }
+]
