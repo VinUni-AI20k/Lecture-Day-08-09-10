@@ -4,3 +4,17 @@
 
 # Grading questions — không public trước 17:00
 day08/lab/data/grading_questions.json
+
+# Môi trường & Bảo mật
+.env
+venv/
+.venv/
+env/
+
+# Database sinh tự động
+**/chroma_db/
+
+# Cache của Python
+__pycache__/
+*.py[cod]
+#tests
