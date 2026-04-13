@@ -90,9 +90,9 @@ python index.py    # Xem preview preprocess + chunking (không cần API key)
 3. Chạy `build_index()` và kiểm tra với `list_chunks()`
 
 **Definition of Done:**
-- [ ] Script chạy được, index đủ 5 tài liệu
-- [ ] Mỗi chunk có ít nhất 3 metadata fields: `source`, `section`, `effective_date`
-- [ ] `list_chunks()` cho thấy chunk hợp lý, không bị cắt giữa điều khoản
+- [x] Script chạy được, index đủ 5 tài liệu
+- [x] Mỗi chunk có ít nhất 3 metadata fields: `source`, `section`, `effective_date`
+- [x] `list_chunks()` cho thấy chunk hợp lý, không bị cắt giữa điều khoản
 
 ---
 
