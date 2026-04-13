@@ -196,6 +196,53 @@ def _split_by_size(
     # paragraphs = text.split("\n\n")
     # Ghép paragraphs lại cho đến khi gần đủ chunk_chars
     # Lấy overlap từ đoạn cuối chunk trước
+
+    # --- Paragraph-based splitting (ưu tiên dùng nếu có nhiều paragraph) ---
+    paragraphs = text.split("\n\n")
+    paragraphs = [p.strip() for p in paragraphs if p.strip()]  # Bỏ paragraph rỗng
+
+    if len(paragraphs) > 1:
+        chunks = []
+        current_parts = []   # Các paragraph đang ghép trong chunk hiện tại
+        current_len = 0      # Tổng ký tự của chunk hiện tại
+
+        for para in paragraphs:
+            para_len = len(para)
+
+            # Nếu thêm paragraph này vượt quá chunk_chars → lưu chunk hiện tại
+            if current_len + para_len + 2 > chunk_chars and current_parts:
+                chunk_text = "\n\n".join(current_parts)
+                chunks.append({
+                    "text": chunk_text,
+                    "metadata": {**base_metadata, "section": section},
+                })
+
+                # Overlap: giữ lại paragraph cuối từ chunk trước để chunk sau có ngữ cảnh
+                overlap_parts = []
+                overlap_len = 0
+                for p in reversed(current_parts):
+                    if overlap_len + len(p) + 2 <= overlap_chars:
+                        overlap_parts.insert(0, p)
+                        overlap_len += len(p) + 2
+                    else:
+                        break
+                current_parts = overlap_parts
+                current_len = overlap_len
+
+            current_parts.append(para)
+            current_len += para_len + 2  # +2 cho "\n\n" giữa các paragraph
+
+        # Lưu chunk cuối cùng
+        if current_parts:
+            chunk_text = "\n\n".join(current_parts)
+            chunks.append({
+                "text": chunk_text,
+                "metadata": {**base_metadata, "section": section},
+            })
+
+        return chunks
+
+    # --- Fallback: character-based splitting (khi chỉ có 1 paragraph dài) ---
     chunks = []
     start = 0
     while start < len(text):
@@ -204,6 +251,23 @@ def _split_by_size(
 
         # TODO: Tìm ranh giới tự nhiên gần nhất (dấu xuống dòng, dấu chấm)
         # thay vì cắt giữa câu
+        if end < len(text):
+            # Ưu tiên 1: Tìm ranh giới paragraph (dấu xuống dòng kép) gần nhất
+            para_break = text.rfind("\n\n", start + chunk_chars // 2, end)
+            if para_break > start:
+                end = para_break + 2  # Cắt sau paragraph break
+            else:
+                # Ưu tiên 2: Tìm dấu xuống dòng đơn gần nhất
+                newline_pos = text.rfind("\n", start + chunk_chars // 2, end)
+                if newline_pos > start:
+                    end = newline_pos + 1
+                else:
+                    # Ưu tiên 3: Tìm dấu chấm câu gần nhất (. hoặc .  )
+                    period_pos = text.rfind(". ", start + chunk_chars // 2, end)
+                    if period_pos > start:
+                        end = period_pos + 2  # Cắt sau dấu chấm + space
+
+        chunk_text = text[start:end]  # Cập nhật lại chunk_text sau khi tìm ranh giới
 
         chunks.append({
             "text": chunk_text,
