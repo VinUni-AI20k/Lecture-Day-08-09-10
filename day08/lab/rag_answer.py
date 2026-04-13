@@ -93,7 +93,7 @@ def retrieve_dense(query: str, top_k: int = TOP_K_SEARCH) -> List[Dict[str, Any]
         include=["documents", "metadatas", "distances"]
     )
 
-    print(results)
+    # print(results)
 
     chunks = []
     for doc, meta, dist in zip(
@@ -292,17 +292,41 @@ def rerank(
     for i, c in enumerate(candidates):
         chunk_texts.append(f"[{i}] {c['text']}")
     chunks_str = "\n\n".join(chunk_texts)
+
     prompt = f"""
-        You are a ranking assistant.
+    ### Role
+    You are an expert Information Retrieval Assistant. Your task is to re-rank document chunks based on their relevance to a specific user query.
 
-        Given a query and a list of document chunks, select the {top_k} most relevant chunks.
+    ### Task
+    1. Analyze the Query provided below.
+    2. Review the list of Document Chunks.
+    3. Select the top 3 chunks that contain the most direct and accurate information to answer the query.
+    4. Rank them in order of relevance (most relevant first).
 
-        Return ONLY a JSON array of indices (e.g., [0, 2, 5])
-        Query: {query}
+    ### Constraints
+    - Evaluation criteria: Directness of answer, factual overlap, and completeness.
+    - Return ONLY a JSON object. No prose, no explanations.
 
-        Chunks:
-        {chunks_str}
+    ### Input Data
+    Query: "Khách hàng có thể yêu cầu hoàn tiền trong bao nhiêu ngày?"
+
+    Document Chunks:
+    [0] <Insert Text of Chunk 0>
+    [1] <Insert Text of Chunk 1>
+    [2] <Insert Text of Chunk 2>
+    ...
+
+    ### Output Format
+    {
+    "indices": [int, int, int]
+    }
+
+    Query: {query}
+
+    Chunks:
+    {chunks_str}
     """
+
     response = call_llm(prompt)
     import json
     try:
@@ -579,7 +603,7 @@ def compare_retrieval_strategies(query: str) -> None:
     print(f"Query: {query}")
     print('='*60)
 
-    strategies = ["dense", "hybrid"]  # Thêm "sparse" sau khi implement
+    strategies = ["dense", "sparse", "hybrid"]  # Thêm "sparse" sau khi implement
 
     for strategy in strategies:
         print(f"\n--- Strategy: {strategy} ---")
@@ -623,9 +647,9 @@ if __name__ == "__main__":
             print(f"Lỗi: {e}")
 
     # Uncomment sau khi Sprint 3 hoàn thành:
-    # print("\n--- Sprint 3: So sánh strategies ---")
-    # compare_retrieval_strategies("Approval Matrix để cấp quyền là tài liệu nào?")
-    # compare_retrieval_strategies("ERR-403-AUTH")
+    print("\n--- Sprint 3: So sánh strategies ---")
+    compare_retrieval_strategies("Approval Matrix để cấp quyền là tài liệu nào?")
+    compare_retrieval_strategies("ERR-403-AUTH")
 
     print("\n\nViệc cần làm Sprint 2:")
     print("  1. Implement retrieve_dense() — query ChromaDB")
