@@ -58,6 +58,7 @@ CROSS_ENCODER_MODEL = os.getenv(
 CHROMA_DB_DIR = Path(__file__).parent / "chroma_db"
 CHROMA_COLLECTION = "rag_lab"
 RRF_K = _env_int("RRF_K", 60, 10, 120)
+ABSTAIN_ANSWER = "Không đủ dữ liệu trong tài liệu để trả lời."
 
 # Cache BM25 corpus (reload sau khi build_index)
 _bm25_bundle: Optional[Tuple[Any, List[str], List[str], List[Dict[str, Any]]]] = None
@@ -359,7 +360,7 @@ def build_grounded_prompt(query: str, context_block: str) -> str:
 1) Use ONLY information from the numbered context snippets below. Do not use outside knowledge.
 2) **Same-or-different / comparison questions (e.g. leave types, access levels):** If the context defines two or more separate categories (e.g. distinct headings like "Annual Leave" vs "Sick Leave", or separate numbered items), you MUST answer by contrasting them using that text. State clearly whether the question's wording treats them as one thing or not, per policy. Cite [n]. **Do not abstain** when those definitions appear in any snippet.
 3) **Abstain** only when no snippet contains facts needed to address the question at all. Then reply exactly:
-   "Không đủ dữ liệu trong tài liệu để trả lời."
+    "{ABSTAIN_ANSWER}"
    (English questions may use: "Insufficient information in the documents to answer.")
 4) When you cite evidence, include bracket references like [1], [2] matching snippet numbers.
 5) Be concise and factual. Same language as the user's question (Vietnamese or English).
@@ -539,7 +540,7 @@ def rag_answer_impl(
     if not candidates:
         out: Dict[str, Any] = {
             "query": query,
-            "answer": "Không đủ dữ liệu trong tài liệu để trả lời.",
+            "answer": ABSTAIN_ANSWER,
             "sources": [],
             "chunks_used": [],
             "config": config,
@@ -601,8 +602,48 @@ def rag_answer_impl(
     if verbose:
         print(f"[RAG] After select: {len(candidates)} chunks")
 
+    # Chỉ giữ các chunk có text thực sự để tránh gửi context rỗng lên LLM.
+    candidates = [c for c in candidates if (c.get("text") or "").strip()]
+    if not candidates:
+        out: Dict[str, Any] = {
+            "query": query,
+            "answer": ABSTAIN_ANSWER,
+            "sources": [],
+            "chunks_used": [],
+            "config": config,
+        }
+        if trace:
+            steps.append({
+                "step": 4,
+                "name": "Context check",
+                "emoji": "4️⃣",
+                "detail": "Retrieve có kết quả nhưng tất cả chunk sau select đều rỗng. Trả về abstain.",
+                "table": [],
+            })
+            out["pipeline_steps"] = steps
+        return out
+
     # --- Bước 3: Build context và prompt ---
     context_block = build_context_block(candidates)
+    if not context_block.strip():
+        out: Dict[str, Any] = {
+            "query": query,
+            "answer": ABSTAIN_ANSWER,
+            "sources": [],
+            "chunks_used": [],
+            "config": config,
+        }
+        if trace:
+            steps.append({
+                "step": 4,
+                "name": "Context check",
+                "emoji": "4️⃣",
+                "detail": "Context block rỗng sau khi đóng gói chunk. Trả về abstain.",
+                "table": [],
+            })
+            out["pipeline_steps"] = steps
+        return out
+
     prompt = build_grounded_prompt(query, context_block)
 
     if trace:
@@ -622,7 +663,9 @@ def rag_answer_impl(
         print(f"\n[RAG] Prompt:\n{prompt[:500]}...\n")
 
     # --- Bước 4: Generate ---
-    answer = call_llm(prompt)
+    answer = (call_llm(prompt) or "").strip()
+    if not answer:
+        answer = ABSTAIN_ANSWER
 
     if trace:
         steps.append({
