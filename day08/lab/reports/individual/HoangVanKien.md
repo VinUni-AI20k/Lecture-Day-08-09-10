@@ -1,8 +1,8 @@
 # Báo Cáo Cá Nhân — Lab Day 08: RAG Pipeline
 
-**Họ và tên:** ___________  
+**Họ và tên:** Hoàng Văn Kiên 
 **Vai trò trong nhóm:** Eval Owner  
-**Ngày nộp:** ___________  
+**Ngày nộp:** 2026-04-13
 **Độ dài yêu cầu:** 500–800 từ
 
 ---

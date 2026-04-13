@@ -267,11 +267,118 @@ def retrieve_hybrid(
 # Cross-encoder để chấm lại relevance sau search rộng
 # =============================================================================
 
+# def rerank(
+#     query: str,
+#     candidates: List[Dict[str, Any]],
+#     top_k: int = TOP_K_SELECT,
+# ) -> List[Dict[str, Any]]:
+#     """
+#     Rerank các candidate chunks bằng cross-encoder.
+
+#     Cross-encoder: chấm lại "chunk nào thực sự trả lời câu hỏi này?"
+#     MMR (Maximal Marginal Relevance): giữ relevance nhưng giảm trùng lặp
+
+#     Funnel logic (từ slide):
+#       Search rộng (top-20) → Rerank (top-6) → Select (top-3)
+
+#     TODO Sprint 3 (nếu chọn rerank):
+#     Option A — Cross-encoder:
+#         from sentence_transformers import CrossEncoder
+#         model = CrossEncoder("cross-encoder/ms-marco-MiniLM-L-6-v2")
+#         pairs = [[query, chunk["text"]] for chunk in candidates]
+#         scores = model.predict(pairs)
+#         ranked = sorted(zip(candidates, scores), key=lambda x: x[1], reverse=True)
+#         return [chunk for chunk, _ in ranked[:top_k]]
+
+#     Option B — Rerank bằng LLM (đơn giản hơn nhưng tốn token):
+#         Gửi list chunks cho LLM, yêu cầu chọn top_k relevant nhất
+
+#     Khi nào dùng rerank:
+#     - Dense/hybrid trả về nhiều chunk nhưng có noise
+#     - Muốn chắc chắn chỉ 3-5 chunk tốt nhất vào prompt
+#     """
+#     # TODO Sprint 3: Implement rerank
+#     # Tạm thời trả về top_k đầu tiên (không rerank)
+#     global _rerank_model
+
+#     if not candidates:
+#         return candidates
+
+#     try:
+#         from sentence_transformers import CrossEncoder
+#         if _rerank_model is None:
+#             print("  [Rerank] Loading cross-encoder model...")
+#             _rerank_model = CrossEncoder("cross-encoder/ms-marco-MiniLM-L-6-v2")
+
+#         pairs = [[query, chunk["text"]] for chunk in candidates]
+#         scores = _rerank_model.predict(pairs)
+
+#         # Sort theo cross-encoder score
+#         ranked = sorted(zip(candidates, scores), key=lambda x: x[1], reverse=True)
+#         result = []
+#         for chunk, score in ranked[:top_k]:
+#             chunk_copy = chunk.copy()
+#             chunk_copy["rerank_score"] = float(score)
+#             result.append(chunk_copy)
+#         return result
+
+#     except ImportError:
+#         print("  [Rerank] CrossEncoder không available, fallback top_k")
+#         return candidates[:top_k]
+#     except Exception as e:
+#         print(f"  [Rerank] Lỗi: {e}, fallback top_k")
+#         return candidates[:top_k]
+
+from openai import OpenAI
+import numpy as np
+
+client = OpenAI()
+
+def cosine_similarity(a, b):
+    return np.dot(a, b) / (np.linalg.norm(a) * np.linalg.norm(b))
+
 def rerank(
     query: str,
     candidates: List[Dict[str, Any]],
     top_k: int = TOP_K_SELECT,
 ) -> List[Dict[str, Any]]:
+
+    if not candidates:
+        return candidates
+
+    try:
+        # Embed query
+        query_emb = client.embeddings.create(
+            model="text-embedding-3-small",
+            input=query
+        ).data[0].embedding
+
+        texts = [c["text"] for c in candidates]
+
+        # Embed candidates
+        doc_embs = client.embeddings.create(
+            model="text-embedding-3-small",
+            input=texts
+        ).data
+
+        scores = [
+            cosine_similarity(query_emb, d.embedding)
+            for d in doc_embs
+        ]
+
+        ranked = sorted(zip(candidates, scores), key=lambda x: x[1], reverse=True)
+
+        result = []
+        for chunk, score in ranked[:top_k]:
+            chunk_copy = chunk.copy()
+            chunk_copy["rerank_score"] = float(score)
+            result.append(chunk_copy)
+
+        return result
+
+    except Exception as e:
+        print(f"[Rerank] Lỗi: {e}, fallback")
+        return candidates[:top_k]
     """
     Rerank các candidate chunks bằng cross-encoder.
 
@@ -577,6 +684,7 @@ def rag_answer(
         # --- Bước 3: Truncate về top_k_select chunks ---
         # Sắp xếp theo score trước khi cắt để lấy được các chunk tốt nhất
         candidates = sorted(unique_candidates, key=lambda x: x.get("score", 0), reverse=True)[:top_k_select]
+
     # --- Bước 4: Build context block và grounded prompt ---
     context_block = build_context_block(candidates)
     prompt = build_grounded_prompt(query, context_block)
