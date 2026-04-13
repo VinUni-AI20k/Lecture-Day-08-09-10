@@ -1,7 +1,74 @@
+# =========================
+# OS
+# =========================
 .DS_Store
+Thumbs.db
+
+# =========================
+# Editor / IDE
+# =========================
+.vscode/
+.idea/
 *.swp
 *~
 
+# =========================
+# Python cache / build
+# =========================
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Distribution / packaging
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# =========================
+# Virtual environment
+# =========================
+venv/
+.venv/
+env/
+ENV/
+
+# =========================
+# Environment variables
+# =========================
+.env
+.env.*
+
+# =========================
+# Logs
+# =========================
+*.log
+
+# =========================
+# Jupyter Notebook
+# =========================
+.ipynb_checkpoints/
+
+# =========================
+# Testing
+# =========================
+.pytest_cache/
+.coverage
+htmlcov/
+
+# =========================
+# Project-specific (lab của bạn)
+# =========================
 # Grading questions — không public trước 17:00
 day08/lab/data/grading_questions.json
-.env
+
+# Output / reports (nếu không cần push)
+day08/lab/reports/
+
+# Optional: data lớn (tuỳ bạn)
+# day08/lab/data/
+
+# =========================
+# Misc
+# =========================
+*.sqlite3
