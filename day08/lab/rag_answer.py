@@ -34,7 +34,9 @@ load_dotenv()
 TOP_K_SEARCH = 10    # Số chunk lấy từ vector store trước rerank (search rộng)
 TOP_K_SELECT = 3     # Số chunk gửi vào prompt sau rerank/select (top-3 sweet spot)
 
-LLM_MODEL = os.getenv("LLM_MODEL", "gpt-4o-mini")
+LLM_MODEL          = os.getenv("LLM_MODEL", "gpt-4o-mini")
+CHROMA_PERSIST_DIR = os.getenv("CHROMA_PERSIST_DIR", "./data/chroma_db")
+EMBEDDING_MODEL    = os.getenv("OPENAI_EMBEDDING_MODEL", "text-embedding-3-small")
 
 # =============================================================================
 # SYSTEM PROMPT — Grounding Rules (Sprint 2)
@@ -68,43 +70,34 @@ Dưới đây là các đoạn thông tin được trích xuất từ tài liệ
 
 def retrieve_dense(query: str, top_k: int = TOP_K_SEARCH) -> List[Dict[str, Any]]:
     """
-    Dense retrieval: tìm kiếm theo embedding similarity trong ChromaDB.
-
-    Args:
-        query: Câu hỏi của người dùng
-        top_k: Số chunk tối đa trả về
-
-    Returns:
-        List các dict, mỗi dict là một chunk với:
-          - "text": nội dung chunk
-          - "metadata": metadata (source, section, effective_date, ...)
-          - "score": cosine similarity score
-
-    TODO Sprint 2:
-    1. Embed query bằng cùng model đã dùng khi index (xem index.py)
-    2. Query ChromaDB với embedding đó
-    3. Trả về kết quả kèm score
-
-    Gợi ý:
-        import chromadb
-        from index import get_embedding, CHROMA_DB_DIR
-
-        client = chromadb.PersistentClient(path=str(CHROMA_DB_DIR))
-        collection = client.get_collection("rag_lab")
-
-        query_embedding = get_embedding(query)
-        results = collection.query(
-            query_embeddings=[query_embedding],
-            n_results=top_k,
-            include=["documents", "metadatas", "distances"]
-        )
-        # Lưu ý: distances trong ChromaDB cosine = 1 - similarity
-        # Score = 1 - distance
+    Dense retrieval: tìm kiếm theo embedding similarity.
+    Dùng LangChain Chroma — cùng cách index.py build index → tránh lỗi collection name mismatch.
     """
-    raise NotImplementedError(
-        "TODO Sprint 2: Implement retrieve_dense().\n"
-        "Tham khảo comment trong hàm để biết cách query ChromaDB."
+    # [NHat][S2] fix: dùng LangChain Chroma thay vì chromadb trực tiếp
+    from langchain_openai import OpenAIEmbeddings
+    from langchain_community.vectorstores import Chroma
+
+    embedding_fn = OpenAIEmbeddings(model=EMBEDDING_MODEL)
+    vectorstore = Chroma(
+        persist_directory=CHROMA_PERSIST_DIR,
+        embedding_function=embedding_fn,
     )
+
+    # similarity_search_with_score trả về List[(Document, score)]
+    # score ở đây là cosine distance (nhỏ hơn = gần hơn) với Chroma mặc định
+    results = vectorstore.similarity_search_with_score(query, k=top_k)
+
+    chunks = []
+    for doc, distance in results:
+        # Chroma trả về L2 distance mặc định; chuyển thành similarity score 0-1
+        score = max(0.0, 1.0 - distance)
+        chunks.append({
+            "text":     doc.page_content,
+            "metadata": doc.metadata,
+            "score":    score,
+        })
+
+    return chunks
 
 
 # =============================================================================
