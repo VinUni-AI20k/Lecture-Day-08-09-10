@@ -22,12 +22,34 @@ Definition of Done Sprint 3:
 """
 
 import os
+import json
+from datetime import datetime
+from pathlib import Path
 from typing import List, Dict, Any, Optional, Tuple
 from dotenv import load_dotenv
 # ADDED: Prompt template tách biệt để dễ chỉnh sửa — xem prompt/rag_prompt.py
 from prompt.rag_prompt import build_grounded_prompt
 
 load_dotenv()
+
+# =============================================================================
+# TRACE LOGGING (advanced)
+# =============================================================================
+
+LAB_DIR = Path(__file__).parent
+DEFAULT_TRACE_PATH = LAB_DIR / "logs" / "query_trace.jsonl"
+
+
+def _safe_preview(text: str, limit: int = 220) -> str:
+    text = (text or "").replace("\n", " ").strip()
+    return (text[:limit] + "...") if len(text) > limit else text
+
+
+def _append_jsonl(path: Path, row: Dict[str, Any]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("a", encoding="utf-8") as f:
+        f.write(json.dumps(row, ensure_ascii=False) + "\n")
+
 
 # =============================================================================
 # CẤU HÌNH
@@ -530,6 +552,7 @@ def rag_answer(
     dense_weight: float = 0.6,
     sparse_weight: float = 0.4,
     verbose: bool = False,
+    trace_path: Optional[str] = None,
 ) -> Dict[str, Any]:
     """
     Pipeline RAG hoàn chỉnh: query → (transform) → retrieve → (rerank) → generate.
@@ -628,6 +651,29 @@ def rag_answer(
         print(f"[RAG] Retrieval mode: {retrieval_mode}")
         _print_candidates("Candidates BEFORE rerank/select", candidates)
 
+    # --- Trace (before rerank/select) ---
+    trace_enabled = bool(os.getenv("RAG_TRACE", "").strip()) or (trace_path is not None)
+    trace_file = Path(trace_path) if trace_path else DEFAULT_TRACE_PATH
+    trace_row: Dict[str, Any] = {}
+    if trace_enabled:
+        trace_row = {
+            "timestamp": datetime.now().isoformat(),
+            "query": query,
+            "queries_after_transform": queries,
+            "config": config,
+            "stage": "before_rerank",
+            "num_candidates": len(candidates),
+            "candidates": [
+                {
+                    "score": float(c.get("score", 0.0) or 0.0),
+                    "source": (c.get("metadata", {}) or {}).get("source", "unknown"),
+                    "section": (c.get("metadata", {}) or {}).get("section", ""),
+                    "preview": _safe_preview(str(c.get("text", ""))),
+                }
+                for c in candidates[: min(len(candidates), top_k_search)]
+            ],
+        }
+
     # --- Bước 2: Rerank (optional) ---
     if use_rerank:
         candidates = rerank(query, candidates, top_k=top_k_select)
@@ -653,6 +699,30 @@ def rag_answer(
         c["metadata"].get("source", "unknown")
         for c in candidates
     })
+
+    # --- Trace (final) ---
+    if trace_enabled:
+        trace_row.update(
+            {
+                "stage": "final",
+                "selected_chunks": [
+                    {
+                        "score": float(c.get("score", 0.0) or 0.0),
+                        "source": (c.get("metadata", {}) or {}).get("source", "unknown"),
+                        "section": (c.get("metadata", {}) or {}).get("section", ""),
+                        "preview": _safe_preview(str(c.get("text", ""))),
+                    }
+                    for c in candidates
+                ],
+                "sources": sources,
+                "answer_preview": _safe_preview(answer, limit=400),
+            }
+        )
+        try:
+            _append_jsonl(trace_file, trace_row)
+        except Exception:
+            # Trace must never break the main pipeline.
+            pass
 
     return {
         "query": query,
