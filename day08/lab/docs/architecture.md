@@ -1,20 +1,22 @@
 # Architecture — RAG Pipeline (Day 08 Lab)
 
+<<<<<<< HEAD
 > Template: Điền vào các mục này khi hoàn thành từng sprint.
 > Deliverable của Documentation Owner
 
+=======
+>>>>>>> 67e75208944c2f9c9a12bad5107052b425b68486
 ## 1. Tổng quan kiến trúc
 
-```
-[Raw Docs]
-    ↓
-[index.py: Preprocess → Chunk → Embed → Store]
-    ↓
-[ChromaDB Vector Store]
-    ↓
-[rag_answer.py: Query → Retrieve → Rerank → Generate]
-    ↓
-[Grounded Answer + Citation]
+```mermaid
+flowchart TD
+    A["📄 Raw Docs\n(policy_refund, sla_p1, access_control_sop,\nit_helpdesk_faq, hr_leave_policy)"]
+    B["index.py\nPreprocess → Chunk → Embed → Store"]
+    C[("ChromaDB\nVector Store\n29 chunks")]
+    D["rag_answer.py\nQuery → Retrieve → Rerank → Generate"]
+    E["✅ Grounded Answer + Citation\n[1] source | section"]
+
+    A --> B --> C --> D --> E
 ```
 
 **Mô tả ngắn gọn:**
