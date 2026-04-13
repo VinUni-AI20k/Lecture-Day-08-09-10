@@ -559,7 +559,7 @@ def rag_answer(
 
 
 # =============================================================================
-# SPRINT 3: SO SÁNH BASELINE VS VARIANT
+# RETRIEVAL — SPARSE / BM25
 # =============================================================================
 
 def compare_retrieval_strategies(query: str) -> None:
