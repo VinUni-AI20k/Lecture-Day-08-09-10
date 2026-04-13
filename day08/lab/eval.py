@@ -41,13 +41,14 @@ BASELINE_CONFIG = {
 }
 
 # Cấu hình variant (Sprint 3 — điều chỉnh theo lựa chọn của nhóm)
-# TODO Sprint 4: Cập nhật VARIANT_CONFIG theo variant nhóm đã implement
+# Dựa trên rag_answer.py, variant phù hợp nhất hiện tại là hybrid retrieval.
+# Không bật rerank vì rerank() mới đang là placeholder, chưa tạo khác biệt thực sự.
 VARIANT_CONFIG = {
-    "retrieval_mode": "hybrid",   # Hoặc "dense" nếu chỉ đổi rerank
+    "retrieval_mode": "hybrid",
     "top_k_search": 10,
     "top_k_select": 3,
-    "use_rerank": True,           # Hoặc False nếu variant là hybrid không rerank
-    "label": "variant_hybrid_rerank",
+    "use_rerank": False,
+    "label": "variant_hybrid",
 }
 
 
@@ -341,6 +342,16 @@ def compare_ab(
     - Có câu nào variant lại kém hơn baseline không? Tại sao?
     """
     metrics = ["faithfulness", "relevance", "context_recall", "completeness"]
+    metric_labels = {
+        "faithfulness": "Faithfulness",
+        "relevance": "Answer Relevance",
+        "context_recall": "Context Recall",
+        "completeness": "Completeness",
+    }
+
+    def average(rows: List[Dict], metric: str) -> Optional[float]:
+        scores = [r[metric] for r in rows if r.get(metric) is not None]
+        return sum(scores) / len(scores) if scores else None
 
     print(f"\n{'='*70}")
     print("A/B Comparison: Baseline vs Variant")
@@ -348,25 +359,28 @@ def compare_ab(
     print(f"{'Metric':<20} {'Baseline':>10} {'Variant':>10} {'Delta':>8}")
     print("-" * 55)
 
+    summary_rows = []
     for metric in metrics:
-        b_scores = [r[metric] for r in baseline_results if r[metric] is not None]
-        v_scores = [r[metric] for r in variant_results if r[metric] is not None]
+        b_avg = average(baseline_results, metric)
+        v_avg = average(variant_results, metric)
+        delta = (v_avg - b_avg) if (b_avg is not None and v_avg is not None) else None
 
-        b_avg = sum(b_scores) / len(b_scores) if b_scores else None
-        v_avg = sum(v_scores) / len(v_scores) if v_scores else None
-        delta = (v_avg - b_avg) if (b_avg and v_avg) else None
+        b_str = f"{b_avg:.2f}" if b_avg is not None else "N/A"
+        v_str = f"{v_avg:.2f}" if v_avg is not None else "N/A"
+        d_str = f"{delta:+.2f}" if delta is not None else "N/A"
 
-        b_str = f"{b_avg:.2f}" if b_avg else "N/A"
-        v_str = f"{v_avg:.2f}" if v_avg else "N/A"
-        d_str = f"{delta:+.2f}" if delta else "N/A"
-
-        print(f"{metric:<20} {b_str:>10} {v_str:>10} {d_str:>8}")
+        print(f"{metric_labels[metric]:<20} {b_str:>10} {v_str:>10} {d_str:>8}")
+        summary_rows.append((metric_labels[metric], b_avg, v_avg, delta))
 
     # Per-question comparison
     print(f"\n{'Câu':<6} {'Baseline F/R/Rc/C':<22} {'Variant F/R/Rc/C':<22} {'Better?':<10}")
     print("-" * 65)
 
     b_by_id = {r["id"]: r for r in baseline_results}
+    better_variant = []
+    better_baseline = []
+    ties = []
+
     for v_row in variant_results:
         qid = v_row["id"]
         b_row = b_by_id.get(qid, {})
@@ -384,6 +398,61 @@ def compare_ab(
         better = "Variant" if v_total > b_total else ("Baseline" if b_total > v_total else "Tie")
 
         print(f"{qid:<6} {b_scores_str:<22} {v_scores_str:<22} {better:<10}")
+
+        delta_parts = []
+        for metric in metrics:
+            b_score = b_row.get(metric)
+            v_score = v_row.get(metric)
+            if b_score is None or v_score is None:
+                continue
+            if v_score > b_score:
+                delta_parts.append(f"{metric_labels[metric]} +{v_score - b_score}")
+            elif v_score < b_score:
+                delta_parts.append(f"{metric_labels[metric]} {v_score - b_score}")
+
+        explanation = "; ".join(delta_parts) if delta_parts else "Khong du diem de ket luan"
+        if better == "Variant":
+            better_variant.append((qid, explanation))
+        elif better == "Baseline":
+            better_baseline.append((qid, explanation))
+        else:
+            ties.append(qid)
+
+    print("\nMarkdown table for report:")
+    print("| Metric | Baseline | Variant | Delta |")
+    print("|--------|----------|---------|-------|")
+    for label, b_avg, v_avg, delta in summary_rows:
+        b_cell = f"{b_avg:.2f}/5" if b_avg is not None else "N/A"
+        v_cell = f"{v_avg:.2f}/5" if v_avg is not None else "N/A"
+        d_cell = f"{delta:+.2f}" if delta is not None else "N/A"
+        print(f"| {label} | {b_cell} | {v_cell} | {d_cell} |")
+
+    print("\nNhan xet nhanh:")
+    if better_variant:
+        print("- Variant tot hon o:", ", ".join(f"{qid} ({reason})" for qid, reason in better_variant))
+    else:
+        print("- Variant tot hon o: chua thay cau nao ro rang.")
+
+    if better_baseline:
+        print("- Baseline tot hon o:", ", ".join(f"{qid} ({reason})" for qid, reason in better_baseline))
+    else:
+        print("- Baseline tot hon o: khong co hoac chua du evidence.")
+
+    if ties:
+        print("- Hoa nhau o:", ", ".join(ties))
+
+    best_metric = None
+    best_delta = None
+    for metric_label, _, _, delta in summary_rows:
+        if delta is None:
+            continue
+        if best_delta is None or delta > best_delta:
+            best_delta = delta
+            best_metric = metric_label
+
+    if best_metric is not None:
+        print(f"- Bien dong gop lon nhat hien tai kha nang nam o metric: {best_metric} ({best_delta:+.2f}).")
+        print("- Neu variant cua nhom la hybrid, ban co the justify rang hybrid cai thien retrieval, dac biet voi query alias/keyword.")
 
     # Export to CSV
     if output_csv:
@@ -406,15 +475,25 @@ def generate_scorecard_summary(results: List[Dict], label: str) -> str:
     """
     Tạo báo cáo tóm tắt scorecard dạng markdown.
 
-    TODO Sprint 4: Cập nhật template này theo kết quả thực tế của nhóm.
+    Tạo summary đủ dùng để nộp scorecard và đọc nhanh các câu yếu/mạnh.
     """
     metrics = ["faithfulness", "relevance", "context_recall", "completeness"]
+    metric_labels = {
+        "faithfulness": "Faithfulness",
+        "relevance": "Answer Relevance",
+        "context_recall": "Context Recall",
+        "completeness": "Completeness",
+    }
     averages = {}
     for metric in metrics:
         scores = [r[metric] for r in results if r[metric] is not None]
         averages[metric] = sum(scores) / len(scores) if scores else None
 
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M")
+    ranked_rows = sorted(
+        results,
+        key=lambda r: sum((r.get(m) or 0) for m in metrics),
+    )
 
     md = f"""# Scorecard: {label}
 Generated: {timestamp}
@@ -425,17 +504,32 @@ Generated: {timestamp}
 |--------|--------------|
 """
     for metric, avg in averages.items():
-        avg_str = f"{avg:.2f}/5" if avg else "N/A"
-        md += f"| {metric.replace('_', ' ').title()} | {avg_str} |\n"
+        avg_str = f"{avg:.2f}/5" if avg is not None else "N/A"
+        md += f"| {metric_labels[metric]} | {avg_str} |\n"
+
+    md += "\n## Quick Notes\n\n"
+    md += f"- Config label: `{label}`\n"
+    if ranked_rows:
+        weakest = ", ".join(r["id"] for r in ranked_rows[:3])
+        strongest = ", ".join(r["id"] for r in ranked_rows[-3:][::-1])
+        md += f"- Weakest questions: {weakest}\n"
+        md += f"- Strongest questions: {strongest}\n"
 
     md += "\n## Per-Question Results\n\n"
     md += "| ID | Category | Faithful | Relevant | Recall | Complete | Notes |\n"
     md += "|----|----------|----------|----------|--------|----------|-------|\n"
 
     for r in results:
+        notes = " | ".join(
+            note for note in [
+                r.get("faithfulness_notes", ""),
+                r.get("context_recall_notes", ""),
+                r.get("completeness_notes", ""),
+            ] if note
+        )[:80]
         md += (f"| {r['id']} | {r['category']} | {r.get('faithfulness', 'N/A')} | "
                f"{r.get('relevance', 'N/A')} | {r.get('context_recall', 'N/A')} | "
-               f"{r.get('completeness', 'N/A')} | {r.get('faithfulness_notes', '')[:50]} |\n")
+               f"{r.get('completeness', 'N/A')} | {notes} |\n")
 
     return md
 
@@ -488,23 +582,23 @@ if __name__ == "__main__":
 
     # --- Chạy Variant (sau khi Sprint 3 hoàn thành) ---
     # TODO Sprint 4: Uncomment sau khi implement variant trong rag_answer.py
-    # print("\n--- Chạy Variant ---")
-    # variant_results = run_scorecard(
-    #     config=VARIANT_CONFIG,
-    #     test_questions=test_questions,
-    #     verbose=True,
-    # )
-    # variant_md = generate_scorecard_summary(variant_results, VARIANT_CONFIG["label"])
-    # (RESULTS_DIR / "scorecard_variant.md").write_text(variant_md, encoding="utf-8")
+    print("\n--- Chạy Variant ---")
+    variant_results = run_scorecard(
+        config=VARIANT_CONFIG,
+        test_questions=test_questions,
+        verbose=True,
+    )
+    variant_md = generate_scorecard_summary(variant_results, VARIANT_CONFIG["label"])
+    (RESULTS_DIR / "scorecard_variant.md").write_text(variant_md, encoding="utf-8")
 
     # --- A/B Comparison ---
     # TODO Sprint 4: Uncomment sau khi có cả baseline và variant
-    # if baseline_results and variant_results:
-    #     compare_ab(
-    #         baseline_results,
-    #         variant_results,
-    #         output_csv="ab_comparison.csv"
-    #     )
+    if baseline_results and variant_results:
+        compare_ab(
+            baseline_results,
+            variant_results,
+            output_csv="ab_comparison.csv"
+        )
 
     print("\n\nViệc cần làm Sprint 4:")
     print("  1. Hoàn thành Sprint 2 + 3 trước")
