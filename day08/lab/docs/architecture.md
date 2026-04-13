@@ -62,15 +62,14 @@
 ### Variant (Sprint 3)
 | Tham số | Giá trị | Thay đổi so với baseline |
 |---------|---------|------------------------|
-| Strategy | TODO (hybrid / dense) | TODO |
-| Top-k search | TODO | TODO |
-| Top-k select | TODO | TODO |
-| Rerank | TODO (cross-encoder / MMR) | TODO |
-| Query transform | TODO (expansion / HyDE / decomposition) | TODO |
+| Strategy | hybrid | Chuyển sang kết hợp Dense và Sparse |
+| Top-k search | 10 | Giữ nguyên |
+| Top-k select | 3 | Giữ nguyên |
+| Rerank | Không | Giữ nguyên |
+| Query transform | Không | Giữ nguyên |
 
 **Lý do chọn variant này:**
-> TODO: Giải thích tại sao chọn biến này để tune.
-> Ví dụ: "Chọn hybrid vì corpus có cả câu tự nhiên (policy) lẫn mã lỗi và tên chuyên ngành (SLA ticket P1, ERR-403)."
+> Nhóm quyết định lựa chọn Hybrid Search (kết hợp Dense Retrieval bằng Vector và BM25) vì dữ liệu tài liệu (IT Helpdesk, CS) chứa rất nhiều thuật ngữ cứng, mã code riêng (ví dụ: ERR-403, ticket P1) xen lẫn với câu văn tự nhiên. Dense Baseline thu thập theo chuỗi ngữ nghĩa nên dễ bỏ lọt (hoặc hụt điểm) nếu user hỏi mã số chính xác. Hybrid kết hợp BM25 giúp khắc phục khá tốt nhược điểm này.
 
 ---
 
@@ -78,12 +77,15 @@
 
 ### Grounded Prompt Template
 ```
-Answer only from the retrieved context below.0
-If the context is insufficient, say you do not know.
-Cite the source field when possible.
-Keep your answer short, clear, and factual.
+You are a professional IT/CS Helpdesk assistant.
+Your task is to answer the user's question based EXCLUSIVELY on the Context provided below.
 
-Question: {query}
+MANDATORY Rules:
+1. ABSTAIN: If the Context does not contain enough information to answer the question, you must reply exactly with: "Not enough data to answer." DO NOT make up information or use outside knowledge.
+2. CITATION: Every piece of information you provide must include a citation. Use bracketed numbers like [1], [2] that correspond to the chunk IDs in the Context (e.g., "According to the refund policy [1], the process takes 3 days [2]").
+3. Keep your answers short, clear, and direct.
+
+Question: {Nhân viên phải báo trước bao nhiêu ngày để xin nghỉ phép năm? Con số này có giống với số ngày cần giấy tờ khi bị ốm không?}
 
 Context:
 [1] {source} | {section} | score={score}
@@ -91,12 +93,9 @@ Context:
 
 [2] ...
 
-Answer:
+Answer: Nhân viên phải báo trước ít nhất 3 ngày làm việc để xin nghỉ phép năm [1]. Con số này không giống với ...
+
 ```
-Câu hỏi 1: Mng viết prompt bằng tiếng anh hay tiếng việt? Có yêu cầu ngữ điệu hong? Xin nguyên văn 
-Câu 2: Có câu lệnh ép AI trích nguồn không? Xin nguyên văn, có tự động gắn tag [1], [2] như ví dụ không? 
-Câu 3: Nếu tài liệu ko có câu trả lời thì sao? 
-Câu 4: Context đưa vào có score không?
 
 ### LLM Configuration
 | Tham số | Giá trị |
@@ -123,22 +122,8 @@ Câu 4: Context đưa vào có score không?
 
 ## 6. Diagram (tùy chọn)
 
-> TODO: Vẽ sơ đồ pipeline nếu có thời gian. Có thể dùng Mermaid hoặc drawio.
-
-```mermaid
-graph LR
-    A[User Query] --> B[Query Embedding]
-    B --> C[ChromaDB Vector Search]
-    C --> D[Top-10 Candidates]
-    D --> E{Rerank?}
-    E -->|Yes| F[Cross-Encoder]
-    E -->|No| G[Top-3 Select]
-    F --> G
-    G --> H[Build Context Block]
-    H --> I[Grounded Prompt]
-    I --> J[LLM]
-    J --> K[Answer + Citation]
 ```
+mermaid
 graph TD
     %% Định dạng phong cách cho các khối
     classDef database fill:#f9f,stroke:#333,stroke-width:2px;
@@ -170,3 +155,4 @@ graph TD
         PMT --> LL[LLM Generation <br> Temperature = 0]:::llm
         LL --> OUT[Grounded Answer <br> kèm trích dẫn nguồn]:::input
     end
+```

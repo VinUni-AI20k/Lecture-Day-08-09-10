@@ -1,0 +1,77 @@
+[
+  {
+    "id": "eq01",
+    "question": "Mật khẩu công ty phải thay đổi bao lâu một lần?",
+    "expected_answer": "Mật khẩu phải được thay đổi mỗi 90 ngày. Hệ thống sẽ nhắc nhở 7 ngày trước khi hết hạn.",
+    "expected_sources": ["support/helpdesk-faq.md"],
+    "difficulty": "easy",
+    "category": "IT Helpdesk"
+  },
+  {
+    "id": "eq02",
+    "question": "Nhân viên được nghỉ ốm có lương bao nhiêu ngày mỗi năm?",
+    "expected_answer": "Nhân viên được nghỉ ốm 10 ngày/năm có trả lương. Cần thông báo cho Line Manager trước 9:00 sáng ngày nghỉ.",
+    "expected_sources": ["hr/leave-policy-2026.pdf"],
+    "difficulty": "easy",
+    "category": "HR Policy"
+  },
+  {
+    "id": "eq03",
+    "question": "Khách hàng chọn hoàn tiền bằng store credit thì được bao nhiêu phần trăm?",
+    "expected_answer": "Khách hàng chọn nhận store credit thay thế sẽ được giá trị 110% so với số tiền hoàn.",
+    "expected_sources": ["policy/refund-v4.pdf"],
+    "difficulty": "easy",
+    "category": "Refund"
+  },
+  {
+    "id": "eq04",
+    "question": "Ticket P2 có SLA phản hồi và xử lý trong bao lâu?",
+    "expected_answer": "Ticket P2 có SLA phản hồi ban đầu là 2 giờ, thời gian xử lý và khắc phục là 1 ngày làm việc. Tự động escalate sau 90 phút không có phản hồi.",
+    "expected_sources": ["support/sla-p1-2026.pdf"],
+    "difficulty": "medium",
+    "category": "SLA"
+  },
+  {
+    "id": "eq05",
+    "question": "Cấp quyền Level 4 (Admin Access) cần ai phê duyệt và có yêu cầu đặc biệt gì?",
+    "expected_answer": "Level 4 (Admin Access) cần phê duyệt từ IT Manager và CISO. Thời gian xử lý 5 ngày làm việc. Yêu cầu thêm: nhân viên phải hoàn thành training bắt buộc về security policy.",
+    "expected_sources": ["it/access-control-sop.md"],
+    "difficulty": "medium",
+    "category": "Access Control"
+  },
+  {
+    "id": "eq06",
+    "question": "Nhân viên trên 5 năm kinh nghiệm được nghỉ phép năm bao nhiêu ngày, và được chuyển tối đa bao nhiêu ngày sang năm sau?",
+    "expected_answer": "Nhân viên trên 5 năm kinh nghiệm được nghỉ phép năm 18 ngày/năm. Tối đa 5 ngày phép năm chưa dùng được chuyển sang năm tiếp theo.",
+    "expected_sources": ["hr/leave-policy-2026.pdf"],
+    "difficulty": "medium",
+    "category": "HR Policy"
+  },
+  {
+    "id": "eq07",
+    "question": "So sánh quy trình cấp quyền Level 2 và Level 3: khác nhau ở những điểm nào?",
+    "expected_answer": "Level 2 (Standard Access) cần phê duyệt từ Line Manager + IT Admin, xử lý 2 ngày, áp dụng cho nhân viên chính thức sau thử việc. Level 3 (Elevated Access) cần thêm IT Security phê duyệt (3 người), xử lý 3 ngày, áp dụng cho Team Lead/Senior Engineer/Manager.",
+    "expected_sources": ["it/access-control-sop.md"],
+    "difficulty": "hard",
+    "category": "Access Control",
+    "note": "Yêu cầu so sánh multi-section trong cùng tài liệu"
+  },
+  {
+    "id": "eq08",
+    "question": "Nhân viên nghỉ ốm 4 ngày liên tiếp cần thủ tục gì khác so với nghỉ 2 ngày?",
+    "expected_answer": "Nghỉ ốm 2 ngày chỉ cần thông báo cho Line Manager trước 9:00 sáng ngày nghỉ. Nghỉ ốm 4 ngày (trên 3 ngày liên tiếp) ngoài việc thông báo còn phải bổ sung giấy tờ y tế từ bệnh viện.",
+    "expected_sources": ["hr/leave-policy-2026.pdf"],
+    "difficulty": "hard",
+    "category": "HR Policy",
+    "note": "Yêu cầu inference từ ngưỡng >3 ngày, không hỏi trực tiếp"
+  },
+  {
+    "id": "eq09",
+    "question": "Nếu sự cố P1 xảy ra lúc 2 giờ sáng, liên hệ ai và qua kênh nào?",
+    "expected_answer": "Sự cố P1 ngoài giờ liên hệ qua hotline on-call ext. 9999 (hoạt động 24/7). PagerDuty sẽ tự động nhắn on-call engineer khi có P1 ticket mới. Ngoài ra có thể gửi alert qua Slack #incident-p1 và email incident@company.internal.",
+    "expected_sources": ["support/sla-p1-2026.pdf", "support/helpdesk-faq.md"],
+    "difficulty": "hard",
+    "category": "SLA",
+    "note": "Cross-doc: SLA (ext.9999 24/7, PagerDuty, Slack) + Helpdesk FAQ (emergency ext.9999 ngoài giờ)"
+  }
+]
