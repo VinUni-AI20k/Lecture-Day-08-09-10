@@ -1,7 +1,7 @@
 # Báo Cáo Cá Nhân — Lab Day 08: RAG Pipeline
 
 **Họ và tên:** Nguyen Thi Ngoc  
-**Vai trò trong nhóm:** Documentation Owner (hỗ trợ Eval)  
+**Vai trò trong nhóm:** Documentation Owner (hỗ trợ Eval), sprint 4, fix bugs, enhancement
 **Ngày nộp:** 2026-04-13  
 **Độ dài yêu cầu:** 500–800 từ
 
