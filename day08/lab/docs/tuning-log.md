@@ -72,10 +72,10 @@ Ghi chu:
 
 | Metric | Baseline | Variant (hybrid only) | Delta |
 |---|---:|---:|---:|
-| Faithfulness | _dien sau khi chay_ | _dien sau khi chay_ | _dien sau khi chay_ |
-| Relevance | _dien sau khi chay_ | _dien sau khi chay_ | _dien sau khi chay_ |
-| Context Recall | _dien sau khi chay_ | _dien sau khi chay_ | _dien sau khi chay_ |
-| Completeness | _dien sau khi chay_ | _dien sau khi chay_ | _dien sau khi chay_ |
+| Faithfulness | 5.00 | 5.00 | 0.00 |
+| Relevance | 4.20 | 1.00 | -3.20 |
+| Context Recall | 5.00 | 0.00 | -5.00 |
+| Completeness | 4.10 | 1.20 | -2.90 |
 
 Nguon dien so:
 - `results/scorecard_baseline.md`
@@ -86,9 +86,10 @@ Nguon dien so:
 
 ## 5) Ghi chu phan tich tam thoi
 
-1. Dense on dinh o cau hoi de, nhung de bo sot alias/keyword hiem.
-2. Hybrid ky vong tang kha nang lay dung ngu canh cho cau co alias.
-3. Quyết định cuoi cung se chot o commit tiep theo dua tren bang before/after.
+1. Ket qua thuc te cho thay `hybrid only` khong dat muc toi thieu cho A/B nay: relevance va context recall giam manh.
+2. Variant tra ve abstain tren nhieu cau co du lieu, dan den context recall = 0.00 trong tong hop scorecard.
+3. Quyet dinh cuoi: giu `baseline_dense` lam cau hinh nop bai/production hien tai.
+4. Huong tiep theo: neu can danh lai hybrid, can tao A/B rieng voi du lieu va nguong retrieval da hieu chinh, sau do moi so sanh tiep.
 
 ---
 
@@ -168,16 +169,16 @@ Biến duy nhất thay đổi: `retrieval_mode` từ `dense` → `hybrid` (dense
 | Metric | Baseline (dense) | Variant (hybrid only) | Delta |
 |--------|:----------------:|:---------------------:|:-----:|
 | Faithfulness | **5.00** | **5.00** | 0.00 |
-| Relevance | **4.20** | 3.80 | −0.40 |
-| Context Recall | **5.00** | **5.00** | 0.00 |
-| Completeness | **4.20** | 4.00 | −0.20 |
+| Relevance | **4.20** | 1.00 | −3.20 |
+| Context Recall | **5.00** | **0.00** | −5.00 |
+| Completeness | **4.10** | 1.20 | −2.90 |
 
 Nguồn số liệu: `results/scorecard_baseline.md`, `results/scorecard_variant.md`, `logs/runs.jsonl`.
 
 ### Kết luận — Vì sao giữ Baseline dense
 
 1. **Faithfulness bằng nhau (5.0/5):** cả hai config đều grounded hoàn toàn — không sinh thông tin ngoài tài liệu.
-2. **Baseline thắng về Relevance (4.2 vs 3.8):** hybrid đưa thêm keyword chunks vào pool nhưng một số chunk BM25 ít liên quan về ngữ nghĩa, làm loãng context.
-3. **Baseline thắng về Completeness (4.2 vs 4.0):** dense chọn được chunks đầy đủ hơn cho câu hỏi tự nhiên.
-4. **Trường hợp hybrid có ưu thế:** câu q07 ("Approval Matrix" — alias tên cũ) — hybrid giúp BM25 tìm được từ khóa cũ mà dense bỏ sót. Tuy nhiên trong 10 câu thử nghiệm, effect này không đủ bù chi phí noise.
-5. **Quyết định:** giữ `retrieval_mode = dense` làm production config. Hybrid sẽ được tái đánh giá khi corpus mở rộng và có nhiều câu alias hơn.
+2. **Baseline thắng lớn về Relevance (4.2 vs 1.0):** variant hybrid-only tra ve nhieu cau abstain, khong giai quyet dung trong tam cau hoi.
+3. **Baseline thắng lớn về Context Recall (5.0 vs 0.0):** variant khong retrieve duoc expected sources tren cac cau co dap an.
+4. **Baseline thắng rõ về Completeness (4.1 vs 1.2):** variant bo sot nhieu y chinh do context dau vao khong dat.
+5. **Quyết định:** giữ `retrieval_mode = dense` làm config chốt cho nhánh hiện tại. `hybrid` se duoc danh gia lai trong mot sprint rieng sau khi khac phuc retrieval cho variant.
