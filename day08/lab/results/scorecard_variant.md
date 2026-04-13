@@ -1,32 +1,32 @@
-# Scorecard: variant_hybrid
-Generated: 2026-04-13 17:16
+# Scorecard: variant_adaptive_general
+Generated: 2026-04-13 18:05
 
 ## Summary
 
 | Metric | Average Score |
 |--------|--------------|
-| Faithfulness | 4.30/5 |
-| Answer Relevance | 4.40/5 |
+| Faithfulness | 4.90/5 |
+| Answer Relevance | 5.00/5 |
 | Context Recall | 5.00/5 |
-| Completeness | 3.70/5 |
+| Completeness | 4.30/5 |
 
 ## Quick Notes
 
-- Config label: `variant_hybrid`
-- Weakest questions: q09, q06, q07
-- Strongest questions: q05, q03, q02
+- Config label: `variant_adaptive_general`
+- Weakest questions: gq07, gq05, gq09
+- Strongest questions: gq10, gq08, gq04
 
 ## Per-Question Results
 
 | ID | Category | Faithful | Relevant | Recall | Complete | Notes |
 |----|----------|----------|----------|--------|----------|-------|
-| q01 | SLA | 5 | 5 | 5 | 5 | The answer is fully supported by the retrieved chunks, which explicitly state th |
-| q02 | Refund | 5 | 5 | 5 | 5 | The answer is fully supported by the retrieved chunks, which state that customer |
-| q03 | Access Control | 5 | 5 | 5 | 5 | The answer is fully supported by the retrieved chunks, specifically confirming t |
-| q04 | Refund | 5 | 5 | 5 | 4 | The answer is fully supported by the retrieved chunks, which state that digital  |
-| q05 | IT Helpdesk | 5 | 5 | 5 | 5 | The answer is directly supported by the retrieved chunk, which states the same f |
-| q06 | SLA | 2 | 3 | 5 | 2 | The answer includes information about temporary permissions granted by the IT Ad |
-| q07 | Access Control | 2 | 3 | 5 | 2 | The answer states the document is 'Approval Matrix for System Access', but the e |
-| q08 | HR Policy | 5 | 5 | 5 | 4 | The answer is fully supported by the retrieved chunks, specifically stating that |
-| q09 | Insufficient Context | 4 | 3 | None | 2 | The answer correctly states that there is insufficient data, but it does not men |
-| q10 | Refund | 5 | 5 | 5 | 3 | The answer correctly states that there is insufficient data to determine if the  |
+| gq01 | SLA | 5 | 5 | 5 | 5 | The answer is fully supported by the retrieved chunks, accurately reflecting the |
+| gq02 | Cross-Document | 5 | 5 | 5 | 4 | The answer is fully supported by the retrieved chunks, specifically mentioning t |
+| gq03 | Refund | 5 | 5 | 5 | 4 | The answer is fully supported by the retrieved chunks, specifically referencing  |
+| gq04 | Refund | 5 | 5 | 5 | 5 | The answer is fully supported by the retrieved chunks, specifically stating that |
+| gq05 | Access Control | 4 | 5 | 5 | 4 | The answer is mostly supported by the retrieved chunks, but it incorrectly state |
+| gq06 | Cross-Document | 5 | 5 | 5 | 4 | The answer is fully supported by the retrieved chunks, specifically the first ch |
+| gq07 | Insufficient Context | 5 | 5 | None | 4 | The answer correctly states that there is no information in the context regardin |
+| gq08 | HR Policy | 5 | 5 | 5 | 5 | The answer is fully supported by the retrieved chunks, specifically mentioning t |
+| gq09 | IT Helpdesk | 5 | 5 | 5 | 3 | The answer is fully supported by the retrieved chunks, which confirm the need fo |
+| gq10 | Refund | 5 | 5 | 5 | 5 | The answer is fully supported by the retrieved chunks, accurately reflecting the |
