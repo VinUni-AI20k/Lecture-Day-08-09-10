@@ -23,6 +23,18 @@ const EXAMPLE_QUESTIONS = [
   "Nhân viên có bao nhiêu ngày nghỉ phép năm?",
   "Các cấp quyền truy cập hệ thống gồm những gì?",
 ];
+const TEST_QUESTIONS = [
+  "SLA xử lý ticket P1 là bao lâu?",
+  "Khách hàng có thể yêu cầu hoàn tiền trong bao nhiêu ngày?",
+  "Ai phải phê duyệt để cấp quyền Level 3?",
+  "Sản phẩm kỹ thuật số có được hoàn tiền không?",
+  "Tài khoản bị khóa sau bao nhiêu lần đăng nhập sai?",
+  "Escalation trong sự cố P1 diễn ra như thế nào?",
+  "Approval Matrix để cấp quyền hệ thống là tài liệu nào?",
+  "Nhân viên được làm remote tối đa mấy ngày mỗi tuần?",
+  "ERR-403-AUTH là lỗi gì và cách xử lý?",
+  "Nếu cần hoàn tiền khẩn cấp cho khách hàng VIP, quy trình có khác không?",
+];
 
 // ── Mode badges ──────────────────────────────────────────────────────────────
 const MODE_ICONS = {
@@ -287,6 +299,24 @@ export default function ChatPage() {
                   <p className="mt-1.5 text-center text-[10px] text-muted-foreground">
                     Enter để gửi · Shift+Enter xuống dòng
                   </p>
+                  <div className="mt-2.5 rounded-lg border border-primary/20 bg-primary/5 px-2.5 py-2">
+                    <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-primary/70">
+                      Gợi ý từ bộ câu hỏi test
+                    </p>
+                    <div className="flex gap-1.5 overflow-x-auto pb-1">
+                      {TEST_QUESTIONS.map((q, idx) => (
+                        <button
+                          key={`${idx}-${q}`}
+                          type="button"
+                          onClick={() => setQuery(q)}
+                          className="shrink-0 rounded-full border border-primary/25 bg-white px-3 py-1 text-[11px] font-medium text-foreground hover:border-primary/50 hover:bg-primary/10 hover:text-primary transition-colors"
+                          title={q}
+                        >
+                          {q.length > 54 ? `${q.slice(0, 54)}...` : q}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                 </div>
               </div>
             </Panel>
