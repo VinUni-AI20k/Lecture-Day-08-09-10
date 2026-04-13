@@ -165,8 +165,8 @@ def post_rag(
                 "client": "fastapi",
                 "query_preview": qprev,
                 "retrieval_mode": body.retrieval_mode,
-                "ok": err is None,
-                "error": type(err).__name__ if err else None,
+                "success": err is None,
+                "error_type": type(err).__name__ if err else None,
             }
         )
         telemetry_ctx.reset(tok)
