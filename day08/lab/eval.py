@@ -87,6 +87,35 @@ VARIANT_CONFIG = {
 
 
 # =============================================================================
+# LLM-AS-JUDGE HELPER
+# =============================================================================
+
+def _llm_judge(prompt: str) -> dict:
+    """
+    Gọi OpenAI để chấm điểm một câu hỏi theo thang 1-5.
+    Trả về dict {"score": int, "reason": str} hoặc fallback khi lỗi.
+    """
+    import os
+    import json
+    from openai import OpenAI
+
+    try:
+        client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+        response = client.chat.completions.create(
+            model=os.getenv("LLM_MODEL", "gpt-4o-mini"),
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0,
+            max_tokens=200,
+        )
+        raw = response.choices[0].message.content.strip()
+        # Loại bỏ markdown code block nếu có
+        raw = raw.strip("```json").strip("```").strip()
+        return json.loads(raw)
+    except Exception as e:
+        return {"score": None, "reason": f"LLM judge error: {e}"}
+
+
+# =============================================================================
 # SCORING FUNCTIONS
 # 4 metrics từ slide: Faithfulness, Answer Relevance, Context Recall, Completeness
 # =============================================================================
@@ -584,6 +613,12 @@ if __name__ == "__main__":
         variant_results = []
 
     # --- A/B Comparison ---
+    if baseline_results and variant_results:
+        compare_ab(
+            baseline_results,
+            variant_results,
+            output_csv="ab_comparison.csv"
+        )
     if baseline_results and variant_results:
         compare_ab(
             baseline_results,

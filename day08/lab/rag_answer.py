@@ -244,7 +244,7 @@ def rerank(
     """
     # TODO Sprint 3: Implement rerank
     # Tạm thời trả về top_k đầu tiên (không rerank)
-
+    return candidates[:top_k]
 
 
 # =============================================================================
@@ -279,7 +279,7 @@ def transform_query(query: str, strategy: str = "expansion") -> List[str]:
     """
     # TODO Sprint 3: Implement query transformation
     # Tạm thời trả về query gốc
-
+    return [query]
 
 
 # =============================================================================
@@ -420,8 +420,61 @@ def rag_answer(
     - Variant B: bật use_rerank=True
     - Variant C: thêm query transformation trước khi retrieve
     """
+    config = {
+        "retrieval_mode": retrieval_mode,
+        "top_k_search": top_k_search,
+        "top_k_select": top_k_select,
+        "use_rerank": use_rerank,
+    }
 
+    # --- Bước 1: Retrieve ---
+    if retrieval_mode == "dense":
+        candidates = retrieve_dense(query, top_k=top_k_search)
+    elif retrieval_mode == "sparse":
+        candidates = retrieve_sparse(query, top_k=top_k_search)
+    elif retrieval_mode == "hybrid":
+        candidates = retrieve_hybrid(query, top_k=top_k_search)
+    else:
+        raise ValueError(f"retrieval_mode không hợp lệ: {retrieval_mode}")
 
+    if verbose:
+        print(f"\n[RAG] Query: {query}")
+        print(f"[RAG] Retrieved {len(candidates)} candidates (mode={retrieval_mode})")
+        for i, c in enumerate(candidates[:3]):
+            print(f"  [{i+1}] score={c.get('score', 0):.3f} | {c['metadata'].get('source', '?')}")
+
+    # --- Bước 2: Rerank (optional) ---
+    if use_rerank:
+        candidates = rerank(query, candidates, top_k=top_k_select)
+    else:
+        candidates = candidates[:top_k_select]
+
+    if verbose:
+        print(f"[RAG] After select: {len(candidates)} chunks")
+
+    # --- Bước 3: Build context và prompt ---
+    context_block = build_context_block(candidates)
+    prompt = build_grounded_prompt(query, context_block)
+
+    if verbose:
+        print(f"\n[RAG] Prompt:\n{prompt[:500]}...\n")
+
+    # --- Bước 4: Generate ---
+    answer = call_llm(prompt)
+
+    # --- Bước 5: Extract sources ---
+    sources = list({
+        c["metadata"].get("source", "unknown")
+        for c in candidates
+    })
+
+    return {
+        "query": query,
+        "answer": answer,
+        "sources": sources,
+        "chunks_used": candidates,
+        "config": config,
+    }
 
 
 # =============================================================================
@@ -438,6 +491,22 @@ def compare_retrieval_strategies(query: str) -> None:
 
     A/B Rule (từ slide): Chỉ đổi MỘT biến mỗi lần.
     """
+    print(f"\n{'='*60}")
+    print(f"Query: {query}")
+    print('='*60)
+
+    strategies = ["dense", "hybrid"]  # Thêm "sparse" sau khi implement
+
+    for strategy in strategies:
+        print(f"\n--- Strategy: {strategy} ---")
+        try:
+            result = rag_answer(query, retrieval_mode=strategy, verbose=False)
+            print(f"Answer: {result['answer']}")
+            print(f"Sources: {result['sources']}")
+        except NotImplementedError as e:
+            print(f"Chưa implement: {e}")
+        except Exception as e:
+            print(f"Lỗi: {e}")
 
 
 # =============================================================================
