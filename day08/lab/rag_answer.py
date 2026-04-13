@@ -301,18 +301,53 @@ def rerank(
         print("Rerank model loaded.")
 
     pairs = [[query, chunk["text"]] for chunk in candidates]
-    scores = _rerank_model.predict(pairs)
+    ce_scores = list(_rerank_model.predict(pairs))
 
-    ranked = sorted(
-        zip(candidates, scores),
-        key=lambda x: x[1],
-        reverse=True
-    )
+    def _minmax(values: List[float]) -> List[float]:
+        if not values:
+            return values
+        v_min = min(values)
+        v_max = max(values)
+        if abs(v_max - v_min) < 1e-9:
+            return [1.0 for _ in values]
+        return [(v - v_min) / (v_max - v_min) for v in values]
 
-    return [
-        {**chunk, "score": float(score)}
-        for chunk, score in ranked[:top_k]
-    ]
+    # Blend CE score với retrieval score gốc để tránh rerank "lật kèo" quá mạnh.
+    base_scores = [float(c.get("score", 0.0)) for c in candidates]
+    ce_norm = _minmax([float(s) for s in ce_scores])
+    base_norm = _minmax(base_scores)
+
+    alpha = 0.75  # ưu tiên CE, nhưng vẫn giữ tín hiệu retrieval
+    ranked_items = []
+    for chunk, ce_s, base_s in zip(candidates, ce_norm, base_norm):
+        final_score = alpha * ce_s + (1 - alpha) * base_s
+        ranked_items.append({**chunk, "score": float(final_score)})
+
+    ranked_items.sort(key=lambda x: x["score"], reverse=True)
+
+    # Ưu tiên source "trội" để giảm lẫn ngữ cảnh ngoài scope câu hỏi.
+    source_totals: Dict[str, float] = {}
+    for item in ranked_items:
+        src = item.get("metadata", {}).get("source", "")
+        source_totals[src] = source_totals.get(src, 0.0) + item["score"]
+
+    dominant_source = max(source_totals, key=source_totals.get) if source_totals else None
+
+    selected: List[Dict[str, Any]] = []
+    if dominant_source:
+        for item in ranked_items:
+            if item.get("metadata", {}).get("source", "") == dominant_source:
+                selected.append(item)
+                if len(selected) >= top_k:
+                    return selected
+
+    for item in ranked_items:
+        if item not in selected:
+            selected.append(item)
+            if len(selected) >= top_k:
+                break
+
+    return selected
 
 
 # =============================================================================
@@ -404,6 +439,7 @@ Decision rules:
 
 Cite the source field (in brackets like [1]) when possible.
 Keep your answer short, clear, and factual.
+Answer only what the question asks; do not add adjacent policy details unless they are required to answer.
 Respond in the same language as the question.
 
 Question: {query}
