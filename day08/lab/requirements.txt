@@ -1,28 +1,12 @@
-# Day 08 Lab — RAG Pipeline
-# Cài đặt: pip install -r requirements.txt
-
-# === Core ===
-python-dotenv>=1.0.0
-
-# === LLM Providers (chọn ít nhất một) ===
-openai>=1.0.0                    # Option A: OpenAI API
-google-generativeai>=0.5.0       # Option B: Google Gemini
-
-# === Vector Store ===
-chromadb>=0.5.0                  # Vector database (local, không cần server)
-
-# === Embeddings — chọn một trong hai ===
-# Option A: OpenAI Embeddings (dùng chung API key với LLM)
-# (đã có trong openai package)
-
-# Option B: Sentence Transformers (local, không cần API key)
-sentence-transformers>=2.7.0     # Model: paraphrase-multilingual-MiniLM-L12-v2
-
-# === Sprint 3: Sparse/Hybrid Retrieval ===
-rank-bm25>=0.2.2                 # BM25 keyword search
-
-# === Sprint 3: Rerank ===
-# sentence-transformers đã bao gồm CrossEncoder
-
-# === Utils ===
-tqdm>=4.66.0                     # Progress bar khi index nhiều docs
+langchain
+langchain-openai
+langchain-community
+chromadb
+bm25s
+sentence-transformers
+ragas
+datasets
+openai
+python-dotenv
+tqdm
+rich
