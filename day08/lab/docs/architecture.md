@@ -27,7 +27,7 @@
 | Vai trò | Tên | Trách nhiệm chính | Sprint lead |
 |---------|-----|------------------|------------|
 | **Tech Lead** | Tống Tiến Mạnh | Giữ nhịp sprint, nối code end-to-end | 1, 2 |
-| **Retrieval Owner** | Nguyễn Minh Hiếu | Chunking, metadata, retrieval strategy, rerank | 1, 3 |
+| **Retrieval Owner** | Nguyễn Minh Hiếu | Retrieval strategy, rerank | 1, 3 |
 | **Retrieval Owner** | Nguyễn Tùng Lâm | Chunking, metadata, retrieval strategy, rerank | 1, 3 |
 | **Eval Owner** | Nguyễn Việt Long | Test questions, expected evidence, scorecard, A/B | 3, 4 |
 | **Eval Owner** | Hà Huy Hoàng | Test questions, expected evidence, scorecard, A/B | 3, 4 |
@@ -75,19 +75,19 @@
 ### Variant (Sprint 3)
 | Tham số | Giá trị | Thay đổi so với baseline |
 |---------|---------|------------------------|
-| Strategy | Hybrid (Dense + Sparse BM25, RRF `dense_weight=0.6`, `sparse_weight=0.4`) | Đổi từ dense sang hybrid để tăng recall cho query chứa keyword/alias/mã lỗi |
+| Strategy | Dense (embedding similarity) | Giữ nguyên retrieval mode để A/B công bằng, chỉ tập trung kiểm chứng tác động của rerank |
 | Top-k search | 10 | Giữ nguyên để so sánh công bằng (A/B chỉ đổi biến chính) |
 | Top-k select | 3 | Giữ nguyên để kiểm soát độ dài context |
 | Rerank | LLM-based rerank (`use_rerank=True`, model `RERANK_MODEL`) | Thêm bước chọn lại top-3 chunk liên quan nhất sau khi retrieve rộng |
-| Query transform | `expansion` / `decomposition` / `hyde` (optional) | Bật theo từng case để tăng recall, mặc định `None` |
+| Query transform | `None` | Giữ nguyên để tránh nhiễu khi đánh giá tác động của rerank |
 
 **Ghi chú triển khai trong code:**
 - Pipeline thực hiện: query -> (query transform optional) -> retrieve -> deduplicate theo `text` (giữ score cao nhất) -> (rerank optional) -> generate.
 - Hàm `compare_retrieval_strategies()` hiện so sánh `dense` và `hybrid`; rerank/query transform được bật khi gọi `rag_answer()` với config tương ứng.
 
 **Lý do chọn variant này:**
-> Chọn hybrid + rerank vì corpus có cả câu tự nhiên lẫn keyword kỹ thuật (P1/P2, ERR-403, Approval Matrix), nên dense đơn thuần dễ hụt hoặc lẫn noise.
-> Hybrid tăng khả năng tìm đúng tài liệu theo cả nghĩa và từ khóa; rerank giúp chỉ giữ các chunk liên quan nhất trước khi generate để giảm hallucination.
+> Chọn dense + rerank vì baseline đã đạt Context Recall cao (5.00/5), nhưng Relevance và Completeness còn hạn chế do thứ tự chunk chưa tối ưu.
+> Bật rerank giúp cải thiện chất lượng câu trả lời mà không đổi retrieval mode: Faithfulness 4.60 -> 4.70, Relevance 3.00 -> 3.20, Completeness 3.50 -> 3.60.
 
 ---
 
@@ -140,19 +140,33 @@ Answer:
 
 ## 6. Diagram (tùy chọn)
 
-> TODO: Vẽ sơ đồ pipeline nếu có thời gian. Có thể dùng Mermaid hoặc drawio.
+> Sơ đồ pipeline thực tế đang dùng trong repo.
 
 ```mermaid
 graph LR
-    A[User Query] --> B[Query Embedding]
-    B --> C[ChromaDB Vector Search]
-    C --> D[Top-10 Candidates]
-    D --> E{Rerank?}
-    E -->|Yes| F[Cross-Encoder]
-    E -->|No| G[Top-3 Select]
-    F --> G
-    G --> H[Build Context Block]
-    H --> I[Grounded Prompt]
-    I --> J[LLM]
-    J --> K[Answer + Citation]
+    A[User Query] --> B{Query Transform?}
+    B -->|No| C[Original Query]
+    B -->|Yes| D[Expansion / Decomposition / HyDE]
+    D --> E[Transformed Queries]
+    C --> F{Retrieval Mode}
+    E --> F
+    F -->|Dense| G[Chroma Vector Search]
+    F -->|Sparse| H[BM25 Search]
+    F -->|Hybrid| I[RRF Merge Dense + Sparse]
+    G --> J[Candidate Chunks Top-k Search]
+    H --> J
+    I --> J
+    J --> K[Deduplicate by Text Keep Best Score]
+    K --> L{Use Rerank?}
+    L -->|No| M[Select Top-k]
+    L -->|Yes| N[LLM Rerank]
+    N --> M
+    M --> O[Build Context Block]
+    O --> P[Grounded Prompt]
+    P --> Q[LLM Generate]
+    Q --> R{Enough Context?}
+    R -->|No| S[Abstain]
+    R -->|Yes| T[Answer + Citation]
+    S --> U[Final Output]
+    T --> U[Final Output]
 ```
