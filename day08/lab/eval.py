@@ -33,7 +33,7 @@ load_dotenv()
 # CẤU HÌNH
 # =============================================================================
 
-TEST_QUESTIONS_PATH = Path(__file__).parent / "data" / "test_questions.json"
+TEST_QUESTIONS_PATH = Path(__file__).parent / "data" / "grading_questions.json"
 RESULTS_DIR = Path(__file__).parent / "results"
 
 # Cấu hình baseline (Sprint 2)
@@ -49,11 +49,11 @@ BASELINE_CONFIG = {
 # Dựa trên rag_answer.py, variant phù hợp nhất hiện tại là hybrid retrieval.
 # Không bật rerank vì rerank() mới đang là placeholder, chưa tạo khác biệt thực sự.
 VARIANT_CONFIG = {
-    "retrieval_mode": "hybrid",
+    "retrieval_mode": "adaptive",
     "top_k_search": 10,
     "top_k_select": 3,
     "use_rerank": False,
-    "label": "variant_hybrid",
+    "label": "variant_adaptive_general",
 }
 
 JUDGE_MODEL = os.getenv("EVAL_JUDGE_MODEL", os.getenv("LLM_MODEL", "gpt-4o-mini"))
