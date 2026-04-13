@@ -22,7 +22,7 @@ Hai khái niệm tôi hiểu sâu hơn hẳn sau lab này là **Evaluation Loop*
 
 Phân biệt được rõ ràng hai loại lỗi hoàn toàn khác nhau: Retriever tìm sai tài liệu dẫn đến Context Recall thấp, và LLM tự thêm thắt hoặc trả lời lạc đề dù đã có đủ context — biểu hiện qua Faithfulness và Answer Relevance thấp. Mỗi loại lỗi cần được xử lý ở một tầng riêng biệt trong pipeline.
 
-Xây dựng hệ thống evaluation -> lưu log -> tối ưu. Sử dụng loop để cải thiện cũng như các downstream task, hay RL sau này.
+Xây dựng hệ thống giám sát -> evaluation -> lưu log -> tối ưu. Sử dụng loop để cải thiện cũng như các downstream task, hay RL sau này.
 
 ---
 
