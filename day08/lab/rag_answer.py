@@ -24,6 +24,10 @@ Definition of Done Sprint 3:
 import os
 from typing import List, Dict, Any, Optional, Tuple
 from dotenv import load_dotenv
+import json
+from typing import List
+from functools import lru_cache
+from sentence_transformers import CrossEncoder
 
 load_dotenv()
 
@@ -167,31 +171,47 @@ def rerank(
     """
     Rerank các candidate chunks bằng cross-encoder.
 
-    Cross-encoder: chấm lại "chunk nào thực sự trả lời câu hỏi này?"
-    MMR (Maximal Marginal Relevance): giữ relevance nhưng giảm trùng lặp
+    Args:
+        query: câu hỏi người dùng
+        candidates: danh sách chunk retrieve ban đầu
+        top_k: số chunk tốt nhất giữ lại
 
-    Funnel logic (từ slide):
-      Search rộng (top-20) → Rerank (top-6) → Select (top-3)
-
-    TODO Sprint 3 (nếu chọn rerank):
-    Option A — Cross-encoder:
-        from sentence_transformers import CrossEncoder
-        model = CrossEncoder("cross-encoder/ms-marco-MiniLM-L-6-v2")
-        pairs = [[query, chunk["text"]] for chunk in candidates]
-        scores = model.predict(pairs)
-        ranked = sorted(zip(candidates, scores), key=lambda x: x[1], reverse=True)
-        return [chunk for chunk, _ in ranked[:top_k]]
-
-    Option B — Rerank bằng LLM (đơn giản hơn nhưng tốn token):
-        Gửi list chunks cho LLM, yêu cầu chọn top_k relevant nhất
-
-    Khi nào dùng rerank:
-    - Dense/hybrid trả về nhiều chunk nhưng có noise
-    - Muốn chắc chắn chỉ 3-5 chunk tốt nhất vào prompt
+    Returns:
+        List[Dict[str, Any]]: top_k chunks đã được rerank.
+        Mỗi chunk giữ nguyên cấu trúc cũ và được bổ sung:
+          - "rerank_score": điểm cross-encoder
     """
-    # TODO Sprint 3: Implement rerank
-    # Tạm thời trả về top_k đầu tiên (không rerank)
-    return candidates[:top_k]
+    if not candidates:
+        return []
+
+    if top_k <= 0:
+        return []
+
+    try:
+        model = _get_rerank_model()
+
+        # Tạo cặp [query, chunk_text] để model chấm relevance
+        pairs = [
+            [query, chunk.get("text", "")]
+            for chunk in candidates
+        ]
+
+        scores = model.predict(pairs)
+
+        reranked = []
+        for chunk, score in zip(candidates, scores):
+            new_chunk = dict(chunk)  # tránh sửa trực tiếp object gốc
+            new_chunk["rerank_score"] = float(score)
+            reranked.append(new_chunk)
+
+        reranked.sort(key=lambda x: x["rerank_score"], reverse=True)
+
+        return reranked[:min(top_k, len(reranked))]
+
+    except Exception as e:
+        print(f"[rerank] Lỗi khi rerank bằng CrossEncoder: {e}")
+        # Fallback an toàn: giữ nguyên top_k đầu tiên
+        return candidates[:top_k]
 
 
 # =============================================================================
@@ -203,30 +223,124 @@ def transform_query(query: str, strategy: str = "expansion") -> List[str]:
     Biến đổi query để tăng recall.
 
     Strategies:
-      - "expansion": Thêm từ đồng nghĩa, alias, tên cũ
-      - "decomposition": Tách query phức tạp thành 2-3 sub-queries
-      - "hyde": Sinh câu trả lời giả (hypothetical document) để embed thay query
+      - "expansion": sinh 2-3 cách diễn đạt khác / alias / từ khóa liên quan
+      - "decomposition": tách câu hỏi phức tạp thành 2-3 sub-queries
+      - "hyde": sinh một đoạn hypothetical answer ngắn để dùng như query mở rộng
 
-    TODO Sprint 3 (nếu chọn query transformation):
-    Gọi LLM với prompt phù hợp với từng strategy.
-
-    Ví dụ expansion prompt:
-        "Given the query: '{query}'
-         Generate 2-3 alternative phrasings or related terms in Vietnamese.
-         Output as JSON array of strings."
-
-    Ví dụ decomposition:
-        "Break down this complex query into 2-3 simpler sub-queries: '{query}'
-         Output as JSON array."
-
-    Khi nào dùng:
-    - Expansion: query dùng alias/tên cũ (ví dụ: "Approval Matrix" → "Access Control SOP")
-    - Decomposition: query hỏi nhiều thứ một lúc
-    - HyDE: query mơ hồ, search theo nghĩa không hiệu quả
+    Returns:
+        List[str]: danh sách query dùng cho retrieval.
+                   Luôn bao gồm query gốc ở vị trí đầu tiên.
     """
-    # TODO Sprint 3: Implement query transformation
-    # Tạm thời trả về query gốc
-    return [query]
+    strategy = strategy.lower().strip()
+    if strategy not in {"expansion", "decomposition", "hyde"}:
+        raise ValueError(
+            f"strategy không hợp lệ: {strategy}. "
+            f"Chọn một trong: expansion, decomposition, hyde"
+        )
+
+    llm_provider = os.getenv("LLM_PROVIDER", "openai").lower().strip()
+
+    if strategy == "expansion":
+        prompt = f"""
+You are helping improve retrieval recall for a RAG system.
+
+Given the user query below, generate 2 to 3 alternative phrasings or closely related search queries.
+Rules:
+- Preserve the original meaning.
+- Include aliases, synonyms, old names, or likely terminology variations if helpful.
+- Keep each query short and retrieval-friendly.
+- Respond in the same language as the original query when possible.
+- Return ONLY a JSON array of strings, no explanation.
+
+Query: {query}
+""".strip()
+
+    elif strategy == "decomposition":
+        prompt = f"""
+You are helping improve retrieval recall for a RAG system.
+
+Break the following complex user query into 2 to 3 simpler sub-queries.
+Rules:
+- Each sub-query should target one specific information need.
+- Keep them short and retrieval-friendly.
+- Do not invent facts not implied by the original question.
+- Respond in the same language as the original query when possible.
+- Return ONLY a JSON array of strings, no explanation.
+
+Query: {query}
+""".strip()
+
+    else:  # hyde
+        prompt = f"""
+You are helping improve retrieval recall for a RAG system.
+
+Write one short hypothetical answer passage that is likely to appear in a relevant document for the query below.
+Rules:
+- 2 to 4 sentences only.
+- Stay generic and plausible.
+- Do not mention that this is hypothetical.
+- Respond in the same language as the original query when possible.
+- Return ONLY a JSON array with exactly 1 string element.
+
+Query: {query}
+""".strip()
+
+    try:
+        if llm_provider == "openai":
+            from openai import OpenAI
+
+            client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+            response = client.chat.completions.create(
+                model=LLM_MODEL,
+                messages=[{"role": "user", "content": prompt}],
+                temperature=0,
+                max_tokens=256,
+            )
+            raw_output = response.choices[0].message.content.strip()
+
+        elif llm_provider == "gemini":
+            import google.generativeai as genai
+
+            genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
+            model = genai.GenerativeModel("gemini-1.5-flash")
+            response = model.generate_content(prompt)
+            raw_output = response.text.strip()
+
+        else:
+            raise ValueError(
+                f"LLM_PROVIDER không hợp lệ: {llm_provider}. "
+                f"Dùng 'openai' hoặc 'gemini'."
+            )
+
+        # Parse JSON array
+        outputs = json.loads(raw_output)
+
+        if not isinstance(outputs, list):
+            raise ValueError("LLM output không phải JSON array.")
+
+        cleaned = []
+        seen = set()
+
+        # Luôn giữ query gốc đầu tiên
+        for item in [query] + outputs:
+            if not isinstance(item, str):
+                continue
+            text = item.strip()
+            if not text:
+                continue
+            key = text.lower()
+            if key not in seen:
+                seen.add(key)
+                cleaned.append(text)
+
+        # Giới hạn số lượng cho gọn
+        if strategy in {"expansion", "decomposition"}:
+            return cleaned[:4]   # query gốc + tối đa 3 biến thể
+        return cleaned[:2]       # query gốc + 1 HyDE passage
+
+    except Exception as e:
+        print(f"[transform_query] LLM transform failed ({strategy}): {e}")
+        return [query]
 
 
 # =============================================================================
