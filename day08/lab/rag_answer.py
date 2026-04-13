@@ -655,7 +655,7 @@ if __name__ == "__main__":
     for query in test_queries:
         print(f"\nQuery: {query}")
         try:
-            result = rag_answer(query, retrieval_mode="dense", verbose=True)
+            result = rag_answer(query, retrieval_mode="hybrid", verbose=True)
             print(f"Answer: {result['answer']}")
             print(f"Sources: {result['sources']}")
         except NotImplementedError:
@@ -664,9 +664,9 @@ if __name__ == "__main__":
             print(f"Lỗi: {e}")
 
     # Uncomment sau khi Sprint 3 hoàn thành:
-    # print("\n--- Sprint 3: So sánh strategies ---")
-    # compare_retrieval_strategies("Approval Matrix để cấp quyền là tài liệu nào?")
-    # compare_retrieval_strategies("ERR-403-AUTH")
+    print("\n--- Sprint 3: So sánh strategies ---")
+    compare_retrieval_strategies("Approval Matrix để cấp quyền là tài liệu nào?")
+    compare_retrieval_strategies("ERR-403-AUTH")
 
     # print("\n\nViệc cần làm Sprint 2:")
     # print("  1. Implement retrieve_dense() — query ChromaDB")
