@@ -571,32 +571,17 @@ def rag_answer(
     if verbose:
         print(f"[RAG] After select: {len(candidates)} chunks")
 
-    # --- Bước 3: Build context và prompt ---
-    context_block = build_context_block(candidates)
-    prompt = build_grounded_prompt(query, context_block)
-
     if verbose:
-        print(f"\n[RAG] Prompt:\n{prompt[:500]}...\n")
+        print(f"\n[RAG] Sending {len(candidates)} chunks to generate_answer()")
 
-    # --- Bước 4: Generate ---
-    answer = call_llm(prompt)
-    
-    # --- Bước 5: Extract sources ---
-    sources = []
-    seen_sources = set()
-    for c in candidates:
-        src = c["metadata"].get("source", "unknown")
-        if src not in seen_sources:
-            sources.append(src)
-            seen_sources.add(src)
-
-    # Append citation list to answer (Khánh's Sprint 2 task)
-    answer += format_citations(sources)
+    # --- Bước 3: Generate (dùng generate_answer để có abstain + citation logic) ---
+    has_context = len(candidates) > 0
+    result = generate_answer(query, candidates, has_context=has_context)
 
     return {
         "query": query,
-        "answer": answer,
-        "sources": sources,
+        "answer": result["answer"],
+        "sources": result["sources"],
         "chunks_used": candidates,
         "config": config,
     }
