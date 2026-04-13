@@ -1,8 +1,5 @@
 # Tuning Log — RAG Pipeline (Day 08 Lab)
 
-> Template: Ghi lại mỗi thay đổi và kết quả quan sát được.
-> A/B Rule: Chỉ đổi MỘT biến mỗi lần.
-
 ---
 
 ## Baseline (Sprint 2)

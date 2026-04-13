@@ -1,24 +1,27 @@
 # Architecture — RAG Pipeline (Day 08 Lab)
 
-> Template: Điền vào các mục này khi hoàn thành từng sprint.
-> Deliverable của Documentation Owner.
-
 ## 1. Tổng quan kiến trúc
 
 ```
-[Raw Docs]
+[Raw policy/SOP/FAQ docs]
     ↓
-[index.py: Preprocess → Chunk → Embed → Store]
+[index.py]
+    Preprocess → Extract metadata → Chunk → Embed
     ↓
-[ChromaDB Vector Store]
+[ChromaDB Persistent Vector Store]
+    Stores: chunk text + embedding + metadata
     ↓
-[rag_answer.py: Query → Retrieve → Rerank → Generate]
+[rag_answer.py]
+    User query → Retrieve dense/hybrid → Select top chunks → Build grounded prompt
     ↓
-[Grounded Answer + Citation]
+[LLM]
+    Generate answer from retrieved context only
+    ↓
+[Grounded Answer + Citation + Sources]
 ```
 
 **Mô tả ngắn gọn:**
-> TODO: Mô tả hệ thống trong 2-3 câu. Nhóm xây gì? Cho ai dùng? Giải quyết vấn đề gì?
+Nhóm xây dựng một hệ thống RAG nội bộ để hỗ trợ CS, IT Helpdesk, HR và IT Security tra cứu nhanh các tài liệu chính sách, SLA, quy trình cấp quyền và FAQ. Hệ thống index tài liệu thành các chunk có metadata, lưu embedding trong ChromaDB, sau đó retrieve các chunk liên quan để LLM trả lời ngắn gọn kèm citation. Mục tiêu là giảm việc tìm kiếm thủ công trong nhiều tài liệu và hạn chế hallucination bằng cách bắt buộc câu trả lời dựa trên context đã retrieve.
 
 ---
 
