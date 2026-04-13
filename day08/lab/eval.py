@@ -19,10 +19,16 @@ A/B Rule (từ slide):
 
 import json
 import csv
+import os
+import re
+import time
+import logging
 from pathlib import Path
 from typing import List, Dict, Any, Optional
 from datetime import datetime
 from rag_answer import rag_answer
+
+logger = logging.getLogger(__name__)
 
 # =============================================================================
 # CẤU HÌNH
@@ -41,7 +47,6 @@ BASELINE_CONFIG = {
 }
 
 # Cấu hình variant (Sprint 3 — điều chỉnh theo lựa chọn của nhóm)
-# TODO Sprint 4: Cập nhật VARIANT_CONFIG theo variant nhóm đã implement
 VARIANT_CONFIG = {
     "retrieval_mode": "hybrid",   # Hoặc "dense" nếu chỉ đổi rerank
     "top_k_search": 10,
@@ -49,6 +54,102 @@ VARIANT_CONFIG = {
     "use_rerank": True,           # Hoặc False nếu variant là hybrid không rerank
     "label": "variant_hybrid_rerank",
 }
+
+
+# =============================================================================
+# GEMINI LLM JUDGE
+# =============================================================================
+
+def _call_gemini(prompt: str, retries: int = 3, retry_delay: float = 2.0) -> Optional[str]:
+    """
+    Gọi Gemini API với một prompt và trả về text response.
+
+    Đọc API key từ biến môi trường GEMINI_API_KEY.
+    Dùng model gemini-2.0-flash (nhanh, rẻ, đủ dùng cho judge task).
+
+    Args:
+        prompt: Nội dung prompt gửi lên Gemini
+        retries: Số lần thử lại khi gặp lỗi tạm thời (rate limit, timeout)
+        retry_delay: Số giây chờ giữa mỗi lần retry
+
+    Returns:
+        Text response từ Gemini, hoặc None nếu thất bại hoàn toàn
+
+    Raises:
+        EnvironmentError: Nếu GEMINI_API_KEY chưa được set
+    """
+    try:
+        import google.generativeai as genai
+    except ImportError as exc:
+        raise ImportError(
+            "Thiếu thư viện google-generativeai. "
+            "Cài đặt bằng: pip install google-generativeai"
+        ) from exc
+
+    api_key = os.environ.get("GEMINI_API_KEY")
+    if not api_key:
+        raise EnvironmentError(
+            "Chưa set GEMINI_API_KEY. "
+            "Chạy: export GEMINI_API_KEY='your-key-here'"
+        )
+
+    genai.configure(api_key=api_key)
+    model = genai.GenerativeModel("gemini-2.0-flash")
+
+    last_exc = None
+    for attempt in range(1, retries + 1):
+        try:
+            response = model.generate_content(
+                prompt,
+                generation_config=genai.types.GenerationConfig(
+                    temperature=0.0,   # Deterministic — quan trọng cho judge
+                    max_output_tokens=512,
+                ),
+            )
+            return response.text
+        except Exception as exc:  # noqa: BLE001
+            last_exc = exc
+            logger.warning("Gemini call thất bại (lần %d/%d): %s", attempt, retries, exc)
+            if attempt < retries:
+                time.sleep(retry_delay)
+
+    logger.error("Gemini call thất bại sau %d lần: %s", retries, last_exc)
+    return None
+
+
+def _parse_judge_json(raw: Optional[str], fallback_score: int = 3) -> Dict[str, Any]:
+    """
+    Parse JSON từ response của Gemini judge.
+
+    Gemini đôi khi wrap JSON trong markdown code block (```json ... ```)
+    hoặc thêm text thừa — hàm này xử lý cả hai trường hợp.
+
+    Args:
+        raw: Raw text từ Gemini
+        fallback_score: Điểm mặc định nếu parse thất bại
+
+    Returns:
+        Dict với "score" (int 1-5) và "reason" (str)
+    """
+    if not raw:
+        return {"score": fallback_score, "reason": "Không nhận được response từ LLM judge"}
+
+    # Bóc markdown code block nếu có
+    cleaned = re.sub(r"```(?:json)?\s*|\s*```", "", raw).strip()
+
+    # Tìm JSON object đầu tiên trong string (phòng trường hợp có text thừa trước/sau)
+    json_match = re.search(r"\{.*\}", cleaned, re.DOTALL)
+    if not json_match:
+        return {"score": fallback_score, "reason": f"Không parse được JSON: {raw[:200]}"}
+
+    try:
+        parsed = json.loads(json_match.group())
+        score = int(parsed.get("score", fallback_score))
+        score = max(1, min(5, score))  # Clamp về [1, 5]
+        reason = str(parsed.get("reason", parsed.get("notes", "")))
+        return {"score": score, "reason": reason}
+    except (json.JSONDecodeError, ValueError) as exc:
+        return {"score": fallback_score, "reason": f"Lỗi parse JSON: {exc} | Raw: {raw[:200]}"}
 
 
 # =============================================================================
@@ -70,29 +171,45 @@ def score_faithfulness(
       3: Phần lớn grounded, một số thông tin có thể từ model knowledge
       2: Nhiều thông tin không có trong retrieved chunks
       1: Câu trả lời không grounded, phần lớn là model bịa
-
-    TODO Sprint 4 — Có 2 cách chấm:
-
-    Cách 1 — Chấm thủ công (Manual, đơn giản):
-        Đọc answer và chunks_used, chấm điểm theo thang trên.
-        Ghi lý do ngắn gọn vào "notes".
-
-    Cách 2 — LLM-as-Judge (Tự động, nâng cao):
-        Gửi prompt cho LLM:
-            "Given these retrieved chunks: {chunks}
-             And this answer: {answer}
-             Rate the faithfulness on a scale of 1-5.
-             5 = completely grounded in the provided context.
-             1 = answer contains information not in the context.
-             Output JSON: {'score': <int>, 'reason': '<string>'}"
-
-    Trả về dict với: score (1-5) và notes (lý do)
     """
-    # TODO Sprint 4: Implement scoring
-    # Tạm thời trả về None (yêu cầu chấm thủ công)
+    if not chunks_used:
+        return {
+            "score": 1,
+            "notes": "Không có retrieved chunks — không thể verify faithfulness",
+        }
+
+    # Ghép nội dung các chunk thành context block
+    context_block = "\n\n---\n\n".join(
+        f"[Chunk {i+1}]\n{c.get('text', c.get('content', str(c)))}"
+        for i, c in enumerate(chunks_used)
+    )
+
+    prompt = f"""Bạn là một evaluator khách quan cho hệ thống RAG (Retrieval-Augmented Generation).
+
+Nhiệm vụ: Đánh giá mức độ FAITHFULNESS — tức là câu trả lời có bám đúng thông tin trong các đoạn văn đã retrieve không, hay mô hình tự bịa thêm thông tin không có trong context.
+
+=== RETRIEVED CONTEXT ===
+{context_block}
+
+=== MODEL ANSWER ===
+{answer}
+
+=== HƯỚNG DẪN CHẤM ĐIỂM ===
+5: Mọi thông tin trong answer đều có nguồn gốc từ retrieved chunks
+4: Gần như hoàn toàn grounded, tối đa 1 chi tiết nhỏ không rõ nguồn
+3: Phần lớn grounded, nhưng có một vài thông tin xuất phát từ model knowledge
+2: Nhiều thông tin không có trong retrieved chunks
+1: Câu trả lời không grounded, phần lớn là model bịa hoặc hallucinate
+
+Hãy trả về JSON (và CHỈ JSON, không có text nào khác):
+{{"score": <số nguyên từ 1 đến 5>, "reason": "<giải thích ngắn gọn bằng tiếng Việt, tối đa 2 câu>"}}"""
+
+    raw = _call_gemini(prompt)
+    parsed = _parse_judge_json(raw)
+
     return {
-        "score": None,
-        "notes": "TODO: Chấm thủ công hoặc implement LLM-as-Judge",
+        "score": parsed["score"],
+        "notes": parsed["reason"],
     }
 
 
@@ -110,12 +227,33 @@ def score_answer_relevance(
       3: Trả lời có liên quan nhưng chưa đúng trọng tâm
       2: Trả lời lạc đề một phần
       1: Không trả lời câu hỏi
-
-    TODO Sprint 4: Implement tương tự score_faithfulness
     """
+    prompt = f"""Bạn là một evaluator khách quan cho hệ thống RAG (Retrieval-Augmented Generation).
+
+Nhiệm vụ: Đánh giá mức độ ANSWER RELEVANCE — tức là câu trả lời có trả lời đúng và đủ câu hỏi của người dùng không.
+
+=== CÂU HỎI NGƯỜI DÙNG ===
+{query}
+
+=== MODEL ANSWER ===
+{answer}
+
+=== HƯỚNG DẪN CHẤM ĐIỂM ===
+5: Answer trả lời trực tiếp và đầy đủ câu hỏi, đúng trọng tâm
+4: Trả lời đúng hướng nhưng thiếu một vài chi tiết phụ
+3: Có liên quan đến câu hỏi nhưng chưa trúng trọng tâm chính
+2: Trả lời lạc đề một phần, chỉ liên quan một phần nhỏ
+1: Hoàn toàn không trả lời câu hỏi hoặc lạc đề hoàn toàn
+
+Hãy trả về JSON (và CHỈ JSON, không có text nào khác):
+{{"score": <số nguyên từ 1 đến 5>, "reason": "<giải thích ngắn gọn bằng tiếng Việt, tối đa 2 câu>"}}"""
+
+    raw = _call_gemini(prompt)
+    parsed = _parse_judge_json(raw)
+
     return {
-        "score": None,
-        "notes": "TODO: Implement score_answer_relevance",
+        "score": parsed["score"],
+        "notes": parsed["reason"],
     }
 
 
@@ -128,22 +266,12 @@ def score_context_recall(
     Câu hỏi: Expected source có nằm trong retrieved chunks không?
 
     Đây là metric đo retrieval quality, không phải generation quality.
+    Tính recall dựa trên source matching — không cần LLM judge.
 
-    Cách tính đơn giản:
+    Cách tính:
         recall = (số expected source được retrieve) / (tổng số expected sources)
-
-    Ví dụ:
-        expected_sources = ["policy/refund-v4.pdf", "sla-p1-2026.pdf"]
-        retrieved_sources = ["policy/refund-v4.pdf", "helpdesk-faq.md"]
-        recall = 1/2 = 0.5
-
-    TODO Sprint 4:
-    1. Lấy danh sách source từ chunks_used
-    2. Kiểm tra xem expected_sources có trong retrieved sources không
-    3. Tính recall score
     """
     if not expected_sources:
-        # Câu hỏi không có expected source (ví dụ: "Không đủ dữ liệu" cases)
         return {"score": None, "recall": None, "notes": "No expected sources"}
 
     retrieved_sources = {
@@ -151,27 +279,33 @@ def score_context_recall(
         for c in chunks_used
     }
 
-    # TODO: Kiểm tra matching theo partial path (vì source paths có thể khác format)
     found = 0
     missing = []
     for expected in expected_sources:
-        # Kiểm tra partial match (tên file)
-        expected_name = expected.split("/")[-1].replace(".pdf", "").replace(".md", "")
-        matched = any(expected_name.lower() in r.lower() for r in retrieved_sources)
+        # Partial match theo tên file (bỏ extension và path prefix)
+        expected_name = expected.split("/")[-1]
+        expected_stem = re.sub(r"\.(pdf|md|txt|docx)$", "", expected_name, flags=re.IGNORECASE)
+        matched = any(expected_stem.lower() in r.lower() for r in retrieved_sources)
         if matched:
             found += 1
         else:
             missing.append(expected)
 
-    recall = found / len(expected_sources) if expected_sources else 0
+    recall = found / len(expected_sources)
+
+    # Convert recall [0.0, 1.0] → score [1, 5]
+    # 0.0 → 1,  0.25 → 2,  0.5 → 3,  0.75 → 4,  1.0 → 5
+    score = max(1, round(recall * 4) + 1)
 
     return {
-        "score": round(recall * 5),  # Convert to 1-5 scale
+        "score": score,
         "recall": recall,
         "found": found,
         "missing": missing,
-        "notes": f"Retrieved: {found}/{len(expected_sources)} expected sources" +
-                 (f". Missing: {missing}" if missing else ""),
+        "notes": (
+            f"Retrieved {found}/{len(expected_sources)} expected sources"
+            + (f". Missing: {missing}" if missing else "")
+        ),
     }
 
 
@@ -190,17 +324,43 @@ def score_completeness(
       3: Thiếu một số thông tin quan trọng
       2: Thiếu nhiều thông tin quan trọng
       1: Thiếu phần lớn nội dung cốt lõi
-
-    TODO Sprint 4:
-    Option 1 — Chấm thủ công: So sánh answer vs expected_answer và chấm.
-    Option 2 — LLM-as-Judge:
-        "Compare the model answer with the expected answer.
-         Rate completeness 1-5. Are all key points covered?
-         Output: {'score': int, 'missing_points': [str]}"
     """
+    if not expected_answer or expected_answer.strip() == "":
+        return {
+            "score": None,
+            "notes": "Không có expected_answer để so sánh",
+        }
+
+    prompt = f"""Bạn là một evaluator khách quan cho hệ thống RAG (Retrieval-Augmented Generation).
+
+Nhiệm vụ: Đánh giá mức độ COMPLETENESS — tức là câu trả lời của mô hình có bao phủ đầy đủ các điểm quan trọng so với đáp án tham chiếu không.
+
+=== CÂU HỎI ===
+{query}
+
+=== ĐÁP ÁN THAM CHIẾU (Expected Answer) ===
+{expected_answer}
+
+=== MODEL ANSWER ===
+{answer}
+
+=== HƯỚNG DẪN CHẤM ĐIỂM ===
+Tập trung vào nội dung, không phải cách diễn đạt.
+5: Bao phủ tất cả điểm quan trọng trong đáp án tham chiếu
+4: Bỏ sót tối đa 1 chi tiết nhỏ hoặc ngoại lệ
+3: Thiếu một số thông tin quan trọng (khoảng 20-40% nội dung cốt lõi)
+2: Thiếu nhiều thông tin quan trọng (hơn 40% nội dung cốt lõi)
+1: Thiếu phần lớn nội dung — chỉ trả lời được phần nhỏ
+
+Hãy trả về JSON (và CHỈ JSON, không có text nào khác):
+{{"score": <số nguyên từ 1 đến 5>, "reason": "<giải thích ngắn gọn bằng tiếng Việt, tối đa 2 câu, liệt kê điểm bị thiếu nếu có>"}}"""
+
+    raw = _call_gemini(prompt)
+    parsed = _parse_judge_json(raw)
+
     return {
-        "score": None,
-        "notes": "TODO: Implement score_completeness (so sánh với expected_answer)",
+        "score": parsed["score"],
+        "notes": parsed["reason"],
     }
 
 
@@ -223,15 +383,6 @@ def run_scorecard(
 
     Returns:
         List scorecard results, mỗi item là một row
-
-    TODO Sprint 4:
-    1. Load test_questions từ data/test_questions.json
-    2. Với mỗi câu hỏi:
-       a. Gọi rag_answer() với config tương ứng
-       b. Chấm 4 metrics
-       c. Lưu kết quả
-    3. Tính average scores
-    4. In bảng kết quả
     """
     if test_questions is None:
         with open(TEST_QUESTIONS_PATH, "r", encoding="utf-8") as f:
@@ -378,7 +529,6 @@ def compare_ab(
             str(v_row.get(m, "?")) for m in metrics
         ])
 
-        # So sánh đơn giản
         b_total = sum(b_row.get(m, 0) or 0 for m in metrics)
         v_total = sum(v_row.get(m, 0) or 0 for m in metrics)
         better = "Variant" if v_total > b_total else ("Baseline" if b_total > v_total else "Tie")
@@ -449,67 +599,56 @@ if __name__ == "__main__":
     print("Sprint 4: Evaluation & Scorecard")
     print("=" * 60)
 
-    # Kiểm tra test questions
     print(f"\nLoading test questions từ: {TEST_QUESTIONS_PATH}")
     try:
         with open(TEST_QUESTIONS_PATH, "r", encoding="utf-8") as f:
             test_questions = json.load(f)
         print(f"Tìm thấy {len(test_questions)} câu hỏi")
-
-        # In preview
         for q in test_questions[:3]:
             print(f"  [{q['id']}] {q['question']} ({q['category']})")
         print("  ...")
-
     except FileNotFoundError:
         print("Không tìm thấy file test_questions.json!")
         test_questions = []
 
     # --- Chạy Baseline ---
     print("\n--- Chạy Baseline ---")
-    print("Lưu ý: Cần hoàn thành Sprint 2 trước khi chạy scorecard!")
     try:
         baseline_results = run_scorecard(
             config=BASELINE_CONFIG,
             test_questions=test_questions,
             verbose=True,
         )
-
-        # Save scorecard
         RESULTS_DIR.mkdir(parents=True, exist_ok=True)
         baseline_md = generate_scorecard_summary(baseline_results, "baseline_dense")
         scorecard_path = RESULTS_DIR / "scorecard_baseline.md"
         scorecard_path.write_text(baseline_md, encoding="utf-8")
         print(f"\nScorecard lưu tại: {scorecard_path}")
-
     except NotImplementedError:
         print("Pipeline chưa implement. Hoàn thành Sprint 2 trước.")
         baseline_results = []
 
-    # --- Chạy Variant (sau khi Sprint 3 hoàn thành) ---
-    # TODO Sprint 4: Uncomment sau khi implement variant trong rag_answer.py
-    # print("\n--- Chạy Variant ---")
-    # variant_results = run_scorecard(
-    #     config=VARIANT_CONFIG,
-    #     test_questions=test_questions,
-    #     verbose=True,
-    # )
-    # variant_md = generate_scorecard_summary(variant_results, VARIANT_CONFIG["label"])
-    # (RESULTS_DIR / "scorecard_variant.md").write_text(variant_md, encoding="utf-8")
+    # --- Chạy Variant ---
+    print("\n--- Chạy Variant ---")
+    try:
+        variant_results = run_scorecard(
+            config=VARIANT_CONFIG,
+            test_questions=test_questions,
+            verbose=True,
+        )
+        variant_md = generate_scorecard_summary(variant_results, VARIANT_CONFIG["label"])
+        (RESULTS_DIR / "scorecard_variant.md").write_text(variant_md, encoding="utf-8")
+        print(f"\nScorecard lưu tại: {RESULTS_DIR / 'scorecard_variant.md'}")
+    except NotImplementedError:
+        print("Variant chưa implement. Hoàn thành Sprint 3 trước.")
+        variant_results = []
 
     # --- A/B Comparison ---
-    # TODO Sprint 4: Uncomment sau khi có cả baseline và variant
-    # if baseline_results and variant_results:
-    #     compare_ab(
-    #         baseline_results,
-    #         variant_results,
-    #         output_csv="ab_comparison.csv"
-    #     )
-
-    print("\n\nViệc cần làm Sprint 4:")
-    print("  1. Hoàn thành Sprint 2 + 3 trước")
-    print("  2. Chấm điểm thủ công hoặc implement LLM-as-Judge trong score_* functions")
-    print("  3. Chạy run_scorecard(BASELINE_CONFIG)")
-    print("  4. Chạy run_scorecard(VARIANT_CONFIG)")
-    print("  5. Gọi compare_ab() để thấy delta")
-    print("  6. Cập nhật docs/tuning-log.md với kết quả và nhận xét")
+    if baseline_results and variant_results:
+        compare_ab(
+            baseline_results,
+            variant_results,
+            output_csv="ab_comparison.csv",
+        )
+    else:
+        print("\nCần cả baseline và variant để chạy A/B comparison.")
