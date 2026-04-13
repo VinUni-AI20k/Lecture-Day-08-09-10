@@ -23,32 +23,17 @@ from pathlib import Path
 from typing import List, Dict, Any, Optional
 from datetime import datetime
 from rag_answer import rag_answer
-import os
-from dotenv import load_dotenv
-from google import genai
-from google.genai import types
 
-# Load .env
-load_dotenv(Path(__file__).with_name(".env"))
 
-# Lấy API key
-api_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
 
-if not api_key:
-    raise ValueError("Không tìm thấy GEMINI_API_KEY trong .env")
-
-# Config Gemini
-genai.configure(api_key=api_key)
-
-# Init model (dùng 1 lần global)
-model = genai.GenerativeModel("gemini-2.5-flash")
 
 # =============================================================================
 # CẤU HÌNH
 # =============================================================================
-
 TEST_QUESTIONS_PATH = Path(__file__).parent / "data" / "test_questions.json"
 RESULTS_DIR = Path(__file__).parent / "results"
+TOP_K_SEARCH = 10    # Số chunk lấy từ vector store trước rerank (search rộng)
+TOP_K_SELECT = 3     # Số chunk gửi vào prompt sau rerank/select (top-3 sweet spot)
 
 # Cấu hình baseline (Sprint 2)
 BASELINE_CONFIG = {
@@ -70,129 +55,39 @@ VARIANT_CONFIG = {
 }
 
 
-# =============================================================================
-# SCORING FUNCTIONS
-# 4 metrics từ slide: Faithfulness, Answer Relevance, Context Recall, Completeness
-# =============================================================================
+def score_faithfulness(answer, chunks_used):
+    print("\n=== FAITHFULNESS ===")
+    print("\nAnswer:")
+    print(answer)
 
-def score_faithfulness(
-    answer: str,
-    chunks_used: List[Dict[str, Any]],
-) -> Dict[str, Any]:
-    """
-    Faithfulness: Câu trả lời có bám đúng chứng cứ đã retrieve không?
-    Câu hỏi: Model có tự bịa thêm thông tin ngoài retrieved context không?
+    print("\nChunks used:")
+    for i, c in enumerate(chunks_used):
+        print(f"\nChunk {i+1}:")
+        print(c.get("text", "")[:300])
 
-    Thang điểm 1-5:
-      5: Mọi thông tin trong answer đều có trong retrieved chunks
-      4: Gần như hoàn toàn grounded, 1 chi tiết nhỏ chưa chắc chắn
-      3: Phần lớn grounded, một số thông tin có thể từ model knowledge
-      2: Nhiều thông tin không có trong retrieved chunks
-      1: Câu trả lời không grounded, phần lớn là model bịa
-
-    TODO Sprint 4 — Có 2 cách chấm:
-
-    Cách 1 — Chấm thủ công (Manual, đơn giản):
-        Đọc answer và chunks_used, chấm điểm theo thang trên.
-        Ghi lý do ngắn gọn vào "notes".
-
-    Cách 2 — LLM-as-Judge (Tự động, nâng cao):
-        Gửi prompt cho LLM:
-            "Given these retrieved chunks: {chunks}
-             And this answer: {answer}
-             Rate the faithfulness on a scale of 1-5.
-             5 = completely grounded in the provided context.
-             1 = answer contains information not in the context.
-             Output JSON: {'score': <int>, 'reason': '<string>'}"
-
-    Trả về dict với: score (1-5) và notes (lý do)
-    """
-    context = "\n\n".join([c["text"] for c in chunks_used])
-
-    prompt = f"""
-You are an evaluator.
-
-Context:
-{context}
-
-Answer:
-{answer}
-
-Rate faithfulness (1-5):
-5 = fully grounded in context
-1 = hallucinated
-
-Return JSON:
-{{"score": int, "reason": "..." }}
-"""
-
-    response = client.models.generate_content(
-        model="gemini-2.5-flash",
-        contents=prompt,
-        config=types.GenerateContentConfig(temperature=0),
-    )
-    text = response.text.strip()
-
-    try:
-        result = json.loads(text)
-    except:
-        result = {"score": None, "reason": text}
+    score = input("\nScore Faithfulness (1-5): ")
+    notes = input("Notes: ")
 
     return {
-        "score": result.get("score"),
-        "notes": result.get("reason")
+        "score": int(score) if score else None,
+        "notes": notes
     }
 
+def score_answer_relevance(query, answer):
+    print("\n=== RELEVANCE ===")
+    print("\nQuery:")
+    print(query)
 
+    print("\nAnswer:")
+    print(answer)
 
-def score_answer_relevance(
-    query: str,
-    answer: str,
-) -> Dict[str, Any]:
-    """
-    Answer Relevance: Answer có trả lời đúng câu hỏi người dùng hỏi không?
-    Câu hỏi: Model có bị lạc đề hay trả lời đúng vấn đề cốt lõi không?
-
-    Thang điểm 1-5:
-      5: Answer trả lời trực tiếp và đầy đủ câu hỏi
-      4: Trả lời đúng nhưng thiếu vài chi tiết phụ
-      3: Trả lời có liên quan nhưng chưa đúng trọng tâm
-      2: Trả lời lạc đề một phần
-      1: Không trả lời câu hỏi
-
-    TODO Sprint 4: Implement tương tự score_faithfulness
-    """
-    prompt = f"""
-Question:
-{query}
-
-Answer:
-{answer}
-
-Rate relevance (1-5):
-5 = directly answers
-1 = irrelevant
-
-Return JSON:
-{{"score": int, "reason": "..."}}
-"""
-
-    response = client.models.generate_content(
-        model="gemini-2.5-pro",
-        contents=prompt,
-        config=types.GenerateContentConfig(temperature=0),
-    )
-
-    try:
-        result = json.loads(response.text)
-    except:
-        result = {"score": None, "reason": response.text}
+    score = input("\nScore Relevance (1-5): ")
+    notes = input("Notes: ")
 
     return {
-        "score": result.get("score"),
-        "notes": result.get("reason")
+        "score": int(score) if score else None,
+        "notes": notes
     }
-
 
 
 def score_context_recall(
@@ -251,63 +146,22 @@ def score_context_recall(
     }
 
 
-def score_completeness(
-    query: str,
-    answer: str,
-    expected_answer: str,
-) -> Dict[str, Any]:
-    """
-    Completeness: Answer có thiếu điều kiện ngoại lệ hoặc bước quan trọng không?
-    Câu hỏi: Answer có bao phủ đủ thông tin so với expected_answer không?
+def score_completeness(query, answer, expected_answer):
+    print("\n=== COMPLETENESS ===")
+    
+    print("\nExpected Answer:")
+    print(expected_answer)
 
-    Thang điểm 1-5:
-      5: Answer bao gồm đủ tất cả điểm quan trọng trong expected_answer
-      4: Thiếu 1 chi tiết nhỏ
-      3: Thiếu một số thông tin quan trọng
-      2: Thiếu nhiều thông tin quan trọng
-      1: Thiếu phần lớn nội dung cốt lõi
+    print("\nModel Answer:")
+    print(answer)
 
-    TODO Sprint 4:
-    Option 1 — Chấm thủ công: So sánh answer vs expected_answer và chấm.
-    Option 2 — LLM-as-Judge:
-        "Compare the model answer with the expected answer.
-         Rate completeness 1-5. Are all key points covered?
-         Output: {'score': int, 'missing_points': [str]}"
-    """
-    prompt = f"""
-Question:
-{query}
-
-Expected Answer:
-{expected_answer}
-
-Model Answer:
-{answer}
-
-Compare completeness (1-5):
-5 = covers all key points
-1 = missing most
-
-Return JSON:
-{{"score": int, "missing_points": ["..."]}}
-"""
-
-    response = client.models.generate_content(
-        model="gemini-2.5-pro",
-        contents=prompt,
-        config=types.GenerateContentConfig(temperature=0),
-    )
-
-    try:
-        result = json.loads(response.text)
-    except:
-        result = {"score": None, "missing_points": response.text}
+    score = input("\nScore Completeness (1-5): ")
+    notes = input("Notes: ")
 
     return {
-        "score": result.get("score"),
-        "notes": str(result.get("missing_points"))
+        "score": int(score) if score else None,
+        "notes": notes
     }
-
 
 
 # =============================================================================
@@ -605,12 +459,12 @@ if __name__ == "__main__":
 
     # --- A/B Comparison ---
     # TODO Sprint 4: Uncomment sau khi có cả baseline và variant
-    if baseline_results and variant_results:
-        compare_ab(
-            baseline_results,
-            variant_results,
-            output_csv="ab_comparison.csv"
-        )
+    # if baseline_results and variant_results:
+    #     compare_ab(
+    #         baseline_results,
+    #         variant_results,
+    #         output_csv="ab_comparison.csv"
+    #     )
 
     print("\n\nViệc cần làm Sprint 4:")
     print("  1. Hoàn thành Sprint 2 + 3 trước")
