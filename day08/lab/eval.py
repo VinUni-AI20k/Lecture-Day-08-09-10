@@ -50,8 +50,8 @@ BASELINE_CONFIG = {
 # TODO Sprint 4: Cập nhật VARIANT_CONFIG theo variant nhóm đã implement
 VARIANT_CONFIG = {
     "retrieval_mode": "hybrid",   # Hoặc "dense" nếu chỉ đổi rerank
-    "top_k_search": 8,
-    "top_k_select": 2,
+    "top_k_search": 5,
+    "top_k_select": 5,
     "use_rerank": False,           # Hoặc False nếu variant là hybrid không rerank
     "label": "variant_hybrid_rerank",
 }
