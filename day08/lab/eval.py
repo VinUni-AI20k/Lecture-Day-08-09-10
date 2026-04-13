@@ -19,16 +19,22 @@ A/B Rule (từ slide):
 
 import json
 import csv
+import os
 from pathlib import Path
 from typing import List, Dict, Any, Optional
 from datetime import datetime
+
+from dotenv import load_dotenv
+import openai
 from rag_answer import rag_answer
 
 # =============================================================================
 # CẤU HÌNH
 # =============================================================================
-
-TEST_QUESTIONS_PATH = Path(__file__).parent / "data" / "test_questions.json"
+load_dotenv()
+client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+    
+TEST_QUESTIONS_PATH = Path(__file__).parent / "data" / "grading_question.json"
 RESULTS_DIR = Path(__file__).parent / "results"
 
 # Cấu hình baseline (Sprint 2)
@@ -44,9 +50,9 @@ BASELINE_CONFIG = {
 # TODO Sprint 4: Cập nhật VARIANT_CONFIG theo variant nhóm đã implement
 VARIANT_CONFIG = {
     "retrieval_mode": "hybrid",   # Hoặc "dense" nếu chỉ đổi rerank
-    "top_k_search": 10,
-    "top_k_select": 3,
-    "use_rerank": True,           # Hoặc False nếu variant là hybrid không rerank
+    "top_k_search": 5,
+    "top_k_select": 5,
+    "use_rerank": False,           # Hoặc False nếu variant là hybrid không rerank
     "label": "variant_hybrid_rerank",
 }
 
@@ -83,17 +89,21 @@ def score_faithfulness(
              And this answer: {answer}
              Rate the faithfulness on a scale of 1-5.
              5 = completely grounded in the provided context.
-             1 = answer contains information not in the context.
+             1 = answer contains information NOT in the context.
              Output JSON: {'score': <int>, 'reason': '<string>'}"
 
     Trả về dict với: score (1-5) và notes (lý do)
     """
     # TODO Sprint 4: Implement scoring
     # Tạm thời trả về None (yêu cầu chấm thủ công)
-    return {
-        "score": None,
-        "notes": "TODO: Chấm thủ công hoặc implement LLM-as-Judge",
-    }
+
+    context = "\n---\n".join([c.get("text", "") for c in chunks_used])
+    prompt = f"""Rate FAITHFULNESS (1-5). Does the answer only use info from the context?
+    CONTEXT: {context}
+    ANSWER: {answer}
+    Output JSON: {{"score": int, "reason": "string"}}"""
+    res = ask_llm_judge(prompt)
+    return {"score": res.get("score"), "notes": res.get("reason")}
 
 
 def score_answer_relevance(
@@ -113,10 +123,13 @@ def score_answer_relevance(
 
     TODO Sprint 4: Implement tương tự score_faithfulness
     """
-    return {
-        "score": None,
-        "notes": "TODO: Implement score_answer_relevance",
-    }
+
+    prompt = f"""Rate RELEVANCE (1-5). Does the answer address the user's question?
+    QUESTION: {query}
+    ANSWER: {answer}
+    Output JSON: {{"score": int, "reason": "string"}}"""
+    res = ask_llm_judge(prompt)
+    return {"score": res.get("score"), "notes": res.get("reason")}
 
 
 def score_context_recall(
@@ -142,36 +155,42 @@ def score_context_recall(
     2. Kiểm tra xem expected_sources có trong retrieved sources không
     3. Tính recall score
     """
-    if not expected_sources:
-        # Câu hỏi không có expected source (ví dụ: "Không đủ dữ liệu" cases)
-        return {"score": None, "recall": None, "notes": "No expected sources"}
 
-    retrieved_sources = {
-        c.get("metadata", {}).get("source", "")
-        for c in chunks_used
+    if not expected_sources:
+        return {"score": 5, "recall": 1.0, "notes": "No expected sources required"}
+
+    # Lấy danh sách tên file thực tế đã lấy được (chỉ lấy tên file, bỏ đường dẫn)
+    retrieved_names = {
+        Path(c.get("metadata", {}).get("source", "")).name.lower() 
+        for c in chunks_used if c.get("metadata", {}).get("source")
     }
 
-    # TODO: Kiểm tra matching theo partial path (vì source paths có thể khác format)
     found = 0
     missing = []
+    
     for expected in expected_sources:
-        # Kiểm tra partial match (tên file)
-        expected_name = expected.split("/")[-1].replace(".pdf", "").replace(".md", "")
-        matched = any(expected_name.lower() in r.lower() for r in retrieved_sources)
-        if matched:
+        # Lấy tên file mong đợi (ví dụ: refund-v4.pdf)
+        expected_name = Path(expected).name.lower()
+        
+        # Kiểm tra xem tên file này có xuất hiện trong đống retrieved không
+        # Dùng any() với in để cover trường hợp path dài ngắn khác nhau
+        if any(expected_name in r for r in retrieved_names):
             found += 1
         else:
             missing.append(expected)
 
-    recall = found / len(expected_sources) if expected_sources else 0
+    recall = found / len(expected_sources)
+    
+    # Map recall (0-1) sang thang điểm (1-5)
+    # 0.0 -> 1 | 0.5 -> 3 | 1.0 -> 5
+    score = round(recall * 4) + 1
 
     return {
-        "score": round(recall * 5),  # Convert to 1-5 scale
+        "score": score,
         "recall": recall,
         "found": found,
         "missing": missing,
-        "notes": f"Retrieved: {found}/{len(expected_sources)} expected sources" +
-                 (f". Missing: {missing}" if missing else ""),
+        "notes": f"Retrieved: {found}/{len(expected_sources)}. Missing: {missing}" if missing else "All sources found."
     }
 
 
@@ -198,10 +217,16 @@ def score_completeness(
          Rate completeness 1-5. Are all key points covered?
          Output: {'score': int, 'missing_points': [str]}"
     """
-    return {
-        "score": None,
-        "notes": "TODO: Implement score_completeness (so sánh với expected_answer)",
-    }
+    
+    if not expected_answer:
+        return {"score": None, "notes": "No ground truth available."}
+    prompt = f"""Rate COMPLETENESS (1-5). Compare the model answer against the ground truth.
+    QUESTION: {query}
+    MODEL_ANSWER: {answer}
+    GROUND_TRUTH: {expected_answer}
+    Output JSON: {{"score": int, "reason": "string"}}"""
+    res = ask_llm_judge(prompt)
+    return {"score": res.get("score"), "notes": res.get("reason")}
 
 
 # =============================================================================
@@ -439,6 +464,20 @@ Generated: {timestamp}
 
     return md
 
+def ask_llm_judge(prompt: str) -> Dict[str, Any]:
+    """Gửi yêu cầu chấm điểm tới LLM và bắt JSON trả về."""
+    try:
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": "You are an objective RAG evaluator, LLM as judge. Always output valid JSON."},
+                {"role": "user", "content": prompt}
+            ],
+            response_format={"type": "json_object"}
+        )
+        return json.loads(response.choices[0].message.content)
+    except Exception as e:
+        return {"score": 1, "reason": f"Error calling judge: {e}"}
 
 # =============================================================================
 # MAIN — Chạy evaluation
@@ -488,23 +527,23 @@ if __name__ == "__main__":
 
     # --- Chạy Variant (sau khi Sprint 3 hoàn thành) ---
     # TODO Sprint 4: Uncomment sau khi implement variant trong rag_answer.py
-    # print("\n--- Chạy Variant ---")
-    # variant_results = run_scorecard(
-    #     config=VARIANT_CONFIG,
-    #     test_questions=test_questions,
-    #     verbose=True,
-    # )
-    # variant_md = generate_scorecard_summary(variant_results, VARIANT_CONFIG["label"])
-    # (RESULTS_DIR / "scorecard_variant.md").write_text(variant_md, encoding="utf-8")
+    print("\n--- Chạy Variant ---")
+    variant_results = run_scorecard(
+        config=VARIANT_CONFIG,
+        test_questions=test_questions,
+        verbose=True,
+    )
+    variant_md = generate_scorecard_summary(variant_results, VARIANT_CONFIG["label"])
+    (RESULTS_DIR / "scorecard_variant.md").write_text(variant_md, encoding="utf-8")
 
     # --- A/B Comparison ---
     # TODO Sprint 4: Uncomment sau khi có cả baseline và variant
-    # if baseline_results and variant_results:
-    #     compare_ab(
-    #         baseline_results,
-    #         variant_results,
-    #         output_csv="ab_comparison.csv"
-    #     )
+    if baseline_results and variant_results:
+        compare_ab(
+            baseline_results,
+            variant_results,
+            output_csv="ab_comparison.csv"
+        )
 
     print("\n\nViệc cần làm Sprint 4:")
     print("  1. Hoàn thành Sprint 2 + 3 trước")

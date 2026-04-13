@@ -1,6 +1,10 @@
 .DS_Store
 *.swp
 *~
+.venv
+.env
 
 # Grading questions — không public trước 17:00
 day08/lab/data/grading_questions.json
+day08/lab/venv/
+venv/
