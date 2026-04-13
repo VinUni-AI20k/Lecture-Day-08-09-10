@@ -39,7 +39,6 @@ TOP_K_SELECT = 3     # Số chunk gửi vào prompt sau rerank/select (top-3 swe
 LLM_MODEL = os.getenv("LLM_MODEL", "gpt-4o-mini")
 _bm25_index = None
 _bm25_chunks = None
-_rerank_model = None
 
 # =============================================================================
 # RETRIEVAL — DENSE (Vector Search)
@@ -281,42 +280,60 @@ def rerank(
     candidates: List[Dict[str, Any]],
     top_k: int = TOP_K_SELECT,
 ) -> List[Dict[str, Any]]:
+    """
+    Rerank các candidate chunks bằng cross-encoder.
+
+    Cross-encoder: chấm lại "chunk nào thực sự trả lời câu hỏi này?"
+    MMR (Maximal Marginal Relevance): giữ relevance nhưng giảm trùng lặp
+
+    Funnel logic (từ slide):
+      Search rộng (top-20) → Rerank (top-6) → Select (top-3)
+
+    TODO Sprint 3 (nếu chọn rerank):
+    Option A — Cross-encoder:
+        from sentence_transformers import CrossEncoder
+        model = CrossEncoder("cross-encoder/ms-marco-MiniLM-L-6-v2")
+        pairs = [[query, chunk["text"]] for chunk in candidates]
+        scores = model.predict(pairs)
+        ranked = sorted(zip(candidates, scores), key=lambda x: x[1], reverse=True)
+        return [chunk for chunk, _ in ranked[:top_k]]
+
+    Option B — Rerank bằng LLM (đơn giản hơn nhưng tốn token):
+        Gửi list chunks cho LLM, yêu cầu chọn top_k relevant nhất
+
+    Khi nào dùng rerank:
+    - Dense/hybrid trả về nhiều chunk nhưng có noise
+    - Muốn chắc chắn chỉ 3-5 chunk tốt nhất vào prompt
+    """
+    # TODO Sprint 3: Implement rerank
+    # Tạm thời trả về top_k đầu tiên (không rerank)
     if not candidates:
         return candidates
 
-    try:
-        # Embed query
-        query_emb = client.embeddings.create(
-            model="text-embedding-3-small",
-            input=query
-        ).data[0].embedding
+    client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+    scored = []
+    for chunk in candidates:
+        prompt = f"""Rate how relevant this text passage is to answering the question.
+Question: {query}
+Passage: {chunk['text'][:500]}
 
-        texts = [c["text"] for c in candidates]
+Output ONLY a single integer from 0 to 10. Higher = more relevant."""
+        try:
+            response = client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[{"role": "user", "content": prompt}],
+                temperature=0,
+                max_tokens=5,
+            )
+            score = int(response.choices[0].message.content.strip())
+        except Exception:
+            score = 5
+        chunk_copy = chunk.copy()
+        chunk_copy["rerank_score"] = score / 10.0
+        scored.append((chunk_copy, score))
 
-        # Embed candidates
-        doc_embs = client.embeddings.create(
-            model="text-embedding-3-small",
-            input=texts
-        ).data
-
-        scores = [
-            cosine_similarity(query_emb, d.embedding)
-            for d in doc_embs
-        ]
-
-        ranked = sorted(zip(candidates, scores), key=lambda x: x[1], reverse=True)
-
-        result = []
-        for chunk, score in ranked[:top_k]:
-            chunk_copy = chunk.copy()
-            chunk_copy["rerank_score"] = float(score)
-            result.append(chunk_copy)
-
-        return result
-
-    except Exception as e:
-        print(f"[Rerank] Lỗi: {e}, fallback")
-        return candidates[:top_k]
+    scored.sort(key=lambda x: x[1], reverse=True)
+    return [c for c, _ in scored[:top_k]]
 
 
 # =============================================================================
@@ -604,7 +621,7 @@ def compare_retrieval_strategies(query: str) -> None:
     print(f"Query: {query}")
     print('='*60)
 
-    strategies = ["dense", "hybrid"]  # Thêm "sparse" sau khi implement
+    strategies = ["dense", "sparse","hybrid"]  # Thêm "sparse" sau khi implement
 
     for strategy in strategies:
         print(f"\n--- Strategy: {strategy} ---")
@@ -632,7 +649,14 @@ if __name__ == "__main__":
         "SLA xử lý ticket P1 là bao lâu?",
         "Khách hàng có thể yêu cầu hoàn tiền trong bao nhiêu ngày?",
         "Ai phải phê duyệt để cấp quyền Level 3?",
-        "ERR-403-AUTH là lỗi gì?",  # Query không có trong docs → kiểm tra abstain
+        "Sản phẩm kỹ thuật số có được hoàn tiền không?",
+        "Escalation trong sự cố P1 diễn ra như thế nào?",
+        "Approval Matrix để cấp quyền hệ thống là tài liệu nào?",
+        "Nhân viên được làm remote tối đa mấy ngày mỗi tuần?",
+        "ERR-403-AUTH là lỗi gì và cách xử lý?",
+        "Nếu cần hoàn tiền khẩn cấp cho khách hàng VIP, quy trình có khác không?",
+
+          # Query không có trong docs → kiểm tra abstain
     ]
 
     print("\n--- Sprint 2: Test Baseline (Dense) ---")
@@ -648,10 +672,10 @@ if __name__ == "__main__":
             print(f"Lỗi: {e}")
 
     # Uncomment sau khi Sprint 3 hoàn thành:
-    # print("\n--- Sprint 3: So sánh strategies ---")
-    # compare_retrieval_strategies("Approval Matrix để cấp quyền là tài liệu nào?")
-    # compare_retrieval_strategies("ERR-403-AUTH")
-
+    print("\n--- Sprint 3: So sánh strategies ---")
+    compare_retrieval_strategies("Approval Matrix để cấp quyền là tài liệu nào?")
+    compare_retrieval_strategies("ERR-403-AUTH")
+    """
     print("\n\nViệc cần làm Sprint 2:")
     print("  1. Implement retrieve_dense() — query ChromaDB")
     print("  2. Implement call_llm() — gọi OpenAI hoặc Gemini")
@@ -663,3 +687,4 @@ if __name__ == "__main__":
     print("  2. Implement variant đó")
     print("  3. Chạy compare_retrieval_strategies() để thấy sự khác biệt")
     print("  4. Ghi lý do chọn biến đó vào docs/tuning-log.md")
+    """
