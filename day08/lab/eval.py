@@ -23,6 +23,24 @@ from pathlib import Path
 from typing import List, Dict, Any, Optional
 from datetime import datetime
 from rag_answer import rag_answer
+import os
+from dotenv import load_dotenv
+import google.generativeai as genai
+
+# Load .env
+load_dotenv()
+
+# Lấy API key
+api_key = os.getenv("GEMINI_API_KEY")
+
+if not api_key:
+    raise ValueError("Không tìm thấy GEMINI_API_KEY trong .env")
+
+# Config Gemini
+genai.configure(api_key=api_key)
+
+# Init model (dùng 1 lần global)
+model = genai.GenerativeModel("gemini-2.5-pro")
 
 # =============================================================================
 # CẤU HÌNH
@@ -88,12 +106,38 @@ def score_faithfulness(
 
     Trả về dict với: score (1-5) và notes (lý do)
     """
-    # TODO Sprint 4: Implement scoring
-    # Tạm thời trả về None (yêu cầu chấm thủ công)
+    context = "\n\n".join([c["text"] for c in chunks_used])
+
+    prompt = f"""
+You are an evaluator.
+
+Context:
+{context}
+
+Answer:
+{answer}
+
+Rate faithfulness (1-5):
+5 = fully grounded in context
+1 = hallucinated
+
+Return JSON:
+{{"score": int, "reason": "..." }}
+"""
+
+    response = model.generate_content(prompt)
+    text = response.text.strip()
+
+    try:
+        result = json.loads(text)
+    except:
+        result = {"score": None, "reason": text}
+
     return {
-        "score": None,
-        "notes": "TODO: Chấm thủ công hoặc implement LLM-as-Judge",
+        "score": result.get("score"),
+        "notes": result.get("reason")
     }
+
 
 
 def score_answer_relevance(
@@ -113,10 +157,33 @@ def score_answer_relevance(
 
     TODO Sprint 4: Implement tương tự score_faithfulness
     """
+    prompt = f"""
+Question:
+{query}
+
+Answer:
+{answer}
+
+Rate relevance (1-5):
+5 = directly answers
+1 = irrelevant
+
+Return JSON:
+{{"score": int, "reason": "..."}}
+"""
+
+    response = model.generate_content(prompt)
+
+    try:
+        result = json.loads(response.text)
+    except:
+        result = {"score": None, "reason": response.text}
+
     return {
-        "score": None,
-        "notes": "TODO: Implement score_answer_relevance",
+        "score": result.get("score"),
+        "notes": result.get("reason")
     }
+
 
 
 def score_context_recall(
@@ -198,10 +265,36 @@ def score_completeness(
          Rate completeness 1-5. Are all key points covered?
          Output: {'score': int, 'missing_points': [str]}"
     """
+    prompt = f"""
+Question:
+{query}
+
+Expected Answer:
+{expected_answer}
+
+Model Answer:
+{answer}
+
+Compare completeness (1-5):
+5 = covers all key points
+1 = missing most
+
+Return JSON:
+{{"score": int, "missing_points": ["..."]}}
+"""
+
+    response = model.generate_content(prompt)
+
+    try:
+        result = json.loads(response.text)
+    except:
+        result = {"score": None, "missing_points": response.text}
+
     return {
-        "score": None,
-        "notes": "TODO: Implement score_completeness (so sánh với expected_answer)",
+        "score": result.get("score"),
+        "notes": str(result.get("missing_points"))
     }
+
 
 
 # =============================================================================

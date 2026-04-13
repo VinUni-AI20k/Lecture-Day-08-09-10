@@ -31,8 +31,8 @@ CHROMA_DB_DIR = Path(__file__).parent / "chroma_db"
 
 # TODO Sprint 1: Điều chỉnh chunk size và overlap theo quyết định của nhóm
 # Gợi ý từ slide: chunk 300-500 tokens, overlap 50-80 tokens
-CHUNK_SIZE = 400       # tokens (ước lượng bằng số ký tự / 4)
-CHUNK_OVERLAP = 80     # tokens overlap giữa các chunk
+CHUNK_SIZE = 500       # tokens (ước lượng bằng số ký tự / 4)
+CHUNK_OVERLAP = 50     # tokens overlap giữa các chunk
 
 
 # =============================================================================
@@ -60,6 +60,8 @@ def preprocess_document(raw_text: str, filepath: str) -> Dict[str, Any]:
 
     Gợi ý: dùng regex để parse dòng "Key: Value" ở đầu file.
     """
+    from index import get_embedding, CHROMA_DB_DIR
+
     lines = raw_text.strip().split("\n")
     metadata = {
         "source": filepath,
@@ -241,10 +243,14 @@ def get_embedding(text: str) -> List[float]:
         model = SentenceTransformer("paraphrase-multilingual-MiniLM-L12-v2")
         return model.encode(text).tolist()
     """
-    raise NotImplementedError(
-        "TODO: Implement get_embedding().\n"
-        "Chọn Option A (OpenAI) hoặc Option B (Sentence Transformers) trong TODO comment."
+    from google import genai
+    client = genai.Client(api_key=os.getenv("GOOGLE_API_KEY"))
+    response = client.models.embed_content(
+        model="gemini-embedding-2-preview",
+        contents=text,
+        # config={"task_type": "retrieval_document"}
     )
+    return response.embeddings[0].values
 
 
 def build_index(docs_dir: Path = DOCS_DIR, db_dir: Path = CHROMA_DB_DIR) -> None:
@@ -270,7 +276,7 @@ def build_index(docs_dir: Path = DOCS_DIR, db_dir: Path = CHROMA_DB_DIR) -> None
         )
     """
     import chromadb
-
+    
     print(f"Đang build index từ: {docs_dir}")
     db_dir.mkdir(parents=True, exist_ok=True)
 
@@ -308,13 +314,26 @@ def build_index(docs_dir: Path = DOCS_DIR, db_dir: Path = CHROMA_DB_DIR) -> None
         # total_chunks += len(chunks)
 
         # Placeholder để code không lỗi khi chưa implement
+        client = chromadb.PersistentClient(path=str(db_dir))
+        collection = client.get_or_create_collection(
+            name="rag_lab",
+            metadata={"hnsw:space": "cosine"}
+        )
         doc = preprocess_document(raw_text, str(filepath))
         chunks = chunk_document(doc)
-        print(f"    → {len(chunks)} chunks (embedding chưa implement)")
+        for i, chunk in enumerate(chunks):
+            chunk_id = f"{filepath.stem}_{i}"
+            embedding = get_embedding(chunk["text"])
+            collection.upsert(
+                ids=[chunk_id],
+                embeddings=[embedding],
+                documents=[chunk["text"]],
+                metadatas=[chunk["metadata"]],
+            )
         total_chunks += len(chunks)
 
     print(f"\nHoàn thành! Tổng số chunks: {total_chunks}")
-    print("Lưu ý: Embedding chưa được implement. Xem TODO trong get_embedding() và build_index().")
+
 
 
 # =============================================================================
@@ -420,14 +439,14 @@ if __name__ == "__main__":
 
     # Bước 3: Build index (yêu cầu implement get_embedding)
     print("\n--- Build Full Index ---")
-    print("Lưu ý: Cần implement get_embedding() trước khi chạy bước này!")
+    # print("Lưu ý: Cần implement get_embedding() trước khi chạy bước này!")
     # Uncomment dòng dưới sau khi implement get_embedding():
-    # build_index()
+    build_index()
 
     # Bước 4: Kiểm tra index
     # Uncomment sau khi build_index() thành công:
-    # list_chunks()
-    # inspect_metadata_coverage()
+    list_chunks()
+    inspect_metadata_coverage()
 
     print("\nSprint 1 setup hoàn thành!")
     print("Việc cần làm:")
