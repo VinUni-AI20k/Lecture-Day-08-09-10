@@ -199,3 +199,4 @@ Nếu pipeline trả lời sai, kiểm tra lần lượt:
 - OpenAI Embeddings: https://platform.openai.com/docs/guides/embeddings
 - Sentence Transformers: https://www.sbert.net
 - rank-bm25: https://github.com/dorianbrown/rank_bm25
+## Backup1
