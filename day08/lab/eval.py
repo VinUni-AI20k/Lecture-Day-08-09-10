@@ -24,6 +24,7 @@ from typing import List, Dict, Any, Optional
 from datetime import datetime
 from rag_answer import rag_answer
 import os
+import sys
 
 # =============================================================================
 # CẤU HÌNH
@@ -39,13 +40,20 @@ BASELINE_CONFIG = {
     "label": "baseline_dense",
 }
 
-# Cấu hình variant (Sprint 3)
-VARIANT_CONFIG = {
+# Cấu hình variant Sparse (Sprint 3)
+VARIANT_SPARSE_CONFIG = {
+    "retrieval_mode": "sparse",
+    "top_k_search": 10,
+    "top_k_select": 3,
+    "label": "variant_sparse",
+}
+
+# Cấu hình variant Hybrid (Sprint 3)
+VARIANT_HYBRID_CONFIG = {
     "retrieval_mode": "hybrid",
     "top_k_search": 10,
     "top_k_select": 3,
-    "use_mmr": True,
-    "label": "variant_hybrid_mmr",
+    "label": "variant_hybrid",
 }
 
 
@@ -289,7 +297,7 @@ def run_scorecard(
                 top_k_search=config.get("top_k_search", 10),
                 top_k_select=config.get("top_k_select", 3),
                 use_mmr=config.get("use_mmr", False),
-                verbose=False,
+                verbose=verbose,
             )
             answer = result["answer"]
             chunks_used = result["chunks_used"]
@@ -471,6 +479,24 @@ Generated: {timestamp}
 # =============================================================================
 
 if __name__ == "__main__":
+    # --- Redirect Output to File ---
+    OUTPUT_FILE = Path(__file__).parent / "outputs" / "sprint4.txt"
+    OUTPUT_FILE.parent.mkdir(parents=True, exist_ok=True)
+    
+    class Tee(object):
+        def __init__(self, *files):
+            self.files = files
+        def write(self, obj):
+            for f in self.files:
+                f.write(obj)
+                f.flush()
+        def flush(self):
+            for f in self.files:
+                f.flush()
+
+    f = open(OUTPUT_FILE, "w", encoding="utf-8")
+    sys.stdout = Tee(sys.stdout, f)
+
     print("=" * 60)
     print("Sprint 4: Evaluation & Scorecard")
     print("=" * 60)
@@ -512,26 +538,46 @@ if __name__ == "__main__":
         print("Pipeline chưa implement. Hoàn thành Sprint 2 trước.")
         baseline_results = []
 
-    # --- Chạy Variant (sau khi Sprint 3 hoàn thành) ---
-    print("\n--- Chạy Variant ---")
-    try:
-        variant_results = run_scorecard(
-            config=VARIANT_CONFIG,
-            test_questions=test_questions,
-            verbose=True,
-        )
-        variant_md = generate_scorecard_summary(variant_results, VARIANT_CONFIG["label"])
-        (RESULTS_DIR / "scorecard_variant.md").write_text(variant_md, encoding="utf-8")
-        
-        # --- A/B Comparison ---
-        if baseline_results and variant_results:
-            compare_ab(
-                baseline_results,
-                variant_results,
-                output_csv="ab_comparison.csv"
+    # --- Chạy các Variant (sau khi Sprint 3 hoàn thành) ---
+    variants = [VARIANT_SPARSE_CONFIG, VARIANT_HYBRID_CONFIG]
+    all_results = {"baseline": baseline_results}
+    
+    for v_config in variants:
+        print(f"\n--- Chạy Variant: {v_config['label']} ---")
+        try:
+            variant_results = run_scorecard(
+                config=v_config,
+                test_questions=test_questions,
+                verbose=True,
             )
-    except Exception as e:
-        print(f"Error running variant evaluation: {e}")
+            v_label = v_config["label"]
+            all_results[v_label] = variant_results
+            
+            variant_md = generate_scorecard_summary(variant_results, v_label)
+            scorecard_path = RESULTS_DIR / f"scorecard_{v_label}.md"
+            scorecard_path.write_text(variant_md, encoding="utf-8")
+            
+        except Exception as e:
+            print(f"Error running evaluation for {v_config['label']}: {e}")
+
+    # --- FINAL COMPARISON TABLE ---
+    print(f"\n{'='*80}")
+    print(f"{'BẢNG SO SÁNH TỔNG HỢP 3 CẤU HÌNH':^80}")
+    print('='*80)
+    
+    metrics = ["faithfulness", "relevance", "context_recall", "completeness"]
+    print(f"{'Metric':<20} {'Baseline':>12} {'Sparse':>12} {'Hybrid':>12}")
+    print("-" * 60)
+    
+    for metric in metrics:
+        row = [f"{metric:<20}"]
+        for label in ["baseline", "variant_sparse", "variant_hybrid"]:
+            results = all_results.get(label, [])
+            scores = [r[metric] for r in results if r[metric] is not None]
+            avg = sum(scores) / len(scores) if scores else 0
+            row.append(f"{avg:>12.2f}")
+        print(" ".join(row))
+    print('='*80)
 
     print("\n\nViệc cần làm Sprint 4:")
     print("  1. Hoàn thành Sprint 2 + 3 trước")
