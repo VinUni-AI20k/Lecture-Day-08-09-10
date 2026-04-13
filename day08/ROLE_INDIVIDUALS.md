@@ -780,8 +780,11 @@ python eval.py            # full eval
 ## 5. Kết luận và hướng cải thiện
 ```
 
-4. Viết báo cáo cá nhân `reports/individual/son.md` (500-800 từ):
-   - **Đóng góp cụ thể:** mô tả chi tiết architecture.md, tuning-log, group_report — có dẫn chứng commit
+4. Xây dựng bản Prototype Web UI (Thuyết trình):
+   - Đóng gói giao diện HTML "The Digital Architect".
+   - Dựng FastAPI backend phục vụ Demo và Trace Panel.
+5. Viết báo cáo cá nhân `reports/individual/son.md` (500-800 từ):
+   - **Đóng góp cụ thể:** mô tả chi tiết architecture.md, tuning-log, group_report, **Web UI Demo** — có dẫn chứng commit
    - **Phân tích 1 câu grading** (sau 17:00): chọn câu liên quan đến multi-document hoặc temporal scoping
    - **Rút kinh nghiệm:** khó khăn khi tổng hợp tài liệu từ nhiều thành viên
    - **Đề xuất cải tiến** có evidence từ scorecard
