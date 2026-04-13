@@ -450,6 +450,37 @@ def _trace_chunk_rows(chunks: List[Dict[str, Any]], text_snippet: int = 200) -> 
     return rows
 
 
+def _trace_score_stats(chunks: List[Dict[str, Any]]) -> Optional[Dict[str, float]]:
+    vals: List[float] = []
+    for c in chunks:
+        try:
+            vals.append(float(c.get("score", 0.0)))
+        except (TypeError, ValueError):
+            continue
+    if not vals:
+        return None
+    return {
+        "min": min(vals),
+        "max": max(vals),
+        "avg": sum(vals) / len(vals),
+    }
+
+
+def _trace_sources_preview(chunks: List[Dict[str, Any]], limit: int = 4) -> str:
+    sources: List[str] = []
+    for c in chunks:
+        src = str((c.get("metadata") or {}).get("source", "")).strip()
+        if src and src not in sources:
+            sources.append(src)
+    if not sources:
+        return "none"
+    head = sources[:limit]
+    tail = ""
+    if len(sources) > limit:
+        tail = f" (+{len(sources) - limit} more)"
+    return ", ".join(head) + tail
+
+
 def _retrieval_mode_note(retrieval_mode: str) -> str:
     notes = {
         "dense": "**Dense:** embed query (cùng model lúc index) → cosine search trong Chroma.",
@@ -557,11 +588,30 @@ def rag_answer_impl(
         return out
 
     if trace:
+        retrieve_stats = _trace_score_stats(candidates)
+        retrieve_score_txt = "N/A"
+        if retrieve_stats is not None:
+            retrieve_score_txt = (
+                f"{retrieve_stats['min']:.4f}..{retrieve_stats['max']:.4f} "
+                f"(avg {retrieve_stats['avg']:.4f})"
+            )
+        retrieve_sources = _trace_sources_preview(candidates)
+        retrieve_non_empty = sum(1 for c in candidates if (c.get("text") or "").strip())
         steps.append({
             "step": 2,
             "name": "Retrieve",
             "emoji": "2️⃣",
-            "detail": f"**{retrieval_mode}** · lấy **{len(candidates)}** ứng viên (`top_k_search={top_k_search}`).",
+            "detail": (
+                f"**{retrieval_mode}** · lấy **{len(candidates)}** ứng viên (`top_k_search={top_k_search}`). "
+                f"Score range: **{retrieve_score_txt}**. "
+                f"Chunk có nội dung: **{retrieve_non_empty}/{len(candidates)}**. "
+                f"Nguồn: {retrieve_sources}."
+            ),
+            "stats": {
+                "score": retrieve_stats,
+                "non_empty_chunks": retrieve_non_empty,
+                "sources_preview": retrieve_sources,
+            },
             "table": _trace_chunk_rows(candidates),
         })
 
@@ -591,11 +641,33 @@ def rag_answer_impl(
         select_emoji = "3️⃣"
 
     if trace:
+        selected_stats = _trace_score_stats(candidates)
+        selected_score_txt = "N/A"
+        if selected_stats is not None:
+            selected_score_txt = (
+                f"{selected_stats['min']:.4f}..{selected_stats['max']:.4f} "
+                f"(avg {selected_stats['avg']:.4f})"
+            )
+        selected_sources = _trace_sources_preview(candidates)
+        selected_non_empty = sum(1 for c in candidates if (c.get("text") or "").strip())
+        dropped = max(0, len(after_retrieve) - len(candidates))
         steps.append({
             "step": 3,
             "name": select_title,
             "emoji": select_emoji,
-            "detail": select_detail + f" (từ **{len(after_retrieve)}** ứng viên).",
+            "detail": (
+                select_detail
+                + f" (từ **{len(after_retrieve)}** ứng viên, bỏ **{dropped}**). "
+                + f"Score sau chọn: **{selected_score_txt}**. "
+                + f"Chunk có nội dung: **{selected_non_empty}/{len(candidates)}**. "
+                + f"Nguồn giữ lại: {selected_sources}."
+            ),
+            "stats": {
+                "score": selected_stats,
+                "dropped_candidates": dropped,
+                "non_empty_chunks": selected_non_empty,
+                "sources_preview": selected_sources,
+            },
             "table": _trace_chunk_rows(candidates),
         })
 
@@ -647,14 +719,19 @@ def rag_answer_impl(
     prompt = build_grounded_prompt(query, context_block)
 
     if trace:
+        prompt_sources = _trace_sources_preview(candidates)
         steps.append({
             "step": 4,
             "name": "Context + prompt",
             "emoji": "4️⃣",
             "detail": (
                 f"Đánh số **[1],[2],…**, kèm source/section/score → **{len(context_block)}** ký tự context. "
-                f"Prompt grounded tổng **{len(prompt)}** ký tự."
+                f"Prompt grounded tổng **{len(prompt)}** ký tự. "
+                f"Nguồn vào prompt: {prompt_sources}."
             ),
+            "stats": {
+                "prompt_sources_preview": prompt_sources,
+            },
             "context_preview": context_block[:1800] + ("…" if len(context_block) > 1800 else ""),
             "prompt_preview": prompt[:1400] + ("…" if len(prompt) > 1400 else ""),
         })
