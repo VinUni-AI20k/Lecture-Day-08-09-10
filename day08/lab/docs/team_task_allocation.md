@@ -6,13 +6,22 @@
 2. Dang Dinh Tu Anh (2A202600019)
 3. Quach Gia Duoc (2A202600423)
 4. Pham Quoc Dung (2A202600490)
-5. Nguyen Thanh Nam (2A202600205) - non-tech
+5. Nguyen Thanh Nam (2A202600205)
+
 
 ## Mục tiêu chia việc
 
 - Mỗi người có phần việc riêng, dễ hiểu, tránh conflict.
 - Chia nhỏ theo giai đoạn để tạo nhiều commit rõ nội dung.
 - Tập trung vào core: indexing, retrieval, eval, telemetry, docs/runbook.
+
+## Mục tiêu công việc (phiên bản dễ hiểu)
+
+- Mục tiêu 1: Khi chạy hệ thống, bot trả lời đúng hơn và bớt bịa.
+- Mục tiêu 2: Có log + report để chứng minh nhóm đã làm thật, không chỉ nói miệng.
+- Mục tiêu 3: Mỗi thành viên đều có commit đúng phần của mình để thầy dễ chấm.
+- Mục tiêu 4: Ưu tiên việc nhỏ, làm xong nhanh, commit ngay (không dồn việc đến cuối).
+- Mục tiêu 5: Nhóm trưởng (Tri Thanh) tập trung điều phối, review và kết nối tiến độ, nên số commit có thể ít hơn các bạn khác.
 
 ## Quy ước commit chung (bắt buộc)
 
@@ -29,20 +38,25 @@
 
 ## Giai đoạn 1 - Ổn định dữ liệu và indexing (dễ, commit nhanh)
 
-### Hoang Kim Tri Thanh - Owner Indexing
+### Hoang Kim Tri Thanh - Nhóm trưởng (điều phối + hỗ trợ kỹ thuật)
 
-**File chính:** `day08/lab/index.py`, `day08/lab/docs/architecture.md`
+**Vai trò chính (dễ hiểu):**
+- Chia việc, chốt scope từng giai đoạn, nhắc deadline.
+- Hỗ trợ khi bạn khác bị kẹt bug.
+- Review nhanh commit trước khi merge để đảm bảo không conflict.
+
+**File chính:** `day08/lab/docs/architecture.md`, `day08/lab/README.md`, hỗ trợ chọn lọc ở `day08/lab/index.py`
 
 Task nhỏ theo commit:
-1. Chuẩn hóa metadata cho chunk (`source`, `section`, `chunk_id`).
-2. Thêm log thống kê số docs/chunks sau khi build index.
-3. Tách hàm helper để dễ đọc code (không đổi logic lớn).
-4. Cập nhật `architecture.md` phần Indexing Flow.
+1. Cập nhật sơ đồ và mô tả flow tổng trong `architecture.md` để cả nhóm bám theo.
+2. Tạo checklist tiến độ theo giai đoạn trong `README.md` (ai làm gì, xong khi nào).
+3. Hỗ trợ 1 chỉnh sửa nhỏ ở indexing nếu cần để unblock nhóm.
+4. Viết commit tổng hợp nhỏ cho từng giai đoạn (chỉ phần docs/chore).
 
 Commit gợi ý:
-- `feat(day08-lab): normalize chunk metadata fields`
-- `chore(day08-lab): add indexing stats logging`
-- `docs(day08-lab): update indexing section in architecture`
+- `docs(day08-lab): clarify architecture flow for team execution`
+- `docs(day08-lab): add phase checklist for team progress`
+- `chore(day08-lab): sync minor integration notes after team updates`
 
 ### Dang Dinh Tu Anh - Hỗ trợ index + data sanity
 
@@ -150,10 +164,10 @@ Checklist chốt:
 
 ## KPI commit đề xuất (để thầy dễ chấm phân công)
 
-- Hoang Kim Tri Thanh: 5 commits
+- Hoang Kim Tri Thanh (nhóm trưởng): 3 commits
 - Dang Dinh Tu Anh: 4 commits
 - Quach Gia Duoc: 5 commits
 - Pham Quoc Dung: 5 commits
 - Nguyen Thanh Nam: 4 commits (docs-only)
 
-Tổng: khoảng 23 commit nhỏ, rõ nội dung và vai trò từng người.
+Tổng: khoảng 21 commit nhỏ, rõ nội dung và vai trò từng người.
