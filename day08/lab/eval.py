@@ -78,11 +78,11 @@ BASELINE_CONFIG = {
 # Cấu hình variant (Sprint 3 — điều chỉnh theo lựa chọn của nhóm)
 # TODO Sprint 4: Cập nhật VARIANT_CONFIG theo variant nhóm đã implement
 VARIANT_CONFIG = {
-    "retrieval_mode": "hybrid",
+    "retrieval_mode": "dense",
     "top_k_search": 10,
     "top_k_select": 3,
     "use_rerank": True,
-    "label": "variant_hybrid_rerank",
+    "label": "variant_dense_rerank",
 }
 
 # Variant phụ (chỉ đổi 1 biến so với baseline) — dùng cho A/B chặt trong tuning-log

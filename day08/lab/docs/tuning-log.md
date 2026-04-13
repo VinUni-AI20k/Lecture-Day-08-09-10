@@ -1,8 +1,8 @@
 # Tuning Log — RAG Pipeline (Day 08 Lab)
 
-> A/B Rule: Mỗi variant chỉ đổi MỘT biến so với baseline (Variant 1 và Variant 2). Variant 3 là tổ hợp hai biến tốt nhất, dùng làm config chạy grading.
+> A/B Rule: Mỗi variant chỉ đổi MỘT biến so với baseline (Variant 1 và Variant 2). Variant 3 là tổ hợp hai biến. Config grading cuối cùng = **Variant 1 (Dense + Rerank)**.
 >
-> **Ghi chú về độ ổn định số đo:** LLM-as-Judge (`gpt-4o-mini`, temperature=0) vẫn dao động ±0.10 giữa các lần chạy. Các bảng dưới đều được đo trong cùng phiên `python ablation.py` (cho V1, V2) và `python eval.py` (cho V3) sau khi đã fix bug `retrieve_sparse` (xem ghi chú cuối file).
+> **Ghi chú về độ ổn định số đo:** LLM-as-Judge (`gpt-4o-mini`, temperature=0) vẫn dao động ±0.10 giữa các lần chạy. Các bảng dưới đều được đo trong cùng phiên `python ablation.py` (Baseline, V1, V2, V3) sau khi đã fix bug `retrieve_sparse` (xem ghi chú cuối file).
 
 ---
 
