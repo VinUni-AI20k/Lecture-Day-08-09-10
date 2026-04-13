@@ -79,19 +79,26 @@ Nhóm phát triển một hệ thống RAG nội bộ giúp tra cứu và trả 
 ### Grounded Prompt Template
 ```
 Answer only from the retrieved context below.
-If the context is insufficient, say you do not know.
-Cite the source field when possible.
-Keep your answer short, clear, and factual.
+If the context contains enough information:
+- Provide a short, clear, factual answer.
+- Cite the source field (in brackets like [1]) when possible.
+
+If the context does NOT contain enough information:
+- DO NOT guess or fabricate.
+- Instead, respond in a helpful way:
+  + State that you could not find the answer in the provided context.
+  + Suggest 1-2 concrete next steps (e.g., refine keywords, search broader documents, contact relevant department).
+  + Optionally suggest related keywords or what information is missing.
+
+Additional rules:
+- Respond in the same language as the question.
+- If there is conflict between documents, list all conflicting sources and point out where they differ.
+- Do not infer information not explicitly stated in the context.
 
 Question: {query}
 
 Context:
-[1] {source} | {section} | score={score}
-{chunk_text}
-
-[2] ...
-
-Answer:
+{context_block}
 ```
 
 ### LLM Configuration
