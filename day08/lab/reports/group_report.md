@@ -1,16 +1,17 @@
 # Báo Cáo Nhóm — Lab Day 08: Full RAG Pipeline
 
-**Tên nhóm:** ___________  
+**Tên nhóm:** A2-4C1
 **Thành viên:**
 | Tên | Vai trò             | Email |
 | --- | ------------------- | ----- |
-| ___ | Tech Lead           | ___   |
+|  Hoàng Bá Minh Quang| Tech Lead           |    |
 | ___ | Retrieval Owner     | ___   |
-| ___ | Eval Owner          | ___   |
-| ___ | Documentation Owner | ___   |
+| Trần Quang Long +  | Eval Owner          | ___   |
+|  Đỗ Lê Thành Nhân| UI Owner          | ___   |
+| Nguyễn Công Quốc Huy| Documentation Owner | ___   |
 
-**Ngày nộp:** ___________  
-**Repo:** ___________  
+**Ngày nộp:** 13/4/2026  
+**Repo:** https://github.com/minquan-alt/Lecture-Day-08-09-10/
 **Độ dài khuyến nghị:** 600–900 từ
 
 ---
@@ -21,9 +22,6 @@
 > - Deadline: Được phép commit **sau 18:00** (xem SCORING.md)
 > - Tập trung vào **quyết định kỹ thuật cấp nhóm** — không trùng lặp với individual reports
 > - Phải có **bằng chứng từ code, scorecard, hoặc tuning log** — không mô tả chung chung
-
----
-
 ## 1. Pipeline nhóm đã xây dựng (150–200 từ)
 
 > Mô tả ngắn gọn pipeline của nhóm:
@@ -32,13 +30,10 @@
 > - Retrieval mode: dense / hybrid / rerank (Sprint 3 variant)
 
 **Chunking decision:**
-> VD: "Nhóm dùng chunk_size=500, overlap=50, tách theo section headers vì tài liệu có cấu trúc rõ ràng."
-
-_________________
+> Nhóm dùng chunk_size=500, overlap=80, tách theo section headers vì tài liệu có cấu trúc rõ ràng.
 
 **Embedding model:**
 
-_________________
 
 **Retrieval variant (Sprint 3):**
 > Nêu rõ variant đã chọn (hybrid / rerank / query transform) và lý do ngắn gọn.
