@@ -41,6 +41,7 @@ if sys.stdout.encoding != 'utf-8':
 import chromadb
 from sentence_transformers import SentenceTransformer
 import google.generativeai as genai
+from openai import OpenAI
 from rank_bm25 import BM25Okapi
 
 load_dotenv()
@@ -62,7 +63,8 @@ def get_embedding(text: str) -> List[float]:
 TOP_K_SEARCH = 10    # Số chunk lấy từ vector store trước rerank (search rộng)
 TOP_K_SELECT = 3     # Số chunk gửi vào prompt sau rerank/select (top-3 sweet spot)
 
-LLM_MODEL = os.getenv("LLM_MODEL", "gemini-1.5-flash")
+LLM_PROVIDER = os.getenv("LLM_PROVIDER", "gemini")
+LLM_MODEL = os.getenv("LLM_MODEL", "gemini-2.5-flash")
 
 
 # =============================================================================
@@ -317,9 +319,29 @@ Answer:"""
 
 def call_llm(prompt: str) -> str:
     """
-    Gọi LLM (Google Gemini) để sinh câu trả lời.
-    Tự động thử các model Flash khả dụng nếu model cấu hình bị 404.
+    Gọi LLM để sinh câu trả lời. Hỗ trợ nhiều Provider (Gemini, DeepSeek, OpenAI).
     """
+    if LLM_PROVIDER == "gemini":
+        return call_llm_gemini(prompt)
+    elif LLM_PROVIDER == "deepseek":
+        return call_llm_openai_compatible(
+            prompt=prompt,
+            api_key=os.getenv("DEEPSEEK_API_KEY"),
+            base_url=os.getenv("DEEPSEEK_BASE_URL", "https://api.deepseek.com"),
+            model=LLM_MODEL
+        )
+    elif LLM_PROVIDER == "openai":
+        return call_llm_openai_compatible(
+            prompt=prompt,
+            api_key=os.getenv("OPENAI_API_KEY"),
+            model=LLM_MODEL
+        )
+    else:
+        raise ValueError(f"LLM_PROVIDER không hợp lệ: {LLM_PROVIDER}")
+
+
+def call_llm_gemini(prompt: str) -> str:
+    """Gọi Google Gemini API."""
     api_key = os.getenv("GOOGLE_API_KEY")
     if not api_key:
         raise ValueError("Missing GOOGLE_API_KEY in .env file.")
@@ -327,8 +349,7 @@ def call_llm(prompt: str) -> str:
     genai.configure(api_key=api_key)
     
     # Danh sách các model Flash tiềm năng để thử nếu model chính lỗi
-    # Thứ tự: từ model người dùng chọn -> các model Flash mới nhất
-    candidate_models = [LLM_MODEL, "gemini-2.0-flash", "gemini-3.0-flash-preview", "gemini-flash-latest"]
+    candidate_models = [LLM_MODEL, "gemini-2.5-flash", "gemini-2.0-flash", "gemini-flash-latest"]
     
     last_exception = None
     for model_name in candidate_models:
@@ -337,18 +358,35 @@ def call_llm(prompt: str) -> str:
             model = genai.GenerativeModel(model_name=clean_name)
             response = model.generate_content(
                 prompt,
-                generation_config=genai.types.GenerationConfig(
-                    temperature=0,
-                )
+                generation_config=genai.types.GenerationConfig(temperature=0)
             )
             return response.text
         except Exception as e:
             last_exception = e
             if "404" in str(e) or "not found" in str(e).lower():
-                continue # Thử model kế tiếp
-            raise e # Lỗi khác (ví dụ: API Key, Quota) thì dừng
+                continue
+            raise e
             
     raise last_exception
+
+
+def call_llm_openai_compatible(
+    prompt: str, 
+    api_key: str, 
+    model: str, 
+    base_url: Optional[str] = None
+) -> str:
+    """Gọi các API tương thích OpenAI (DeepSeek, OpenAI...)."""
+    if not api_key or "sk-" not in api_key:
+         raise ValueError(f"Invalid or missing API key for {LLM_PROVIDER}")
+
+    client = OpenAI(api_key=api_key, base_url=base_url)
+    response = client.chat.completions.create(
+        model=model,
+        messages=[{"role": "user", "content": prompt}],
+        temperature=0,
+    )
+    return response.choices[0].message.content
 
 
 def rag_answer(
