@@ -744,7 +744,7 @@ def compare_retrieval_strategies(query: str) -> None:
     print(f"Query: {query}")
     print("=" * 60)
 
-    strategies = ["dense", "sparse"]  # Thêm "sparse" sau khi implement
+    strategies = ["dense", "hybrid"]  # Thêm "sparse" sau khi implement
 
     for strategy in strategies:
         print(f"\n--- Strategy: {strategy} ---")
