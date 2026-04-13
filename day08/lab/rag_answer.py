@@ -292,53 +292,30 @@ def rerank(
     for i, c in enumerate(candidates):
         chunk_texts.append(f"[{i}] {c['text']}")
     chunks_str = "\n\n".join(chunk_texts)
-
     prompt = f"""
-    ### Role
-    You are an expert Information Retrieval Assistant. Your task is to re-rank document chunks based on their relevance to a specific user query.
+        You are a ranking assistant.
+        Given a query and a list of document chunks, select the {top_k} most relevant chunks.
 
-    ### Task
-    1. Analyze the Query provided below.
-    2. Review the list of Document Chunks.
-    3. Select the top 3 chunks that contain the most direct and accurate information to answer the query.
-    4. Rank them in order of relevance (most relevant first).
+        Return ONLY a valid JSON array of integer indices, for example: [0, 2, 5]
+        Do not include any explanation or extra text.
 
-    ### Constraints
-    - Evaluation criteria: Directness of answer, factual overlap, and completeness.
-    - Return ONLY a JSON object. No prose, no explanations.
+        Query: {query}
 
-    ### Input Data
-    Query: "Khách hàng có thể yêu cầu hoàn tiền trong bao nhiêu ngày?"
-
-    Document Chunks:
-    [0] <Insert Text of Chunk 0>
-    [1] <Insert Text of Chunk 1>
-    [2] <Insert Text of Chunk 2>
-    ...
-
-    ### Output Format
-    {
-    "indices": [int, int, int]
-    }
-
-    Query: {query}
-
-    Chunks:
-    {chunks_str}
-    """
-
+        Chunks:
+        {chunks_str}
+        """
     response = call_llm(prompt)
+ 
     import json
     try:
         indices = json.loads(response)
-    except:
-        print("⚠️ LLM output lỗi, fallback")
+    except Exception:
+        print("LLM output lỗi, fallback")
         return candidates[:top_k]
 
-    # lấy chunk tương ứng
     selected = []
     for i in indices:
-        if 0 <= i < len(candidates):
+        if isinstance(i, int) and 0 <= i < len(candidates):
             selected.append(candidates[i])
 
     return selected[:top_k]
@@ -376,13 +353,33 @@ def transform_query(query: str, strategy: str = "expansion") -> List[str]:
     - HyDE: query mơ hồ, search theo nghĩa không hiệu quả
     """
     # TODO Sprint 3: Implement query transformation
-    
-    Strategies="""
-    "Given the query: '{query}'
-         Generate 2-3 alternative phrasings or related terms in Vietnamese.
-         Output as JSON array of strings."
+    # Trả về luôn List[str] để các bước downstream có thể iterate an toàn.
+    prompt = f"""
+        You are a query rewriting assistant.
+        Original query: {query}
+        Strategy: {strategy}
+
+        Return ONLY valid JSON.
+        If strategy is "expansion", return a JSON array of 2-3 alternative phrasings or related terms.
+        If strategy is "decomposition", return a JSON array of 2-3 simpler sub-queries.
+        If strategy is "hyde", return a JSON array with 1 hypothetical answer-like query.
+        Do not include any explanation.
     """
-    return List(call_llm(Strategies.format(query=query)))
+    response = call_llm(prompt)
+
+    import json
+    try:
+        parsed = json.loads(response)
+    except Exception:
+        return [query]
+
+    if isinstance(parsed, list):
+        return [str(item) for item in parsed if str(item).strip()]
+
+    if isinstance(parsed, str) and parsed.strip():
+        return [parsed.strip()]
+
+    return [query]
     
 
 
