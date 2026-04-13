@@ -10,3 +10,5 @@ openai
 python-dotenv
 tqdm
 rich
+fastapi
+uvicorn

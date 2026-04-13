@@ -26,6 +26,10 @@ from rag_answer import rag_answer
 from langchain_openai import ChatOpenAI
 import os
 
+from datasets import Dataset
+from ragas import evaluate
+from ragas.metrics import faithfulness, answer_relevancy, context_precision, context_recall as ragas_context_recall
+
 # =============================================================================
 # CẤU HÌNH
 # =============================================================================
@@ -38,25 +42,22 @@ BASELINE_CONFIG = {
     "retrieval_mode": "dense",
     "top_k_search": 10,
     "top_k_select": 3,
-    "use_rerank": False,
     "label": "baseline_dense",
 }
 
 # Cấu hình variant (Sprint 3 — điều chỉnh theo lựa chọn của nhóm)
-# TODO Sprint 4: Cập nhật VARIANT_CONFIG theo variant nhóm đã implement
 VARIANT_CONFIG = {
-    "retrieval_mode": "hybrid",   # Hoặc "dense" nếu chỉ đổi rerank
+    "retrieval_mode": "hybrid",
     "top_k_search": 10,
     "top_k_select": 3,
-    "use_rerank": True,           # Hoặc False nếu variant là hybrid không rerank
-    "label": "variant_hybrid_rerank",
+    "label": "variant_hybrid",
 }
 api_base = os.getenv("OPENAI_API_BASE")
 # taans
 def get_judge_llm():
     """Khởi tạo LLM làm giám khảo chấm điểm"""
     return ChatOpenAI(
-        model=os.getenv("LLM_MODEL", "openai/gpt-4o-mini"),
+        model=os.getenv("LLM_MODEL", "gpt-4o-mini"),
         openai_api_key=os.getenv("OPENAI_API_KEY"),
         openai_api_base=api_base if api_base else None,
         temperature=0
@@ -113,7 +114,7 @@ def score_faithfulness(
              Rate the faithfulness on a scale of 1-5.
              5 = completely grounded in the provided context.
              1 = answer contains information not in the context.
-             Output JSON: {'score': <int>, 'reason': '<string>'}"""
+             Output JSON: {{"score": int, "reason": "string"}}"""
     try:
         response = llm.invoke(prompt)
         import re,json
@@ -273,6 +274,81 @@ def score_completeness(
     except Exception as e:
         return {"score": 3, "notes": "Error in LLM evaluation"}
 
+
+#thanh
+def compute_ragas_scores(results: List[Dict[str, Any]]) -> Dict[str, Any]:
+    """Tính RAGAS metrics từ kết quả run_scorecard."""
+    if not results:
+        return {
+            "faithfulness": None,
+            "answer_relevancy": None,
+            "context_precision": None,
+            "context_recall": None,
+            "notes": "No results to evaluate",
+        }
+
+    dataset = Dataset.from_dict(
+        {
+            "question": [r.get("query", "") for r in results],
+            "answer": [r.get("answer", "") for r in results],
+            "contexts": [r.get("contexts", []) for r in results],
+            "ground_truth": [r.get("expected_answer", "") for r in results],
+        }
+    )
+
+    try:
+        scores = evaluate(
+            dataset,
+            metrics=[
+                faithfulness,
+                answer_relevancy,
+                context_precision,
+                ragas_context_recall,
+            ],
+        )
+        return {
+            "faithfulness": round(float(scores["faithfulness"]), 4),
+            "answer_relevancy": round(float(scores["answer_relevancy"]), 4),
+            "context_precision": round(float(scores["context_precision"]), 4),
+            "context_recall": round(float(scores["context_recall"]), 4),
+        }
+    except Exception as e:
+        return {
+            "faithfulness": None,
+            "answer_relevancy": None,
+            "context_precision": None,
+            "context_recall": None,
+            "notes": f"RAGAS evaluation failed: {e}",
+        }
+
+
+#thanh
+def compute_abstain_accuracy(results: List[Dict[str, Any]]) -> float:
+    """Tỷ lệ abstain đúng trên các câu expected_sources rỗng."""
+    abstain_cases = [r for r in results if r.get("expected_sources") == []]
+    if not abstain_cases:
+        return 1.0
+
+    def is_abstain(answer: str) -> bool:
+        normalized = (answer or "").strip().lower()
+        return (
+            "không đủ dữ liệu" in normalized
+            or "không tìm thấy thông tin" in normalized
+            or "không có thông tin" in normalized
+            or "i do not know" in normalized
+            or "do not know" in normalized
+        )
+
+    correct = 0
+    for row in abstain_cases:
+        answer = row.get("answer", "")
+        chunks_used = row.get("chunks_used", [])
+        sources = row.get("sources", [])
+        if is_abstain(answer) or (not chunks_used and not sources):
+            correct += 1
+
+    return round(correct / len(abstain_cases), 4)
+
 # =============================================================================
 # SCORECARD RUNNER
 # =============================================================================
@@ -325,13 +401,13 @@ def run_scorecard(
             print(f"\n[{question_id}] {query}")
 
         # --- Gọi pipeline ---
+        result = {}
         try:
             result = rag_answer(
                 query=query,
                 retrieval_mode=config.get("retrieval_mode", "dense"),
                 top_k_search=config.get("top_k_search", 10),
                 top_k_select=config.get("top_k_select", 3),
-                use_rerank=config.get("use_rerank", False),
                 verbose=False,
             )
             answer = result["answer"]
@@ -356,6 +432,14 @@ def run_scorecard(
             "query": query,
             "answer": answer,
             "expected_answer": expected_answer,
+            "expected_sources": expected_sources, #thanh
+            "sources": result.get("sources", []) if "result" in locals() and isinstance(result, dict) else [], #thanh
+            "chunks_used": chunks_used, #thanh
+            "contexts": [
+                c.get("text") or c.get("page_content", "")
+                for c in chunks_used
+                if isinstance(c, dict)
+            ], #thanh
             "faithfulness": faith["score"],
             "faithfulness_notes": faith["notes"],
             "relevance": relevance["score"],
@@ -564,6 +648,14 @@ if __name__ == "__main__":
         scorecard_path = RESULTS_DIR / "scorecard_baseline.md"
         scorecard_path.write_text(baseline_md, encoding="utf-8")
         print(f"\nScorecard lưu tại: {scorecard_path}")
+
+        #thanh
+        ragas_scores = compute_ragas_scores(baseline_results)
+        abstain_accuracy = compute_abstain_accuracy(baseline_results)
+        print("\nRAGAS Metrics:")
+        for metric_name, metric_value in ragas_scores.items():
+            print(f"  {metric_name}: {metric_value}")
+        print(f"Abstain Accuracy: {abstain_accuracy}")
 
     except NotImplementedError:
         print("Pipeline chưa implement. Hoàn thành Sprint 2 trước.")
