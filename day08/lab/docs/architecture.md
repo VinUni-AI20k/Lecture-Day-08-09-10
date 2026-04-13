@@ -40,22 +40,22 @@
 ### Tài liệu được index
 | File | Nguồn | Department | Số chunk |
 |------|-------|-----------|---------|
-| `policy_refund_v4.txt` | policy/refund-v4.pdf | CS | TODO |
-| `sla_p1_2026.txt` | support/sla-p1-2026.pdf | IT | TODO |
-| `access_control_sop.txt` | it/access-control-sop.md | IT Security | TODO |
-| `it_helpdesk_faq.txt` | support/helpdesk-faq.md | IT | TODO |
-| `hr_leave_policy.txt` | hr/leave-policy-2026.pdf | HR | TODO |
+| `policy_refund_v4.txt` | policy/refund-v4.pdf | CS | 6 |
+| `sla_p1_2026.txt` | support/sla-p1-2026.pdf | IT | 5 |
+| `access_control_sop.txt` | it/access-control-sop.md | IT Security | 8 |
+| `it_helpdesk_faq.txt` | support/helpdesk-faq.md | IT | 6 |
+| `hr_leave_policy.txt` | hr/leave-policy-2026.pdf | HR | 5 |
 
 ### Quyết định chunking
 | Tham số | Giá trị | Lý do |
 |---------|---------|-------|
-| Chunk size | TODO tokens | TODO |
-| Overlap | TODO tokens | TODO |
-| Chunking strategy | Heading-based / paragraph-based | TODO |
+| Chunk size | 400 tokens (ước lượng theo `CHUNK_SIZE`) | Cân bằng giữa đủ ngữ cảnh và tránh context quá dài khi retrieve nhiều chunk |
+| Overlap | 80 tokens (ước lượng theo `CHUNK_OVERLAP`) | Giữ liên tục ngữ nghĩa giữa các chunk liền kề, giảm mất ý ở ranh giới |
+| Chunking strategy | Heading-based, fallback paragraph/size split + overlap | Ưu tiên ranh giới tự nhiên theo `=== Section ... ===`, sau đó mới tách theo paragraph/độ dài |
 | Metadata fields | source, section, effective_date, department, access | Phục vụ filter, freshness, citation |
 
 ### Embedding model
-- **Model**: TODO (OpenAI text-embedding-3-small / paraphrase-multilingual-MiniLM-L12-v2)
+- **Model**: OpenAI-compatible `text-embedding-3-small` (qua `CUSTOM_API_KEY`)
 - **Vector store**: ChromaDB (PersistentClient)
 - **Similarity metric**: Cosine
 
