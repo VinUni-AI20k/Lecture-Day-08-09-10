@@ -1,3 +1,5 @@
+day8_venv/
+tests/
 .DS_Store
 *.swp
 *~

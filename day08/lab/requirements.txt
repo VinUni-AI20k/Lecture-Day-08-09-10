@@ -26,3 +26,5 @@ rank-bm25>=0.2.2                 # BM25 keyword search
 
 # === Utils ===
 tqdm>=4.66.0                     # Progress bar khi index nhiều docs
+
+pytest

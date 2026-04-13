@@ -518,6 +518,21 @@ def rag_answer(
     - Variant B: bật use_rerank=True
     - Variant C: thêm query transformation trước khi retrieve
     """
+    def _print_candidates(title: str, items: List[Dict[str, Any]], preview_chars: int = 100) -> None:
+        print(f"[RAG] {title}: {len(items)} chunks")
+        for i, item in enumerate(items, 1):
+            meta = item.get("metadata", {})
+            score = item.get("score", 0.0)
+            source = meta.get("source", "?")
+            section = meta.get("section", "")
+            text = str(item.get("text", "")).replace("\n", " ").strip()
+            if len(text) > preview_chars:
+                text = text[:preview_chars] + "..."
+
+            section_part = f" | {section}" if section else ""
+            print(f"  [{i}] score={score:.3f} | {source}{section_part}")
+            print(f"      {text}")
+
     config = {
         "retrieval_mode": retrieval_mode,
         "top_k_search": top_k_search,
@@ -537,9 +552,8 @@ def rag_answer(
 
     if verbose:
         print(f"\n[RAG] Query: {query}")
-        print(f"[RAG] Retrieved {len(candidates)} candidates (mode={retrieval_mode})")
-        for i, c in enumerate(candidates[:3]):
-            print(f"  [{i+1}] score={c.get('score', 0):.3f} | {c['metadata'].get('source', '?')}")
+        print(f"[RAG] Retrieval mode: {retrieval_mode}")
+        _print_candidates("Candidates BEFORE rerank/select", candidates)
 
     # --- Bước 2: Rerank (optional) ---
     if use_rerank:
@@ -548,7 +562,8 @@ def rag_answer(
         candidates = candidates[:top_k_select]
 
     if verbose:
-        print(f"[RAG] After select: {len(candidates)} chunks")
+        stage_name = "Candidates AFTER rerank" if use_rerank else "Candidates AFTER top_k select"
+        _print_candidates(stage_name, candidates)
 
     # --- Bước 3: Build context và prompt ---
     context_block = build_context_block(candidates)
@@ -628,18 +643,23 @@ if __name__ == "__main__":
     print("=" * 60)
 
     # Test queries từ data/test_questions.json
+    # test_queries = [
+    #     "SLA xử lý ticket P1 là bao lâu?",
+    #     "Khách hàng có thể yêu cầu hoàn tiền trong bao nhiêu ngày?",
+    #     "Ai phải phê duyệt để cấp quyền Level 3?",
+    #     "ERR-403-AUTH là lỗi gì?",  # Query không có trong docs → kiểm tra abstain
+    # ]
+    
     test_queries = [
         "SLA xử lý ticket P1 là bao lâu?",
         "Khách hàng có thể yêu cầu hoàn tiền trong bao nhiêu ngày?",
-        "Ai phải phê duyệt để cấp quyền Level 3?",
-        "ERR-403-AUTH là lỗi gì?",  # Query không có trong docs → kiểm tra abstain
     ]
     
     print("\n--- Sprint 2: Test Baseline (Dense) ---")
     for query in test_queries:
         print(f"\nQuery: {query}")
         try:
-            result = rag_answer(query, retrieval_mode="dense", verbose=True)
+            result = rag_answer(query, retrieval_mode="dense", use_rerank=True, verbose=True)
             print(f"Answer: {result['answer']}")
             print(f"Sources: {result['sources']}")
         except NotImplementedError:
