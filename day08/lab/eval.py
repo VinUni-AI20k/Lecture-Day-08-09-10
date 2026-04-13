@@ -78,41 +78,21 @@ BASELINE_CONFIG = {
 # Cấu hình variant (Sprint 3 — điều chỉnh theo lựa chọn của nhóm)
 # TODO Sprint 4: Cập nhật VARIANT_CONFIG theo variant nhóm đã implement
 VARIANT_CONFIG = {
-    "retrieval_mode": "hybrid",   # Hoặc "dense" nếu chỉ đổi rerank
+    "retrieval_mode": "hybrid",
     "top_k_search": 10,
     "top_k_select": 3,
-    "use_rerank": True,           # Hoặc False nếu variant là hybrid không rerank
+    "use_rerank": True,
     "label": "variant_hybrid_rerank",
 }
 
-
-# =============================================================================
-# LLM-AS-JUDGE HELPER
-# =============================================================================
-
-def _llm_judge(prompt: str) -> dict:
-    """
-    Gọi OpenAI để chấm điểm một câu hỏi theo thang 1-5.
-    Trả về dict {"score": int, "reason": str} hoặc fallback khi lỗi.
-    """
-    import os
-    import json
-    from openai import OpenAI
-
-    try:
-        client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-        response = client.chat.completions.create(
-            model=os.getenv("LLM_MODEL", "gpt-4o-mini"),
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0,
-            max_tokens=200,
-        )
-        raw = response.choices[0].message.content.strip()
-        # Loại bỏ markdown code block nếu có
-        raw = raw.strip("```json").strip("```").strip()
-        return json.loads(raw)
-    except Exception as e:
-        return {"score": None, "reason": f"LLM judge error: {e}"}
+# Variant phụ (chỉ đổi 1 biến so với baseline) — dùng cho A/B chặt trong tuning-log
+VARIANT_HYBRID_ONLY = {
+    "retrieval_mode": "hybrid",
+    "top_k_search": 10,
+    "top_k_select": 3,
+    "use_rerank": False,
+    "label": "variant_hybrid_only",
+}
 
 
 # =============================================================================
@@ -613,12 +593,6 @@ if __name__ == "__main__":
         variant_results = []
 
     # --- A/B Comparison ---
-    if baseline_results and variant_results:
-        compare_ab(
-            baseline_results,
-            variant_results,
-            output_csv="ab_comparison.csv"
-        )
     if baseline_results and variant_results:
         compare_ab(
             baseline_results,

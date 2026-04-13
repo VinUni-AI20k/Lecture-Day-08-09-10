@@ -190,7 +190,6 @@ def _split_by_size(
     Cải thiện: split theo paragraph (\n\n) trước, rồi mới ghép đến khi đủ size.
     """
     if len(text) <= chunk_chars:
-        # Toàn bộ section vừa một chunk
         return [
             {
                 "text": text,
@@ -198,28 +197,51 @@ def _split_by_size(
             }
         ]
 
-    # TODO: Implement split theo paragraph với overlap
-    # Gợi ý:
-    # paragraphs = text.split("\n\n")
-    # Ghép paragraphs lại cho đến khi gần đủ chunk_chars
-    # Lấy overlap từ đoạn cuối chunk trước
-    chunks = []
-    start = 0
-    while start < len(text):
-        end = min(start + chunk_chars, len(text))
-        chunk_text = text[start:end]
+    # Paragraph-aware split: ghép paragraph đến khi gần chunk_chars,
+    # thêm overlap bằng cách giữ lại paragraph cuối của chunk trước.
+    paragraphs = [p.strip() for p in re.split(r"\n\s*\n", text) if p.strip()]
+    chunks: List[Dict[str, Any]] = []
+    buf: List[str] = []
+    buf_len = 0
 
-        # TODO: Tìm ranh giới tự nhiên gần nhất (dấu xuống dòng, dấu chấm)
-        # thay vì cắt giữa câu
-
+    def _flush():
+        nonlocal buf, buf_len
+        if not buf:
+            return
         chunks.append({
-            "text": chunk_text,
+            "text": "\n\n".join(buf).strip(),
             "metadata": {**base_metadata, "section": section},
         })
-        # Overlap: lùi lại overlap_chars để chunk sau có ngữ cảnh từ chunk trước
-        start = end - overlap_chars
+        # Overlap: giữ lại các paragraph cuối cùng tổng độ dài <= overlap_chars
+        tail: List[str] = []
+        tail_len = 0
+        for p in reversed(buf):
+            if tail_len + len(p) > overlap_chars:
+                break
+            tail.insert(0, p)
+            tail_len += len(p) + 2
+        buf = tail
+        buf_len = tail_len
 
-    return chunks
+    for para in paragraphs:
+        # Paragraph đơn quá dài → cắt cứng theo câu
+        if len(para) > chunk_chars:
+            sentences = re.split(r"(?<=[\.\?\!])\s+", para)
+            for s in sentences:
+                if buf_len + len(s) + 2 > chunk_chars and buf:
+                    _flush()
+                buf.append(s)
+                buf_len += len(s) + 2
+            continue
+
+        if buf_len + len(para) + 2 > chunk_chars and buf:
+            _flush()
+        buf.append(para)
+        buf_len += len(para) + 2
+
+    _flush()
+    # Bỏ chunks rỗng nếu có
+    return [c for c in chunks if c["text"].strip()]
 
 
 # =============================================================================
@@ -228,36 +250,16 @@ def _split_by_size(
 # =============================================================================
 
 
-def get_embedding(text: str) -> List[float]:
+def get_embedding(text):
     """
-    Tạo embedding vector cho một đoạn text.
+    Tạo embedding vector cho text (single string) hoặc batch (list of strings).
 
-    TODO Sprint 1:
-    Chọn một trong hai:
+    - text: str  → trả về List[float]
+    - text: List[str] → trả về List[List[float]]
 
-    Option A — OpenAI Embeddings (cần OPENAI_API_KEY):
-        from openai import OpenAI
-        client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-        response = client.embeddings.create(
-            input=text,
-            model="text-embedding-3-small"
-        )
-        return response.data[0].embedding
-
-    Option B — Sentence Transformers (chạy local, không cần API key):
+    Dùng Sentence Transformers local (paraphrase-multilingual-MiniLM-L12-v2).
     """
-
     return model.encode(text).tolist()
-
-    raise NotImplementedError(
-        "TODO: Implement get_embedding().\n"
-        "Chọn Option A (OpenAI) hoặc Option B (Sentence Transformers) trong TODO comment."
-    )
-
-def get_embedding(texts: List[str]) -> List[List[float]]:
-    """Phiên bản batch của get_embedding() cho nhiều đoạn text cùng lúc (nếu dùng Sentence Transformers)."""
-    
-    return model.encode(texts).tolist()
 
 def build_index(docs_dir: Path = DOCS_DIR, db_dir: Path = CHROMA_DB_DIR) -> None:
     """

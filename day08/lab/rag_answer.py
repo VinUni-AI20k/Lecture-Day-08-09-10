@@ -242,9 +242,29 @@ def rerank(
     - Dense/hybrid trả về nhiều chunk nhưng có noise
     - Muốn chắc chắn chỉ 3-5 chunk tốt nhất vào prompt
     """
-    # TODO Sprint 3: Implement rerank
-    # Tạm thời trả về top_k đầu tiên (không rerank)
-    return candidates[:top_k]
+    if not candidates:
+        return []
+
+    # Cache CrossEncoder để không load lại mỗi call
+    global _CROSS_ENCODER
+    try:
+        _CROSS_ENCODER
+    except NameError:
+        from sentence_transformers import CrossEncoder
+        _CROSS_ENCODER = CrossEncoder("cross-encoder/ms-marco-MiniLM-L-6-v2")
+
+    pairs = [[query, c["text"]] for c in candidates]
+    scores = _CROSS_ENCODER.predict(pairs)
+    ranked = sorted(
+        zip(candidates, scores),
+        key=lambda x: float(x[1]),
+        reverse=True,
+    )
+    out = []
+    for c, s in ranked[:top_k]:
+        c = {**c, "rerank_score": float(s)}
+        out.append(c)
+    return out
 
 
 # =============================================================================
