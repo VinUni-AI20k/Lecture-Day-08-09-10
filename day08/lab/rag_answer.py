@@ -1,4 +1,5 @@
 """
+#commentmoi
 rag_answer.py — Sprint 2 + Sprint 3: Retrieval & Grounded Answer
 ================================================================
 Sprint 2 (60 phút): Baseline RAG
