@@ -1,5 +1,5 @@
 # Scorecard: variant_hybrid_rerank_qt
-Generated: 2026-04-13 17:01
+Generated: 2026-04-13 17:38
 
 ## Summary
 
@@ -17,9 +17,9 @@ Generated: 2026-04-13 17:01
 | q01 | SLA | 5 | 5 | 5 | 4 | Mọi thông tin trong câu trả lời đều có căn cứ trực |
 | q02 | Refund | 5 | 5 | 5 | 5 | Câu trả lời hoàn toàn bám sát context, thông tin đ |
 | q03 | Access Control | 5 | 5 | 5 | 5 | Mọi thông tin trong câu trả lời đều có căn cứ trực |
-| q04 | Refund | 5 | 5 | 4 | 4 | Câu trả lời hoàn toàn bám sát context, thông tin đ |
+| q04 | Refund | 5 | 5 | 4 | 5 | Câu trả lời hoàn toàn bám sát context, thông tin đ |
 | q05 | IT Helpdesk | 5 | 5 | 5 | 5 | Mọi thông tin trong câu trả lời đều có căn cứ trực |
-| q06 | SLA | 5 | 5 | 2 | 5 | Mọi thông tin trong câu trả lời đều có căn cứ trực |
+| q06 | SLA | 5 | 5 | 2 | 4 | Mọi thông tin trong câu trả lời đều có căn cứ trực |
 | q07 | Access Control | 5 | 5 | 4 | 4 | Câu trả lời hoàn toàn bám sát context, thông tin đ |
 | q08 | HR Policy | 5 | 5 | 4 | 3 | Câu trả lời hoàn toàn bám sát thông tin trong cont |
 | q09 | Insufficient Context | 5 | 5 | 0 | 3 | Câu trả lời abstain đúng khi không có thông tin li |
