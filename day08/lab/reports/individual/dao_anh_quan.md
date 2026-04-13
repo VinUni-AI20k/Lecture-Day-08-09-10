@@ -1,6 +1,6 @@
 # Báo Cáo Cá Nhân — Lab Day 08: RAG Pipeline
 
-**Họ và tên:** Đào Anh Quân  
+**Họ và tên:** Đào Anh Quân - 2A202600028
 **Vai trò trong nhóm:** Retrieval Owner  
 **Ngày nộp:** 2026-04-13  
 **Độ dài yêu cầu:** 500–800 từ
