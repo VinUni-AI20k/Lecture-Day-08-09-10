@@ -91,3 +91,7 @@ models/
 # Docker
 *.tar
 docker-compose.override.yml
+
+.cgcignore
+.claude
+chroma_db/
