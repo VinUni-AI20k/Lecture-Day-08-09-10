@@ -13,12 +13,13 @@ Definition of Done Sprint 1:
   ✓ Có thể kiểm tra chunk bằng list_chunks()
 """
 
-import os
 import json
+import os
 import re
 from pathlib import Path
-from typing import List, Dict, Any, Optional
-from dotenv import load_dotenv, dotenv_values
+from typing import Any, Dict, List, Optional
+
+from dotenv import dotenv_values, load_dotenv
 
 BASE_DIR = Path(__file__).parent
 ENV_PATH = BASE_DIR / ".env"
@@ -33,14 +34,15 @@ CHROMA_DB_DIR = BASE_DIR / "chroma_db"
 
 # TODO Sprint 1: Điều chỉnh chunk size và overlap theo quyết định của nhóm
 # Gợi ý từ slide: chunk 300-500 tokens, overlap 50-80 tokens
-CHUNK_SIZE = 400       # tokens (ước lượng bằng số ký tự / 4)
-CHUNK_OVERLAP = 80     # tokens overlap giữa các chunk
+CHUNK_SIZE = 400  # tokens (ước lượng bằng số ký tự / 4)
+CHUNK_OVERLAP = 80  # tokens overlap giữa các chunk
 
 
 # =============================================================================
 # STEP 1: PREPROCESS
 # Làm sạch text trước khi chunk và embed
 # =============================================================================
+
 
 def preprocess_document(raw_text: str, filepath: str) -> Dict[str, Any]:
     """
@@ -114,9 +116,9 @@ def preprocess_document(raw_text: str, filepath: str) -> Dict[str, Any]:
     cleaned_text = "\n".join(content_lines)
 
     # Normalize whitespace/noise
-    cleaned_text = re.sub(r"[ \t]+", " ", cleaned_text)      # collapse spaces/tabs
-    cleaned_text = re.sub(r"\n[ \t]+", "\n", cleaned_text)   # trim indentation artifacts
-    cleaned_text = re.sub(r"\n{3,}", "\n\n", cleaned_text)   # max 2 blank lines
+    cleaned_text = re.sub(r"[ \t]+", " ", cleaned_text)  # collapse spaces/tabs
+    cleaned_text = re.sub(r"\n[ \t]+", "\n", cleaned_text)  # trim indentation artifacts
+    cleaned_text = re.sub(r"\n{3,}", "\n\n", cleaned_text)  # max 2 blank lines
     cleaned_text = cleaned_text.strip()
 
     return {"text": cleaned_text, "metadata": metadata}
@@ -126,6 +128,7 @@ def preprocess_document(raw_text: str, filepath: str) -> Dict[str, Any]:
 # STEP 2: CHUNK
 # Chia tài liệu thành các đoạn nhỏ theo cấu trúc tự nhiên
 # =============================================================================
+
 
 def chunk_document(doc: Dict[str, Any]) -> List[Dict[str, Any]]:
     """
@@ -166,7 +169,7 @@ def chunk_document(doc: Dict[str, Any]) -> List[Dict[str, Any]]:
         )
 
     # Nội dung trước heading đầu tiên (nếu có)
-    preface = text[:matches[0].start()].strip()
+    preface = text[: matches[0].start()].strip()
     if preface:
         chunks.extend(
             _split_by_size(
@@ -216,10 +219,12 @@ def _split_by_size(
         return []
 
     if len(clean_text) <= chunk_chars:
-        return [{
-            "text": clean_text,
-            "metadata": {**base_metadata, "section": section},
-        }]
+        return [
+            {
+                "text": clean_text,
+                "metadata": {**base_metadata, "section": section},
+            }
+        ]
 
     overlap_chars = min(overlap_chars, max(chunk_chars // 2, 1))
 
@@ -235,10 +240,12 @@ def _split_by_size(
         chunk_text = current.strip()
         if not chunk_text:
             return
-        chunks.append({
-            "text": chunk_text,
-            "metadata": {**base_metadata, "section": section},
-        })
+        chunks.append(
+            {
+                "text": chunk_text,
+                "metadata": {**base_metadata, "section": section},
+            }
+        )
         current = ""
 
     for para in paragraphs:
@@ -252,7 +259,12 @@ def _split_by_size(
 
                 # Ưu tiên cắt ở ranh giới tự nhiên nếu có
                 if end < len(para):
-                    candidates = [window.rfind("\n"), window.rfind(". "), window.rfind("; "), window.rfind(", ")]
+                    candidates = [
+                        window.rfind("\n"),
+                        window.rfind(". "),
+                        window.rfind("; "),
+                        window.rfind(", "),
+                    ]
                     cut_at = max(candidates)
                     if cut_at >= int(chunk_chars * 0.6):
                         end = start + cut_at + 1
@@ -260,10 +272,12 @@ def _split_by_size(
 
                 chunk_text = window.strip()
                 if chunk_text:
-                    chunks.append({
-                        "text": chunk_text,
-                        "metadata": {**base_metadata, "section": section},
-                    })
+                    chunks.append(
+                        {
+                            "text": chunk_text,
+                            "metadata": {**base_metadata, "section": section},
+                        }
+                    )
 
                 if end >= len(para):
                     break
@@ -296,12 +310,14 @@ def _split_by_size(
         curr_text = item["text"]
         merged_text = f"{prev_tail}\n{curr_text}" if prev_tail else curr_text
         if len(merged_text) > chunk_chars + overlap_chars:
-            merged_text = merged_text[-(chunk_chars + overlap_chars):]
+            merged_text = merged_text[-(chunk_chars + overlap_chars) :]
 
-        overlapped.append({
-            "text": merged_text,
-            "metadata": item["metadata"],
-        })
+        overlapped.append(
+            {
+                "text": merged_text,
+                "metadata": item["metadata"],
+            }
+        )
 
     return overlapped
 
@@ -311,6 +327,7 @@ def _split_by_size(
 # Embed các chunk và lưu vào ChromaDB
 # =============================================================================
 
+
 def get_embedding(text: str) -> List[float]:
     """
     Tạo embedding vector cho một đoạn text.
@@ -318,10 +335,10 @@ def get_embedding(text: str) -> List[float]:
     TODO Sprint 1:
     Chọn một trong hai:
 
-    Option A — OpenAI-compatible Embeddings (cần CUSTOM_API_KEY):
+    Option A — OpenAI-compatible Embeddings (cần SHOPAIKEY_API_KEY):
 
         client = OpenAI(
-            api_key=os.getenv("CUSTOM_API_KEY"),
+            api_key=os.getenv("SHOPAIKEY_API_KEY"),
             base_url="https://api.shopaikey.com/v1",
             default_headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"}
         )
@@ -338,18 +355,16 @@ def get_embedding(text: str) -> List[float]:
     """
     from openai import OpenAI
 
-    api_key = os.getenv("CUSTOM_API_KEY")
+    api_key = os.getenv("SHOPAIKEY_API_KEY")
     if not api_key and ENV_PATH.exists():
         # Fallback: đọc trực tiếp từ .env khi biến môi trường chưa được inject vào process.
-        api_key = dotenv_values(ENV_PATH).get("CUSTOM_API_KEY")
+        api_key = dotenv_values(ENV_PATH).get("SHOPAIKEY_API_KEY")
 
     if isinstance(api_key, str):
         api_key = api_key.strip().strip('"').strip("'")
 
     if not api_key:
-        raise ValueError(
-            "Thiếu CUSTOM_API_KEY trong .env để tạo embedding"
-        )
+        raise ValueError("Thiếu SHOPAIKEY_API_KEY trong .env để tạo embedding")
 
     client = OpenAI(
         api_key=api_key,
@@ -457,6 +472,7 @@ def build_index(docs_dir: Path = DOCS_DIR, db_dir: Path = CHROMA_DB_DIR) -> None
 # Dùng để debug và kiểm tra chất lượng index
 # =============================================================================
 
+
 def list_chunks(db_dir: Path = CHROMA_DB_DIR, n: int = 5) -> None:
     """
     In ra n chunk đầu tiên trong ChromaDB để kiểm tra chất lượng index.
@@ -470,12 +486,15 @@ def list_chunks(db_dir: Path = CHROMA_DB_DIR, n: int = 5) -> None:
     """
     try:
         import chromadb
+
         client = chromadb.PersistentClient(path=str(db_dir))
         collection = client.get_collection("rag_lab")
         results = collection.get(limit=n, include=["documents", "metadatas"])
 
         print(f"\n=== Top {n} chunks trong index ===\n")
-        for i, (doc, meta) in enumerate(zip(results["documents"], results["metadatas"])):
+        for i, (doc, meta) in enumerate(
+            zip(results["documents"], results["metadatas"])
+        ):
             print(f"[Chunk {i+1}]")
             print(f"  Source: {meta.get('source', 'N/A')}")
             print(f"  Section: {meta.get('section', 'N/A')}")
@@ -500,6 +519,7 @@ def inspect_metadata_coverage(db_dir: Path = CHROMA_DB_DIR) -> None:
     """
     try:
         import chromadb
+
         client = chromadb.PersistentClient(path=str(db_dir))
         collection = client.get_collection("rag_lab")
         results = collection.get(include=["metadatas"])
@@ -569,4 +589,6 @@ if __name__ == "__main__":
     print("  1. Implement get_embedding() - chọn OpenAI hoặc Sentence Transformers")
     print("  2. Implement phần TODO trong build_index()")
     print("  3. Chạy build_index() và kiểm tra với list_chunks()")
-    print("  4. Nếu chunking chưa tốt: cải thiện _split_by_size() để split theo paragraph")
+    print(
+        "  4. Nếu chunking chưa tốt: cải thiện _split_by_size() để split theo paragraph"
+    )
