@@ -91,10 +91,10 @@ Variant không thắng toàn diện. Hybrid retrieval giúp câu trả lời bá
 
 | Thành viên | Phần đã làm | Sprint |
 |------------|-------------|--------|
-| Dũng, Quang | Ghép pipeline end-to-end, embedding, ChromaDB, retrieval/generation skeleton | 1, 2 |
-| Tuấn, Hải | Quyết định chunking theo heading/QA, bóc metadata, định hướng hybrid retrieval | 1, 3 |
-| Huy, Long | Soạn test questions, triển khai eval và scorecard, so sánh baseline/variant | 3, 4 |
-| Hồ Hải Thuận | Viết `architecture.md`, `tuning-log.md`, tổng hợp quyết định kỹ thuật và báo cáo nhóm | 4 |
+| Dũng, Quang | Ghép pipeline end-to-end, embedding, ChromaDB, retrieval/generation skeleton | 1, 2, 3 |
+| Tuấn, Hải | Quyết định chunking theo heading/QA, bóc metadata, định hướng hybrid retrieval | 1, 2, 3 |
+| Huy, Long | Soạn test questions, triển khai eval và scorecard, so sánh baseline/variant | 1, 2, 3 |
+| Hồ Hải Thuận | Viết `architecture.md`, `tuning-log.md`, tổng hợp quyết định kỹ thuật và báo cáo nhóm | 1, 2, 3 |
 
 **Điều nhóm làm tốt:**  
 Nhóm chia việc đúng theo sprint và theo vai trò. Retrieval, eval và documentation chạy song song nên không bị block hoàn toàn bởi code chính. Điểm mạnh nữa là tuning log ghi lại khá rõ giả thuyết, biến thay đổi và kết quả A/B.

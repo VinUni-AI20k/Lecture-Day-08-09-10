@@ -17,6 +17,7 @@
 Tôi chịu trách nhiệm hoàn thành các yêu cầu trong file 'architecture.md' và 'tuning-log.md'. Cụ thể, tôi đã:
 - Ở sprint 1: Định nghĩa bài toán và cập nhật các thông tin về số chunk, các tham số (chunk_size, overlap), embedding model, vector store.
 - Ở sprint 2&3: Mô tả sơ bộ về retrieval và generation pipeline.
+- Cuối cùng: Tổng hợp kết quả thu được và viết vào báo cáo.
 
 _________________
 
