@@ -82,7 +82,7 @@ python index.py    # Xem preview preprocess + chunking (không cần API key)
 ## 4 Sprints
 
 ### Sprint 1 (60') — Build Index
-**File:** `index.py`
+**File:** ``
 
 **Việc phải làm:**
 1. Implement `get_embedding()` — chọn OpenAI hoặc Sentence Transformers
