@@ -58,6 +58,7 @@ CROSS_ENCODER_MODEL = os.getenv(
 CHROMA_DB_DIR = Path(__file__).parent / "chroma_db"
 CHROMA_COLLECTION = "rag_lab"
 RRF_K = _env_int("RRF_K", 60, 10, 120)
+ABSTAIN_ANSWER = "Không đủ dữ liệu trong tài liệu để trả lời."
 
 # Cache BM25 corpus (reload sau khi build_index)
 _bm25_bundle: Optional[Tuple[Any, List[str], List[str], List[Dict[str, Any]]]] = None
@@ -359,7 +360,7 @@ def build_grounded_prompt(query: str, context_block: str) -> str:
 1) Use ONLY information from the numbered context snippets below. Do not use outside knowledge.
 2) **Same-or-different / comparison questions (e.g. leave types, access levels):** If the context defines two or more separate categories (e.g. distinct headings like "Annual Leave" vs "Sick Leave", or separate numbered items), you MUST answer by contrasting them using that text. State clearly whether the question's wording treats them as one thing or not, per policy. Cite [n]. **Do not abstain** when those definitions appear in any snippet.
 3) **Abstain** only when no snippet contains facts needed to address the question at all. Then reply exactly:
-   "Không đủ dữ liệu trong tài liệu để trả lời."
+    "{ABSTAIN_ANSWER}"
    (English questions may use: "Insufficient information in the documents to answer.")
 4) When you cite evidence, include bracket references like [1], [2] matching snippet numbers.
 5) Be concise and factual. Same language as the user's question (Vietnamese or English).
@@ -449,6 +450,60 @@ def _trace_chunk_rows(chunks: List[Dict[str, Any]], text_snippet: int = 200) -> 
     return rows
 
 
+def _trace_score_stats(chunks: List[Dict[str, Any]]) -> Optional[Dict[str, float]]:
+    vals: List[float] = []
+    for c in chunks:
+        try:
+            vals.append(float(c.get("score", 0.0)))
+        except (TypeError, ValueError):
+            continue
+    if not vals:
+        return None
+    return {
+        "min": min(vals),
+        "max": max(vals),
+        "avg": sum(vals) / len(vals),
+    }
+
+
+def _trace_sources_preview(chunks: List[Dict[str, Any]], limit: int = 4) -> str:
+    sources: List[str] = []
+    for c in chunks:
+        src = str((c.get("metadata") or {}).get("source", "")).strip()
+        if src and src not in sources:
+            sources.append(src)
+    if not sources:
+        return "none"
+    head = sources[:limit]
+    tail = ""
+    if len(sources) > limit:
+        tail = f" (+{len(sources) - limit} more)"
+    return ", ".join(head) + tail
+
+
+def _retrieval_mode_note(retrieval_mode: str) -> str:
+    notes = {
+        "dense": "**Dense:** embed query (cùng model lúc index) → cosine search trong Chroma.",
+        "sparse": "**Sparse (BM25):** tokenize query, chấm điểm keyword trên toàn corpus trong Chroma.",
+        "hybrid": "**Hybrid:** dense + BM25, hợp nhất thứ hạng bằng **RRF** (Reciprocal Rank Fusion).",
+    }
+    return notes.get(
+        retrieval_mode,
+        "**Unknown mode:** kiểm tra lại retrieval_mode để trace đúng pipeline.",
+    )
+
+
+def _get_retriever(retrieval_mode: str):
+    retrievers = {
+        "dense": retrieve_dense,
+        "sparse": retrieve_sparse,
+        "hybrid": retrieve_hybrid,
+    }
+    if retrieval_mode not in retrievers:
+        raise ValueError(f"retrieval_mode không hợp lệ: {retrieval_mode}")
+    return retrievers[retrieval_mode]
+
+
 def rag_answer_impl(
     query: str,
     retrieval_mode: str = "dense",
@@ -501,34 +556,22 @@ def rag_answer_impl(
 
     steps: List[Dict[str, Any]] = []
     if trace:
-        if retrieval_mode == "sparse":
-            retrieve_note = "**Sparse (BM25):** tokenize query, chấm điểm keyword trên toàn corpus trong Chroma."
-        elif retrieval_mode == "dense":
-            retrieve_note = "**Dense:** embed query (cùng model lúc index) → cosine search trong Chroma."
-        else:
-            retrieve_note = "**Hybrid:** dense + BM25, hợp nhất thứ hạng bằng **RRF** (Reciprocal Rank Fusion)."
         steps.append({
             "step": 1,
             "name": "Câu hỏi",
             "emoji": "1️⃣",
-            "detail": retrieve_note,
+            "detail": _retrieval_mode_note(retrieval_mode),
             "query": query,
         })
 
     # --- Bước 1: Retrieve ---
-    if retrieval_mode == "dense":
-        candidates = retrieve_dense(query, top_k=top_k_search)
-    elif retrieval_mode == "sparse":
-        candidates = retrieve_sparse(query, top_k=top_k_search)
-    elif retrieval_mode == "hybrid":
-        candidates = retrieve_hybrid(query, top_k=top_k_search)
-    else:
-        raise ValueError(f"retrieval_mode không hợp lệ: {retrieval_mode}")
+    retriever = _get_retriever(retrieval_mode)
+    candidates = retriever(query, top_k=top_k_search)
 
     if not candidates:
         out: Dict[str, Any] = {
             "query": query,
-            "answer": "Không đủ dữ liệu trong tài liệu để trả lời.",
+            "answer": ABSTAIN_ANSWER,
             "sources": [],
             "chunks_used": [],
             "config": config,
@@ -545,11 +588,30 @@ def rag_answer_impl(
         return out
 
     if trace:
+        retrieve_stats = _trace_score_stats(candidates)
+        retrieve_score_txt = "N/A"
+        if retrieve_stats is not None:
+            retrieve_score_txt = (
+                f"{retrieve_stats['min']:.4f}..{retrieve_stats['max']:.4f} "
+                f"(avg {retrieve_stats['avg']:.4f})"
+            )
+        retrieve_sources = _trace_sources_preview(candidates)
+        retrieve_non_empty = sum(1 for c in candidates if (c.get("text") or "").strip())
         steps.append({
             "step": 2,
             "name": "Retrieve",
             "emoji": "2️⃣",
-            "detail": f"**{retrieval_mode}** · lấy **{len(candidates)}** ứng viên (`top_k_search={top_k_search}`).",
+            "detail": (
+                f"**{retrieval_mode}** · lấy **{len(candidates)}** ứng viên (`top_k_search={top_k_search}`). "
+                f"Score range: **{retrieve_score_txt}**. "
+                f"Chunk có nội dung: **{retrieve_non_empty}/{len(candidates)}**. "
+                f"Nguồn: {retrieve_sources}."
+            ),
+            "stats": {
+                "score": retrieve_stats,
+                "non_empty_chunks": retrieve_non_empty,
+                "sources_preview": retrieve_sources,
+            },
             "table": _trace_chunk_rows(candidates),
         })
 
@@ -579,30 +641,97 @@ def rag_answer_impl(
         select_emoji = "3️⃣"
 
     if trace:
+        selected_stats = _trace_score_stats(candidates)
+        selected_score_txt = "N/A"
+        if selected_stats is not None:
+            selected_score_txt = (
+                f"{selected_stats['min']:.4f}..{selected_stats['max']:.4f} "
+                f"(avg {selected_stats['avg']:.4f})"
+            )
+        selected_sources = _trace_sources_preview(candidates)
+        selected_non_empty = sum(1 for c in candidates if (c.get("text") or "").strip())
+        dropped = max(0, len(after_retrieve) - len(candidates))
         steps.append({
             "step": 3,
             "name": select_title,
             "emoji": select_emoji,
-            "detail": select_detail + f" (từ **{len(after_retrieve)}** ứng viên).",
+            "detail": (
+                select_detail
+                + f" (từ **{len(after_retrieve)}** ứng viên, bỏ **{dropped}**). "
+                + f"Score sau chọn: **{selected_score_txt}**. "
+                + f"Chunk có nội dung: **{selected_non_empty}/{len(candidates)}**. "
+                + f"Nguồn giữ lại: {selected_sources}."
+            ),
+            "stats": {
+                "score": selected_stats,
+                "dropped_candidates": dropped,
+                "non_empty_chunks": selected_non_empty,
+                "sources_preview": selected_sources,
+            },
             "table": _trace_chunk_rows(candidates),
         })
 
     if verbose:
         print(f"[RAG] After select: {len(candidates)} chunks")
 
+    # Chỉ giữ các chunk có text thực sự để tránh gửi context rỗng lên LLM.
+    candidates = [c for c in candidates if (c.get("text") or "").strip()]
+    if not candidates:
+        out: Dict[str, Any] = {
+            "query": query,
+            "answer": ABSTAIN_ANSWER,
+            "sources": [],
+            "chunks_used": [],
+            "config": config,
+        }
+        if trace:
+            steps.append({
+                "step": 4,
+                "name": "Context check",
+                "emoji": "4️⃣",
+                "detail": "Retrieve có kết quả nhưng tất cả chunk sau select đều rỗng. Trả về abstain.",
+                "table": [],
+            })
+            out["pipeline_steps"] = steps
+        return out
+
     # --- Bước 3: Build context và prompt ---
     context_block = build_context_block(candidates)
+    if not context_block.strip():
+        out: Dict[str, Any] = {
+            "query": query,
+            "answer": ABSTAIN_ANSWER,
+            "sources": [],
+            "chunks_used": [],
+            "config": config,
+        }
+        if trace:
+            steps.append({
+                "step": 4,
+                "name": "Context check",
+                "emoji": "4️⃣",
+                "detail": "Context block rỗng sau khi đóng gói chunk. Trả về abstain.",
+                "table": [],
+            })
+            out["pipeline_steps"] = steps
+        return out
+
     prompt = build_grounded_prompt(query, context_block)
 
     if trace:
+        prompt_sources = _trace_sources_preview(candidates)
         steps.append({
             "step": 4,
             "name": "Context + prompt",
             "emoji": "4️⃣",
             "detail": (
                 f"Đánh số **[1],[2],…**, kèm source/section/score → **{len(context_block)}** ký tự context. "
-                f"Prompt grounded tổng **{len(prompt)}** ký tự."
+                f"Prompt grounded tổng **{len(prompt)}** ký tự. "
+                f"Nguồn vào prompt: {prompt_sources}."
             ),
+            "stats": {
+                "prompt_sources_preview": prompt_sources,
+            },
             "context_preview": context_block[:1800] + ("…" if len(context_block) > 1800 else ""),
             "prompt_preview": prompt[:1400] + ("…" if len(prompt) > 1400 else ""),
         })
@@ -611,7 +740,9 @@ def rag_answer_impl(
         print(f"\n[RAG] Prompt:\n{prompt[:500]}...\n")
 
     # --- Bước 4: Generate ---
-    answer = call_llm(prompt)
+    answer = (call_llm(prompt) or "").strip()
+    if not answer:
+        answer = ABSTAIN_ANSWER
 
     if trace:
         steps.append({
