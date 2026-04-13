@@ -1,0 +1,160 @@
+{
+  "total_raw": 64.0,
+  "max_raw": 98.0,
+  "projected_30": 19.59,
+  "config": {
+    "retrieval_mode": "dense",
+    "top_k_search": 12,
+    "top_k_select": 5,
+    "use_rerank": false
+  },
+  "threshold": "0.05",
+  "verdicts": {
+    "Partial": 5,
+    "Full": 4,
+    "Zero": 1
+  },
+  "per_question": [
+    {
+      "id": "gq01",
+      "verdict": "Partial",
+      "points": 5.0,
+      "max_points": 10.0,
+      "reason": "Câu trả lời nêu đúng giá trị hiện tại và cũ, có citation về phiên bản v2026.1. Tuy nhiên, thông tin về phiên bản v2025.3 là không cần thiết và không được yêu cầu.",
+      "criteria_met": [
+        true,
+        true,
+        true,
+        false
+      ],
+      "hallucination": false
+    },
+    {
+      "id": "gq02",
+      "verdict": "Partial",
+      "points": 5.0,
+      "max_points": 10.0,
+      "reason": "Câu trả lời xác nhận VPN là bắt buộc và nêu đúng giới hạn 2 thiết bị. Tuy nhiên, không có citation từ 2 nguồn khác nhau.",
+      "criteria_met": [
+        true,
+        true,
+        false,
+        true
+      ],
+      "hallucination": false
+    },
+    {
+      "id": "gq03",
+      "verdict": "Full",
+      "points": 10.0,
+      "max_points": 10.0,
+      "reason": "Câu trả lời rõ ràng về việc không được hoàn tiền. Đã nêu đúng các ngoại lệ liên quan đến Flash Sale và sản phẩm đã kích hoạt. Có citation từ tài liệu chính xác.",
+      "criteria_met": [
+        true,
+        true,
+        true,
+        true,
+        true
+      ],
+      "hallucination": false
+    },
+    {
+      "id": "gq04",
+      "verdict": "Partial",
+      "points": 4.0,
+      "max_points": 8.0,
+      "reason": "Câu trả lời nêu đúng con số 110% và nhấn mạnh đây là tùy chọn. Tuy nhiên, không có citation từ policy/refund-v4.pdf.",
+      "criteria_met": [
+        true,
+        true,
+        false
+      ],
+      "hallucination": false
+    },
+    {
+      "id": "gq05",
+      "verdict": "Zero",
+      "points": 0,
+      "max_points": 10.0,
+      "reason": "Câu trả lời xác nhận contractor được cấp quyền nhưng không nêu đúng approver, thời gian và yêu cầu training. Không đạt đủ tiêu chí.",
+      "criteria_met": [
+        true,
+        false,
+        false,
+        false,
+        false
+      ],
+      "hallucination": false
+    },
+    {
+      "id": "gq06",
+      "verdict": "Partial",
+      "points": 6.0,
+      "max_points": 12.0,
+      "reason": "Câu trả lời đạt 4/5 tiêu chí. Không đề cập đến hotline on-call ext. 9999 từ SLA P1.",
+      "criteria_met": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "hallucination": false
+    },
+    {
+      "id": "gq07",
+      "verdict": "Full",
+      "points": 10.0,
+      "max_points": 10.0,
+      "reason": "Câu trả lời đã nêu rõ rằng không có đủ dữ liệu trong tài liệu để trả lời câu hỏi. Không có thông tin nào bị bịa ra.",
+      "criteria_met": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "hallucination": false
+    },
+    {
+      "id": "gq08",
+      "verdict": "Full",
+      "points": 10.0,
+      "max_points": 10.0,
+      "reason": "Câu trả lời nêu đúng số ngày báo trước cho cả nghỉ phép năm và nghỉ ốm. Đồng thời, phân biệt rõ hai ngữ cảnh mà không lẫn lộn quy định.",
+      "criteria_met": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "hallucination": false
+    },
+    {
+      "id": "gq09",
+      "verdict": "Partial",
+      "points": 4.0,
+      "max_points": 8.0,
+      "reason": "Câu trả lời xác nhận mật khẩu cần đổi định kỳ, nêu đúng chu kỳ và thời gian nhắc nhở. Tuy nhiên, không cung cấp kênh để đổi mật khẩu.",
+      "criteria_met": [
+        true,
+        true,
+        true,
+        false
+      ],
+      "hallucination": false
+    },
+    {
+      "id": "gq10",
+      "verdict": "Full",
+      "points": 10.0,
+      "max_points": 10.0,
+      "reason": "Câu trả lời rõ ràng và đầy đủ thông tin theo yêu cầu. Không có thông tin nào bị bịa đặt.",
+      "criteria_met": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "hallucination": false
+    }
+  ]
+}
