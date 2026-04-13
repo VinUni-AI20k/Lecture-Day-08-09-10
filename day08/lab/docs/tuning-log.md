@@ -1,69 +1,91 @@
 # Tuning Log — RAG Pipeline (Day 08 Lab)
 
-> A/B so sánh: **baseline** = dense, không rerank · **variant** = hybrid (RRF) + cross-encoder rerank.  
-> Điểm số chi tiết: chạy `python eval.py` (cần `OPENAI_API_KEY`) và xem `results/scorecard_*.md`.
+> Mục tiêu commit này: ghi rõ setup A/B **đúng chuẩn chỉ đổi 1 biến** để nộp bài và truy vết.
+> Lưu ý: thử nghiệm "hybrid + rerank" vẫn được giữ làm tham chiếu khám phá, nhưng không dùng làm A/B chính thức.
 
 ---
 
-## Baseline (Sprint 2)
+## 1) Baseline cố định (mốc so sánh)
 
-**Config:**
+Config baseline dùng xuyên suốt:
+
 ```
 retrieval_mode = "dense"
-chunk_size = 400 tokens (ước lượng)
-overlap = 80 tokens
 top_k_search = 10
 top_k_select = 3
 use_rerank = False
 llm_model = gpt-4o-mini (temperature=0)
 ```
 
-**Quan sát nhanh (qualitative):**
-- Dense ổn với câu hỏi diễn đạt gần văn bản gốc (SLA P1, hoàn tiền 7 ngày).
-- Dễ hụt khi query dùng **từ khóa hiếm** hoặc **alias** (ví dụ “Approval Matrix”): embedding có thể không đứng đầu đúng chunk ghi chú đổi tên tài liệu.
-
-**Scorecard Baseline:** xem file `results/scorecard_baseline.md` sau khi chạy eval.
+Scorecard baseline: `results/scorecard_baseline.md`
 
 ---
 
-## Variant 1 (Sprint 3)
+## 2) Thử nghiệm khám phá (khong dung cho A/B chinh thuc)
 
-**Biến đổi chính:** `retrieval_mode = "hybrid"` (dense + BM25, RRF) và `use_rerank = True` (cross-encoder).
+Da chay bien the:
 
-**Lý do:**
-- Corpus trộn **tiếng Việt tự nhiên** và **ký hiệu/keyword** (P1, Level 3, ERR-403, Flash Sale) → BM25 bổ sung recall cho từ hiếm.
-- **RRF** hợp nhất thứ hạng dense và sparse mà không cần scale score thủ công.
-- **Rerank** giảm nhiễu khi top-10 vẫn lẫn chunk liên quan mức độ thấp.
-
-**Config:**
 ```
 retrieval_mode = "hybrid"
-top_k_search = 10
-top_k_select = 3
+top_k_search = 15
+top_k_select = 4
 use_rerank = True
-cross_encoder = cross-encoder/ms-marco-MiniLM-L-6-v2
 ```
 
-**Scorecard Variant:** `results/scorecard_variant.md`
-
-**Kết luận (cần khớp với số liệu eval):**
-- Kỳ vọng: **context recall** và **relevance** cao hơn ở câu có alias/keyword; chi phí tính toán tăng (BM25 + cross-encoder trên CPU/GPU).
-
----
-
-## Bảng so sánh metrics (điền từ `compare_ab` / scorecard)
-
-| Metric | Baseline | Variant | Delta |
-|--------|----------|---------|-------|
-| Faithfulness | _xem scorecard_ | _xem scorecard_ | _chạy eval_ |
-| Answer Relevance | _xem scorecard_ | _xem scorecard_ | _chạy eval_ |
-| Context Recall | _xem scorecard_ | _xem scorecard_ | _chạy eval_ |
-| Completeness | _xem scorecard_ | _xem scorecard_ | _chạy eval_ |
+Ly do giu lai muc nay:
+- Dung de nhin nhanh headroom khi bat nhieu don bay retrieval cung luc.
+- KHONG dung lam bang chung A/B chinh thuc vi da doi nhieu hon 1 bien.
 
 ---
 
-## Tóm tắt học được
+## 3) A/B chuan cho nop bai (single-variable)
 
-1. **Lỗi phổ biến:** retrieval sai đoạn → LLM vẫn trả lời “hợp lý” nhưng hallucinate; cần prompt abstain + judge faithfulness.
-2. **Biến tác động lớn:** chiến lược retrieval (dense vs hybrid) và chất lượng chunk/metadata.
-3. **Hướng tiếp:** query expansion có kiểm soát cho alias; hoặc metadata filter theo `department` nếu có routing chủ đề.
+Bien thay doi duy nhat:
+
+```
+retrieval_mode: "dense" -> "hybrid"
+```
+
+Tat ca bien con lai giu nguyen:
+
+```
+top_k_search = 10
+top_k_select = 3
+use_rerank = False
+llm_model = gpt-4o-mini
+```
+
+Bang setup A/B:
+
+| Run label | retrieval_mode | top_k_search | top_k_select | use_rerank | So bien doi |
+|---|---|---:|---:|---|---:|
+| baseline_dense | dense | 10 | 3 | False | 0 |
+| variant_hybrid_only | hybrid | 10 | 3 | False | 1 |
+
+Ghi chu:
+- Rule A/B duoc thoa: moi lan chi doi mot bien.
+- Neu can thu rerank, tao mot lan A/B khac (dense no-rerank vs dense rerank).
+
+---
+
+## 4) Khung ghi ket qua cho lan chay A/B single-variable
+
+| Metric | Baseline | Variant (hybrid only) | Delta |
+|---|---:|---:|---:|
+| Faithfulness | _dien sau khi chay_ | _dien sau khi chay_ | _dien sau khi chay_ |
+| Relevance | _dien sau khi chay_ | _dien sau khi chay_ | _dien sau khi chay_ |
+| Context Recall | _dien sau khi chay_ | _dien sau khi chay_ | _dien sau khi chay_ |
+| Completeness | _dien sau khi chay_ | _dien sau khi chay_ | _dien sau khi chay_ |
+
+Nguon dien so:
+- `results/scorecard_baseline.md`
+- `results/scorecard_variant.md`
+- `results/ab_comparison.csv`
+
+---
+
+## 5) Ghi chu phan tich tam thoi
+
+1. Dense on dinh o cau hoi de, nhung de bo sot alias/keyword hiem.
+2. Hybrid ky vong tang kha nang lay dung ngu canh cho cau co alias.
+3. Quyết định cuoi cung se chot o commit tiep theo dua tren bang before/after.
