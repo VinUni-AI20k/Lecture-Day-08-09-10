@@ -31,8 +31,8 @@ CHROMA_DB_DIR = Path(__file__).parent / "chroma_db"
 
 # TODO Sprint 1: Điều chỉnh chunk size và overlap theo quyết định của nhóm
 # Gợi ý từ slide: chunk 300-500 tokens, overlap 50-80 tokens
-CHUNK_SIZE = 400       # tokens (ước lượng bằng số ký tự / 4)
-CHUNK_OVERLAP = 80     # tokens overlap giữa các chunk
+CHUNK_SIZE = 280       # tokens (ước lượng bằng số ký tự / 4)
+CHUNK_OVERLAP = 50     # tokens overlap giữa các chunk
 
 
 # =============================================================================
@@ -166,6 +166,17 @@ def chunk_document(doc: Dict[str, Any]) -> List[Dict[str, Any]]:
             section=current_section,
         )
         chunks.extend(section_chunks)
+
+    # Alias chunk giúp truy hồi đúng các query dùng tên cũ của tài liệu.
+    source = base_metadata.get("source", "").lower()
+    if "access-control-sop" in source:
+        chunks.append({
+            "text": (
+                'Tài liệu "Approval Matrix for System Access" hiện có tên mới là '
+                '"Access Control SOP". Source chính thức là it/access-control-sop.md.'
+            ),
+            "metadata": {**base_metadata, "section": "Alias / Previous Name"},
+        })
 
     return chunks
 

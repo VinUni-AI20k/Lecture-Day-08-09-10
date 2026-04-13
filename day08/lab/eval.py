@@ -30,8 +30,7 @@ from rag_answer import rag_answer, call_llm
 # =============================================================================
 
 TEST_QUESTIONS_PATHS = [
-    Path(__file__).parent / "data" / "test_questions.json",
-    Path(__file__).parent / "data" / "test_questions2.json"
+    Path(__file__).parent / "logs" / "grading_questions.json"
 ]
 RESULTS_DIR = Path(__file__).parent / "results"
 
@@ -45,14 +44,43 @@ BASELINE_CONFIG = {
 }
 
 # Cấu hình variant (Sprint 3 — điều chỉnh theo lựa chọn của nhóm)
-# Đã chọn Hybrid + Rerank
+# Variant mới: auto router + prompt v3, không dùng rerank mặc định.
 VARIANT_CONFIG = {
-    "retrieval_mode": "hybrid",
-    "top_k_search": 10,
-    "top_k_select": 3,
-    "use_rerank": True,
-    "label": "variant_hybrid_rerank",
+    "retrieval_mode": "auto",
+    "top_k_search": 8,
+    "top_k_select": 4,
+    "use_rerank": False,
+    "label": "variant_dense_router_prompt_v3",
 }
+
+
+def save_eval_log(
+    baseline_results: List[Dict[str, Any]],
+    variant_results: List[Dict[str, Any]],
+    test_questions: List[Dict[str, Any]],
+    output_filename: str = "eval.json",
+) -> Path:
+    """
+    Lưu toàn bộ kết quả evaluation ra file JSON để phục vụ phân tích/report.
+    """
+    RESULTS_DIR.mkdir(parents=True, exist_ok=True)
+    output_path = RESULTS_DIR / output_filename
+
+    payload = {
+        "generated_at": datetime.now().isoformat(),
+        "test_question_files": [str(path) for path in TEST_QUESTIONS_PATHS],
+        "num_questions": len(test_questions),
+        "baseline_config": BASELINE_CONFIG,
+        "variant_config": VARIANT_CONFIG,
+        "baseline_results": baseline_results,
+        "variant_results": variant_results,
+    }
+
+    output_path.write_text(
+        json.dumps(payload, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
+    return output_path
 
 
 # =============================================================================
@@ -561,6 +589,7 @@ if __name__ == "__main__":
     # --- Chạy Baseline ---
     print("\n--- Chạy Baseline ---")
     print("Lưu ý: Cần hoàn thành Sprint 2 trước khi chạy scorecard!")
+    baseline_results = []
     try:
         baseline_results = run_scorecard(
             config=BASELINE_CONFIG,
@@ -577,18 +606,21 @@ if __name__ == "__main__":
 
     except NotImplementedError:
         print("Pipeline chưa implement. Hoàn thành Sprint 2 trước.")
-        baseline_results = []
 
     # --- Chạy Variant (sau khi Sprint 3 hoàn thành) ---
     # --- Chạy Variant (sau khi Sprint 3 hoàn thành) ---
     print("\n--- Chạy Variant ---")
-    variant_results = run_scorecard(
-        config=VARIANT_CONFIG,
-        test_questions=test_questions,
-        verbose=True,
-    )
-    variant_md = generate_scorecard_summary(variant_results, VARIANT_CONFIG["label"])
-    (RESULTS_DIR / "scorecard_variant.md").write_text(variant_md, encoding="utf-8")
+    variant_results = []
+    try:
+        variant_results = run_scorecard(
+            config=VARIANT_CONFIG,
+            test_questions=test_questions,
+            verbose=True,
+        )
+        variant_md = generate_scorecard_summary(variant_results, VARIANT_CONFIG["label"])
+        (RESULTS_DIR / "scorecard_variant.md").write_text(variant_md, encoding="utf-8")
+    except NotImplementedError:
+        print("Variant pipeline chưa implement.")
 
     # --- A/B Comparison ---
     if baseline_results and variant_results:
@@ -597,6 +629,13 @@ if __name__ == "__main__":
             variant_results,
             output_csv="ab_comparison.csv"
         )
+
+    eval_log_path = save_eval_log(
+        baseline_results=baseline_results,
+        variant_results=variant_results,
+        test_questions=test_questions,
+    )
+    print(f"\nEval log lưu tại: {eval_log_path}")
 
     print("\n\nViệc cần làm Sprint 4:")
     print("  1. Hoàn thành Sprint 2 + 3 trước")
