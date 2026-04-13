@@ -7,100 +7,109 @@
 
 ## Baseline (Sprint 2)
 
-**Ngày:** ___________  
+**Ngày:** 2026-04-13  
 **Config:**
 ```
 retrieval_mode = "dense"
-chunk_size = _____ tokens
-overlap = _____ tokens
+chunk_size = 400 tokens
+overlap = 80 tokens
 top_k_search = 10
 top_k_select = 3
 use_rerank = False
-llm_model = _____
+llm_model = gpt-4o-mini
 ```
 
 **Scorecard Baseline:**
 | Metric | Average Score |
 |--------|--------------|
-| Faithfulness | ? /5 |
-| Answer Relevance | ? /5 |
-| Context Recall | ? /5 |
-| Completeness | ? /5 |
+| Faithfulness | 4.50 /5 |
+| Answer Relevance | 4.50 /5 |
+| Context Recall | 5.00 /5 |
+| Completeness | 3.20 /5 |
 
 **Câu hỏi yếu nhất (điểm thấp):**
-> TODO: Liệt kê 2-3 câu hỏi có điểm thấp nhất và lý do tại sao.
-> Ví dụ: "q07 (Approval Matrix) - context recall = 1/5 vì dense bỏ lỡ alias."
+> `q01` (SLA ticket P1) - faithfulness = 2/5, completeness = 1/5. Retriever lấy đúng source nhưng answer lại bám nhầm chi tiết "24 giờ viết báo cáo sự cố" thay vì "15 phút phản hồi, 4 giờ resolution".
+> `q06` (Escalation P1) - completeness = 2/5. Answer có grounded nhưng thiếu chi tiết cốt lõi là auto-escalate lên Senior Engineer nếu không có phản hồi trong 10 phút.
+> `q07` (Approval Matrix) - completeness = 2/5. Hệ thống tìm đúng tài liệu nhưng answer mới nhắc tên cũ "Approval Matrix for System Access", chưa nêu rõ tên hiện tại là `Access Control SOP`.
+> `q10` (Refund VIP khẩn cấp) - relevance = 1/5, completeness = 2/5. Prompt abstain khá chặt nên model trả lời "không có thông tin" mà không nối được với quy trình chuẩn hiện hành trong policy.
 
 **Giả thuyết nguyên nhân (Error Tree):**
 - [ ] Indexing: Chunking cắt giữa điều khoản
 - [ ] Indexing: Metadata thiếu effective_date
-- [ ] Retrieval: Dense bỏ lỡ exact keyword / alias
+- [x] Retrieval: Dense bỏ lỡ exact keyword / alias
 - [ ] Retrieval: Top-k quá ít → thiếu evidence
-- [ ] Generation: Prompt không đủ grounding
+- [x] Generation: Prompt không đủ grounding
 - [ ] Generation: Context quá dài → lost in the middle
+
+Ghi chú:
+`inspect_metadata_coverage()` cho thấy `Chunks thiếu effective_date: 0`, nên chưa có bằng chứng lỗi metadata.
+`Context Recall = 5.00/5` cho baseline cho thấy expected source hầu như đều được retrieve; vấn đề chính nằm ở bước generate/select hơn là index.
 
 ---
 
 ## Variant 1 (Sprint 3)
 
-**Ngày:** ___________  
-**Biến thay đổi:** ___________  
+**Ngày:** 2026-04-13  
+**Biến thay đổi:** `retrieval_mode`: `dense` → `hybrid`  
 **Lý do chọn biến này:**
-> TODO: Giải thích theo evidence từ baseline results.
-> Ví dụ: "Chọn hybrid vì q07 (alias query) và q09 (mã lỗi ERR-403) đều thất bại với dense.
-> Corpus có cả ngôn ngữ tự nhiên (policy) lẫn tên riêng/mã lỗi (ticket code, SLA label)."
+> Chọn hybrid vì corpus có cả câu tự nhiên và keyword/alias chuyên biệt. Từ log chạy `rag_answer.py`, các query như `Approval Matrix` và `CRITICAL` đều là dạng exact term hoặc alias, phù hợp để kiểm tra BM25 + dense fusion. Mục tiêu của variant này là tăng độ ổn định cho các truy vấn có từ khóa đặc thù mà không đổi prompt hoặc thêm rerank.
 
 **Config thay đổi:**
 ```
-retrieval_mode = "hybrid"   # hoặc biến khác
-# Các tham số còn lại giữ nguyên như baseline
+retrieval_mode = "hybrid"
+chunk_size = 400 tokens
+overlap = 80 tokens
+top_k_search = 10
+top_k_select = 3
+use_rerank = False
+llm_model = gpt-4o-mini
 ```
 
 **Scorecard Variant 1:**
 | Metric | Baseline | Variant 1 | Delta |
 |--------|----------|-----------|-------|
-| Faithfulness | ?/5 | ?/5 | +/- |
-| Answer Relevance | ?/5 | ?/5 | +/- |
-| Context Recall | ?/5 | ?/5 | +/- |
-| Completeness | ?/5 | ?/5 | +/- |
+| Faithfulness | 4.50/5 | Chưa có scorecard | Chưa đo |
+| Answer Relevance | 4.50/5 | Chưa có scorecard | Chưa đo |
+| Context Recall | 5.00/5 | Chưa có scorecard | Chưa đo |
+| Completeness | 3.20/5 | Chưa có scorecard | Chưa đo |
 
 **Nhận xét:**
-> TODO: Variant 1 cải thiện ở câu nào? Tại sao?
-> Có câu nào kém hơn không? Tại sao?
+> Từ log `python rag_answer.py`, hybrid cho kết quả tương đương dense ở 3 query demo đã chạy.
+> Với query `Approval Matrix để cấp quyền là tài liệu nào?`, hybrid cho câu trả lời rõ hơn một chút: "tài liệu trước đây có tên..." nên sát alias query hơn dense.
+> Với query `CRITICAL` và query refund, chưa thấy khác biệt rõ giữa dense và hybrid; output gần như giống nhau.
+> Chưa có bằng chứng định lượng để kết luận hybrid cải thiện completeness hay faithfulness trên toàn bộ 10 câu hỏi, vì `eval.py` mới chạy baseline trong log hiện có.
 
 **Kết luận:**
-> TODO: Variant 1 có tốt hơn baseline không?
-> Bằng chứng là gì? (điểm số, câu hỏi cụ thể)
+> Chưa thể kết luận Variant 1 tốt hơn baseline theo scorecard vì chưa có lần chạy `run_scorecard()` cho hybrid trong log hiện tại.
+> Bằng chứng hiện có chỉ là so sánh định tính trên 3 query demo: hybrid không làm xấu kết quả và có cải thiện nhẹ về diễn đạt ở query alias `Approval Matrix`, nhưng chưa chứng minh được delta trung bình trên 4 metric.
 
 ---
 
 ## Variant 2 (nếu có thời gian)
 
-**Biến thay đổi:** ___________  
+**Biến thay đổi:** Không thực hiện  
 **Config:**
 ```
-# TODO
+# Không có variant 2 trong phạm vi log hiện tại
 ```
 
 **Scorecard Variant 2:**
 | Metric | Baseline | Variant 1 | Variant 2 | Best |
 |--------|----------|-----------|-----------|------|
-| Faithfulness | ? | ? | ? | ? |
-| Answer Relevance | ? | ? | ? | ? |
-| Context Recall | ? | ? | ? | ? |
-| Completeness | ? | ? | ? | ? |
+| Faithfulness | 4.50 | Chưa có scorecard | N/A | Baseline |
+| Answer Relevance | 4.50 | Chưa có scorecard | N/A | Baseline |
+| Context Recall | 5.00 | Chưa có scorecard | N/A | Baseline |
+| Completeness | 3.20 | Chưa có scorecard | N/A | Baseline |
 
 ---
 
 ## Tóm tắt học được
 
-> TODO (Sprint 4): Điền sau khi hoàn thành evaluation.
-
 1. **Lỗi phổ biến nhất trong pipeline này là gì?**
-   > _____________
+   > Retriever thường mang đúng source về, nhưng answer vẫn có thể chọn sai chi tiết hoặc bỏ sót ý quan trọng. Điểm yếu lớn nhất hiện tại là generation/completeness, không phải recall.
 
 2. **Biến nào có tác động lớn nhất tới chất lượng?**
-   > _____________
+   > Theo cấu trúc code và log demo, retrieval strategy là biến đáng thử nhất cho Sprint 3 vì corpus có nhiều alias và keyword đặc thù. Tuy vậy, trong log hiện tại hybrid mới chỉ cho thấy tín hiệu cải thiện định tính, chưa có số liệu A/B hoàn chỉnh.
 
 3. **Nếu có thêm 1 giờ, nhóm sẽ thử gì tiếp theo?**
-   > _____________
+   > Chạy đầy đủ scorecard cho `hybrid`, sau đó thử thêm một biến độc lập như `use_rerank=True` hoặc điều chỉnh prompt để answer bắt buộc nêu đủ "current name / SLA pair / escalation trigger" ở các câu đang thiếu completeness.

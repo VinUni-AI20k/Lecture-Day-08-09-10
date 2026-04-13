@@ -18,7 +18,7 @@
 ```
 
 **Mô tả ngắn gọn:**
-> TODO: Mô tả hệ thống trong 2-3 câu. Nhóm xây gì? Cho ai dùng? Giải quyết vấn đề gì?
+> Nhóm xây dựng một pipeline RAG cho trợ lý nội bộ phục vụ khối CS và IT Helpdesk. Hệ thống index các policy, SLA, SOP và FAQ để trả lời câu hỏi dựa trên ngữ cảnh được retrieve từ ChromaDB, kèm citation nguồn. Mục tiêu là giảm trả lời sai hoặc bịa thông tin khi tra cứu tài liệu vận hành nội bộ.
 
 ---
 
@@ -27,22 +27,22 @@
 ### Tài liệu được index
 | File | Nguồn | Department | Số chunk |
 |------|-------|-----------|---------|
-| `policy_refund_v4.txt` | policy/refund-v4.pdf | CS | TODO |
-| `sla_p1_2026.txt` | support/sla-p1-2026.pdf | IT | TODO |
-| `access_control_sop.txt` | it/access-control-sop.md | IT Security | TODO |
-| `it_helpdesk_faq.txt` | support/helpdesk-faq.md | IT | TODO |
-| `hr_leave_policy.txt` | hr/leave-policy-2026.pdf | HR | TODO |
+| `policy_refund_v4.txt` | policy/refund-v4.pdf | CS | 6 |
+| `sla_p1_2026.txt` | support/sla-p1-2026.pdf | IT | 5 |
+| `access_control_sop.txt` | it/access-control-sop.md | IT Security | 8 |
+| `it_helpdesk_faq.txt` | support/helpdesk-faq.md | IT | 6 |
+| `hr_leave_policy.txt` | hr/leave-policy-2026.pdf | HR | 5 |
 
 ### Quyết định chunking
 | Tham số | Giá trị | Lý do |
 |---------|---------|-------|
-| Chunk size | TODO tokens | TODO |
-| Overlap | TODO tokens | TODO |
-| Chunking strategy | Heading-based / paragraph-based | TODO |
+| Chunk size | 400 tokens | Nằm trong khoảng gợi ý 300-500 tokens, đủ giữ trọn một điều khoản/ngữ cảnh ngắn nhưng vẫn gọn cho retrieval |
+| Overlap | 80 tokens | Giữ phần chuyển tiếp giữa các đoạn để giảm mất ngữ nghĩa khi chunk bị cắt gần ranh giới section/paragraph |
+| Chunking strategy | Heading-based + paragraph-based fallback | Ưu tiên tách theo section `=== ... ===`, sau đó split theo ranh giới tự nhiên như đoạn văn, câu hoặc dòng mới nếu section quá dài |
 | Metadata fields | source, section, effective_date, department, access | Phục vụ filter, freshness, citation |
 
 ### Embedding model
-- **Model**: TODO (OpenAI text-embedding-3-small / paraphrase-multilingual-MiniLM-L12-v2)
+- **Model**: `text-embedding-3-small` (cấu hình chạy hiện tại qua `EMBEDDING_PROVIDER=openai`); code vẫn hỗ trợ `paraphrase-multilingual-MiniLM-L12-v2` ở chế độ local
 - **Vector store**: ChromaDB (PersistentClient)
 - **Similarity metric**: Cosine
 
@@ -61,14 +61,14 @@
 ### Variant (Sprint 3)
 | Tham số | Giá trị | Thay đổi so với baseline |
 |---------|---------|------------------------|
-| Strategy | TODO (hybrid / dense) | TODO |
-| Top-k search | TODO | TODO |
-| Top-k select | TODO | TODO |
-| Rerank | TODO (cross-encoder / MMR) | TODO |
-| Query transform | TODO (expansion / HyDE / decomposition) | TODO |
+| Strategy | Hybrid | Kết hợp dense retrieval với sparse BM25 bằng Reciprocal Rank Fusion thay vì chỉ dense |
+| Top-k search | 10 | Giữ nguyên để A/B test chỉ đổi chiến lược retrieval |
+| Top-k select | 3 | Giữ nguyên để so sánh công bằng với baseline |
+| Rerank | Không | Không bật rerank để tránh đổi thêm biến ngoài retrieval strategy |
+| Query transform | Không | Không dùng query expansion/HyDE/decomposition trong variant này |
 
 **Lý do chọn variant này:**
-> TODO: Giải thích tại sao chọn biến này để tune.
+> Chọn hybrid vì corpus có cả nội dung diễn đạt tự nhiên (policy, FAQ) lẫn keyword/alias chuyên biệt như `P1`, `CRITICAL`, hoặc tên gọi cũ như "Approval Matrix". Dense retrieval là baseline tốt cho ngữ nghĩa, nhưng hybrid giúp giữ thêm tín hiệu exact-match từ BM25 mà không phải đổi prompt hay thêm rerank.
 > Ví dụ: "Chọn hybrid vì corpus có cả câu tự nhiên (policy) lẫn mã lỗi và tên chuyên ngành (SLA ticket P1, ERR-403)."
 
 ---
@@ -78,9 +78,10 @@
 ### Grounded Prompt Template
 ```
 Answer only from the retrieved context below.
-If the context is insufficient, say you do not know.
-Cite the source field when possible.
+If the context is insufficient to answer the question, say you do not know and do not make up information.
+Cite the source field (in brackets like [1]) when possible.
 Keep your answer short, clear, and factual.
+Respond in the same language as the question.
 
 Question: {query}
 
@@ -96,7 +97,7 @@ Answer:
 ### LLM Configuration
 | Tham số | Giá trị |
 |---------|---------|
-| Model | TODO (gpt-4o-mini / gemini-1.5-flash) |
+| Model | `gpt-4o-mini` (mặc định); hỗ trợ `gemini-1.5-flash` nếu cấu hình Gemini |
 | Temperature | 0 (để output ổn định cho eval) |
 | Max tokens | 512 |
 
@@ -118,7 +119,7 @@ Answer:
 
 ## 6. Diagram (tùy chọn)
 
-> TODO: Vẽ sơ đồ pipeline nếu có thời gian. Có thể dùng Mermaid hoặc drawio.
+> Sơ đồ Mermaid của pipeline hiện tại:
 
 ```mermaid
 graph LR
