@@ -744,7 +744,7 @@ def compare_retrieval_strategies(query: str) -> None:
     print(f"Query: {query}")
     print("=" * 60)
 
-    strategies = ["dense", "hybrid"]  # Thêm "sparse" sau khi implement
+    strategies = ["dense", "sparse"]  # Thêm "sparse" sau khi implement
 
     for strategy in strategies:
         print(f"\n--- Strategy: {strategy} ---")
@@ -763,36 +763,38 @@ def compare_retrieval_strategies(query: str) -> None:
 # =============================================================================
 
 if __name__ == "__main__":
-    print("=" * 60)
-    print("Sprint 2 + 3: RAG Answer Pipeline")
-    print("=" * 60)
+    # print("=" * 60)
+    # print("Sprint 2 + 3: RAG Answer Pipeline")
+    # print("=" * 60)
 
-    # Test queries từ data/test_questions.json
-    test_queries = [
-        "SLA xử lý ticket P1 là bao lâu?",
-        "Khách hàng có thể yêu cầu hoàn tiền trong bao nhiêu ngày?",
-        "Ai phải phê duyệt để cấp quyền Level 3?",
-        "ERR-403-AUTH là lỗi gì?",  # Query không có trong docs → kiểm tra abstain
-    ]
+    # # Test queries từ data/test_questions.json
+    # test_queries = [
+    #     "SLA xử lý ticket P1 là bao lâu?",
+    #     "Khách hàng có thể yêu cầu hoàn tiền trong bao nhiêu ngày?",
+    #     "Ai phải phê duyệt để cấp quyền Level 3?",
+    #     "ERR-403-AUTH là lỗi gì?",  # Query không có trong docs → kiểm tra abstain
+    # ]
 
-    print("\n--- Sprint 2: Test Baseline (Dense) ---")
-    for query in test_queries:
-        print(f"\nQuery: {query}")
-        try:
-            result = rag_answer(query, retrieval_mode="dense", verbose=True)
-            print(f"Answer: {result['answer']}")
-            print(f"Sources: {result['sources']}")
-        except NotImplementedError:
-            print(
-                "Chưa implement — hoàn thành TODO trong retrieve_dense() và call_llm() trước."
-            )
-        except Exception as e:
-            print(f"Lỗi: {e}")
+    # print("\n--- Sprint 2: Test Baseline (Dense) ---")
+    # for query in test_queries:
+    #     print(f"\nQuery: {query}")
+    #     try:
+    #         result = rag_answer(query, retrieval_mode="dense", verbose=True)
+    #         print(f"Answer: {result['answer']}")
+    #         print(f"Sources: {result['sources']}")
+    #     except NotImplementedError:
+    #         print(
+    #             "Chưa implement — hoàn thành TODO trong retrieve_dense() và call_llm() trước."
+    #         )
+    #     except Exception as e:
+    #         print(f"Lỗi: {e}")
 
     # Uncomment sau khi Sprint 3 hoàn thành:
-    # print("\n--- Sprint 3: So sánh strategies ---")
-    # compare_retrieval_strategies("Approval Matrix để cấp quyền là tài liệu nào?")
-    # compare_retrieval_strategies("ERR-403-AUTH")
+    print("\n--- Sprint 3: So sánh strategies ---")
+    compare_retrieval_strategies(
+        "Audit và review định kỳ cần thời gian bao lâu và cấp những quyền gì?"
+    )
+    compare_retrieval_strategies("ERR-403-AUTH liên quan đến chính sách nào?")
 
     print("\n\nViệc cần làm Sprint 2:")
     print("  1. Implement retrieve_dense() — query ChromaDB")
