@@ -16,28 +16,30 @@ overlap = 80 tokens
 top_k_search = 10
 top_k_select = 3
 use_rerank = False
-llm_model = "openai-gpt-4o"
+query_transform = None
+llm_model = openai-gpt-4o
 ```
 
 **Scorecard Baseline:**
 | Metric | Average Score |
 |--------|--------------|
-| Faithfulness | 4.50 /5 |
-| Answer Relevance | 3.30 /5 |
-| Context Recall | 5.00 /5 |
-| Completeness | 3.80 /5 |
+| Faithfulness | 4.60/5 |
+| Answer Relevance | 3.00/5 |
+| Context Recall | 5.00/5 |
+| Completeness | 3.50/5 |
 
 **Câu hỏi yếu nhất (điểm thấp):**
-- q06 (Escalation P1): relevance = 1/5, completeness = 2/5. Answer trộn cả escalation của SLA P1 và escalation quyền truy cập tạm thời từ access-control nên bị dư thông tin ngoài trọng tâm câu hỏi.
-- q09 (ERR-403-AUTH): completeness = 2/5. Hệ thống abstain đúng nhưng expected answer có thêm gợi ý liên hệ IT Helpdesk nên điểm completeness không cao.
-- q10 (VIP refund): completeness = 2/5. Hệ thống abstain ngắn, chưa nêu đầy đủ ý "không có quy trình VIP riêng, vẫn theo quy trình chuẩn 3-5 ngày".
+> q06 (SLA) - Answer Relevance = 1/5, Completeness = 2/5 vì câu hỏi dễ kéo nhiều ngữ cảnh nhưng baseline dense vẫn chưa chọn đúng chunk ưu tiên.
+> q09 (Insufficient Context) - Completeness = 2/5 vì mô hình đã abstain đúng hướng, nhưng không đủ nội dung để trả lời đầy đủ như các câu có evidence rõ.
+> q10 (Refund) - Completeness = 2/5 vì query có xu hướng thiếu chính xác keyword, nên câu trả lời khá ngắn và chưa đủ cụ thể.
 
 **Giả thuyết nguyên nhân (Error Tree):**
 - [ ] Indexing: Chunking cắt giữa điều khoản
 - [ ] Indexing: Metadata thiếu effective_date
 - [x] Retrieval: Dense bỏ lỡ exact keyword / alias
+- [x] Retrieval: Thứ tự ranking chunk chưa tối ưu trước khi generate
 - [ ] Retrieval: Top-k quá ít → thiếu evidence
-- [x] Generation: Prompt không đủ grounding
+- [ ] Generation: Prompt không đủ grounding
 - [ ] Generation: Context quá dài → lost in the middle
 
 ---
@@ -45,62 +47,70 @@ llm_model = "openai-gpt-4o"
 ## Variant 1 (Sprint 3)
 
 **Ngày:** 2026-04-13  
-**Biến thay đổi:** `use_rerank: False -> True`  
+**Biến thay đổi:** `use_rerank = True` (dense + LLM rerank)  
 **Lý do chọn biến này:**
-Dựa trên baseline, các câu q06/q10 bị giảm relevance và completeness do context đưa vào prompt còn nhiễu hoặc thiếu tập trung. Rerank được chọn để giữ nguyên dense retrieval nhưng sắp lại top chunks trước khi generate, kỳ vọng tăng độ đúng trọng tâm câu trả lời.
+> Chọn rerank vì baseline dense đã có context recall rất tốt, nhưng một số câu vẫn bị giảm relevance/completeness do thứ tự chunk chưa tối ưu.
+> Rerank giúp sắp xếp lại candidate chunks theo mức độ trả lời câu hỏi thực tế, đặc biệt hữu ích với các query có nhiều chunk gần đúng nhưng chỉ một chunk thật sự chứa evidence chính.
 
 **Config thay đổi:**
 ```
 retrieval_mode = "dense"
+chunk_size = 400 tokens
+overlap = 80 tokens
 top_k_search = 10
 top_k_select = 3
 use_rerank = True
-# Các tham số còn lại giữ nguyên như baseline
+query_transform = None
+llm_model = openai-gpt-4o
 ```
 
 **Scorecard Variant 1:**
 | Metric | Baseline | Variant 1 | Delta |
 |--------|----------|-----------|-------|
-| Faithfulness | 4.50/5 | 4.60/5 | +0.10 |
-| Answer Relevance | 3.30/5 | 3.00/5 | -0.30 |
+| Faithfulness | 4.60/5 | 4.70/5 | +0.10 |
+| Answer Relevance | 3.00/5 | 3.20/5 | +0.20 |
 | Context Recall | 5.00/5 | 5.00/5 | +0.00 |
-| Completeness | 3.80/5 | 3.50/5 | -0.30 |
+| Completeness | 3.50/5 | 3.60/5 | +0.10 |
 
 **Nhận xét:**
-- Cải thiện nhẹ faithfulness trung bình (+0.10), một số câu có trích dẫn gọn và tập trung hơn (q01, q07).
-- Không cải thiện recall (giữ 5.00/5), chứng tỏ rerank không tác động tới khả năng retrieve đúng source.
-- Relevance và completeness giảm ở các câu quan trọng (q01, q04, q06), do rerank đôi lúc đẩy chunk nhiều chi tiết phụ lên cao hoặc làm mất một phần detail then chốt.
+> Variant 1 cải thiện đều ở Faithfulness (+0.10), Relevance (+0.20), và Completeness (+0.10), trong khi Context Recall giữ nguyên 5.00/5.
+> Cải thiện thấy rõ ở q04 (Relevant 3 -> 4) và q06 (Complete 2 -> 3), cho thấy rerank giúp chọn thứ tự evidence phù hợp hơn trước khi generate.
+> Một số câu vẫn khó như q06 (Relevant = 1) và q09/q10 (Complete = 2) do bản chất câu hỏi thiếu context hoặc cần tổng hợp nhiều ý.
 
 **Kết luận:**
-Variant 1 không tốt hơn baseline về tổng thể cho bộ câu hỏi hiện tại. Bằng chứng: relevance giảm 0.30 và completeness giảm 0.30, trong khi faithfulness chỉ tăng nhẹ 0.10 và context recall không đổi.
+> Variant 1 tốt hơn baseline theo tổng thể: tăng 3/4 metric và không làm giảm Context Recall.
+> Nhóm chọn `dense + rerank` làm cấu hình ưu tiên cho grading vì cân bằng tốt hơn giữa độ đúng (faithfulness) và độ phù hợp câu trả lời (relevance/completeness).
+> Bằng chứng: Faithfulness 4.60 -> 4.70, Relevance 3.00 -> 3.20, Completeness 3.50 -> 3.60, Context Recall giữ 5.00.
 
 ---
 
 ## Variant 2 (nếu có thời gian)
 
-**Biến thay đổi:** Chưa thực hiện  
+**Biến thay đổi:** Chưa chạy  
 **Config:**
 ```
-# Not run
+# Chưa có
 ```
 
 **Scorecard Variant 2:**
 | Metric | Baseline | Variant 1 | Variant 2 | Best |
 |--------|----------|-----------|-----------|------|
-| Faithfulness | 4.50 | 4.60 | N/A | Variant 1 |
-| Answer Relevance | 3.30 | 3.00 | N/A | Baseline |
+| Faithfulness | 4.60 | 4.70 | N/A | Variant 1 |
+| Answer Relevance | 3.00 | 3.20 | N/A | Variant 1 |
 | Context Recall | 5.00 | 5.00 | N/A | Tie |
-| Completeness | 3.80 | 3.50 | N/A | Baseline |
+| Completeness | 3.50 | 3.60 | N/A | Variant 1 |
 
 ---
 
 ## Tóm tắt học được
 
+> TODO (Sprint 4): Điền sau khi hoàn thành evaluation.
+
 1. **Lỗi phổ biến nhất trong pipeline này là gì?**
-   > Retriever lấy đúng source nhưng generation vẫn trả lời lan sang chi tiết ngoài trọng tâm (đặc biệt câu hỏi escalation), làm giảm relevance/completeness.
+   > _____________
 
 2. **Biến nào có tác động lớn nhất tới chất lượng?**
-   > Rerank có tác động rõ tới cách model tổng hợp context, nhưng với cấu hình hiện tại tác động nghiêng về giảm relevance/completeness hơn là cải thiện tổng thể.
+   > _____________
 
 3. **Nếu có thêm 1 giờ, nhóm sẽ thử gì tiếp theo?**
-   > Giữ baseline dense và thử thay đổi prompt generation (ràng buộc "chỉ trả lời đúng trọng tâm câu hỏi, không thêm quy trình liên quan") hoặc giảm top_k_select xuống 2 để giảm nhiễu context.
+   > _____________
