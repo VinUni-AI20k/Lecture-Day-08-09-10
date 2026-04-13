@@ -38,6 +38,8 @@ TOP_K_SEARCH = 10    # Số chunk lấy từ vector store trước rerank (searc
 TOP_K_SELECT = 3     # Số chunk gửi vào prompt sau rerank/select (top-3 sweet spot)
 
 LLM_MODEL = os.getenv("LLM_MODEL", "gpt-4o-mini")
+MIN_DENSE_SCORE = float(os.getenv("MIN_DENSE_SCORE", "0.45"))
+MIN_HYBRID_SCORE = float(os.getenv("MIN_HYBRID_SCORE", "0.01"))
 
 RERANK_MODEL_NAME = os.getenv(
     "RERANK_MODEL_NAME",
@@ -567,10 +569,43 @@ def call_llm(prompt: str) -> str:
 
     Lưu ý: Dùng temperature=0 hoặc thấp để output ổn định cho evaluation.
     """
-    raise NotImplementedError(
-        "TODO Sprint 2: Implement call_llm().\n"
-        "Chọn Option A (OpenAI) hoặc Option B (Gemini) trong TODO comment."
-    )
+    provider_raw = os.getenv("LLM_PROVIDER", "openai").strip()
+    provider = provider_raw.lower()
+
+    if provider.startswith("sk-") and not os.getenv("OPENAI_API_KEY", "").strip():
+        provider = "openai"
+        os.environ["OPENAI_API_KEY"] = provider_raw
+
+    if provider == "openai":
+        from openai import OpenAI
+
+        api_key = os.getenv("OPENAI_API_KEY", "").strip()
+        if not api_key:
+            raise ValueError("LLM_PROVIDER=openai nhưng thiếu OPENAI_API_KEY trong .env")
+
+        client = OpenAI(api_key=api_key)
+        response = client.chat.completions.create(
+            model=LLM_MODEL,
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.0,
+            max_tokens=512,
+        )
+        return response.choices[0].message.content or ""
+
+    if provider == "gemini":
+        import google.generativeai as genai
+
+        api_key = os.getenv("GOOGLE_API_KEY", "").strip()
+        if not api_key:
+            raise ValueError("LLM_PROVIDER=gemini nhưng thiếu GOOGLE_API_KEY trong .env")
+
+        genai.configure(api_key=api_key)
+        model_name = os.getenv("GEMINI_MODEL", "gemini-1.5-flash")
+        model = genai.GenerativeModel(model_name)
+        response = model.generate_content(prompt)
+        return getattr(response, "text", "") or ""
+
+    raise ValueError(f"LLM_PROVIDER không hợp lệ: {provider}. Dùng 'openai' hoặc 'gemini'.")
 
 
 def rag_answer(
@@ -630,6 +665,26 @@ def rag_answer(
     else:
         raise ValueError(f"retrieval_mode không hợp lệ: {retrieval_mode}")
 
+    if not candidates:
+        return {
+            "query": query,
+            "answer": "Không đủ dữ liệu trong tài liệu hiện có để trả lời câu hỏi này.",
+            "sources": [],
+            "chunks_used": [],
+            "config": config,
+        }
+
+    best_score = max((c.get("score", 0.0) for c in candidates), default=0.0)
+    min_score = MIN_DENSE_SCORE if retrieval_mode == "dense" else MIN_HYBRID_SCORE
+    if best_score < min_score:
+        return {
+            "query": query,
+            "answer": "Không đủ dữ liệu trong tài liệu hiện có để trả lời câu hỏi này.",
+            "sources": [],
+            "chunks_used": [],
+            "config": config,
+        }
+
     if verbose:
         print(f"\n[RAG] Query: {query}")
         print(f"[RAG] Retrieved {len(candidates)} candidates (mode={retrieval_mode})")
@@ -647,6 +702,14 @@ def rag_answer(
 
     # --- Bước 3: Build context và prompt ---
     context_block = build_context_block(candidates)
+    if not context_block.strip():
+        return {
+            "query": query,
+            "answer": "Không đủ dữ liệu trong tài liệu hiện có để trả lời câu hỏi này.",
+            "sources": [],
+            "chunks_used": [],
+            "config": config,
+        }
     prompt = build_grounded_prompt(query, context_block)
 
     if verbose:
@@ -684,20 +747,36 @@ def compare_retrieval_strategies(query: str) -> None:
 
     A/B Rule (từ slide): Chỉ đổi MỘT biến mỗi lần.
     """
+    import sys
+
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8")
+
     print(f"\n{'='*60}")
     print(f"Query: {query}")
     print('='*60)
 
-    strategies = ["dense", "hybrid"]  # Thêm "sparse" sau khi implement
+    strategies = ["dense", "sparse", "hybrid"]
 
     for strategy in strategies:
         print(f"\n--- Strategy: {strategy} ---")
         try:
-            result = rag_answer(query, retrieval_mode=strategy, verbose=False)
-            print(f"Answer: {result['answer']}")
-            print(f"Sources: {result['sources']}")
-        except NotImplementedError as e:
-            print(f"Chưa implement: {e}")
+            if strategy == "dense":
+                candidates = retrieve_dense(query, top_k=TOP_K_SEARCH)
+            elif strategy == "sparse":
+                candidates = retrieve_sparse(query, top_k=TOP_K_SEARCH)
+            elif strategy == "hybrid":
+                candidates = retrieve_hybrid(query, top_k=TOP_K_SEARCH)
+            else:
+                candidates = []
+
+            print(f"Retrieved: {len(candidates)}")
+            for i, c in enumerate(candidates[:5], 1):
+                meta = c.get("metadata", {})
+                src = meta.get("source", "?")
+                sec = meta.get("section", "")
+                score = c.get("score", 0.0)
+                print(f"  [{i}] score={score:.4f} | {src}" + (f" | {sec}" if sec else ""))
         except Exception as e:
             print(f"Lỗi: {e}")
 

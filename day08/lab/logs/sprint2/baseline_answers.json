@@ -1,0 +1,114 @@
+[
+  {
+    "id": "q01",
+    "question": "SLA xử lý ticket P1 là bao lâu?",
+    "answer": "SLA xử lý ticket P1 là 4 giờ để khắc phục và 15 phút để phản hồi ban đầu kể từ khi ticket được tạo [1].",
+    "sources": [
+      "support/sla-p1-2026.pdf",
+      "it/access-control-sop.md"
+    ],
+    "retrieval_mode": "dense",
+    "use_rerank": false,
+    "timestamp": "2026-04-13T15:47:58"
+  },
+  {
+    "id": "q02",
+    "question": "Khách hàng có thể yêu cầu hoàn tiền trong bao nhiêu ngày?",
+    "answer": "Khách hàng có thể yêu cầu hoàn tiền trong vòng 7 ngày làm việc kể từ thời điểm xác nhận đơn hàng [1].",
+    "sources": [
+      "policy/refund-v4.pdf",
+      "hr/leave-policy-2026.pdf"
+    ],
+    "retrieval_mode": "dense",
+    "use_rerank": false,
+    "timestamp": "2026-04-13T15:48:01"
+  },
+  {
+    "id": "q03",
+    "question": "Ai phải phê duyệt để cấp quyền Level 3?",
+    "answer": "Để cấp quyền Level 3, cần có sự phê duyệt của Line Manager, IT Admin và IT Security [2].",
+    "sources": [
+      "it/access-control-sop.md"
+    ],
+    "retrieval_mode": "dense",
+    "use_rerank": false,
+    "timestamp": "2026-04-13T15:48:03"
+  },
+  {
+    "id": "q04",
+    "question": "Sản phẩm kỹ thuật số có được hoàn tiền không?",
+    "answer": "Không đủ dữ liệu trong tài liệu hiện có để trả lời câu hỏi này.",
+    "sources": [],
+    "retrieval_mode": "dense",
+    "use_rerank": false,
+    "timestamp": "2026-04-13T15:48:03"
+  },
+  {
+    "id": "q05",
+    "question": "Tài khoản bị khóa sau bao nhiêu lần đăng nhập sai?",
+    "answer": "Tài khoản bị khóa sau 5 lần đăng nhập sai liên tiếp. Để mở khóa, liên hệ IT Helpdesk hoặc tự reset qua portal SSO [1].",
+    "sources": [
+      "policy/refund-v4.pdf",
+      "support/helpdesk-faq.md"
+    ],
+    "retrieval_mode": "dense",
+    "use_rerank": false,
+    "timestamp": "2026-04-13T15:48:07"
+  },
+  {
+    "id": "q06",
+    "question": "Escalation trong sự cố P1 diễn ra như thế nào?",
+    "answer": "Escalation trong sự cố P1 diễn ra tự động lên Senior Engineer nếu không có phản hồi trong 10 phút kể từ khi ticket được tạo [2].",
+    "sources": [
+      "support/sla-p1-2026.pdf"
+    ],
+    "retrieval_mode": "dense",
+    "use_rerank": false,
+    "timestamp": "2026-04-13T15:48:09"
+  },
+  {
+    "id": "q07",
+    "question": "Approval Matrix để cấp quyền hệ thống là tài liệu nào?",
+    "answer": "Approval Matrix để cấp quyền hệ thống là tài liệu quy định quy trình cấp phép truy cập vào các hệ thống nội bộ của công ty [1].",
+    "sources": [
+      "policy/refund-v4.pdf",
+      "it/access-control-sop.md"
+    ],
+    "retrieval_mode": "dense",
+    "use_rerank": false,
+    "timestamp": "2026-04-13T15:48:10"
+  },
+  {
+    "id": "q08",
+    "question": "Nhân viên được làm remote tối đa mấy ngày mỗi tuần?",
+    "answer": "Nhân viên được làm remote tối đa 2 ngày mỗi tuần sau khi hoàn thành probation period, và lịch remote phải được Team Lead phê duyệt qua HR Portal [1].",
+    "sources": [
+      "hr/leave-policy-2026.pdf"
+    ],
+    "retrieval_mode": "dense",
+    "use_rerank": false,
+    "timestamp": "2026-04-13T15:48:13"
+  },
+  {
+    "id": "q09",
+    "question": "ERR-403-AUTH là lỗi gì và cách xử lý?",
+    "answer": "Không đủ dữ liệu trong tài liệu hiện có để trả lời câu hỏi này.",
+    "sources": [],
+    "retrieval_mode": "dense",
+    "use_rerank": false,
+    "timestamp": "2026-04-13T15:48:13"
+  },
+  {
+    "id": "q10",
+    "question": "Nếu cần hoàn tiền khẩn cấp cho khách hàng VIP, quy trình có khác không?",
+    "answer": "Không có thông tin nào trong ngữ cảnh về quy trình hoàn tiền khẩn cấp cho khách hàng VIP. Tôi không biết.",
+    "sources": [
+      "policy/refund-v4.pdf",
+      "hr/leave-policy-2026.pdf",
+      "it/access-control-sop.md"
+    ],
+    "retrieval_mode": "dense",
+    "use_rerank": false,
+    "timestamp": "2026-04-13T15:48:15"
+  }
+]

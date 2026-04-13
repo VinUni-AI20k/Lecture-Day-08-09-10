@@ -1,0 +1,10 @@
+{
+  "timestamp": "2026-04-13T15:47:51",
+  "collection": "rag_lab",
+  "total_chunks": 29,
+  "missing_metadata_counts": {
+    "source": 0,
+    "section": 0,
+    "effective_date": 0
+  }
+}

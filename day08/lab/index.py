@@ -262,16 +262,14 @@ def get_embedding(text: str) -> List[float]:
 
         api_key = os.getenv("OPENAI_API_KEY", "").strip()
         if not api_key:
-            raise ValueError(
-                "EMBEDDING_PROVIDER=openai nhưng thiếu OPENAI_API_KEY trong .env"
+            provider = "local"
+        else:
+            client = OpenAI(api_key=api_key)
+            response = client.embeddings.create(
+                input=text,
+                model="text-embedding-3-small",
             )
-
-        client = OpenAI(api_key=api_key)
-        response = client.embeddings.create(
-            input=text,
-            model="text-embedding-3-small",
-        )
-        return response.data[0].embedding
+            return response.data[0].embedding
 
     if provider == "local":
         # Lazy-load model một lần để giảm thời gian cho nhiều chunks.
@@ -448,6 +446,11 @@ def inspect_metadata_coverage(db_dir: Path = CHROMA_DB_DIR) -> None:
 # =============================================================================
 
 if __name__ == "__main__":
+    import sys
+
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8")
+
     print("=" * 60)
     print("Sprint 1: Build RAG Index")
     print("=" * 60)
