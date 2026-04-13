@@ -39,7 +39,6 @@ TOP_K_SELECT = 3     # Số chunk gửi vào prompt sau rerank/select (top-3 swe
 LLM_MODEL = os.getenv("LLM_MODEL", "gpt-4o-mini")
 _bm25_index = None
 _bm25_chunks = None
-_rerank_model = None
 
 # =============================================================================
 # RETRIEVAL — DENSE (Vector Search)
@@ -343,6 +342,7 @@ def rerank(
     candidates: List[Dict[str, Any]],
     top_k: int = TOP_K_SELECT,
 ) -> List[Dict[str, Any]]:
+
     if not candidates:
         return candidates
 
@@ -379,6 +379,61 @@ def rerank(
     except Exception as e:
         print(f"[Rerank] Lỗi: {e}, fallback")
         return candidates[:top_k]
+    """
+    Rerank các candidate chunks bằng cross-encoder.
+
+    Cross-encoder: chấm lại "chunk nào thực sự trả lời câu hỏi này?"
+    MMR (Maximal Marginal Relevance): giữ relevance nhưng giảm trùng lặp
+
+    Funnel logic (từ slide):
+      Search rộng (top-20) → Rerank (top-6) → Select (top-3)
+
+    TODO Sprint 3 (nếu chọn rerank):
+    Option A — Cross-encoder:
+        from sentence_transformers import CrossEncoder
+        model = CrossEncoder("cross-encoder/ms-marco-MiniLM-L-6-v2")
+        pairs = [[query, chunk["text"]] for chunk in candidates]
+        scores = model.predict(pairs)
+        ranked = sorted(zip(candidates, scores), key=lambda x: x[1], reverse=True)
+        return [chunk for chunk, _ in ranked[:top_k]]
+
+    Option B — Rerank bằng LLM (đơn giản hơn nhưng tốn token):
+        Gửi list chunks cho LLM, yêu cầu chọn top_k relevant nhất
+
+    Khi nào dùng rerank:
+    - Dense/hybrid trả về nhiều chunk nhưng có noise
+    - Muốn chắc chắn chỉ 3-5 chunk tốt nhất vào prompt
+    """
+    # TODO Sprint 3: Implement rerank
+    # Tạm thời trả về top_k đầu tiên (không rerank)
+    if not candidates:
+        return candidates
+
+    client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+    scored = []
+    for chunk in candidates:
+        prompt = f"""Rate how relevant this text passage is to answering the question.
+Question: {query}
+Passage: {chunk['text'][:500]}
+
+Output ONLY a single integer from 0 to 10. Higher = more relevant."""
+        try:
+            response = client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[{"role": "user", "content": prompt}],
+                temperature=0,
+                max_tokens=5,
+            )
+            score = int(response.choices[0].message.content.strip())
+        except Exception:
+            score = 5
+        chunk_copy = chunk.copy()
+        chunk_copy["rerank_score"] = score / 10.0
+        scored.append((chunk_copy, score))
+
+    scored.sort(key=lambda x: x[1], reverse=True)
+    return [c for c, _ in scored[:top_k]]
+
 
 # =============================================================================
 # QUERY TRANSFORMATION (Sprint 3 alternative)

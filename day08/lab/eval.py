@@ -29,6 +29,7 @@ from rag_answer import rag_answer
 # =============================================================================
 
 TEST_QUESTIONS_PATH = Path(__file__).parent / "data" / "test_questions.json"
+GRADING_QUESTIONS_PATH = Path(__file__).parent / "data" / "grading_questions.json"
 RESULTS_DIR = Path(__file__).parent / "results"
 
 # Cấu hình baseline (Sprint 2)
@@ -531,9 +532,69 @@ Generated: {timestamp}
     return md
 
 
-# =============================================================================
-# MAIN — Chạy evaluation
-# =============================================================================
+def generate_grading_report(results: List[Dict], label: str) -> str:
+    """
+    Tạo báo cáo grading questions dạng markdown với cột points và difficulty.
+    """
+    metrics = ["faithfulness", "relevance", "context_recall", "completeness"]
+    averages = {}
+    for metric in metrics:
+        scores = [r[metric] for r in results if r[metric] is not None]
+        averages[metric] = sum(scores) / len(scores) if scores else None
+
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M")
+
+    md = f"""# Grading Scorecard: {label}
+Generated: {timestamp}
+
+## Summary
+
+| Metric | Average Score |
+|--------|--------------|
+"""
+    for metric, avg in averages.items():
+        avg_str = f"{avg:.2f}/5" if avg else "N/A"
+        md += f"| {metric.replace('_', ' ').title()} | {avg_str} |\n"
+
+    md += "\n## Per-Question Results\n\n"
+    md += "| ID | Difficulty | Category | Points | Faithful | Relevant | Recall | Complete | Answer Preview |\n"
+    md += "|----|-----------|----------|--------|----------|----------|--------|----------|----------------|\n"
+
+    for r in results:
+        answer_preview = r.get("answer", "")[:60].replace("\n", " ")
+        md += (f"| {r['id']} | {r.get('difficulty', 'N/A')} | {r['category']} | "
+               f"{r.get('points', 'N/A')} | {r.get('faithfulness', 'N/A')} | "
+               f"{r.get('relevance', 'N/A')} | {r.get('context_recall', 'N/A')} | "
+               f"{r.get('completeness', 'N/A')} | {answer_preview}... |\n")
+
+    return md
+
+
+def run_grading(
+    config: Dict[str, Any],
+    verbose: bool = True,
+) -> List[Dict[str, Any]]:
+    """
+    Chạy grading_questions.json qua pipeline và chấm điểm.
+    Kết quả có thêm trường 'difficulty' và 'points' so với run_scorecard thông thường.
+    """
+    try:
+        with open(GRADING_QUESTIONS_PATH, "r", encoding="utf-8") as f:
+            grading_questions = json.load(f)
+    except FileNotFoundError:
+        print(f"Không tìm thấy file: {GRADING_QUESTIONS_PATH}")
+        return []
+
+    results = run_scorecard(config=config, test_questions=grading_questions, verbose=verbose)
+
+    # Gắn thêm difficulty và points từ grading_questions vào mỗi row
+    meta_map = {q["id"]: q for q in grading_questions}
+    for row in results:
+        qmeta = meta_map.get(row["id"], {})
+        row["difficulty"] = qmeta.get("difficulty", "N/A")
+        row["points"] = qmeta.get("points", "N/A")
+
+    return results
 
 if __name__ == "__main__":
     print("=" * 60)
@@ -604,3 +665,50 @@ if __name__ == "__main__":
     print("  4. Chạy run_scorecard(VARIANT_CONFIG)")
     print("  5. Gọi compare_ab() để thấy delta")
     print("  6. Cập nhật docs/tuning-log.md với kết quả và nhận xét")
+
+    # =========================================================================
+    # GRADING QUESTIONS — Chạy riêng với grading_questions.json
+    # =========================================================================
+    print("\n" + "=" * 60)
+    print("Grading Questions Evaluation (grading_questions.json)")
+    print("=" * 60)
+
+    print("\n--- Chạy Grading Baseline ---")
+    try:
+        grading_baseline = run_grading(config=BASELINE_CONFIG, verbose=True)
+    except Exception as e:
+        print(f"Lỗi: {e}")
+        grading_baseline = []
+
+    print("\n--- Chạy Grading Variant (hybrid + rerank) ---")
+    try:
+        grading_variant = run_grading(config=VARIANT_CONFIG, verbose=True)
+    except Exception as e:
+        print(f"Lỗi: {e}")
+        grading_variant = []
+
+    if grading_baseline or grading_variant:
+        RESULTS_DIR.mkdir(parents=True, exist_ok=True)
+
+        # 1 markdown tổng hợp baseline + variant
+        md = ""
+        if grading_baseline:
+            md += generate_grading_report(grading_baseline, BASELINE_CONFIG["label"]) + "\n\n---\n\n"
+        if grading_variant:
+            md += generate_grading_report(grading_variant, VARIANT_CONFIG["label"])
+        (RESULTS_DIR / "scorecard_grading.md").write_text(md, encoding="utf-8")
+        print("\nGrading scorecard lưu tại: results/scorecard_grading.md")
+
+        # 1 CSV gộp cả hai
+        combined = (grading_baseline or []) + (grading_variant or [])
+        csv_path = RESULTS_DIR / "grading_results.csv"
+        with open(csv_path, "w", newline="", encoding="utf-8") as f:
+            writer = csv.DictWriter(f, fieldnames=combined[0].keys())
+            writer.writeheader()
+            writer.writerows(combined)
+        print(f"Grading CSV lưu tại: {csv_path}")
+
+        # In A/B nếu có cả hai
+        if grading_baseline and grading_variant:
+            print("\n--- A/B Comparison: Grading Questions ---")
+            compare_ab(grading_baseline, grading_variant)
