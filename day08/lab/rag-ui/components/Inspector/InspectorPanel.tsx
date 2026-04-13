@@ -17,7 +17,11 @@ interface Props {
 }
 
 export function InspectorPanel({ last, loading, streamingSteps, className }: Props) {
-  const steps = streamingSteps ?? last?.pipeline_steps ?? [];
+  // While loading → show live streaming steps as they arrive.
+  // After done  → prefer last.pipeline_steps (contains step5 + full data).
+  const steps = loading
+    ? (streamingSteps ?? [])
+    : (last?.pipeline_steps ?? streamingSteps ?? []);
 
   return (
     <aside className={cn("flex flex-col h-full", className)} style={{ background: "var(--sidebar)" }}>

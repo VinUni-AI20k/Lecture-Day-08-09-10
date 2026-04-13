@@ -1020,10 +1020,11 @@ def rag_answer_stream(
         answer = ("".join(answer_parts)).strip() or ABSTAIN_ANSWER
 
         step5 = {
-            "step": 5, "name": "LLM", "emoji": "5️⃣",
-            "detail": f"**{LLM_MODEL}** · temperature=0 · trả lời bám context.",
+            "step": 5, "name": "LLM Generation", "emoji": "5️⃣",
+            "detail": f"**{LLM_MODEL}** · temperature=0 · {len(answer)} chars · grounded answer.",
             "answer_chars": len(answer),
         }
+        yield {"event": "step", "data": step5}
 
         sources = list({c["metadata"].get("source", "unknown") for c in candidates})
         pipeline_steps = [step1, step2, step3, step4, step5]

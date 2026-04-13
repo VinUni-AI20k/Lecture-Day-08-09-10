@@ -7,7 +7,7 @@ import { Group as PanelGroup, Panel, Separator as PanelResizeHandle } from "reac
 import { streamRag, type RagResponse, type PipelineStep, type StreamRagHandle } from "@/lib/rag-client";
 import { MessageList } from "@/components/Chat/MessageList";
 import { ChatInput } from "@/components/Chat/ChatInput";
-import type { Message } from "@/components/Chat/MessageBubble";
+import type { Message, ChunkMeta } from "@/components/Chat/MessageBubble";
 import { InspectorPanel } from "@/components/Inspector/InspectorPanel";
 import {
   SettingsDrawer,
@@ -112,11 +112,18 @@ export default function ChatPage() {
           },
           onDone(result) {
             setLast(result);
-            setStreamingSteps([]);
+            // Do NOT clear streamingSteps here — InspectorPanel will switch to
+            // last.pipeline_steps (which also contains step5) once loading=false.
+            // streamingSteps is cleared at the start of the next send().
             setMessages((prev) =>
               prev.map((m) =>
                 m.id === asstMsgId
-                  ? { ...m, text: result.answer, isStreaming: false }
+                  ? {
+                      ...m,
+                      text: result.answer,
+                      isStreaming: false,
+                      chunks: result.chunks_used as ChunkMeta[],
+                    }
                   : m
               )
             );

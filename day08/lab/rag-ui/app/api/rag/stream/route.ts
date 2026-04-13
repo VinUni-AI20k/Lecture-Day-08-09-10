@@ -22,27 +22,49 @@ export async function POST(req: NextRequest) {
         accept: "text/event-stream",
       },
       body,
-      // @ts-expect-error -- Node 18+ fetch supports duplex
-      duplex: "half",
       cache: "no-store",
-      signal: req.signal,
+      // Do NOT forward req.signal — avoids early disconnects in dev
     });
 
     if (!r.ok || !r.body) {
-      const text = await r.text();
+      const text = await r.text().catch(() => `HTTP ${r.status}`);
       return new NextResponse(text, {
         status: r.status,
         headers: { "content-type": "application/json", "x-request-id": requestId },
       });
     }
 
-    return new NextResponse(r.body, {
+    // Explicitly pipe with ReadableStream to avoid Next.js dev-mode buffering.
+    const upstreamReader = r.body.getReader();
+    const echoedRid = r.headers.get("x-request-id") || requestId;
+
+    const stream = new ReadableStream({
+      async pull(controller) {
+        try {
+          const { done, value } = await upstreamReader.read();
+          if (done) {
+            controller.close();
+          } else {
+            controller.enqueue(value);
+          }
+        } catch (err) {
+          controller.error(err);
+        }
+      },
+      cancel() {
+        upstreamReader.cancel().catch(() => {});
+      },
+    });
+
+    return new NextResponse(stream, {
       status: 200,
       headers: {
         "content-type": "text/event-stream",
-        "cache-control": "no-cache",
+        "cache-control": "no-cache, no-transform",
         "x-accel-buffering": "no",
-        "x-request-id": r.headers.get("x-request-id") || requestId,
+        "x-request-id": echoedRid,
+        // Prevent Next.js from compressing the SSE stream
+        "transfer-encoding": "chunked",
       },
     });
   } catch (e) {
