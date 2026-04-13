@@ -1,14 +1,14 @@
 # Scorecard: baseline_dense
-Generated: 2026-04-13 17:45
+Generated: 2026-04-13 17:49
 
 ## Summary
 
 | Metric | Average Score |
 |--------|--------------|
 | Faithfulness | 4.80/5 |
-| Relevance | 4.70/5 |
+| Relevance | 4.60/5 |
 | Context Recall | 5.00/5 |
-| Completeness | 4.00/5 |
+| Completeness | 3.80/5 |
 
 ## Per-Question Results
 
@@ -23,4 +23,4 @@ Generated: 2026-04-13 17:45
 | q07 | Access Control | 5 | 5 | 5 | 2 | Every claim in the answer is directly supported by |
 | q08 | HR Policy | 5 | 5 | 5 | 5 | Every claim in the answer is directly supported by |
 | q09 | Insufficient Context | 5 | 5 | None | 2 | Every claim in the answer is directly supported by |
-| q10 | Refund | 5 | 2 | 5 | 4 | The answer accurately reflects the lack of informa |
+| q10 | Refund | 5 | 1 | 5 | 2 | The model answer accurately reflects the lack of i |

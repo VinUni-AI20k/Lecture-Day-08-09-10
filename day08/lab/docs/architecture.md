@@ -68,7 +68,7 @@
 | Query transform | Không | Không dùng query expansion/HyDE/decomposition trong variant này |
 
 **Lý do chọn variant này:**
-> Chọn hybrid vì corpus có cả nội dung diễn đạt tự nhiên (policy, FAQ) lẫn keyword/alias chuyên biệt như `P1`, `CRITICAL`, hoặc tên gọi cũ như "Approval Matrix". Dense retrieval là baseline tốt cho ngữ nghĩa, nhưng hybrid giúp giữ thêm tín hiệu exact-match từ BM25 mà không phải đổi prompt hay thêm rerank.
+> Chọn hybrid vì corpus có cả nội dung diễn đạt tự nhiên (policy, FAQ) lẫn keyword/alias chuyên biệt như `P1`, `CRITICAL`, hoặc tên gọi cũ như "Approval Matrix". Dense retrieval là baseline tốt cho ngữ nghĩa, nhưng hybrid giúp giữ thêm tín hiệu exact-match từ BM25 mà không phải đổi prompt hay thêm rerank. Trong log `grading_run.json`, hybrid đã retrieve đúng 2 nguồn cho các câu cross-document như `gq02` và `gq06`, nhưng chất lượng cuối cùng vẫn phụ thuộc mạnh vào generation/completeness.
 > Ví dụ: "Chọn hybrid vì corpus có cả câu tự nhiên (policy) lẫn mã lỗi và tên chuyên ngành (SLA ticket P1, ERR-403)."
 
 ---
@@ -114,6 +114,12 @@ Answer:
 | Retrieval lỗi | Không tìm được expected source | `score_context_recall()` trong eval.py |
 | Generation lỗi | Answer không grounded / bịa | `score_faithfulness()` trong eval.py |
 | Token overload | Context quá dài → lost in the middle | Kiểm tra độ dài context_block |
+
+**Failure đã gặp trong log chạy thực tế:**
+- `q01`: retrieve đúng `sla_p1_2026.pdf` nhưng answer chọn nhầm chi tiết "24 giờ viết báo cáo sự cố" thay vì cặp SLA chính `15 phút / 4 giờ`.
+- `gq02`: hybrid lấy được cả `hr_leave_policy` và `helpdesk_faq`, nhưng answer chỉ giữ lại chi tiết "2 thiết bị", bỏ mất yêu cầu VPN bắt buộc và tên phần mềm.
+- `gq05`: answer nhầm hoàn toàn luồng `Admin Access (Level 4)` sang thông tin gần với level thấp hơn, cho thấy candidate đúng chưa đủ nếu model chọn sai evidence.
+- `gq09`: answer đúng chu kỳ `90 ngày` và nhắc trước `7 ngày`, nhưng bỏ mất kênh reset password, nên completeness vẫn thấp.
 
 ---
 

@@ -73,15 +73,21 @@ llm_model = gpt-4o-mini
 | Context Recall | 5.00/5 | Chưa có scorecard | Chưa đo |
 | Completeness | 3.20/5 | Chưa có scorecard | Chưa đo |
 
+**Quan sát từ `grading_questions.json` (config `variant_hybrid`):**
+> Đã chạy đủ 10 câu và xuất `logs/grading_run.json` lúc khoảng `2026-04-13T17:52`. Hybrid cho thấy lợi thế rõ ở truy vấn cross-document và emergency path: `gq06` trả về khá đầy đủ quy trình cấp quyền tạm thời trong sự cố P1; `gq03`, `gq08`, `gq10` cũng bám đúng policy tương đối tốt.
+> Các lỗi còn lại chủ yếu là completeness hơn là recall: `gq02` thiếu VPN bắt buộc và Cisco AnyConnect; `gq04` thiếu ý "store credit là tùy chọn"; `gq09` thiếu kênh đổi mật khẩu; `gq07` abstain đúng hướng nhưng mới dừng ở "Tôi không biết", chưa nói rõ là tài liệu không có thông tin này.
+> `gq05` là câu fail lớn nhất: answer nhầm approver, thời gian xử lý và bỏ mất training bắt buộc của `Admin Access (Level 4)`, cho thấy model vẫn dễ chọn sai chi tiết dù retrieve có chứa đúng source `it/access-control-sop.md`.
+
 **Nhận xét:**
-> Từ log `python rag_answer.py`, hybrid cho kết quả tương đương dense ở 3 query demo đã chạy.
-> Với query `Approval Matrix để cấp quyền là tài liệu nào?`, hybrid cho câu trả lời rõ hơn một chút: "tài liệu trước đây có tên..." nên sát alias query hơn dense.
-> Với query `CRITICAL` và query refund, chưa thấy khác biệt rõ giữa dense và hybrid; output gần như giống nhau.
-> Chưa có bằng chứng định lượng để kết luận hybrid cải thiện completeness hay faithfulness trên toàn bộ 10 câu hỏi, vì `eval.py` mới chạy baseline trong log hiện có.
+> Từ log `python rag_answer.py`, hybrid cho kết quả tương đương dense ở các query demo đơn giản và có cải thiện nhẹ về diễn đạt ở query alias `Approval Matrix`.
+> Từ `grading_run.json`, hybrid thực sự hữu ích cho câu hỏi cần nhiều nguồn hoặc keyword rõ như `gq02`, `gq06`, `gq10`, vì output cho thấy hệ thống giữ được đúng source chính.
+> Tuy vậy, hybrid không tự giải quyết được lỗi generation: khi candidate có nhiều chi tiết gần nhau, model vẫn có thể chọn nhầm hoặc rút gọn quá mức như ở `gq05` và `gq09`.
+> Nói ngắn gọn: hybrid cải thiện khả năng retrieve evidence phù hợp, nhưng bottleneck lớn nhất sau tuning vẫn là completeness ở bước answer synthesis.
 
 **Kết luận:**
-> Chưa thể kết luận Variant 1 tốt hơn baseline theo scorecard vì chưa có lần chạy `run_scorecard()` cho hybrid trong log hiện tại.
-> Bằng chứng hiện có chỉ là so sánh định tính trên 3 query demo: hybrid không làm xấu kết quả và có cải thiện nhẹ về diễn đạt ở query alias `Approval Matrix`, nhưng chưa chứng minh được delta trung bình trên 4 metric.
+> Chưa thể kết luận Variant 1 tốt hơn baseline bằng số liệu A/B đầy đủ vì nhóm mới có `scorecard_baseline.md` và `grading_run.json`, chưa có `scorecard_variant.md`.
+> Tuy nhiên, dựa trên log grading hiện có, variant `hybrid` là hướng đúng: nó xử lý tốt hơn các câu cần exact term hoặc nhiều nguồn như `gq02`, `gq06`, `gq10`, đồng thời vẫn abstain an toàn ở `gq07`.
+> Bằng chứng quan trọng nhất từ toàn bộ kết quả hiện có là: retrieval/recall đã khá tốt, còn phần cần cải thiện tiếp theo là answer synthesis và rerank để tránh thiếu ý hoặc chọn sai chi tiết trong cùng một tài liệu.
 
 ---
 
@@ -106,10 +112,10 @@ llm_model = gpt-4o-mini
 ## Tóm tắt học được
 
 1. **Lỗi phổ biến nhất trong pipeline này là gì?**
-   > Retriever thường mang đúng source về, nhưng answer vẫn có thể chọn sai chi tiết hoặc bỏ sót ý quan trọng. Điểm yếu lớn nhất hiện tại là generation/completeness, không phải recall.
+   > Retriever thường mang đúng source về, nhưng answer vẫn có thể chọn sai chi tiết hoặc bỏ sót ý quan trọng. Từ cả baseline scorecard lẫn grading log, điểm yếu lớn nhất hiện tại là generation/completeness, không phải recall.
 
 2. **Biến nào có tác động lớn nhất tới chất lượng?**
-   > Theo cấu trúc code và log demo, retrieval strategy là biến đáng thử nhất cho Sprint 3 vì corpus có nhiều alias và keyword đặc thù. Tuy vậy, trong log hiện tại hybrid mới chỉ cho thấy tín hiệu cải thiện định tính, chưa có số liệu A/B hoàn chỉnh.
+   > Retrieval strategy là biến có tác động nhìn thấy rõ nhất ở giai đoạn tuning vì corpus có nhiều alias, keyword và câu hỏi cross-document. Hybrid giúp giữ evidence đúng tốt hơn, nhưng để kéo chất lượng tổng thể lên nữa thì biến tiếp theo nên là rerank hoặc prompt stricter cho completeness.
 
 3. **Nếu có thêm 1 giờ, nhóm sẽ thử gì tiếp theo?**
-   > Chạy đầy đủ scorecard cho `hybrid`, sau đó thử thêm một biến độc lập như `use_rerank=True` hoặc điều chỉnh prompt để answer bắt buộc nêu đủ "current name / SLA pair / escalation trigger" ở các câu đang thiếu completeness.
+   > Chạy đầy đủ `scorecard_variant.md` cho `hybrid`, sau đó thử một biến độc lập như `use_rerank=True` hoặc prompt template bắt buộc liệt kê đủ các ý chính khi câu hỏi là multi-part. Hai mục tiêu ưu tiên là sửa `gq05` và tăng completeness cho `gq02`, `gq04`, `gq09`.

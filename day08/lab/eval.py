@@ -20,6 +20,7 @@ A/B Rule (từ slide):
 import json
 import csv
 import os
+import argparse
 from pathlib import Path
 from typing import List, Dict, Any, Optional
 from datetime import datetime
@@ -52,9 +53,95 @@ VARIANT_CONFIG = {
     "retrieval_mode": "hybrid",   # Hoặc "dense" nếu chỉ đổi rerank
     "top_k_search": 10,
     "top_k_select": 3,
-    "use_rerank": True,           # Hoặc False nếu variant là hybrid không rerank
-    "label": "variant_hybrid_rerank",
+    "use_rerank": False,          # Variant hiện tại của nhóm là hybrid không rerank
+    "label": "variant_hybrid",
 }
+
+
+def load_questions(path: Path, label: str) -> List[Dict[str, Any]]:
+    """
+    Load một bộ câu hỏi từ file JSON và in preview ngắn.
+    """
+    print(f"\nLoading {label} từ: {path}")
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            questions = json.load(f)
+    except FileNotFoundError:
+        print(f"Không tìm thấy file {path.name}!")
+        return []
+
+    print(f"Tìm thấy {len(questions)} câu hỏi")
+    for q in questions[:3]:
+        category = q.get("category")
+        category_text = f" ({category})" if category else ""
+        print(f"  [{q.get('id', '?')}] {q.get('question', '')}{category_text}")
+    if len(questions) > 3:
+        print("  ...")
+
+    return questions
+
+
+def parse_args() -> argparse.Namespace:
+    """
+    CLI cho eval.py:
+      - Mặc định: chạy scorecard với test_questions.json
+      - grading: chạy grading_questions.json và xuất logs/grading_run.json
+    """
+    parser = argparse.ArgumentParser(
+        description="Run scorecard on test questions or generate grading logs."
+    )
+    parser.add_argument(
+        "--dataset",
+        choices=["test", "grading", "both"],
+        default="test",
+        help="Dataset to run: test, grading, or both. Default is test.",
+    )
+    parser.add_argument(
+        "--config",
+        choices=["baseline", "variant"],
+        default="baseline",
+        help="Pipeline config to use: baseline or variant.",
+    )
+    parser.add_argument(
+        "--compare",
+        action="store_true",
+        help="Run both baseline and variant, then print A/B comparison.",
+    )
+    return parser.parse_args()
+
+
+def get_config(config_name: str) -> Dict[str, Any]:
+    """
+    Resolve tên config CLI sang config dict.
+    """
+    if config_name == "variant":
+        return VARIANT_CONFIG
+    return BASELINE_CONFIG
+
+
+def run_and_save_scorecard(
+    questions: List[Dict[str, Any]],
+    config: Dict[str, Any],
+    prefix: str = "",
+    verbose: bool = True,
+) -> List[Dict[str, Any]]:
+    """
+    Chạy scorecard cho một config và lưu markdown summary.
+    """
+    results = run_scorecard(
+        config=config,
+        test_questions=questions,
+        verbose=verbose,
+    )
+
+    RESULTS_DIR.mkdir(parents=True, exist_ok=True)
+    scorecard_name = f"scorecard_{prefix}{config['label']}.md"
+    scorecard_md = generate_scorecard_summary(results, config["label"])
+    scorecard_path = RESULTS_DIR / scorecard_name
+    scorecard_path.write_text(scorecard_md, encoding="utf-8")
+    print(f"\nScorecard lưu tại: {scorecard_path}")
+
+    return results
 
 
 # =============================================================================
@@ -681,82 +768,84 @@ def generate_grading_log(
 
 
 if __name__ == "__main__":
+    args = parse_args()
+    selected_config = get_config(args.config)
+
     print("=" * 60)
     print("Sprint 4: Evaluation & Scorecard")
     print("=" * 60)
+    print(f"Dataset: {args.dataset}")
+    print(f"Config: {args.config} -> {selected_config}")
+    print(f"Compare mode: {args.compare}")
 
-    # Kiểm tra test questions
-    print(f"\nLoading test questions từ: {TEST_QUESTIONS_PATH}")
-    try:
-        with open(TEST_QUESTIONS_PATH, "r", encoding="utf-8") as f:
-            test_questions = json.load(f)
-        print(f"Tìm thấy {len(test_questions)} câu hỏi")
+    if args.dataset in ("test", "both"):
+        test_questions = load_questions(TEST_QUESTIONS_PATH, "test questions")
 
-        # In preview
-        for q in test_questions[:3]:
-            print(f"  [{q['id']}] {q['question']} ({q['category']})")
-        print("  ...")
+        print("\n--- Chạy Scorecard (test) ---")
+        print("Lưu ý: Cần hoàn thành Sprint 2 trước khi chạy scorecard!")
+        try:
+            if args.compare:
+                baseline_results = run_and_save_scorecard(
+                    test_questions,
+                    BASELINE_CONFIG,
+                    verbose=True,
+                )
+                variant_results = run_and_save_scorecard(
+                    test_questions,
+                    VARIANT_CONFIG,
+                    verbose=True,
+                )
+                compare_ab(
+                    baseline_results,
+                    variant_results,
+                    output_csv="ab_comparison_test.csv",
+                )
+            else:
+                run_and_save_scorecard(
+                    test_questions,
+                    selected_config,
+                    verbose=True,
+                )
 
-    except FileNotFoundError:
-        print("Không tìm thấy file test_questions.json!")
-        test_questions = []
+        except NotImplementedError:
+            print("Pipeline chưa implement. Hoàn thành Sprint 2 trước.")
 
-    # --- Chạy Baseline ---
-    print("\n--- Chạy Baseline ---")
-    print("Lưu ý: Cần hoàn thành Sprint 2 trước khi chạy scorecard!")
-    try:
-        baseline_results = run_scorecard(
-            config=BASELINE_CONFIG,
-            test_questions=test_questions,
-            verbose=True,
-        )
+    if args.dataset in ("grading", "both"):
+        grading_questions = load_questions(GRADING_QUESTIONS_PATH, "grading questions")
 
-        # Save scorecard
-        RESULTS_DIR.mkdir(parents=True, exist_ok=True)
-        baseline_md = generate_scorecard_summary(baseline_results, "baseline_dense")
-        scorecard_path = RESULTS_DIR / "scorecard_baseline.md"
-        scorecard_path.write_text(baseline_md, encoding="utf-8")
-        print(f"\nScorecard lưu tại: {scorecard_path}")
+        if args.compare:
+            print("\n--- Chạy A/B Comparison (grading) ---")
+            baseline_results = run_and_save_scorecard(
+                grading_questions,
+                BASELINE_CONFIG,
+                prefix="grading_",
+                verbose=True,
+            )
+            variant_results = run_and_save_scorecard(
+                grading_questions,
+                VARIANT_CONFIG,
+                prefix="grading_",
+                verbose=True,
+            )
+            compare_ab(
+                baseline_results,
+                variant_results,
+                output_csv="ab_comparison_grading.csv",
+            )
+        else:
+            print("\n--- Chạy Grading Log ---")
+            generate_grading_log(
+                questions_path=GRADING_QUESTIONS_PATH,
+                retrieval_mode=selected_config["retrieval_mode"],
+                use_rerank=selected_config["use_rerank"],
+                top_k_search=selected_config["top_k_search"],
+                top_k_select=selected_config["top_k_select"],
+            )
 
-    except NotImplementedError:
-        print("Pipeline chưa implement. Hoàn thành Sprint 2 trước.")
-        baseline_results = []
-
-    # --- Chạy Variant (sau khi Sprint 3 hoàn thành) ---
-    # TODO Sprint 4: Uncomment sau khi implement variant trong rag_answer.py
-    # print("\n--- Chạy Variant ---")
-    # variant_results = run_scorecard(
-    #     config=VARIANT_CONFIG,
-    #     test_questions=test_questions,
-    #     verbose=True,
-    # )
-    # variant_md = generate_scorecard_summary(variant_results, VARIANT_CONFIG["label"])
-    # (RESULTS_DIR / "scorecard_variant.md").write_text(variant_md, encoding="utf-8")
-
-    # --- A/B Comparison ---
-    # TODO Sprint 4: Uncomment sau khi có cả baseline và variant
-    # if baseline_results and variant_results:
-    #     compare_ab(
-    #         baseline_results,
-    #         variant_results,
-    #         output_csv="ab_comparison.csv"
-    #     )
-
-    print("\n\nViệc cần làm Sprint 4:")
-    print("  1. Hoàn thành Sprint 2 + 3 trước")
-    print("  2. score_* functions đã implement (LLM-as-Judge) — sẵn sàng chạy")
-    print("  3. Chạy run_scorecard(BASELINE_CONFIG)")
-    print("  4. Chạy run_scorecard(VARIANT_CONFIG)")
-    print("  5. Gọi compare_ab() để thấy delta")
-    print("  6. Khi grading_questions.json public (17:00): gọi generate_grading_log()")
-    print("     → Xuất logs/grading_run.json để nộp bài")
-    print("  7. Cập nhật docs/tuning-log.md với kết quả và nhận xét")
-
-    # --- Grading Run (chạy sau 17:00 khi grading_questions.json public) ---
-    # Uncomment khi grading_questions.json đã được public:
-    # print("\n--- Grading Run (17:00+) ---")
-    # generate_grading_log(
-    #     questions_path=GRADING_QUESTIONS_PATH,
-    #     retrieval_mode=VARIANT_CONFIG["retrieval_mode"],
-    #     use_rerank=VARIANT_CONFIG["use_rerank"],
-    # )
+    print("\n\nLệnh gợi ý:")
+    print("  python eval.py")
+    print("  python eval.py --config variant")
+    print("  python eval.py --dataset grading --config variant")
+    print("  python eval.py --dataset both --config variant")
+    print("  python eval.py --dataset grading --compare")
+    print("  python eval.py --dataset test --compare")
