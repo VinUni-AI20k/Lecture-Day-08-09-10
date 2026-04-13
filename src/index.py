@@ -217,7 +217,7 @@ def _split_by_size(
 # Embed các chunk và lưu vào ChromaDB
 # =============================================================================
 
-def get_embedding(text: str) -> List[float]:
+def get_embedding(text: str, task: str = "retrieval.passage") -> List[float]:
     """
     Tạo embedding vector cho một đoạn text sử dụng JINA AI API.
     """
@@ -234,7 +234,7 @@ def get_embedding(text: str) -> List[float]:
     }
     data = {
         "model": "jina-embeddings-v5-text-small",
-        "task": "retrieval.passage",
+        "task": task,
         "normalized": True,
         "input": [text]
     }
