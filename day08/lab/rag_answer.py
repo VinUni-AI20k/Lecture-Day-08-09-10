@@ -395,8 +395,13 @@ def build_grounded_prompt(query: str, context_block: str) -> str:
     - Thêm ngôn ngữ phản hồi (tiếng Việt vs tiếng Anh)
     - Điều chỉnh tone phù hợp với use case (CS helpdesk, IT support)
     """
-    prompt = f"""Answer only from the retrieved context below.
-If the context is insufficient to answer the question, say "Không đủ dữ liệu trong tài liệu hiện có để trả lời câu hỏi này." and do not make up information.
+    prompt = f"""Answer only from the retrieved context below. Do not use outside knowledge.
+
+Decision rules:
+1) If the context directly contains the requested information, answer directly with citation.
+2) If the exact scenario is not explicitly documented, but a general policy/process in context clearly applies, say that the document does not specify a separate case and provide the applicable standard policy/process from context.
+3) Only say "Không đủ dữ liệu trong tài liệu hiện có để trả lời câu hỏi này." when neither direct evidence nor an applicable general policy/process is available in the context.
+
 Cite the source field (in brackets like [1]) when possible.
 Keep your answer short, clear, and factual.
 Respond in the same language as the question.
@@ -413,7 +418,10 @@ Answer:"""
 def call_llm(prompt: str) -> str:
     """
     Gọi LLM để sinh câu trả lời.
-    Hỗ trợ cả OpenAI và Google Gemini, chọn qua LLM_PROVIDER.
+
+    TODO Sprint 2:
+    Chọn một trong hai:
+    Option A — OpenAI (cần OPENAI_API_KEY):
     """
     if LLM_PROVIDER == "openai":
         from openai import OpenAI
