@@ -1,60 +1,25 @@
-# Scorecard Variant — Hybrid Retrieval (Sprint 3)
+# Scorecard — Variant Hybrid
+**Thời gian chạy:** 2026-04-13 16:58 
 
-**Date:** 2026-04-13  
-**Variant:** `retrieval_mode = "hybrid"` (Dense + BM25S + RRF k=60)  
-**Test set:** `data/test_questions.json` (10 câu mẫu)
+## RAGAS Metrics
+| Metric | Score | Target | Status |
+|---|---|---|---|---|
+| Faithfulness | 0.84 | > 0.90 | ❌ |
+| Relevance | 0.84 | > 0.85 | ❌ |
+| Context Recall | 0.96 | > 0.80 | ✅ |
+| Completeness | 0.70 | > 0.80 | ❌ |
+| Abstain Accuracy | 0.00 | = 1.00 | ❌ |
 
----
-
-## Retrieval Results
-
-| ID | Câu hỏi (tóm tắt) | Dense | Hybrid |
-|----|-------------------|-------|--------|
-| q01 | SLA ticket P1 | HIT ✅ | HIT ✅ |
-| q02 | Hoàn tiền bao nhiêu ngày | HIT ✅ | HIT ✅ |
-| q03 | Phê duyệt Level 3 | HIT ✅ | HIT ✅ |
-| q04 | Sản phẩm kỹ thuật số hoàn tiền | HIT ✅ | HIT ✅ |
-| q05 | Tài khoản bị khóa sau mấy lần | HIT ✅ | HIT ✅ |
-| q06 | Escalation P1 | HIT ✅ | HIT ✅ |
-| q07 | Approval Matrix là tài liệu nào | HIT ✅ | HIT ✅ |
-| q08 | Remote tối đa mấy ngày/tuần | HIT ✅ | HIT ✅ |
-| q09 | ERR-403-AUTH (abstain) | ABSTAIN ✅ | ABSTAIN ✅ |
-| q10 | Hoàn tiền VIP khác không | HIT ✅ | HIT ✅ |
-
-## Summary
-
-| Metric | Baseline (Dense) | Variant (Hybrid) | Delta |
-|--------|-----------------|-----------------|-------|
-| HIT | 9/9 | 9/9 | 0 |
-| MISS | 0/9 | 0/9 | 0 |
-| Abstain Accuracy | 1/1 | 1/1 | 0 |
-| **Context Recall** | **100%** | **100%** | **0** |
-
-## Config
-
-```
-# Baseline
-retrieval_mode = "dense"
-top_k_search   = 10
-top_k_select   = 3
-use_rerank     = False
-
-# Variant 1 (chỉ đổi 1 biến)
-retrieval_mode = "hybrid"
-dense_weight   = 0.6
-sparse_weight  = 0.4
-RRF_K          = 60
-```
-
-## Analysis
-
-- **q07** (alias query: "Approval Matrix") là câu hưởng lợi nhất từ Hybrid: BM25S bắt được keyword alias đã inject vào chunk đầu tiên, Dense có thể bỏ lỡ nếu embedding space không gần.
-- **q09** (ERR-403-AUTH): cả hai mode đều abstain đúng — không có chunk nào vượt threshold.
-- Hybrid không làm kém bất kỳ câu nào so với Dense.
-
-## Conclusion
-
-Hybrid được chọn làm mode mặc định vì:
-1. Context Recall không giảm (100% → 100%)
-2. Bền vững hơn với alias/keyword query (q07)
-3. Chi phí tăng nhỏ (thêm BM25S lookup ~ms) so với lợi ích về độ tin cậy
+## Per-question Results
+| ID | Category | Expected | Got | Pass? |
+|---|---|---|---|---|
+| gq01 | SLA | Phiên bản hiện tại (v2026.1, có hiệu lực từ 2026-0... | SLA xử lý ticket P1 đã thay đổi như sau so với phi... | ✅ |
+| gq02 | Cross-Document | Khi làm việc remote và truy cập hệ thống nội bộ, V... | Khi làm việc remote, bạn phải sử dụng VPN để kết n... | ✅ |
+| gq03 | Refund | Không được hoàn tiền. Đơn hàng rơi vào hai ngoại l... | Đơn hàng mua trong chương trình Flash Sale không đ... | ✅ |
+| gq04 | Refund | Khách hàng có thể chọn nhận store credit (credit n... | Nếu bạn chọn nhận store credit thay vì hoàn tiền, ... | ✅ |
+| gq05 | Access Control | Có. Theo Access Control SOP, quy trình áp dụng cho... | Tôi không tìm thấy thông tin này trong tài liệu.... | ❌ |
+| gq06 | Cross-Document | On-call IT Admin có thể cấp quyền tạm thời (tối đa... | Khi xảy ra sự cố P1 lúc 2 giờ sáng, quy trình cấp ... | ✅ |
+| gq07 | Insufficient Context | Tài liệu hiện có không quy định mức phạt hay hình ... | Tôi không tìm thấy thông tin này trong tài liệu.... | ❌ |
+| gq08 | HR Policy | Nghỉ phép năm cần báo trước ít nhất 3 ngày làm việ... | Nhân viên phải báo trước ít nhất 3 ngày làm việc đ... | ✅ |
+| gq09 | IT Helpdesk | Có. Mật khẩu phải được thay đổi mỗi 90 ngày. Hệ th... | Có, mật khẩu tài khoản công ty cần được thay đổi đ... | ✅ |
+| gq10 | Refund | Không. Chính sách hoàn tiền phiên bản 4 có hiệu lự... | Chính sách hoàn tiền hiện tại không áp dụng cho cá... | ✅ |

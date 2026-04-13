@@ -38,25 +38,22 @@ BASELINE_CONFIG = {
     "retrieval_mode": "dense",
     "top_k_search": 10,
     "top_k_select": 3,
-    "use_rerank": False,
     "label": "baseline_dense",
 }
 
 # Cấu hình variant (Sprint 3 — điều chỉnh theo lựa chọn của nhóm)
-# TODO Sprint 4: Cập nhật VARIANT_CONFIG theo variant nhóm đã implement
 VARIANT_CONFIG = {
-    "retrieval_mode": "hybrid",   # Hoặc "dense" nếu chỉ đổi rerank
+    "retrieval_mode": "hybrid",
     "top_k_search": 10,
     "top_k_select": 3,
-    "use_rerank": True,           # Hoặc False nếu variant là hybrid không rerank
-    "label": "variant_hybrid_rerank",
+    "label": "variant_hybrid",
 }
 api_base = os.getenv("OPENAI_API_BASE")
 # taans
 def get_judge_llm():
     """Khởi tạo LLM làm giám khảo chấm điểm"""
     return ChatOpenAI(
-        model=os.getenv("LLM_MODEL", "openai/gpt-4o-mini"),
+        model=os.getenv("LLM_MODEL", "gpt-4o-mini"),
         openai_api_key=os.getenv("OPENAI_API_KEY"),
         openai_api_base=api_base if api_base else None,
         temperature=0
@@ -113,7 +110,7 @@ def score_faithfulness(
              Rate the faithfulness on a scale of 1-5.
              5 = completely grounded in the provided context.
              1 = answer contains information not in the context.
-             Output JSON: {'score': <int>, 'reason': '<string>'}"""
+             Output JSON: {{"score": int, "reason": "string"}}"""
     try:
         response = llm.invoke(prompt)
         import re,json
@@ -331,7 +328,6 @@ def run_scorecard(
                 retrieval_mode=config.get("retrieval_mode", "dense"),
                 top_k_search=config.get("top_k_search", 10),
                 top_k_select=config.get("top_k_select", 3),
-                use_rerank=config.get("use_rerank", False),
                 verbose=False,
             )
             answer = result["answer"]
