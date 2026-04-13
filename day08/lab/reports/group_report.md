@@ -28,9 +28,9 @@ Nhóm đã xây dựng RAG pipeline hoàn chỉnh với 4 sprints:
 - **Kết quả:** 29 chunks với metadata đầy đủ, không có chunk bị cắt giữa section
 
 ### Embedding Model
-- **Quyết định:** Sentence Transformers (paraphrase-multilingual-MiniLM-L12-v2) local
-- **Lý do:** Miễn phí, nhanh, không cần API key, đủ tốt cho tiếng Việt
-- **Trade-off:** Chất lượng embedding thấp hơn OpenAI một chút nhưng tiết kiệm chi phí
+- **Quyết định:** OpenAI Embeddings (`text-embedding-3-small`) qua `OPENAI_API_KEY` của nhóm
+- **Lý do:** Đồng bộ môi trường team, giảm sai khác local machine, chất lượng semantic retrieval ổn định hơn khi chạy eval
+- **Trade-off:** Có chi phí API và phụ thuộc network, nhưng phù hợp mục tiêu demo/grading đồng nhất giữa các thành viên
 
 ### Retrieval Strategy
 - **Baseline:** Dense (embedding similarity)
@@ -47,43 +47,41 @@ Nhóm đã xây dựng RAG pipeline hoàn chỉnh với 4 sprints:
 ### Metrics (Kết quả thực tế từ LLM-as-Judge)
 | Metric | Baseline (Dense) | Variant (Hybrid) | Delta |
 |--------|------------------|------------------|-------|
-| Faithfulness | 4.60/5 | 4.10/5 | **-0.50** ⚠️ |
-| Answer Relevance | 4.40/5 | 4.30/5 | -0.10 |
+| Faithfulness | 4.50/5 | 4.30/5 | -0.20 |
+| Answer Relevance | 4.30/5 | 4.50/5 | +0.20 |
 | Context Recall | 5.00/5 | 5.00/5 | 0.00 ✅ |
-| Completeness | 4.60/5 | 4.20/5 | **-0.40** ⚠️ |
+| Completeness | 4.00/5 | 4.20/5 | +0.20 |
 
 ### Phân tích chi tiết
 
 **Điểm mạnh của Baseline:**
 - Context Recall hoàn hảo (5.00/5) - retrieve đúng 100% expected sources
-- Faithfulness cao (4.60/5) - answer bám sát evidence
-- Completeness tốt (4.60/5) - đầy đủ thông tin quan trọng
+- Faithfulness cao hơn variant (4.50 vs 4.30) - answer bám sát evidence hơn
 - Abstain đúng 100% với câu không có docs (q09)
 
-**Vấn đề của Variant (Hybrid):**
-- Faithfulness giảm mạnh (-0.50) do BM25 retrieve chunks không relevant
-- Completeness giảm (-0.40) vì chunks sai focus
-- Ví dụ q06: Hybrid retrieve về "access control" thay vì "SLA escalation" vì keyword "P1" match quá nhiều
+**Điểm mạnh và điểm yếu của Variant (Hybrid):**
+- Tăng Relevance (+0.20) và Completeness (+0.20)
+- Giảm Faithfulness (-0.20), đặc biệt ở câu alias/access control
+- Ví dụ q07: variant trả lời đúng tên tài liệu nhưng judge đánh dấu có chi tiết chưa được hỗ trợ trực tiếp trong chunk
 
 **Câu hỏi Variant kém hơn:**
-- q05: Faithfulness 5→4 (thêm thông tin không chắc chắn)
-- q06: Completeness 5→2 (trả lời sai focus hoàn toàn)
-- q09: Faithfulness 5→1 (abstain quá ngắn, thiếu context)
+- q07: Faithfulness 5→2 (alias mapping tốt hơn nhưng grounding chưa chặt)
+- q03: cả baseline và variant đều bị judge phạt faithfulness ở một chi tiết phê duyệt level 3
 
 **Root Cause:**
-BM25 trong Hybrid quá aggressive với keyword frequency cao (P1, Level 3, remote xuất hiện nhiều lần trong corpus), đẩy chunks ít semantic relevant lên top.
+Hybrid với BM25 + RRF mang lại lợi ích keyword match nhưng cũng có rủi ro kéo nhiễu; khi keyword lặp lại nhiều trong corpus, cần tuning weight hoặc thêm rerank để giữ grounding.
 
-**Kết luận:** Dense retrieval đơn giản nhưng hiệu quả hơn cho corpus này. Hybrid cần fine-tuning BM25 weights hoặc better tokenization cho tiếng Việt.
+**Kết luận:** Dense vẫn là baseline an toàn về faithfulness; Hybrid có tiềm năng nhưng cần fine-tuning BM25 weights/rerank trước khi dùng mặc định.
 
 ## 4. Challenges và Solutions
 
-### Challenge 1: Hybrid không cải thiện như kỳ vọng
-- **Vấn đề:** Kỳ vọng Hybrid (Dense + BM25) tốt hơn Dense nhưng kết quả ngược lại
+### Challenge 1: Trade-off giữa Faithfulness và Relevance
+- **Vấn đề:** Hybrid cải thiện relevance/completeness nhưng giảm faithfulness
 - **Root cause phát hiện:** 
   - BM25 match keyword quá aggressive với terms có frequency cao (P1, Level 3, remote)
   - Ví dụ q06: Query "Escalation P1" → BM25 match "P1" trong access control docs → retrieve sai context
   - Dense semantic search tốt hơn cho corpus có natural language nhiều
-- **Lesson learned:** Phải test và hiểu đặc điểm corpus trước khi áp dụng advanced techniques. "More complex" không luôn = "better"
+- **Lesson learned:** Phải chọn objective ưu tiên (faithfulness hay coverage) và test định lượng trước khi chốt cấu hình
 - **Potential fix:** Giảm BM25 weight xuống 0.2, hoặc implement better Vietnamese tokenization
 
 ### Challenge 2: Completeness có thể cải thiện
@@ -128,6 +126,6 @@ BM25 trong Hybrid quá aggressive với keyword frequency cao (P1, Level 3, remo
 
 ## 7. Kết luận
 
-Nhóm đã hoàn thành đầy đủ 4 sprints với RAG pipeline hoạt động tốt. Baseline (Dense) đạt faithfulness 4.60/5 và context recall 5.00/5. Variant (Hybrid) không cải thiện nhưng nhóm đã học được bài học quan trọng về việc hiểu đặc điểm data trước khi chọn advanced techniques.
+Nhóm đã hoàn thành đầy đủ 4 sprints với pipeline chạy end-to-end bằng OpenAI API key của nhóm (`index.py -> rag_answer.py -> eval.py`). Baseline đạt faithfulness 4.50/5 và context recall 5.00/5; Variant đạt relevance/completeness tốt hơn nhẹ nhưng giảm faithfulness. Nhóm chọn baseline làm cấu hình ổn định và ghi nhận hướng tối ưu tiếp theo cho hybrid.
 
 Hệ thống sẵn sàng cho grading questions và có thể scale cho production với một số cải tiến về error handling và monitoring.

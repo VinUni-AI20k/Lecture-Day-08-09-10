@@ -41,10 +41,10 @@ Hệ thống RAG (Retrieval-Augmented Generation) để trả lời câu hỏi v
 | Metadata fields | source, section, effective_date, department, access | Phục vụ filter, freshness, citation |
 
 ### Embedding model
-- **Model**: paraphrase-multilingual-MiniLM-L12-v2 (Sentence Transformers, local)
+- **Model**: text-embedding-3-small (OpenAI Embeddings)
 - **Vector store**: ChromaDB (PersistentClient)
 - **Similarity metric**: Cosine
-- **Lý do chọn local**: Miễn phí, nhanh, không cần API key, đủ tốt cho tiếng Việt
+- **Lý do chọn API key nhóm**: Đồng bộ môi trường triển khai chung của team, chất lượng embedding ổn định hơn cho toàn bộ pipeline và evaluation
 
 ---
 
@@ -121,12 +121,12 @@ Answer:
 ### Metrics (Kết quả thực tế)
 | Metric | Baseline | Variant | Delta |
 |--------|----------|---------|-------|
-| Faithfulness | 4.60/5 | 4.10/5 | **-0.50** |
-| Answer Relevance | 4.40/5 | 4.30/5 | -0.10 |
+| Faithfulness | 4.50/5 | 4.30/5 | -0.20 |
+| Answer Relevance | 4.30/5 | 4.50/5 | +0.20 |
 | Context Recall | 5.00/5 | 5.00/5 | 0.00 |
-| Completeness | 4.60/5 | 4.20/5 | **-0.40** |
+| Completeness | 4.00/5 | 4.20/5 | +0.20 |
 
-**Kết luận:** Baseline (Dense) tốt hơn Variant (Hybrid) đáng kể. Hybrid không cải thiện vì BM25 match keyword quá aggressive với terms phổ biến (P1, Level 3), dẫn đến retrieve chunks không relevant về semantic.
+**Kết luận:** Baseline (Dense) ổn định hơn về faithfulness, trong khi Variant (Hybrid) cải thiện relevance/completeness ở một số câu hỏi thiếu ngữ cảnh đặc thù. Hybrid tạo trade-off, chưa đủ tốt để thay baseline làm cấu hình mặc định.
 
 ### Scoring Method
 - **LLM-as-Judge**: Sử dụng GPT-4o-mini để chấm tự động
@@ -151,7 +151,7 @@ Answer:
 
 | Component | Technology | Version |
 |-----------|-----------|---------|
-| Embedding | Sentence Transformers | paraphrase-multilingual-MiniLM-L12-v2 |
+| Embedding | OpenAI Embeddings | text-embedding-3-small |
 | Vector Store | ChromaDB | 0.5.0+ |
 | LLM | OpenAI | gpt-4o-mini |
 | Sparse Retrieval | rank-bm25 | 0.2.2 |

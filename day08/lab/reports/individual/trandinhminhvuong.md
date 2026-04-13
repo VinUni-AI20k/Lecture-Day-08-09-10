@@ -11,13 +11,13 @@
 
 Trong lab này, tôi chịu trách nhiệm Sprint 4 (Evaluation) và documentation. Công việc chính:
 
-Đầu tiên, implement evaluation pipeline trong `eval.py` với 4 scoring functions sử dụng LLM-as-Judge (GPT-4o-mini). Mỗi metric có logic riêng: Context Recall tính recall từ expected sources, Faithfulness dùng LLM kiểm tra grounding, Relevance đánh giá answer có trả lời đúng câu hỏi, Completeness so sánh với expected answer.
+Đầu tiên, tôi implement evaluation pipeline trong `eval.py` với 4 scoring functions sử dụng LLM-as-Judge (GPT-4o-mini). Mỗi metric có logic riêng: Context Recall tính recall từ expected sources, Faithfulness dùng LLM kiểm tra grounding, Relevance đánh giá answer có trả lời đúng câu hỏi, Completeness so sánh với expected answer.
 
 Thứ hai, implement `run_scorecard()` để chạy tự động 10 test questions, chấm điểm và generate markdown report. Function tích hợp với `rag_answer()` của team, nhận results và chấm theo 4 metrics.
 
-Thứ ba, implement `compare_ab()` để so sánh baseline vs variant, tính delta và export CSV. Kết quả: Baseline tốt hơn Variant ở 3/4 metrics.
+Thứ ba, tôi implement `compare_ab()` để so sánh baseline vs variant, tính delta và export CSV. Sau khi chạy lại đầy đủ bằng `OPENAI_API_KEY` của nhóm, kết quả mới là: Baseline tốt hơn ở Faithfulness (-0.20 cho variant), còn Variant tốt hơn ở Relevance (+0.20) và Completeness (+0.20), Context Recall hòa (5.00/5).
 
-Cuối cùng, viết documentation cho `docs/architecture.md` và `reports/group_report.md` với phân tích challenges và recommendations.
+Cuối cùng, tôi cập nhật documentation cho `docs/architecture.md`, `docs/tuning-log.md` và `reports/group_report.md` để phản ánh đúng cấu hình chạy thật bằng OpenAI embeddings (`text-embedding-3-small`), không còn dùng local embedding.
 
 ---
 
@@ -27,15 +27,15 @@ Sau lab này, tôi hiểu sâu hơn về evaluation trong RAG systems. RAG có n
 
 Tôi cũng hiểu về LLM-as-Judge - technique mạnh để automate evaluation. Học được cách design prompt cho judge: rõ ràng về scale, yêu cầu structured JSON output, provide examples. GPT-4o-mini chấm khá consistent nhưng đôi khi strict quá (q03 faithfulness = 2 có thể false negative).
 
-Quan trọng nhất: "more complex ≠ better". Evaluation cho thấy Baseline (Dense) tốt hơn Variant (Hybrid) với faithfulness 4.60 vs 4.10. Phải test và measure impact thực tế, không assume advanced technique luôn tốt hơn. A/B testing đúng cách giúp identify root cause: BM25 match keyword quá aggressive.
+Quan trọng nhất: "more complex ≠ better". Evaluation cho thấy Hybrid tạo trade-off chứ không thắng tuyệt đối: Faithfulness giảm nhẹ nhưng Relevance/Completeness tăng nhẹ. Phải test và đo tác động thực tế, không assume advanced technique luôn tốt hơn. A/B testing đúng cách giúp identify root cause: BM25 match keyword có lúc kéo thêm nhiễu.
 
 ---
 
 ## 3. Điều tôi ngạc nhiên hoặc gặp khó khăn
 
-Điều ngạc nhiên nhất là kết quả A/B comparison. Tôi kỳ vọng Hybrid ngang bằng Dense, nhưng thực tế kém hơn đáng kể: Faithfulness giảm 0.50 điểm, Completeness giảm 0.40 điểm. Phải deep dive per-question analysis để hiểu tại sao.
+Điều ngạc nhiên nhất là kết quả A/B comparison thay đổi theo điều kiện chạy thật với API key chung của nhóm. Tôi kỳ vọng Hybrid sẽ thắng rõ ràng, nhưng kết quả thực tế là chỉ cải thiện một phần: Relevance/Completeness tăng nhẹ, đổi lại Faithfulness giảm. Phải deep dive per-question analysis để hiểu vì sao.
 
-Khó khăn lớn nhất là debug q06 về "Escalation P1". Baseline trả lời đúng (completeness 5/5), Variant trả lời về access control (completeness 2/5) - sai focus hoàn toàn. Trace thấy BM25 match "P1" trong access control docs, đẩy chunks không relevant lên top.
+Khó khăn lớn nhất là debug các câu alias và insufficient-context như q07, q09. Có câu variant trả lời nghe hợp lý hơn với người đọc nhưng lại bị judge phạt faithfulness vì câu chữ không bám sát chunk trích xuất. Điều này cho thấy cần cân bằng giữa "đúng ý" và "grounded".
 
 Khó khăn khác là thiết kế Context Recall scoring. Ban đầu exact matching fail vì format khác nhau ("policy/refund-v4.pdf" vs "policy_refund_v4.txt"). Phải chuyển sang partial matching bằng filename lowercase mới work.
 
@@ -51,19 +51,19 @@ Cũng gặp LLM-as-Judge timeout khi chấm 10 câu liên tục. Thêm error han
 
 Câu này cho thấy rõ tại sao Hybrid kém hơn Dense. Expected: "Ticket P1 auto-escalate lên Senior Engineer nếu không phản hồi trong 10 phút".
 
-**Baseline:** Faithfulness 5/5, Completeness 5/5. Trả lời chính xác: "Nếu không có phản hồi trong 10 phút, tự động escalate lên Senior Engineer." Dense retrieval lấy đúng chunks từ SLA document.
+**Baseline:** Faithfulness 4/5, Completeness 5/5. Trả lời đầy đủ flow escalation và bám khá sát context.
 
-**Variant:** Faithfulness 5/5, Completeness 2/5. Trả lời về "cấp quyền tạm thời trong P1" - sai focus hoàn toàn. Nói về access control thay vì escalation.
+**Variant:** Faithfulness 5/5, Completeness 4/5. Trả lời ngắn gọn hơn, vẫn đúng trọng tâm về điều kiện auto-escalate sau 10 phút.
 
-**Root cause:** BM25 match "P1" quá aggressive. Từ "P1" xuất hiện trong cả SLA và access control docs. BM25 đẩy access control chunks lên top vì nhiều exact matches, mất chunks về escalation. Đây là keyword frequency problem - khi term xuất hiện nhiều, BM25 không phân biệt context nào relevant.
+**Root cause:** Đây là bài toán weighting và rerank. Hybrid có thể tận dụng keyword tốt, nhưng khi thiếu lớp lọc cuối (cross-encoder), một số câu alias có thể bị giảm grounding score dù nội dung trả lời nhìn chung vẫn hợp lý.
 
-**Lesson:** Lỗi ở retrieval, không phải generation. Model generate đúng dựa trên chunks nhận được, nhưng chunks sai từ đầu. "Garbage in, garbage out".
+**Lesson:** Không nên đánh giá một retrieval strategy chỉ qua một câu; cần nhìn toàn bộ metric và per-question delta để thấy trade-off thật.
 
 ---
 
 ## 5. Nếu có thêm thời gian, tôi sẽ làm gì?
 
-Nếu có thêm 2-3 giờ, tôi sẽ implement ensemble judging - chạy 3 judges (GPT-4o-mini, GPT-4, Claude) và lấy median score. Kết quả cho thấy q03 faithfulness = 2 có thể false negative, ensemble giảm variance.
+Nếu có thêm 2-3 giờ, tôi sẽ implement ensemble judging - chạy nhiều judges và lấy median score để giảm bias của một model judge duy nhất.
 
 Tôi cũng sẽ thêm more test questions cho edge cases: multi-hop questions (combine info từ 2+ docs), numerical questions (SLA time, refund days), negation questions ("Sản phẩm nào KHÔNG được hoàn tiền?"). Hiện tại 10 câu chưa đủ test thoroughly.
 

@@ -16,27 +16,28 @@ overlap = 80 tokens
 top_k_search = 10
 top_k_select = 3
 use_rerank = False
-llm_model = gpt-4o-mini (fallback: gemini-1.5-flash)
+embedding_backend = OpenAI text-embedding-3-small (via OPENAI_API_KEY)
+llm_model = gpt-4o-mini
 ```
 
 **Scorecard Baseline:**
 | Metric | Average Score |
 |--------|--------------|
-| Faithfulness | 5.00 /5 |
-| Answer Relevance | 2.00 /5 |
-| Context Recall | 0.00 /5 |
-| Completeness | 1.00 /5 |
+| Faithfulness | 4.50 /5 |
+| Answer Relevance | 4.30 /5 |
+| Context Recall | 5.00 /5 |
+| Completeness | 4.00 /5 |
 
 **Câu hỏi yếu nhất (điểm thấp):**
-q01, q02, q03 (và hầu như toàn bộ tập test) có completeness thấp vì chưa build index `rag_lab`, nên retriever không có dữ liệu để lấy context.
-Kết quả baseline hiện tại chủ yếu phản ánh trạng thái "abstain an toàn" chứ chưa phản ánh chất lượng retrieval thật.
+- `q09` (Insufficient Context): Relevance 1/5, Completeness 1/5 do câu trả lời chỉ "Tôi không biết."
+- `q10` (Refund VIP): Relevance 2/5, Completeness 2/5 do thiếu nêu rõ "không có quy trình VIP riêng, vẫn theo quy trình chuẩn 3-5 ngày."
 
 **Giả thuyết nguyên nhân (Error Tree):**
 - [ ] Indexing: Chunking cắt giữa điều khoản
 - [ ] Indexing: Metadata thiếu effective_date
 - [x] Retrieval: Dense bỏ lỡ exact keyword / alias
-- [x] Retrieval: Top-k quá ít → thiếu evidence
-- [ ] Generation: Prompt không đủ grounding
+- [ ] Retrieval: Top-k quá ít → thiếu evidence
+- [x] Generation: Prompt chưa ép model trả lời đầy đủ với câu thiếu ngữ cảnh đặc biệt (VIP, alias)
 - [ ] Generation: Context quá dài → lost in the middle
 
 ---
@@ -58,18 +59,21 @@ retrieval_mode = "hybrid"
 **Scorecard Variant 1:**
 | Metric | Baseline | Variant 1 | Delta |
 |--------|----------|-----------|-------|
-| Faithfulness | 5.00/5 | TODO | TODO |
-| Answer Relevance | 2.00/5 | TODO | TODO |
-| Context Recall | 0.00/5 | TODO | TODO |
-| Completeness | 1.00/5 | TODO | TODO |
+| Faithfulness | 4.50/5 | 4.30/5 | -0.20 |
+| Answer Relevance | 4.30/5 | 4.50/5 | +0.20 |
+| Context Recall | 5.00/5 | 5.00/5 | 0.00 |
+| Completeness | 4.00/5 | 4.20/5 | +0.20 |
 
 **Nhận xét:**
-Pipeline variant đã code xong (sparse BM25 + RRF hybrid + rerank fallback).
-Cần chạy lại sau khi build index để có so sánh thực nghiệm chính xác theo từng câu.
+- Hybrid cải thiện nhóm câu thiếu ngữ cảnh (`q09`: baseline 1.75 -> variant 3.25 điểm trung bình/câu).
+- Hybrid giảm faithfulness ở câu alias/access control (`q07`: faithfulness 5 -> 2), cho thấy BM25 kéo thêm chunk nhiễu.
+- Tổng thể: variant không vượt trội baseline toàn diện, nhưng tốt hơn ở Relevance/Completeness.
 
 **Kết luận:**
-Chưa kết luận định lượng vì baseline hiện tại chạy khi chưa có index.
-Bước kế tiếp là build index và chạy đủ A/B để xác nhận delta trên context recall và completeness.
+Khi chạy với OpenAI embeddings + OpenAI LLM judge, variant hybrid tạo trade-off rõ ràng:
+- Tăng khả năng trả lời ở câu thiếu ngữ cảnh đặc thù.
+- Giảm độ trung thành ở một số câu alias/keyword.
+Baseline dense vẫn ổn định hơn về faithfulness.
 
 ---
 
@@ -84,22 +88,20 @@ Bước kế tiếp là build index và chạy đủ A/B để xác nhận delta
 **Scorecard Variant 2:**
 | Metric | Baseline | Variant 1 | Variant 2 | Best |
 |--------|----------|-----------|-----------|------|
-| Faithfulness | ? | ? | ? | ? |
-| Answer Relevance | ? | ? | ? | ? |
-| Context Recall | ? | ? | ? | ? |
-| Completeness | ? | ? | ? | ? |
+| Faithfulness | 4.50 | 4.30 | TBD | Baseline |
+| Answer Relevance | 4.30 | 4.50 | TBD | Variant 1 |
+| Context Recall | 5.00 | 5.00 | TBD | Tie |
+| Completeness | 4.00 | 4.20 | TBD | Variant 1 |
 
 ---
 
 ## Tóm tắt học được
 
-> TODO (Sprint 4): Điền sau khi hoàn thành evaluation.
-
 1. **Lỗi phổ biến nhất trong pipeline này là gì?**
-   > Build index chưa được chạy trước retrieval, khiến toàn bộ pipeline rơi vào chế độ abstain.
+   > Misalignment giữa alias/keyword và semantic intent trong Hybrid retrieval làm giảm faithfulness ở một số câu.
 
 2. **Biến nào có tác động lớn nhất tới chất lượng?**
-   > Retrieval strategy (đặc biệt hybrid cho câu hỏi chứa alias/keyword).
+   > Retrieval strategy (Dense vs Hybrid) có tác động lớn nhất, rõ nhất ở q07 và q09.
 
 3. **Nếu có thêm 1 giờ, nhóm sẽ thử gì tiếp theo?**
-   > Bật cross-encoder rerank để lọc top-k cuối và giảm chunk nhiễu trong prompt.
+   > Bật cross-encoder rerank + giảm BM25 weight để giữ lợi thế recall mà không làm giảm faithfulness.
