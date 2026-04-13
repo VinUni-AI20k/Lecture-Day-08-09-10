@@ -63,7 +63,7 @@ lab/
 
 ## Setup
 
-### Quick Start (copy/paste)
+### Quick Start (Copy/Paste)
 Chay nhanh tren Windows PowerShell:
 
 ```powershell
@@ -279,14 +279,14 @@ Mở [http://localhost:3000](http://localhost:3000) → **Mở chat**. Debug cli
 
 ---
 
-## Loi thuong gap va cach xu ly nhanh
+## Loi Thuong Gap Va Cach Xu Ly Nhanh
 
 ### 1. API chua chay nen UI khong tra loi
 - Dau hieu: UI chat bao loi fetch/API, khong nhan duoc response.
 - Cach xu ly:
-  1. Mo terminal tai `day08/lab/`.
-  2. Chay `uvicorn api_server:app --reload --host 127.0.0.1 --port 8000`.
-  3. Thu lai `http://127.0.0.1:8000/api/health`.
+  - Mo terminal tai `day08/lab/`.
+  - Chay `uvicorn api_server:app --reload --host 127.0.0.1 --port 8000`.
+  - Thu lai `http://127.0.0.1:8000/api/health`.
 
 ### 2. Port bi chiem (`Address already in use`)
 - Dau hieu: Uvicorn hoac Next.js bao port da duoc su dung.
@@ -299,6 +299,6 @@ Mở [http://localhost:3000](http://localhost:3000) → **Mở chat**. Debug cli
 ### 3. Thieu bien moi truong trong `.env`
 - Dau hieu: Script bao thieu API key, model khong goi duoc.
 - Cach xu ly:
-  1. Tao file: `copy .env.example .env`
-  2. Dien it nhat mot key: `OPENAI_API_KEY` hoac `GOOGLE_API_KEY`
-  3. Chay lai `python rag_answer.py`
+  - Tao file: `copy .env.example .env`
+  - Dien it nhat mot key: `OPENAI_API_KEY` hoac `GOOGLE_API_KEY`
+  - Chay lai `python rag_answer.py`
