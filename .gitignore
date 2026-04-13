@@ -1,13 +1,10 @@
 .DS_Store
 *.swp
 *~
-__pycache__/
-day08/lab/.venv/
-.venv/
-.antigravity/
 
-# Data & Index
-day08/lab/data/
+# Grading questions — không public trước 17:00
 day08/lab/data/grading_questions.json
 
 .env
+.env
+.__pycache__
