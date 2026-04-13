@@ -1,6 +1,6 @@
 # Báo Cáo Cá Nhân — Lab Day 08: RAG Pipeline
 
-**Họ và tên:** vũ Minh Quân
+**Họ và tên:** Vũ Minh Quân
 **Vai trò trong nhóm:** Eval Owner
 **Ngày nộp:** 13/4/2026
 **Độ dài yêu cầu:** 500–800 từ
