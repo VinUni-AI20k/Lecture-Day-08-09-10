@@ -19,6 +19,8 @@ A/B Rule (từ slide):
 
 import json
 import csv
+import os
+import re
 from pathlib import Path
 from typing import List, Dict, Any, Optional
 from datetime import datetime
@@ -28,7 +30,7 @@ from rag_answer import rag_answer
 # CẤU HÌNH
 # =============================================================================
 
-TEST_QUESTIONS_PATH = Path(__file__).parent / "data" / "case.json"
+TEST_QUESTIONS_PATH = Path(__file__).parent / "data" / "testset.json"
 RESULTS_DIR = Path(__file__).parent / "results"
 
 # Cấu hình baseline (Sprint 2)
@@ -45,8 +47,13 @@ BASELINE_CONFIG = {
 # Hybrid retrieval + rerank
 # top_k_search = 10, top_k_select = 3
 
+# Hybrid retrieval + rerank
+# top_k_search = 10, top_k_select = 3
+
 VARIANT_CONFIG = {
     "retrieval_mode": "hybrid",   # Hoặc "dense" nếu chỉ đổi rerank
+    "top_k_search": 11,
+    "top_k_select": 4,
     "top_k_search": 11,
     "top_k_select": 4,
     "use_rerank": True,           # Hoặc False nếu variant là hybrid không rerank
@@ -59,6 +66,47 @@ VARIANT_CONFIG = {
 # 4 metrics từ slide: Faithfulness, Answer Relevance, Context Recall, Completeness
 # =============================================================================
 
+
+def _build_openrouter_client():
+    from openai import OpenAI
+
+    api_key = os.getenv("OPENROUTER_API_KEY")
+    if not api_key:
+        raise RuntimeError("OPENROUTER_API_KEY is missing")
+
+    base_url = os.getenv("OPENROUTER_BASE_URL") or os.getenv("BASE_URL") or "https://openrouter.ai/api/v1"
+    base_url = base_url.rstrip("/")
+    if "openrouter.ai" in base_url and not base_url.endswith("/api/v1"):
+        base_url = f"{base_url}/api/v1"
+
+    return OpenAI(api_key=api_key, base_url=base_url)
+
+
+def _judge_with_openrouter(prompt: str, model: str) -> Dict[str, Any]:
+    try:
+        client = _build_openrouter_client()
+        response = client.chat.completions.create(
+            model=model,
+            messages=[{"role": "user", "content": prompt}],
+            response_format={"type": "json_object"},
+        )
+        raw = (response.choices[0].message.content or "").strip()
+
+        try:
+            data = json.loads(raw)
+        except json.JSONDecodeError:
+            match = re.search(r"\{.*\}", raw, flags=re.DOTALL)
+            if not match:
+                raise ValueError(f"Judge did not return JSON: {raw[:120]}")
+            data = json.loads(match.group(0))
+
+        score = int(data.get("score"))
+        score = max(1, min(5, score))
+        reason = str(data.get("reason", ""))
+        return {"score": score, "notes": reason}
+    except Exception as e:
+        return {"score": None, "notes": f"Lỗi chấm điểm: {e}"}
+
 def score_faithfulness(
     answer: str,
     chunks_used: List[Dict[str, Any]],
@@ -67,10 +115,6 @@ def score_faithfulness(
     Faithfulness: Câu trả lời có bám đúng chứng cứ đã retrieve không?
     Sử dụng LLM-as-Judge để chấm điểm.
     """
-    from openai import OpenAI
-    import os
-    import json
-
     context = "\n\n".join([f"Chunk {i+1}:\n{c['text']}" for i, c in enumerate(chunks_used)])
     prompt = f"""Bạn là một giám khảo khách quan. Hãy chấm điểm tính TRUNG THỰC (Faithfulness) của câu trả lời dựa trên các đoạn ngữ cảnh (Context) đã được tìm thấy.
 
@@ -88,21 +132,8 @@ Answer:
 {answer}
 
 Trả về định dạng JSON duy nhất: {{"score": <số từ 1-5>, "reason": "<lý do ngắn gọn>"}}"""
-
-    try:
-        client = OpenAI(
-            api_key=os.getenv("OPENAI_API_KEY"),
-
-        )
-        response = client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[{"role": "user", "content": prompt}],
-            response_format={"type": "json_object"}
-        )
-        data = json.loads(response.choices[0].message.content)
-        return {"score": int(data["score"]), "notes": data["reason"]}
-    except Exception as e:
-        return {"score": None, "notes": f"Lỗi chấm điểm: {e}"}
+    model = os.getenv("EVAL_FAITHFULNESS_MODEL", "openai/gpt-4o-mini")
+    return _judge_with_openrouter(prompt, model)
 
 
 def score_answer_relevance(
@@ -113,10 +144,6 @@ def score_answer_relevance(
     Answer Relevance: Answer có trả lời đúng câu hỏi người dùng hỏi không?
     Sử dụng LLM-as-Judge.
     """
-    from openai import OpenAI
-    import os
-    import json
-
     prompt = f"""Hãy chấm điểm mức độ LIÊN QUAN (Answer Relevance) của câu trả lời so với câu hỏi.
 
 QUY TẮC CHẤM:
@@ -130,21 +157,8 @@ Question: {query}
 Answer: {answer}
 
 Trả về định dạng JSON duy nhất: {{"score": <số từ 1-5>, "reason": "<lý do ngắn gọn>"}}"""
-
-    try:
-        client = OpenAI(
-            api_key=os.getenv("OPENAI_API_KEY"),
-
-        )
-        response = client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[{"role": "user", "content": prompt}],
-            response_format={"type": "json_object"}
-        )
-        data = json.loads(response.choices[0].message.content)
-        return {"score": int(data["score"]), "notes": data["reason"]}
-    except Exception as e:
-        return {"score": None, "notes": f"Lỗi chấm điểm: {e}"}
+    model = os.getenv("EVAL_RELEVANCE_MODEL", "openai/gpt-4o-mini")
+    return _judge_with_openrouter(prompt, model)
 
 
 def score_context_recall(
@@ -212,10 +226,6 @@ def score_completeness(
     Completeness: Answer có thiếu điều kiện ngoại lệ hoặc bước quan trọng không?
     Sử dụng LLM-as-Judge.
     """
-    from openai import OpenAI
-    import os
-    import json
-
     prompt = f"""Hãy so sánh câu trả lời của AI (Answer) với câu trả lời lý tưởng (Expected Answer) để chấm điểm mức độ đầy đủ (Completeness).
 
 QUY TẮC CHẤM:
@@ -230,21 +240,8 @@ Expected Answer: {expected_answer}
 Answer: {answer}
 
 Trả về định dạng JSON duy nhất: {{"score": <số từ 1-5>, "reason": "<lý do ngắn gọn>"}}"""
-
-    try:
-        client = OpenAI(
-            api_key=os.getenv("OPENAI_API_KEY"),
-
-        )
-        response = client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[{"role": "user", "content": prompt}],
-            response_format={"type": "json_object"}
-        )
-        data = json.loads(response.choices[0].message.content)
-        return {"score": int(data["score"]), "notes": data["reason"]}
-    except Exception as e:
-        return {"score": None, "notes": f"Lỗi chấm điểm: {e}"}
+    model = os.getenv("EVAL_COMPLETENESS_MODEL", "google/gemma-3-12b-it:free")
+    return _judge_with_openrouter(prompt, model)
 
 
 # =============================================================================
@@ -319,10 +316,16 @@ def run_scorecard(
             chunks_used = []
 
         # --- Chấm điểm ---
-        faith = score_faithfulness(answer, chunks_used)
-        relevance = score_answer_relevance(query, answer)
-        recall = score_context_recall(chunks_used, expected_sources)
-        complete = score_completeness(query, answer, expected_answer)
+        if answer.startswith("ERROR:") or answer == "PIPELINE_NOT_IMPLEMENTED":
+            faith = {"score": None, "notes": "Skip judge vì pipeline lỗi"}
+            relevance = {"score": None, "notes": "Skip judge vì pipeline lỗi"}
+            recall = {"score": None, "notes": "Skip recall vì pipeline lỗi"}
+            complete = {"score": None, "notes": "Skip judge vì pipeline lỗi"}
+        else:
+            faith = score_faithfulness(answer, chunks_used)
+            relevance = score_answer_relevance(query, answer)
+            recall = score_context_recall(chunks_used, expected_sources)
+            complete = score_completeness(query, answer, expected_answer)
 
         row = {
             "id": question_id,
@@ -351,7 +354,7 @@ def run_scorecard(
     for metric in ["faithfulness", "relevance", "context_recall", "completeness"]:
         scores = [r[metric] for r in results if r[metric] is not None]
         avg = sum(scores) / len(scores) if scores else None
-        print(f"\nAverage {metric}: {avg:.2f}" if avg else f"\nAverage {metric}: N/A (chưa chấm)")
+        print(f"\nAverage {metric}: {avg:.2f}" if avg is not None else f"\nAverage {metric}: N/A (chưa chấm)")
 
     return results
 
@@ -399,7 +402,11 @@ def compare_ab(
         b_avg = sum(b_scores) / len(b_scores) if b_scores else None
         v_avg = sum(v_scores) / len(v_scores) if v_scores else None
         delta = (v_avg - b_avg) if (b_avg is not None and v_avg is not None) else None
+        delta = (v_avg - b_avg) if (b_avg is not None and v_avg is not None) else None
 
+        b_str = f"{b_avg:.2f}" if b_avg is not None else "N/A"
+        v_str = f"{v_avg:.2f}" if v_avg is not None else "N/A"
+        d_str = f"{delta:+.2f}" if delta is not None else "N/A"
         b_str = f"{b_avg:.2f}" if b_avg is not None else "N/A"
         v_str = f"{v_avg:.2f}" if v_avg is not None else "N/A"
         d_str = f"{delta:+.2f}" if delta is not None else "N/A"
@@ -469,7 +476,7 @@ Generated: {timestamp}
 |--------|--------------|
 """
     for metric, avg in averages.items():
-        avg_str = f"{avg:.2f}/5" if avg else "N/A"
+        avg_str = f"{avg:.2f}/5" if avg is not None else "N/A"
         md += f"| {metric.replace('_', ' ').title()} | {avg_str} |\n"
 
     md += "\n## Per-Question Results\n\n"
@@ -513,43 +520,51 @@ if __name__ == "__main__":
         print("Không tìm thấy file câu hỏi!")
         test_questions = []
 
-    # --- Chạy Baseline (Chỉ với 5 câu) ---
-    baseline_results = []
-    if test_questions:
-        print("\n--- Chạy Baseline ---")
-        try:
-            baseline_results = run_scorecard(
-                config=BASELINE_CONFIG,
-                test_questions=test_questions, # Đã là list 5 câu
-                verbose=True,
-            )
-            # Lưu scorecard
-            RESULTS_DIR.mkdir(parents=True, exist_ok=True)
-            baseline_md = generate_scorecard_summary(baseline_results, "baseline_dense_top5")
-            (RESULTS_DIR / "scorecard_baseline.md").write_text(baseline_md, encoding="utf-8")
-        except Exception as e:
-            print(f"Lỗi khi chạy Baseline: {e}")
+    # --- Chạy Baseline ---
+    print("\n--- Chạy Baseline ---")
+    print("Lưu ý: Cần hoàn thành Sprint 2 trước khi chạy scorecard!")
+    try:
+        baseline_results = run_scorecard(
+            config=BASELINE_CONFIG,
+            test_questions=test_questions,
+            verbose=True,
+        )
 
-    # --- Chạy Variant (Chỉ với 5 câu) ---
-    variant_results = []
-    if test_questions:
-        print("\n--- Chạy Variant ---")
-        try:
-            variant_results = run_scorecard(
-                config=VARIANT_CONFIG,
-                test_questions=test_questions, # Đã là list 5 câu
-                verbose=True,
-            )
-            # Lưu scorecard
-            variant_md = generate_scorecard_summary(variant_results, VARIANT_CONFIG["label"])
-            (RESULTS_DIR / "scorecard_variant.md").write_text(variant_md, encoding="utf-8")
-        except Exception as e:
-            print(f"Lỗi khi chạy Variant: {e}")
+        # Save scorecard
+        RESULTS_DIR.mkdir(parents=True, exist_ok=True)
+        baseline_md = generate_scorecard_summary(baseline_results, "baseline_dense")
+        scorecard_path = RESULTS_DIR / "scorecard_baseline.md"
+        scorecard_path.write_text(baseline_md, encoding="utf-8")
+        print(f"\nScorecard lưu tại: {scorecard_path}")
 
-    # --- So sánh A/B ---
+    except NotImplementedError:
+        print("Pipeline chưa implement. Hoàn thành Sprint 2 trước.")
+        baseline_results = []
+
+    # --- Chạy Variant (sau khi Sprint 3 hoàn thành) ---
+    # TODO Sprint 4: Uncomment sau khi implement variant trong rag_answer.py
+    print("\n--- Chạy Variant ---")
+    variant_results = run_scorecard(
+        config=VARIANT_CONFIG,
+        test_questions=test_questions,
+        verbose=True,
+    )
+    variant_md = generate_scorecard_summary(variant_results, VARIANT_CONFIG["label"])
+    (RESULTS_DIR / "scorecard_variant.md").write_text(variant_md, encoding="utf-8")
+
+    # --- A/B Comparison ---
+    # TODO Sprint 4: Uncomment sau khi có cả baseline và variant
     if baseline_results and variant_results:
         compare_ab(
             baseline_results,
             variant_results,
-            output_csv="ab_comparison_top5.csv"
+            output_csv="ab_comparison.csv"
         )
+
+    print("\n\nViệc cần làm Sprint 4:")
+    print("  1. Hoàn thành Sprint 2 + 3 trước")
+    print("  2. Chấm điểm thủ công hoặc implement LLM-as-Judge trong score_* functions")
+    print("  3. Chạy run_scorecard(BASELINE_CONFIG)")
+    print("  4. Chạy run_scorecard(VARIANT_CONFIG)")
+    print("  5. Gọi compare_ab() để thấy delta")
+    print("  6. Cập nhật docs/tuning-log.md với kết quả và nhận xét")

@@ -1,0 +1,4 @@
+{"ts": "2026-04-13T16:43:37", "event": "experiment_started", "output_root": "results/experiments/20260413_164337"}
+{"ts": "2026-04-13T16:43:37", "event": "import_started"}
+{"ts": "2026-04-13T16:43:37", "event": "import_finished"}
+{"ts": "2026-04-13T16:43:37", "event": "run_started", "run_id": 1, "phase": "baseline", "label": "baseline_paragraph_recursive_cs500_ov80_dense", "run_dir": "results/experiments/20260413_164337/001_baseline_paragraph_recursive_cs500_ov80_dense"}

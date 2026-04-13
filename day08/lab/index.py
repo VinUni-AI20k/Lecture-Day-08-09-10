@@ -149,7 +149,7 @@ def chunk_document(doc: Dict[str, Any]) -> List[Dict[str, Any]]:
         if re.match(r"===.*?===", part):
             # Lưu section trước (nếu có nội dung)
             if current_section_text.strip():
-                section_chunks = _split_by_recursive(
+                section_chunks = _split_by_paragraph_recursive(
                     current_section_text.strip(),
                     base_metadata=base_metadata,
                     section=current_section,
@@ -217,13 +217,12 @@ def _split_by_size(
 
     return chunks
 
-def _split_by_recursive(
+def _split_by_paragraph_recursive(
     text: str,
     base_metadata: Dict,
     section: str,
     chunk_chars: int = CHUNK_SIZE * 4,
     overlap_chars: int = CHUNK_OVERLAP * 4,
-    separators: Optional[List[str]] = ["\n\n"],
 ) -> List[Dict[str, Any]]:
     """
     Cải thiện split_by_size() bằng cách split theo paragraph trước, rồi ghép lại.
@@ -303,6 +302,85 @@ def _split_by_recursive(
             current_len = len(para)
 
     flush_current()
+    return chunks
+
+
+def _split_by_recursive_two_separators(
+    text: str,
+    base_metadata: Dict,
+    section: str,
+    chunk_chars: int = CHUNK_SIZE * 4,
+    overlap_chars: int = CHUNK_OVERLAP * 4,
+) -> List[Dict[str, Any]]:
+    """
+    Recursive chunking theo 2 separators tuần tự: "\n\n" rồi "\n".
+    Nếu vẫn quá dài sau khi split theo separators, fallback sang split theo ký tự.
+    """
+    if len(text) <= chunk_chars:
+        return [{
+            "text": text,
+            "metadata": {**base_metadata, "section": section},
+        }]
+
+    separators = ["\n\n", "\n"]
+
+    def recursive_split(block: str, sep_idx: int) -> List[str]:
+        block = block.strip()
+        if not block:
+            return []
+
+        if len(block) <= chunk_chars:
+            return [block]
+
+        if sep_idx >= len(separators):
+            pieces = []
+            start = 0
+            while start < len(block):
+                piece = block[start:start + chunk_chars].strip()
+                if piece:
+                    pieces.append(piece)
+                start += chunk_chars
+            return pieces
+
+        sep = separators[sep_idx]
+        parts = [p.strip() for p in block.split(sep) if p.strip()]
+
+        if len(parts) <= 1:
+            return recursive_split(block, sep_idx + 1)
+
+        grouped: List[str] = []
+        current = ""
+        for part in parts:
+            candidate = part if not current else f"{current}{sep}{part}"
+            if len(candidate) <= chunk_chars:
+                current = candidate
+            else:
+                if current:
+                    grouped.extend(recursive_split(current, sep_idx + 1))
+                current = part
+
+        if current:
+            grouped.extend(recursive_split(current, sep_idx + 1))
+
+        return grouped
+
+    raw_chunks = recursive_split(text, 0)
+
+    chunks = []
+    previous_tail = ""
+    for raw_chunk in raw_chunks:
+        if overlap_chars > 0 and previous_tail and not raw_chunk.startswith(previous_tail):
+            final_text = f"{previous_tail}\n\n{raw_chunk}"
+        else:
+            final_text = raw_chunk
+
+        chunks.append({
+            "text": final_text,
+            "metadata": {**base_metadata, "section": section},
+        })
+
+        previous_tail = raw_chunk[-overlap_chars:] if overlap_chars > 0 else ""
+
     return chunks
 
 # =============================================================================

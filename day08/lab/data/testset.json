@@ -1,0 +1,452 @@
+[
+  {
+    "id": "tc_01",
+    "question": "Ai là người phê duyệt quyền Level 2 (Standard Access)?",
+    "expected_answer": "Quyền Level 2 cần được phê duyệt bởi Line Manager và IT Admin.",
+    "expected_sources": ["it/access-control-sop.md"],
+    "case_type": "Happy Case",
+    "difficulty": "easy",
+    "note": "Câu hỏi trực diện, thông tin có sẵn rõ ràng ở Section 2."
+  },
+  {
+    "id": "tc_02",
+    "question": "Tôi là nhân viên mới vào làm được đúng 30 ngày, tôi có thể xin quyền Level 2 được không?",
+    "expected_answer": "Có thể. Quyền Level 1 áp dụng cho nhân viên mới trong 30 ngày đầu, sau đó khi đã qua thử việc (sau 30 ngày), bạn có thể xin quyền Level 2.",
+    "expected_sources": ["it/access-control-sop.md"],
+    "case_type": "Edge Case",
+    "difficulty": "medium",
+    "note": "Kiểm tra giới hạn mốc thời gian (boundary) là 'trong 30 ngày đầu'."
+  },
+  {
+    "id": "tc_03",
+    "question": "Tôi muốn xin cấp quyền truy cập vào mã nguồn trên GitHub thì tạo ticket gửi cho ai?",
+    "expected_answer": "Tài liệu hiện tại không đề cập chi tiết đến hệ thống GitHub hay người phê duyệt cụ thể cho GitHub.",
+    "expected_sources": [],
+    "case_type": "Insufficient Context Case",
+    "difficulty": "hard",
+    "note": "Hệ thống RAG cần trả lời 'Không đủ dữ liệu' thay vì bịa ra quy trình."
+  },
+  {
+    "id": "tc_04",
+    "question": "Để xin cấp quyền Level 3, sau khi Line Manager của tôi duyệt xong thì các bước tiếp theo ai sẽ xử lý?",
+    "expected_answer": "Sau khi Line Manager duyệt (Bước 2), IT Admin sẽ kiểm tra compliance và cấp quyền (Bước 3), sau đó IT Security sẽ review (Bước 4).",
+    "expected_sources": ["it/access-control-sop.md"],
+    "case_type": "Multi-hop Case",
+    "difficulty": "hard",
+    "note": "Model phải kết hợp thông tin phê duyệt Level 3 và các bước trong quy trình (Section 3)."
+  },
+  {
+    "id": "tc_05",
+    "question": "Tôi là nhân viên thử việc nhưng sếp yêu cầu tôi cầm quyền Level 4 (Admin Access) để làm task, vậy tôi xin thế nào?",
+    "expected_answer": "Dựa trên quy định, quyền Level 4 chỉ áp dụng cho DevOps, SRE, IT Admin. Nhân viên thử việc không thuộc đối tượng này.",
+    "expected_sources": ["it/access-control-sop.md"],
+    "case_type": "Adversarial Case",
+    "difficulty": "hard",
+    "note": "Cố tình đưa ra premise sai (thử việc xin quyền Level 4) để xem model có phát hiện ra sự mâu thuẫn với chính sách không."
+  },
+  {
+    "id": "tc_06",
+    "question": "Xin cấp quyền mất bao lâu?",
+    "expected_answer": "Thời gian cấp quyền phụ thuộc vào Level bạn yêu cầu. Cụ thể: Level 1 (1 ngày), Level 2 (2 ngày), Level 3 (3 ngày) và Level 4 (5 ngày). Vui lòng xác định rõ Level bạn cần.",
+    "expected_sources": ["it/access-control-sop.md"],
+    "case_type": "Ambiguous Case",
+    "difficulty": "medium",
+    "note": "Câu hỏi chung chung, model cần liệt kê các trường hợp hoặc yêu cầu làm rõ."
+  },
+  {
+    "id": "tc_07",
+    "question": "Vui lòng hướng dẫn tôi cách cấu hình rules cho Firewall của công ty.",
+    "expected_answer": "Không có thông tin. Tài liệu không hướng dẫn cấu hình Firewall.",
+    "expected_sources": [],
+    "case_type": "Negative Case (Out-of-scope)",
+    "difficulty": "easy",
+    "note": "Câu hỏi hoàn toàn nằm ngoài phạm vi tài liệu (về IT nhưng không có trong docs)."
+  },
+  {
+    "id": "tc_08",
+    "question": "Cần tìm tài liệu Approval Matrix for System Access ở đâu?",
+    "expected_answer": "Tài liệu 'Approval Matrix for System Access' hiện đã được đổi tên thành 'Access Control SOP'.",
+    "expected_sources": ["it/access-control-sop.md"],
+    "case_type": "Paraphrase Case",
+    "difficulty": "medium",
+    "note": "Hỏi bằng tên cũ/alias để test khả năng mapping của Vector DB / Query Transform."
+  },
+  {
+    "id": "tc_09",
+    "question": "Trong trường hợp hệ thống sập (P1), việc cấp quyền cho on-call có giới hạn gì không?",
+    "expected_answer": "Có. On-call IT Admin chỉ được cấp quyền tạm thời tối đa 24 giờ sau khi Tech Lead duyệt bằng lời. Sau 24h phải có ticket hoặc quyền tự thu hồi.",
+    "expected_sources": ["it/access-control-sop.md"],
+    "case_type": "Edge Case",
+    "difficulty": "medium",
+    "note": "Hỏi vào điều kiện ràng buộc khắt khe của quy trình khẩn cấp."
+  },
+  {
+    "id": "tc_10",
+    "question": "Phòng bảo mật thông tin (Security team) sẽ kiểm tra phân quyền mấy tháng 1 lần?",
+    "expected_answer": "IT Security thực hiện kiểm tra (access review) định kỳ mỗi 6 tháng.",
+    "expected_sources": ["it/access-control-sop.md"],
+    "case_type": "Paraphrase Case",
+    "difficulty": "easy",
+    "note": "Dùng 'Phòng bảo mật thông tin' thay cho 'IT Security', 'kiểm tra phân quyền' thay cho 'access review'."
+  },
+  {
+    "id": "tc_11",
+    "question": "Nhân viên làm việc được 2 năm thì có bao nhiêu ngày nghỉ phép?",
+    "expected_answer": "Nhân viên dưới 3 năm kinh nghiệm có 12 ngày phép/năm.",
+    "expected_sources": ["hr/leave-policy.pdf"],
+    "case_type": "Happy Case",
+    "difficulty": "easy",
+    "note": "Truy xuất thông tin cơ bản."
+  },
+  {
+    "id": "tc_12",
+    "question": "Tôi bị ốm và nghỉ đúng 3 ngày liên tiếp, tôi có cần nộp giấy khám bệnh không?",
+    "expected_answer": "Không cần. Theo chính sách, chỉ khi nghỉ ốm 'trên 3 ngày liên tiếp' mới cần giấy tờ y tế từ bệnh viện.",
+    "expected_sources": ["hr/leave-policy.pdf"],
+    "case_type": "Edge Case",
+    "difficulty": "medium",
+    "note": "Test logic '>' so với '>=' (trên 3 ngày vs từ 3 ngày)."
+  },
+  {
+    "id": "tc_13",
+    "question": "Tôi đã làm việc ở đây 6 năm. Năm 2025 tôi không nghỉ ngày phép nào. Vậy năm 2026 tôi có tổng cộng bao nhiêu ngày phép?",
+    "expected_answer": "Bạn sẽ có 23 ngày phép. Bao gồm 18 ngày phép tiêu chuẩn (do trên 5 năm kinh nghiệm) cộng với 5 ngày phép bảo lưu từ năm trước.",
+    "expected_sources": ["hr/leave-policy.pdf"],
+    "case_type": "Multi-hop Case",
+    "difficulty": "hard",
+    "note": "Kết hợp điều kiện 'kinh nghiệm > 5 năm' (18 ngày) và 'chuyển năm sau tối đa' (5 ngày)."
+  },
+  {
+    "id": "tc_14",
+    "question": "Tôi sắp sinh em bé, số tiền thai sản công ty hỗ trợ là bao nhiêu?",
+    "expected_answer": "Tài liệu chính sách nghỉ phép không đề cập đến số tiền trợ cấp thai sản cụ thể.",
+    "expected_sources": [],
+    "case_type": "Insufficient Context Case",
+    "difficulty": "medium",
+    "note": "Tài liệu có nói về nghỉ thai sản nhưng không nói về số tiền."
+  },
+  {
+    "id": "tc_15",
+    "question": "Tôi muốn đăng ký lịch làm remote cố định vào Thứ 3 và Thứ 5 hàng tuần, cần ai duyệt?",
+    "expected_answer": "Bạn không thể làm remote vào Thứ 3 và Thứ 5, vì đây là những ngày bắt buộc phải làm việc tại văn phòng (onsite) theo lịch của team.",
+    "expected_sources": ["hr/leave-policy.pdf"],
+    "case_type": "Adversarial Case",
+    "difficulty": "hard",
+    "note": "Gài bẫy hỏi về quy trình duyệt cho một việc đã bị cấm rõ ràng."
+  },
+  {
+    "id": "tc_16",
+    "question": "Tăng ca được tính lương như thế nào?",
+    "expected_answer": "Hệ số lương làm thêm phụ thuộc vào thời điểm: Ngày thường (150%), Cuối tuần (200%), Ngày lễ (300%). Bạn muốn hỏi trường hợp nào?",
+    "expected_sources": ["hr/leave-policy.pdf"],
+    "case_type": "Ambiguous Case",
+    "difficulty": "medium",
+    "note": "Cần liệt kê hoặc làm rõ context vì có 3 mức hệ số khác nhau."
+  },
+  {
+    "id": "tc_17",
+    "question": "Cách tính thuế thu nhập cá nhân (PIT) khi nhận lương làm thêm giờ?",
+    "expected_answer": "Tài liệu không có thông tin hướng dẫn cách tính thuế thu nhập cá nhân.",
+    "expected_sources": [],
+    "case_type": "Negative Case (Out-of-scope)",
+    "difficulty": "easy",
+    "note": "Nằm ngoài phạm vi tài liệu."
+  },
+  {
+    "id": "tc_18",
+    "question": "Phép năm dùng không hết có được cộng dồn sang năm sau không?",
+    "expected_answer": "Có, nhưng tối đa chỉ được chuyển 5 ngày phép năm chưa dùng sang năm tiếp theo.",
+    "expected_sources": ["hr/leave-policy.pdf"],
+    "case_type": "Paraphrase Case",
+    "difficulty": "easy",
+    "note": "Dùng từ 'cộng dồn' thay cho 'chuyển năm sau'."
+  },
+  {
+    "id": "tc_19",
+    "question": "Vợ tôi sắp sinh, tôi là nam thì được nghỉ tiêu chuẩn mấy ngày?",
+    "expected_answer": "Tài liệu không đề cập đến chế độ nghỉ thai sản dành cho nhân viên nam (Paternity Leave).",
+    "expected_sources": [],
+    "case_type": "Insufficient Context Case",
+    "difficulty": "hard",
+    "note": "Hỏi về giới tính/trường hợp không có trong quy định nghỉ thai sản."
+  },
+  {
+    "id": "tc_20",
+    "question": "Xin phép nghỉ đi du lịch thì báo trước bao lâu?",
+    "expected_answer": "Bạn cần gửi yêu cầu qua HR Portal ít nhất 3 ngày làm việc trước ngày nghỉ.",
+    "expected_sources": ["hr/leave-policy.pdf"],
+    "case_type": "Happy Case",
+    "difficulty": "easy",
+    "note": "Lấy thông tin quy trình chung."
+  },
+  {
+    "id": "tc_21",
+    "question": "Nhập sai pass mấy lần thì nick bị block?",
+    "expected_answer": "Tài khoản bị khóa sau 5 lần đăng nhập sai liên tiếp.",
+    "expected_sources": ["support/helpdesk-faq.md"],
+    "case_type": "Paraphrase Case",
+    "difficulty": "easy",
+    "note": "Dùng slang 'pass', 'nick', 'block'."
+  },
+  {
+    "id": "tc_22",
+    "question": "Tôi có thể cài VPN của công ty lên laptop, iPad và điện thoại cá nhân cùng lúc không?",
+    "expected_answer": "Không. Mỗi tài khoản chỉ được kết nối VPN trên tối đa 2 thiết bị cùng lúc.",
+    "expected_sources": ["support/helpdesk-faq.md"],
+    "case_type": "Edge Case",
+    "difficulty": "medium",
+    "note": "Cố tình hỏi số lượng 3 thiết bị để test giới hạn (max 2)."
+  },
+  {
+    "id": "tc_23",
+    "question": "Tôi muốn cài thêm phần mềm nhưng phát hiện email của mình đã báo đầy dung lượng, tôi phải tạo những ticket nào?",
+    "expected_answer": "Bạn cần tạo 2 ticket: (1) Yêu cầu cài phần mềm qua Jira project IT-SOFTWARE. (2) Yêu cầu tăng dung lượng email qua ticket IT-ACCESS.",
+    "expected_sources": ["support/helpdesk-faq.md"],
+    "case_type": "Multi-hop Case",
+    "difficulty": "hard",
+    "note": "Người dùng nêu 2 vấn đề thuộc 2 section khác nhau, RAG phải gom lại."
+  },
+  {
+    "id": "tc_24",
+    "question": "Máy tính tôi bị lỗi màn hình xanh (BSOD), nguyên nhân là gì?",
+    "expected_answer": "Tài liệu Helpdesk FAQ hiện không đề cập đến nguyên nhân hay cách xử lý lỗi màn hình xanh.",
+    "expected_sources": [],
+    "case_type": "Insufficient Context Case",
+    "difficulty": "medium",
+    "note": "Lỗi phần cứng thường gặp nhưng không có trong docs."
+  },
+  {
+    "id": "tc_25",
+    "question": "Bây giờ là 10h sáng Thứ 4, hệ thống sập, tôi gọi số khẩn cấp 9999 để báo IT được không?",
+    "expected_answer": "Số 9999 là Hotline khẩn cấp ngoài giờ. Trong giờ hành chính (8:00 - 18:00), bạn nên gọi ext. 9000.",
+    "expected_sources": ["support/helpdesk-faq.md"],
+    "case_type": "Adversarial Case",
+    "difficulty": "hard",
+    "note": "Đánh lừa model dùng số hotline sai bối cảnh (trong giờ vs ngoài giờ)."
+  },
+  {
+    "id": "tc_26",
+    "question": "Bị mất kết nối thì làm sao?",
+    "expected_answer": "Bạn đang hỏi về mất kết nối VPN hay mất kết nối mạng Internet chung? Nếu là VPN, hãy kiểm tra Internet trước, nếu vẫn lỗi thì tạo ticket P3 đính kèm log file.",
+    "expected_sources": ["support/helpdesk-faq.md"],
+    "case_type": "Ambiguous Case",
+    "difficulty": "medium",
+    "note": "Từ khóa 'mất kết nối' quá chung chung."
+  },
+  {
+    "id": "tc_27",
+    "question": "Công ty có chính sách hỗ trợ tiền cước điện thoại hàng tháng không?",
+    "expected_answer": "Tài liệu không có thông tin về chính sách hỗ trợ tiền cước điện thoại.",
+    "expected_sources": [],
+    "case_type": "Negative Case (Out-of-scope)",
+    "difficulty": "easy",
+    "note": "Hỏi về phúc lợi không liên quan IT Helpdesk."
+  },
+  {
+    "id": "tc_28",
+    "question": "Làm thế nào để gia hạn bản quyền công cụ đang dùng?",
+    "expected_answer": "Bạn không cần tự làm, IT Procurement team quản lý tất cả license và sẽ gửi nhắc nhở 30 ngày trước khi hết hạn.",
+    "expected_sources": ["support/helpdesk-faq.md"],
+    "case_type": "Paraphrase Case",
+    "difficulty": "medium",
+    "note": "Dùng 'bản quyền công cụ' thay cho 'license phần mềm'."
+  },
+  {
+    "id": "tc_29",
+    "question": "Quên password đăng nhập vào SSO thì quy trình thế nào?",
+    "expected_answer": "Truy cập link https://sso.company.internal/reset hoặc liên hệ Helpdesk (ext. 9000). Mật khẩu mới sẽ gửi qua email trong 5 phút.",
+    "expected_sources": ["support/helpdesk-faq.md"],
+    "case_type": "Happy Case",
+    "difficulty": "easy",
+    "note": "Trực diện, đơn giản."
+  },
+  {
+    "id": "tc_30",
+    "question": "Dung lượng hòm thư tối đa là bao nhiêu trước khi phải xin thêm?",
+    "expected_answer": "Dung lượng tiêu chuẩn của hộp thư là 50GB.",
+    "expected_sources": ["support/helpdesk-faq.md"],
+    "case_type": "Edge Case",
+    "difficulty": "easy",
+    "note": "Hỏi về con số cụ thể của system limit."
+  },
+  {
+    "id": "tc_31",
+    "question": "Mua hàng trên hệ thống bao lâu thì được trả lại?",
+    "expected_answer": "Yêu cầu hoàn tiền phải được gửi trong vòng 7 ngày làm việc kể từ thời điểm xác nhận đơn hàng.",
+    "expected_sources": ["policy/refund-v4.pdf"],
+    "case_type": "Happy Case",
+    "difficulty": "easy",
+    "note": "Kiểm tra SLA cơ bản."
+  },
+  {
+    "id": "tc_32",
+    "question": "Đơn hàng của tôi được xác nhận vào ngày 31/01/2026, tôi có được áp dụng chính sách hoàn tiền v4 này không?",
+    "expected_answer": "Không. Chính sách v4 chỉ áp dụng cho đơn hàng đặt từ 01/02/2026. Đơn hàng của bạn sẽ áp dụng chính sách phiên bản 3.",
+    "expected_sources": ["policy/refund-v4.pdf"],
+    "case_type": "Edge Case",
+    "difficulty": "medium",
+    "note": "Hỏi về boundary date của policy."
+  },
+  {
+    "id": "tc_33",
+    "question": "Tôi mua hàng bị lỗi, tôi muốn nhận lại tiền dưới dạng store credit. Tổng thời gian quy trình từ lúc mở ticket đến lúc Finance xử lý xong là bao nhiêu ngày?",
+    "expected_answer": "Tổng thời gian xử lý mất khoảng 4-6 ngày làm việc (CS Agent xác nhận 1 ngày + Finance xử lý 3-5 ngày).",
+    "expected_sources": ["policy/refund-v4.pdf"],
+    "case_type": "Multi-hop Case",
+    "difficulty": "hard",
+    "note": "Phải cộng SLA của Bước 2 và Bước 4 lại với nhau."
+  },
+  {
+    "id": "tc_34",
+    "question": "Tôi lỡ mua nhầm license key Office 365, tôi muốn refund có được không?",
+    "expected_answer": "Không. Sản phẩm kỹ thuật số (license key, subscription) thuộc diện ngoại lệ không được hoàn tiền.",
+    "expected_sources": ["policy/refund-v4.pdf"],
+    "case_type": "Paraphrase Case",
+    "difficulty": "medium",
+    "note": "Mô phỏng cụ thể hóa 'hàng kỹ thuật số' thành 'license key Office 365'."
+  },
+  {
+    "id": "tc_35",
+    "question": "Nếu được hoàn tiền, phí vận chuyển gửi trả hàng về kho thì ai chịu?",
+    "expected_answer": "Tài liệu chính sách hoàn tiền không đề cập đến việc ai chịu phí vận chuyển.",
+    "expected_sources": [],
+    "case_type": "Insufficient Context Case",
+    "difficulty": "medium",
+    "note": "Thực tế hay gặp nhưng docs không quy định."
+  },
+  {
+    "id": "tc_36",
+    "question": "Tôi mua cái loa trong chương trình Flash Sale, hàng bị lỗi nhà sản xuất và tôi chưa tháo seal, tôi được hoàn tiền chứ?",
+    "expected_answer": "Không. Đơn hàng áp dụng mã giảm giá đặc biệt theo Flash Sale là ngoại lệ không được hoàn tiền, dù hàng bị lỗi hay chưa bóc seal.",
+    "expected_sources": ["policy/refund-v4.pdf"],
+    "case_type": "Adversarial Case",
+    "difficulty": "hard",
+    "note": "Đưa ra premise thỏa mãn 2 điều kiện (lỗi NSX, chưa bóc seal) nhưng dính 1 ngoại lệ (Flash sale)."
+  },
+  {
+    "id": "tc_37",
+    "question": "Làm thế nào để lấy lại tiền?",
+    "expected_answer": "Vui lòng cho biết bạn muốn hoàn tiền cho đơn hàng nào? Quy trình chung là bạn gửi yêu cầu qua hệ thống ticket với category 'Refund Request' trong 7 ngày làm việc.",
+    "expected_sources": ["policy/refund-v4.pdf"],
+    "case_type": "Ambiguous Case",
+    "difficulty": "easy",
+    "note": "Câu hỏi rỗng, thiếu ngữ cảnh."
+  },
+  {
+    "id": "tc_38",
+    "question": "Làm sao để ứng tuyển vị trí CS Agent?",
+    "expected_answer": "Không có thông tin. Tài liệu này chỉ quy định về chính sách hoàn tiền.",
+    "expected_sources": [],
+    "case_type": "Negative Case (Out-of-scope)",
+    "difficulty": "easy",
+    "note": "Out of domain."
+  },
+  {
+    "id": "tc_39",
+    "question": "Nếu nhận tiền hoàn qua Credit nội bộ thì có ưu đãi gì không?",
+    "expected_answer": "Có, nếu nhận store credit bạn sẽ được nhận giá trị 110% so với số tiền hoàn.",
+    "expected_sources": ["policy/refund-v4.pdf"],
+    "case_type": "Paraphrase Case",
+    "difficulty": "easy",
+    "note": "Hỏi về lợi ích của alternative option."
+  },
+  {
+    "id": "tc_40",
+    "question": "Đơn hàng của tôi vừa nhận được đúng 7 ngày nhưng tôi lỡ bóc lớp nilon bên ngoài rồi, có trả lại được không?",
+    "expected_answer": "Không. Một trong các điều kiện bắt buộc là đơn hàng 'chưa bị mở seal'.",
+    "expected_sources": ["policy/refund-v4.pdf"],
+    "case_type": "Edge Case",
+    "difficulty": "medium",
+    "note": "Đúng hạn thời gian nhưng vi phạm ràng buộc về tình trạng hàng hóa."
+  },
+  {
+    "id": "tc_41",
+    "question": "Hệ thống Database bị sập là lỗi ưu tiên mức mấy?",
+    "expected_answer": "Đó là sự cố P1 - CRITICAL (Khẩn cấp).",
+    "expected_sources": ["support/sla-p1-2026.pdf"],
+    "case_type": "Happy Case",
+    "difficulty": "easy",
+    "note": "Lấy ví dụ trực tiếp từ text."
+  },
+  {
+    "id": "tc_42",
+    "question": "Thời gian cam kết sửa xong lỗi nghiêm trọng (ảnh hưởng một phần hệ thống) là bao lâu?",
+    "expected_answer": "Với lỗi nghiêm trọng (P2), thời gian xử lý và khắc phục là 1 ngày làm việc.",
+    "expected_sources": ["support/sla-p1-2026.pdf"],
+    "case_type": "Paraphrase Case",
+    "difficulty": "medium",
+    "note": "Không dùng chữ P2 mà miêu tả định nghĩa 'Nghiêm trọng (ảnh hưởng 1 phần)'."
+  },
+  {
+    "id": "tc_43",
+    "question": "Ticket P1 vừa được tạo, 15 phút trôi qua mà engineer được assign không trả lời thì quy trình tiếp theo là gì?",
+    "expected_answer": "Hệ thống sẽ tự động escalate lên Senior Engineer vì đã quá 10 phút không có phản hồi.",
+    "expected_sources": ["support/sla-p1-2026.pdf"],
+    "case_type": "Multi-hop Case",
+    "difficulty": "hard",
+    "note": "Suy luận dựa trên timeline (15 phút > 10 phút escalation time)."
+  },
+  {
+    "id": "tc_44",
+    "question": "Lỗi sai chính tả trên nút bấm giao diện thì bao lâu mới sửa?",
+    "expected_answer": "Đây là lỗi giao diện nhỏ thuộc mức P4. Sẽ được xử lý theo sprint cycle (thông thường 2-4 tuần).",
+    "expected_sources": ["support/sla-p1-2026.pdf"],
+    "case_type": "Edge Case",
+    "difficulty": "medium",
+    "note": "Xếp loại lỗi dựa theo miêu tả nhỏ lẻ."
+  },
+  {
+    "id": "tc_45",
+    "question": "Hệ thống PagerDuty sẽ gọi điện (call) hay gửi tin nhắn (sms) cho người trực khi có P1?",
+    "expected_answer": "Tài liệu chỉ ghi 'Tự động nhắn on-call khi P1 ticket mới', không nói rõ là gọi điện hay SMS.",
+    "expected_sources": [],
+    "case_type": "Insufficient Context Case",
+    "difficulty": "medium",
+    "note": "Chi tiết implementation tool không có trong quy trình."
+  },
+  {
+    "id": "tc_46",
+    "question": "Tôi nhớ theo quy trình cũ năm 2025, lỗi P1 có SLA xử lý là 4 giờ, đúng không?",
+    "expected_answer": "Sai. Theo lịch sử phiên bản, quy trình năm 2025 có SLA độ trễ là 6 giờ. Bản v2026.1 (hiện tại) mới cập nhật giảm xuống còn 4 giờ.",
+    "expected_sources": ["support/sla-p1-2026.pdf"],
+    "case_type": "Adversarial Case",
+    "difficulty": "hard",
+    "note": "Đảo ngược thông tin history để đánh lừa model."
+  },
+  {
+    "id": "tc_47",
+    "question": "Có lỗi rồi, bao lâu thì team IT sửa xong?",
+    "expected_answer": "Vui lòng cho biết mức độ nghiêm trọng của lỗi (Khẩn cấp, Nghiêm trọng, Trung bình hay Thấp) để xác định thời gian xử lý tương ứng (từ 4 giờ đến vài tuần).",
+    "expected_sources": ["support/sla-p1-2026.pdf"],
+    "case_type": "Ambiguous Case",
+    "difficulty": "easy",
+    "note": "Thiếu parameter quan trọng nhất là mức độ P."
+  },
+  {
+    "id": "tc_48",
+    "question": "Làm thế nào để deploy mã nguồn lên môi trường production?",
+    "expected_answer": "Tài liệu này không chứa thông tin về quy trình deploy mã nguồn.",
+    "expected_sources": [],
+    "case_type": "Negative Case (Out-of-scope)",
+    "difficulty": "easy",
+    "note": "Hoàn toàn lạc đề."
+  },
+  {
+    "id": "tc_49",
+    "question": "Kênh liên lạc để trao đổi khi hệ thống gặp sự cố lớn nhất (P1) là gì?",
+    "expected_answer": "Bạn có thể liên lạc qua kênh Slack #incident-p1 hoặc email incident@company.internal. Hotline 24/7 là ext. 9999.",
+    "expected_sources": ["support/sla-p1-2026.pdf"],
+    "case_type": "Paraphrase Case",
+    "difficulty": "medium",
+    "note": "Mô tả 'sự cố lớn nhất' = P1."
+  },
+  {
+    "id": "tc_50",
+    "question": "Sau khi xử lý xong lỗi P1, Engineer cần làm thêm nhiệm vụ gì?",
+    "expected_answer": "Engineer cần viết incident report (báo cáo sự cố) trong vòng 24 giờ sau khi khắc phục.",
+    "expected_sources": ["support/sla-p1-2026.pdf"],
+    "case_type": "Happy Case",
+    "difficulty": "easy",
+    "note": "Bước 5 của quy trình xử lý sự cố."
+  }
+]

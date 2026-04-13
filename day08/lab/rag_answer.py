@@ -438,19 +438,49 @@ def call_llm(prompt: str) -> str:
     """
     from openai import OpenAI
 
-    client = OpenAI(
-        api_key=os.getenv("OLLAMA_API_KEY"),
-        base_url=os.getenv("OLLAMA_BASE_URL")
-    )
+    ollama_model = os.getenv("OLLAMA_MODEL")
+    openrouter_key = os.getenv("OPENROUTER_API_KEY")
 
-    response = client.chat.completions.create(
-        model=os.getenv("OLLAMA_MODEL"),
-        messages=[
-            {"role":"user","content":prompt}
-        ],
-    )
+    def normalize_ollama_base_url(raw_url: str) -> str:
+        url = (raw_url or "http://localhost:11434/v1").rstrip("/")
+        if url.endswith("/v1"):
+            return url
+        return f"{url}/v1"
 
-    return response.choices[0].message.content
+    def normalize_openrouter_base_url(raw_url: str) -> str:
+        url = (raw_url or "https://openrouter.ai/api/v1").rstrip("/")
+        if "openrouter.ai" in url and not url.endswith("/api/v1"):
+            return f"{url}/api/v1"
+        return url
+
+    # Prefer local Ollama if model is configured.
+    if ollama_model:
+        client = OpenAI(
+            api_key=os.getenv("OLLAMA_API_KEY", "ollama"),
+            base_url=normalize_ollama_base_url(os.getenv("OLLAMA_BASE_URL", "http://localhost:11434/v1")),
+        )
+        response = client.chat.completions.create(
+            model=ollama_model,
+            messages=[{"role": "user", "content": prompt}],
+        )
+        return response.choices[0].message.content
+
+    # Fallback to OpenRouter when Ollama is not configured.
+    if openrouter_key:
+        client = OpenAI(
+            api_key=openrouter_key,
+            base_url=normalize_openrouter_base_url(os.getenv("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1")),
+        )
+        response = client.chat.completions.create(
+            model=os.getenv("OPENROUTER_MODEL", "openai/gpt-4o-mini"),
+            messages=[{"role": "user", "content": prompt}],
+        )
+        return response.choices[0].message.content
+
+    raise RuntimeError(
+        "No LLM provider configured. Set OLLAMA_MODEL (and optionally OLLAMA_BASE_URL), "
+        "or set OPENROUTER_API_KEY."
+    )
 
 
 def rag_answer(
