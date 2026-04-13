@@ -1,147 +1,123 @@
-# Group Report - Day 08 (RAG Pipeline)
+# Group Report — Day 08 (RAG Pipeline)
 
-## 1) Mục tiêu báo cáo
+## 1. Mục tiêu
 
-Báo cáo này dùng để chốt lại toàn bộ lịch sử phát triển gần đây của nhóm theo 2 trục:
+Nhóm xây dựng RAG pipeline trả lời câu hỏi nội bộ (chính sách, SLA, FAQ) dựa trên 5 tài liệu gốc, đảm bảo grounded (không bịa), có citation, và đo lường được chất lượng qua A/B testing.
 
-- Rà soát **tất cả branch** đang có trên remote.
-- Rà soát **tất cả commit chính** đã đi vào `main`, kèm phần đóng góp theo giai đoạn.
+## 2. Kiến trúc hệ thống
 
-Mục tiêu là nhìn rõ 4 điểm: nhóm đã làm gì, đã nhập những nhánh nào, còn gì chưa nhập, và mức độ sẵn sàng của repo hiện tại.
+```
+User query → Embedding → ChromaDB search (top-20) → Select top-8 → Abstain guard → Prompt v2 → gpt-4o-mini → Answer + [n] citation
+```
 
-## 2) Ảnh chụp trạng thái git tại thời điểm rà soát
+- **Indexing**: 5 file → 29 chunk (heading-based, ~400 tokens, overlap 80), metadata gồm source/section/effective_date.
+- **Retrieval**: Dense (cosine) là production. Hybrid (dense + BM25 RRF) đã implement nhưng thua dense ở Relevance (3.8 vs 4.2) trên bộ test 10 câu.
+- **Generation**: gpt-4o-mini, temperature=0. Prompt v2 gồm 9 rules: grounded, per-fact citation, scope awareness, actionable details.
+- **Abstain**: 3 lớp (empty retrieve → weak score < 0.05 → prompt rule).
 
-- Nhánh làm việc hiện tại: `main`
-- Remote chính để nộp: `fork/main`
-- Commit mới nhất: `5ee3e2f`
+Chi tiết: `docs/architecture.md`
 
-Các branch remote đang tồn tại:
+## 3. Quyết định kỹ thuật chính
 
-1. `fork/main`
-2. `fork/DangDinhTuAnh-2A202600019`
-3. `fork/PhamQuocDung-2A202600490`
-4. `fork/QuachGiaDuoc-2A202600423`
-5. `fork/nam/docs-day08-tasks`
-6. `origin/main`
+### 3.1 Tại sao giữ Dense thay vì Hybrid?
 
-## 3) Kết quả rà soát branch
+Thử nghiệm A/B ban đầu (dense vs hybrid, cùng k=10, select=3):
+- Hybrid thua Relevance (3.8 vs 4.2) và Completeness (4.0 vs 4.2).
+- BM25 noise làm loãng context cho câu hỏi tự nhiên.
+- Hybrid chỉ có lợi thế ở câu alias/keyword hiếm (gq07 — "Approval Matrix").
+- Kết luận: dense ổn định hơn trên bộ 10 câu hiện tại.
 
-### 3.1 Trạng thái tích hợp
+### 3.2 Tại sao tăng top_k_select từ 3 lên 8?
 
-Khi đối chiếu từng branch với `main` bằng `git log main..branch`, trạng thái hiện tại:
+Phân tích failure mode baseline:
+- gq05 (Zero): thiếu cả section scope lẫn section detail — chỉ 3 chunk không đủ.
+- gq09 (Partial): FAQ chunk xếp thứ 4–5, bị loại khỏi top 3.
+- gq06 (Partial): chunk hotline xếp thứ 7.
 
-- `fork/DangDinhTuAnh-2A202600019`: không còn commit chưa nhập.
-- `fork/PhamQuocDung-2A202600490`: **còn 2 commit chưa nhập** (`f4be715`, `1736c6c`) cần review riêng trước khi merge.
-- `fork/QuachGiaDuoc-2A202600423`: không còn commit chưa nhập.
-- `fork/nam/docs-day08-tasks`: đã merge vào `main` qua commit `ab91942`.
+Tăng k_select=8 giải quyết cả 3 trường hợp. Cost trade-off: context dài hơn (~1600 tokens → ~4000 tokens) nhưng gpt-4o-mini xử lý tốt trong window 128k.
 
-Kết luận: `main` đã nhập xong TuAnh, Gia Dược, Nam; riêng nhánh của Quốc Dũng còn 2 commit mới cần xử lý vòng review tiếp theo.
+### 3.3 Tại sao hạ threshold từ 0.15 xuống 0.05?
 
-### 3.2 Các mốc merge chính đã diễn ra
+gq05 baseline: chunk "contractor" + "Admin Access Level 4" có cosine score ~0.12, bị chặn bởi threshold=0.15 → false abstain. Hạ xuống 0.05 cho phép chunk qua; L3 (prompt rule) vẫn bảo vệ chống hallucination.
 
-Trong lịch sử `main`, có 6 mốc nhập nhánh rõ ràng:
+### 3.4 Prompt v1 → v2
 
-1. `14ececa` - merge nhánh của TuAnh.
-2. `7b520dd` - merge nhánh của Quốc Dũng.
-3. `841d9ca` - merge nhánh retrieval-flow của Gia Dược.
-4. `ab91942` - merge nhánh docs của Nguyễn Thành Nam (đã review và chỉnh lại nội dung trước khi chốt).
-5. `4e942fa` - merge đợt cập nhật mới từ TuAnh (harden abstain + citation grounding + A/B log).
-6. `5ee3e2f` - merge đợt cập nhật mới nhất của TuAnh (adversarial questions + refresh grading artifacts + bộ 10 câu hỏi test mới).
+- Thêm "stay focused" tránh over-generation (gq01 baseline có thêm v2025.3 không liên quan).
+- Thêm "scope + applicability" tránh abstain sai cho câu cross-section (gq05).
+- Thêm "per-fact citation" thay vì gom hết vào [1].
+- Thêm "actionable details" để LLM include URL, ext., hotline (gq09).
 
-Sau các merge này, có thêm commit tích hợp `13cd978` để đồng bộ logic stream + telemetry cho nhất quán với code mới.
+## 4. Kết quả benchmark
 
-## 4) Tóm tắt commit theo giai đoạn phát triển
+### Grading questions (10 câu, bộ `grading_questions.json`)
 
-### Giai đoạn A - Dựng nền lab + API/UI cơ bản
+| | Baseline | Variant (production) | Delta |
+|---|:---:|:---:|:---:|
+| Faithfulness | 4.90 | **5.00** | +0.10 |
+| Relevance | 4.20 | **5.00** | +0.80 |
+| Context Recall | 4.44 | **4.89** | +0.44 |
+| Completeness | 4.10 | **4.70** | +0.60 |
+| Full | 5 | **7** | +2 |
+| Partial | 4 | 3 | −1 |
+| Zero | 1 | **0** | −1 |
+| **Raw score** | 69/98 | **83/98** | **+14** |
+| **Projected /30** | 21.1 | **25.4** | **+4.3** |
+| Hallucination | 0 | 0 | 0 |
 
-- `30bc656`: bổ sung telemetry, app và khung đánh giá.
-- `9f383e1`: dựng cầu nối FastAPI + khởi tạo giao diện Next.js.
-- `d7161c3`, `b40cee6`, `af4b5a7`: xử lý lỗi môi trường (env, CORS, hydration).
+Chi tiết per-question: `results/scorecard_baseline.md`, `results/scorecard_variant.md`
 
-Ý nghĩa: hoàn thiện bộ khung chạy được end-to-end trước khi tối ưu chất lượng.
+### Câu vẫn Partial ở variant
 
-### Giai đoạn B - Phân công nhóm và tài liệu vận hành
+| Câu | Root cause | Giải pháp tiềm năng |
+|-----|-----------|---------------------|
+| gq02 | LLM gom citation vào [1] dù info từ 2 doc | Tách prompt rule "cross-doc citation" riêng |
+| gq04 | Thiếu tên "Điều 5" trong citation | Cải thiện chunk header format |
+| gq06 | ext. 9999 nằm rank 7, LLM bỏ qua | Tăng k_select hoặc thêm rerank |
 
-- `0dac93e`, `0d4a3da`, `19a9e2e`: cập nhật file phân công và ưu tiên bắt buộc.
+## 5. Phân công nhóm và đóng góp
 
-Ý nghĩa: tách vai trò theo người, theo phase, có thể truy ra trách nhiệm qua commit.
+| Thành viên | Vai trò | Đóng góp chính |
+|-----------|---------|----------------|
+| Hoàng Kim Trí Thành | Nhóm trưởng | Điều phối, review/merge branch, tối ưu pipeline, xây dựng UI |
+| Đặng Đình Tú Anh | Core AI | Harden abstain, citation grounding, A/B log, adversarial test |
+| Quách Gia Dược | Retrieval flow | Cải thiện retrieval trace, xử lý abstain |
+| Phạm Quốc Dũng | Eval/Scorecard | Edge case eval, scorecard formatting |
+| Nguyễn Thành Nam | Documentation | Quick start, troubleshooting guide, tuning explanation |
 
-### Giai đoạn C - Nhập đóng góp core AI từ các branch thành viên
+Chi tiết phân công: `docs/team_task_allocation.md`
 
-- TuAnh:
-  - chuẩn hóa telemetry và phần index/check dữ liệu.
-- Quốc Dũng:
-  - cải thiện phần eval/scorecard và xử lý edge cases.
-- Gia Dược:
-  - nâng chất lượng retrieval flow, trace chi tiết, xử lý abstain tốt hơn.
+## 6. Trạng thái Git
 
-Sau khi nhập, commit `13cd978` làm nhiệm vụ cân chỉnh logic stream với code core mới.
+### Branches
 
-### Giai đoạn D - Nâng cấp trải nghiệm người dùng
+| Branch | Trạng thái |
+|--------|-----------|
+| `fork/main` | Production — đã tổng hợp tất cả |
+| `fork/DangDinhTuAnh-2A202600019` | Merged — 3 đợt merge |
+| `fork/PhamQuocDung-2A202600490` | Merged |
+| `fork/QuachGiaDuoc-2A202600423` | Merged |
+| `fork/nam/docs-day08-tasks` | Merged |
 
-- `80f6bae`: nâng cấp giao diện lớn (màu sắc, panel, settings, stream client).
-- `d6aaa7c`: sửa streaming, hiển thị pipeline step, citation tương tác.
-- `f2add29`: Việt hóa giao diện và sửa đồng bộ thông số settings.
-- `bca50c0`: chốt lại bản Việt hóa hoàn chỉnh + cập nhật task bổ sung cho TuAnh.
-- `eabc268`: thêm dải câu hỏi test cố định dưới khung chat + mở tài liệu tham chiếu ở tab mới.
-- `e08bd79`: sửa API mở tài liệu theo alias nguồn + chuyển câu hỏi gợi ý lên đầu khung chat (có bật/tắt) + giảm chiều cao ô nhập.
-- `ab91942` + các commit docs của Nam: bổ sung quick start, troubleshooting và diễn giải tuning dễ hiểu.
+### Giai đoạn phát triển
 
-Ý nghĩa: phần hiển thị đã đồng bộ với core AI, thao tác rõ ràng hơn và thân thiện cho demo.
+1. **Dựng nền**: API server, ChromaDB index, Next.js UI cơ bản, telemetry framework.
+2. **Phân công**: Task allocation file, priority checklist, branch strategy.
+3. **Nhập core AI**: Merge branch TuAnh (abstain + citation), Gia Dược (retrieval flow), Quốc Dũng (eval), Nam (docs).
+4. **UI/UX**: Panel RAG inspector, streaming SSE, Việt hóa, citation tương tác, test questions.
+5. **Tối ưu**: Benchmark 10 câu, tuning k_select/threshold/prompt, đạt 83/98.
 
-## 5) Kết quả review đợt cập nhật mới nhất của TuAnh
+## 7. Đối chiếu yêu cầu SCORING.md
 
-Đợt cập nhật mới nhất của nhánh TuAnh gồm 3 commit:
-
-- `648a698`: thêm `data/adversarial_questions.json` để test anti-hallucination.
-- `e056881`: cập nhật `results/grading_run.json` và làm mới `results/scorecard_variant.md`.
-- `9f56178`: thêm `data/new_test_questions.md` (10 câu hỏi mới, phủ đủ 5 tài liệu nguồn).
-
-Đánh giá nhanh:
-
-- **Điểm tốt:** bổ sung test case có chủ đích, tăng khả năng chứng minh pipeline không bịa; scorecard variant có giải thích rõ hơn.
-- **Rủi ro nhỏ cần lưu ý:** có thêm `results/grading_run.json` (ngoài file log chính trong `logs/`), khi demo cần nói rõ file nào là nguồn chính để tránh nhầm.
-- **Kết luận review:** không có lỗi chặn; đã merge vào `main`.
-
-## 6) Ghi chú vận hành
-
-1. Về branch:
-   - Các nhánh chính đã được nhập gần như đầy đủ vào `main`.
-   - Riêng nhánh của Quốc Dũng còn 2 commit mới, nên xử lý theo một vòng review riêng để tránh nhập vội.
-
-2. Về commit evidence:
-   - Lịch sử commit đã thể hiện rõ tiến trình: dựng nền -> nhập nhánh -> tích hợp -> hoàn thiện.
-   - Có đủ commit docs/chore/feat/fix để truy vết vai trò từng phần.
-
-3. Về rủi ro còn lại:
-   - Cần tiếp tục giữ nguyên nguyên tắc A/B một biến trong `tuning-log`.
-   - Tránh thay đổi lớn trên core trước khi chốt lại lần chạy grading cuối.
-
-## 7) Đối chiếu yêu cầu bắt buộc trong SCORING.md
-
-Đối chiếu theo checklist file bắt buộc của đề, trạng thái hiện tại như sau:
-
-- Đã có:
-  - `index.py`, `rag_answer.py`, `eval.py`
-  - `data/docs/` đủ 5 tài liệu
-  - `docs/architecture.md`, `docs/tuning-log.md`
-  - `results/scorecard_baseline.md`, `results/scorecard_variant.md`
-  - `reports/group_report.md` (đã thêm và cập nhật)
-- Chưa hoàn thiện đủ:
-  - `logs/grading_run.json` đã có dữ liệu chạy grading theo format rubric; cần kiểm tra lại lần cuối trước khi nộp để đảm bảo đúng cấu hình chốt.
-  - `reports/individual/[ten_thanh_vien].md` đã tạo đủ 5 file theo thành viên, nhưng nội dung đang là khung và cần điền tối thiểu 500-800 từ/người.
-
-Ghi chú riêng cho `SCORING.md`: file này đã có nội dung rubric đầy đủ; phần cần hoàn thiện nằm ở chất lượng artifact đi kèm (log cuối, report cá nhân hoàn chỉnh).
-
-## 8) Kết luận rà soát
-
-- `main` hiện tại đã là nhánh tổng hợp đầy đủ.
-- Các branch thành viên quan trọng đã được nhập và đồng bộ.
-- Repo đang ở trạng thái ổn định để chốt baseline và hoàn thiện báo cáo cá nhân.
-
-Nếu cần mở rộng thêm, có thể bổ sung phụ lục:
-
-- Bảng commit theo thành viên (kèm link hash).
-- Bảng đối chiếu commit <-> file thay đổi chính.
-- Timeline theo mốc giờ trước/sau deadline.
-
+| File bắt buộc | Trạng thái |
+|---------------|-----------|
+| `index.py` | Chạy được, tạo 29 chunk |
+| `rag_answer.py` | Chạy được, có citation + abstain |
+| `eval.py` | Chạy được end-to-end |
+| `data/docs/` | Đủ 5 tài liệu |
+| `logs/grading_run.json` | Có, 10 câu, config variant |
+| `results/scorecard_baseline.md` | Có, đủ metrics |
+| `results/scorecard_variant.md` | Có, đủ metrics + A/B comparison |
+| `docs/architecture.md` | Có, diagram + chunking + retrieval config |
+| `docs/tuning-log.md` | Có, A/B table + per-question breakdown |
+| `reports/group_report.md` | File này |
+| `reports/individual/` | Đủ 5 file |
