@@ -593,4 +593,4 @@ if __name__ == "__main__":
     # print("  3. Chạy run_scorecard(BASELINE_CONFIG)")
     # print("  4. Chạy run_scorecard(VARIANT_CONFIG)")
     # print("  5. Gọi compare_ab() để thấy delta")
-    # print("  6. Cập nhật docs/tuning-log.md với kết quả và nhận xét")
+    # print("  6. Cập nhật docs/tuning-log.md với kết quả và nhận xét.")
