@@ -1,6 +1,20 @@
 .DS_Store
 *.swp
 *~
+.env
 
 # Grading questions — không public trước 17:00
 day08/lab/data/grading_questions.json
+
+# ChromaDB — vector database tự sinh ra khi chạy python index.py
+# Không commit: ai cũng tự build lại được, file nhị phân gây conflict
+chroma_db/
+repo/chroma_db/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Logs — tự sinh ra khi chạy grading
+repo/logs/

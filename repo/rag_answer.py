@@ -76,10 +76,39 @@ def retrieve_dense(query: str, top_k: int = TOP_K_SEARCH) -> List[Dict[str, Any]
         # Lưu ý: distances trong ChromaDB cosine = 1 - similarity
         # Score = 1 - distance
     """
-    raise NotImplementedError(
-        "TODO Sprint 2: Implement retrieve_dense().\n"
-        "Tham khảo comment trong hàm để biết cách query ChromaDB."
+    # [TL] Sprint 2: Dense retrieval — embed query → query ChromaDB → return ranked chunks
+    import chromadb
+    from index import get_embedding, CHROMA_DB_DIR
+
+    # Connect to the persistent ChromaDB built in Sprint 1
+    client = chromadb.PersistentClient(path=str(CHROMA_DB_DIR))
+    collection = client.get_collection("rag_lab")
+
+    # Embed the query using the SAME model used during indexing (text-embedding-3-small)
+    # Using a different model here would produce incompatible vectors → wrong results
+    query_embedding = get_embedding(query)
+
+    # Query ChromaDB — returns distances (cosine distance = 1 - similarity)
+    results = collection.query(
+        query_embeddings=[query_embedding],
+        n_results=min(top_k, collection.count()),  # guard: don't request more than available
+        include=["documents", "metadatas", "distances"],
     )
+
+    # Convert to a flat list of chunk dicts with similarity scores
+    chunks = []
+    for doc, meta, dist in zip(
+        results["documents"][0],
+        results["metadatas"][0],
+        results["distances"][0],
+    ):
+        chunks.append({
+            "text": doc,
+            "metadata": meta,
+            "score": 1.0 - dist,  # cosine distance → similarity (higher = more relevant)
+        })
+
+    return chunks
 
 
 # =============================================================================
@@ -89,30 +118,56 @@ def retrieve_dense(query: str, top_k: int = TOP_K_SEARCH) -> List[Dict[str, Any]
 
 def retrieve_sparse(query: str, top_k: int = TOP_K_SEARCH) -> List[Dict[str, Any]]:
     """
-    Sparse retrieval: tìm kiếm theo keyword (BM25).
+    [RO] Sprint 3: BM25 keyword search.
 
-    Mạnh ở: exact term, mã lỗi, tên riêng (ví dụ: "ERR-403", "P1", "refund")
-    Hay hụt: câu hỏi paraphrase, đồng nghĩa
+    Mạnh ở: exact term, mã lỗi, tên riêng ("ERR-403", "P1", "Approval Matrix")
+    Yếu ở : câu hỏi paraphrase, đồng nghĩa, câu dài tự nhiên
 
-    TODO Sprint 3 (nếu chọn hybrid):
-    1. Cài rank_bm25: pip install rank-bm25
-    2. Load tất cả chunks từ ChromaDB (hoặc rebuild từ docs)
-    3. Tokenize và tạo BM25Index
-    4. Query và trả về top_k kết quả
+    Pipeline:
+      ChromaDB.get() → toàn bộ chunks làm corpus
+      BM25Okapi.get_scores() → score từng chunk
+      Sort giảm dần → top_k kết quả
 
-    Gợi ý:
-        from rank_bm25 import BM25Okapi
-        corpus = [chunk["text"] for chunk in all_chunks]
-        tokenized_corpus = [doc.lower().split() for doc in corpus]
-        bm25 = BM25Okapi(tokenized_corpus)
-        tokenized_query = query.lower().split()
-        scores = bm25.get_scores(tokenized_query)
-        top_indices = sorted(range(len(scores)), key=lambda i: scores[i], reverse=True)[:top_k]
+    Lưu ý: BM25 dùng tokenize đơn giản (split) — đủ cho unigram tiếng Việt
+    với keyword kỹ thuật (mã lỗi, tên riêng viết liền).
     """
-    # TODO Sprint 3: Implement BM25 search
-    # Tạm thời return empty list
-    print("[retrieve_sparse] Chưa implement — Sprint 3")
-    return []
+    from rank_bm25 import BM25Okapi
+    import chromadb
+    from index import CHROMA_DB_DIR
+
+    # Load toàn bộ chunks từ ChromaDB để build BM25 corpus
+    client = chromadb.PersistentClient(path=str(CHROMA_DB_DIR))
+    collection = client.get_collection("rag_lab")
+    all_data = collection.get(include=["documents", "metadatas"])
+    all_docs = all_data["documents"]
+    all_metas = all_data["metadatas"]
+
+    if not all_docs:
+        return []
+
+    # Tokenize corpus: lowercase + split (đủ cho keyword matching)
+    tokenized_corpus = [doc.lower().split() for doc in all_docs]
+    bm25 = BM25Okapi(tokenized_corpus)
+
+    # Score từng chunk với query
+    tokenized_query = query.lower().split()
+    scores = bm25.get_scores(tokenized_query)
+
+    # Lấy top_k indices theo BM25 score giảm dần
+    top_indices = sorted(
+        range(len(scores)),
+        key=lambda i: scores[i],
+        reverse=True
+    )[:top_k]
+
+    return [
+        {
+            "text": all_docs[i],
+            "metadata": all_metas[i],
+            "score": float(scores[i]),
+        }
+        for i in top_indices
+    ]
 
 
 # =============================================================================
@@ -126,32 +181,38 @@ def retrieve_hybrid(
     sparse_weight: float = 0.4,
 ) -> List[Dict[str, Any]]:
     """
-    Hybrid retrieval: kết hợp dense và sparse bằng Reciprocal Rank Fusion (RRF).
+    [RO] Sprint 3: Hybrid = Dense + BM25, merge bằng Reciprocal Rank Fusion (RRF).
 
-    Mạnh ở: giữ được cả nghĩa (dense) lẫn keyword chính xác (sparse)
-    Phù hợp khi: corpus lẫn lộn ngôn ngữ tự nhiên và tên riêng/mã lỗi/điều khoản
+    Mạnh ở: giữ cả nghĩa (dense) lẫn keyword chính xác (BM25)
+    Phù hợp: corpus có cả văn bản tự nhiên VÀ tên riêng/mã lỗi/điều khoản
 
-    Args:
-        dense_weight: Trọng số cho dense score (0-1)
-        sparse_weight: Trọng số cho sparse score (0-1)
+    Công thức RRF (Cormack et al. 2009):
+      RRF(doc) = dense_w × 1/(60 + rank_dense) + sparse_w × 1/(60 + rank_sparse)
+      Hằng số 60 giảm ảnh hưởng của rank cao (rank 1 vs rank 2 không quá chênh lệch)
 
-    TODO Sprint 3 (nếu chọn hybrid):
-    1. Chạy retrieve_dense() → dense_results
-    2. Chạy retrieve_sparse() → sparse_results
-    3. Merge bằng RRF:
-       RRF_score(doc) = dense_weight * (1 / (60 + dense_rank)) +
-                        sparse_weight * (1 / (60 + sparse_rank))
-       60 là hằng số RRF tiêu chuẩn
-    4. Sort theo RRF score giảm dần, trả về top_k
-
-    Khi nào dùng hybrid (từ slide):
-    - Corpus có cả câu tự nhiên VÀ tên riêng, mã lỗi, điều khoản
-    - Query như "Approval Matrix" khi doc đổi tên thành "Access Control SOP"
+    A/B Rule: chỉ thay đổi retrieval_mode, giữ nguyên tất cả tham số khác.
     """
-    # TODO Sprint 3: Implement hybrid RRF
-    # Tạm thời fallback về dense
-    print("[retrieve_hybrid] Chưa implement RRF — fallback về dense")
-    return retrieve_dense(query, top_k)
+    dense_results  = retrieve_dense(query, top_k=top_k)
+    sparse_results = retrieve_sparse(query, top_k=top_k)
+
+    # Accumulate RRF score cho từng chunk (key = 80 ký tự đầu của text)
+    scores: Dict[str, Dict] = {}
+
+    for rank, chunk in enumerate(dense_results):
+        key = chunk["text"][:80]
+        if key not in scores:
+            scores[key] = {"chunk": chunk, "rrf": 0.0}
+        scores[key]["rrf"] += dense_weight * (1.0 / (60 + rank))
+
+    for rank, chunk in enumerate(sparse_results):
+        key = chunk["text"][:80]
+        if key not in scores:
+            scores[key] = {"chunk": chunk, "rrf": 0.0}
+        scores[key]["rrf"] += sparse_weight * (1.0 / (60 + rank))
+
+    # Sort theo RRF score giảm dần → trả về top_k
+    sorted_results = sorted(scores.values(), key=lambda x: x["rrf"], reverse=True)
+    return [item["chunk"] for item in sorted_results[:top_k]]
 
 
 # =============================================================================
@@ -262,23 +323,26 @@ def build_context_block(chunks: List[Dict[str, Any]]) -> str:
 
 def build_grounded_prompt(query: str, context_block: str) -> str:
     """
-    Xây dựng grounded prompt theo 4 quy tắc từ slide:
-    1. Evidence-only: Chỉ trả lời từ retrieved context
-    2. Abstain: Thiếu context thì nói không đủ dữ liệu
-    3. Citation: Gắn source/section khi có thể
-    4. Short, clear, stable: Output ngắn, rõ, nhất quán
+    [TL] Sprint 2: Grounded prompt — siết chặt để force abstain khi context không đủ.
 
-    TODO Sprint 2:
-    Đây là prompt baseline. Trong Sprint 3, bạn có thể:
-    - Thêm hướng dẫn về format output (JSON, bullet points)
-    - Thêm ngôn ngữ phản hồi (tiếng Việt vs tiếng Anh)
-    - Điều chỉnh tone phù hợp với use case (CS helpdesk, IT support)
+    4 quy tắc từ slide:
+    1. Evidence-only: Chỉ trả lời từ retrieved context
+    2. Hard abstain: Thiếu context → PHẢI nói không biết, KHÔNG được suy luận thêm
+    3. Citation: Gắn [số] khi trích dẫn
+    4. Short, clear, stable: Ngắn, rõ, nhất quán
+
+    Lý do dùng "STRICT" và "DO NOT infer": tránh model dùng prior knowledge
+    để tự suy luận thêm khi context score thấp (như ERR-403-AUTH).
     """
-    prompt = f"""Answer only from the retrieved context below.
-If the context is insufficient to answer the question, say you do not know and do not make up information.
-Cite the source field (in brackets like [1]) when possible.
-Keep your answer short, clear, and factual.
-Respond in the same language as the question.
+    prompt = f"""You are a strict internal helpdesk assistant. Answer ONLY using the context provided below.
+
+RULES (follow strictly):
+1. If the answer is clearly stated in the context, answer it and cite the source in [brackets] like [1].
+2. If the context does NOT contain the answer, respond with exactly:
+   "Không tìm thấy thông tin này trong tài liệu nội bộ. Vui lòng liên hệ bộ phận phụ trách."
+3. DO NOT infer, guess, or use any knowledge outside the provided context.
+4. Keep your answer concise and factual.
+5. Respond in Vietnamese.
 
 Question: {query}
 
@@ -316,10 +380,16 @@ def call_llm(prompt: str) -> str:
 
     Lưu ý: Dùng temperature=0 hoặc thấp để output ổn định cho evaluation.
     """
-    raise NotImplementedError(
-        "TODO Sprint 2: Implement call_llm().\n"
-        "Chọn Option A (OpenAI) hoặc Option B (Gemini) trong TODO comment."
+    # [TL] Sprint 2: Dùng OpenAI — khớp với LLM_PROVIDER=openai trong .env
+    from openai import OpenAI
+    client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+    response = client.chat.completions.create(
+        model=LLM_MODEL,                          # gpt-4o-mini từ .env
+        messages=[{"role": "user", "content": prompt}],
+        temperature=0,     # [TL] temperature=0: output ổn định, tái hiện được → dễ A/B eval
+        max_tokens=512,    # đủ cho câu trả lời ngắn gọn, grounded
     )
+    return response.choices[0].message.content
 
 
 def rag_answer(
@@ -425,30 +495,33 @@ def rag_answer(
 
 def compare_retrieval_strategies(query: str) -> None:
     """
-    So sánh các retrieval strategies với cùng một query.
-
-    TODO Sprint 3:
-    Chạy hàm này để thấy sự khác biệt giữa dense, sparse, hybrid.
-    Dùng để justify tại sao chọn variant đó cho Sprint 3.
-
-    A/B Rule (từ slide): Chỉ đổi MỘT biến mỗi lần.
+    [RO] Sprint 3: So sánh dense vs hybrid trên cùng một query.
+    Dùng để justify và ghi vào docs/tuning-log.md.
+    A/B Rule: chỉ đổi retrieval_mode, giữ nguyên các tham số khác.
     """
-    print(f"\n{'='*60}")
+    print(f"\n{'='*62}")
     print(f"Query: {query}")
-    print('='*60)
+    print('='*62)
 
-    strategies = ["dense", "hybrid"]  # Thêm "sparse" sau khi implement
+    strategies = [
+        ("dense",  {"retrieval_mode": "dense",  "use_rerank": False}),
+        ("hybrid", {"retrieval_mode": "hybrid", "use_rerank": False}),
+    ]
 
-    for strategy in strategies:
-        print(f"\n--- Strategy: {strategy} ---")
+    for label, kwargs in strategies:
+        print(f"\n--- [{label.upper()}] ---")
         try:
-            result = rag_answer(query, retrieval_mode=strategy, verbose=False)
-            print(f"Answer: {result['answer']}")
-            print(f"Sources: {result['sources']}")
-        except NotImplementedError as e:
-            print(f"Chưa implement: {e}")
+            result = rag_answer(query, verbose=False, **kwargs)
+            print(f"  Answer  : {result['answer'][:120]}")
+            print(f"  Sources : {result['sources']}")
+            # In top-3 chunks để so sánh trực tiếp
+            for i, c in enumerate(result["chunks_used"], 1):
+                src = c["metadata"].get("source", "?")
+                sec = c["metadata"].get("section", "?")
+                scr = c.get("score", 0)
+                print(f"  Chunk {i}: score={scr:.3f} | {src} | {sec}")
         except Exception as e:
-            print(f"Lỗi: {e}")
+            print(f"  ERROR: {e}")
 
 
 # =============================================================================
@@ -456,43 +529,61 @@ def compare_retrieval_strategies(query: str) -> None:
 # =============================================================================
 
 if __name__ == "__main__":
-    print("=" * 60)
+    print("=" * 62)
     print("Sprint 2 + 3: RAG Answer Pipeline")
-    print("=" * 60)
+    print("=" * 62)
 
-    # Test queries từ data/test_questions.json
-    test_queries = [
-        "SLA xử lý ticket P1 là bao lâu?",
-        "Khách hàng có thể yêu cầu hoàn tiền trong bao nhiêu ngày?",
-        "Ai phải phê duyệt để cấp quyền Level 3?",
-        "ERR-403-AUTH là lỗi gì?",  # Query không có trong docs → kiểm tra abstain
+    # -----------------------------------------------------------------------
+    # SPRINT 2 — Baseline verification (dense)
+    # -----------------------------------------------------------------------
+    baseline_cases = [
+        {"dod": "[DoD 1]", "query": "SLA xử lý ticket P1 là bao lâu?",
+         "expect": "citation [1]"},
+        {"dod": "[DoD 2]", "query": "ERR-403-AUTH là lỗi gì?",
+         "expect": "abstain — không bịa"},
+        {"dod": "[DoD 3]", "query": "Ai phải phê duyệt để cấp quyền Level 3?",
+         "expect": "sources không rỗng"},
     ]
 
-    print("\n--- Sprint 2: Test Baseline (Dense) ---")
-    for query in test_queries:
-        print(f"\nQuery: {query}")
+    print("\n--- Sprint 2: Baseline (Dense) ---")
+    for case in baseline_cases:
+        print(f"\n{'─'*55}")
+        print(f"{case['dod']} {case['query']}")
+        print(f"  Expect : {case['expect']}")
         try:
-            result = rag_answer(query, retrieval_mode="dense", verbose=True)
-            print(f"Answer: {result['answer']}")
-            print(f"Sources: {result['sources']}")
-        except NotImplementedError:
-            print("Chưa implement — hoàn thành TODO trong retrieve_dense() và call_llm() trước.")
+            r = rag_answer(case["query"], retrieval_mode="dense", verbose=False)
+            print(f"  Answer : {r['answer'][:150]}")
+            print(f"  Sources: {r['sources']}")
         except Exception as e:
-            print(f"Lỗi: {e}")
+            print(f"  ERROR  : {e}")
 
-    # Uncomment sau khi Sprint 3 hoàn thành:
-    # print("\n--- Sprint 3: So sánh strategies ---")
-    # compare_retrieval_strategies("Approval Matrix để cấp quyền là tài liệu nào?")
-    # compare_retrieval_strategies("ERR-403-AUTH")
+    # -----------------------------------------------------------------------
+    # SPRINT 3 — [RO] A/B Compare: Dense vs Hybrid
+    # -----------------------------------------------------------------------
+    print("\n\n" + "=" * 62)
+    print("Sprint 3: A/B Compare — Dense vs Hybrid")
+    print("=" * 62)
 
-    print("\n\nViệc cần làm Sprint 2:")
-    print("  1. Implement retrieve_dense() — query ChromaDB")
-    print("  2. Implement call_llm() — gọi OpenAI hoặc Gemini")
-    print("  3. Chạy rag_answer() với 3+ test queries")
-    print("  4. Verify: output có citation không? Câu không có docs → abstain không?")
+    # Câu test quan trọng:
+    # - alias query: dense có thể bỏ sót vì keyword không khớp
+    # - keyword query: BM25 phải tìm P1 chính xác hơn
+    # - abstain case:  cả hai phải abstain
+    compare_queries = [
+        "Approval Matrix để cấp quyền là tài liệu nào?",   # alias test
+        "SLA xử lý ticket P1 là bao lâu?",                  # keyword test
+        "ERR-403-AUTH là lỗi gì?",                          # abstain test
+    ]
 
-    print("\nViệc cần làm Sprint 3:")
-    print("  1. Chọn 1 trong 3 variants: hybrid, rerank, hoặc query transformation")
-    print("  2. Implement variant đó")
-    print("  3. Chạy compare_retrieval_strategies() để thấy sự khác biệt")
-    print("  4. Ghi lý do chọn biến đó vào docs/tuning-log.md")
+    for q in compare_queries:
+        compare_retrieval_strategies(q)
+
+    print("\n" + "=" * 62)
+    print("Sprint 3 — Definition of Done Checklist")
+    print("=" * 62)
+    print("[DoD S3-1] retrieve_hybrid() chạy không crash")
+    print("[DoD S3-2] Alias query → hybrid tìm được it/access-control-sop.md")
+    print("[DoD S3-3] Kết quả khác nhau giữa DENSE và HYBRID ở alias query")
+    print("[DoD S3-4] Abstain case → cả dense và hybrid đều không bịa")
+    print()
+    print("→ Ghi kết quả vào docs/tuning-log.md (Documentation Owner).")
+
