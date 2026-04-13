@@ -2,14 +2,14 @@
   {
     "id": "q01",
     "question": "SLA xử lý ticket P1 là bao lâu?",
-    "answer": "SLA xử lý ticket P1 là 4 giờ [1].",
+    "answer": "SLA xử lý ticket P1 là 4 giờ. [1]",
     "sources": [
       "policy/refund-v4.pdf",
       "support/sla-p1-2026.pdf"
     ],
     "chunks_retrieved": 3,
     "retrieval_mode": "dense",
-    "timestamp": "2026-04-13T16:35:12"
+    "timestamp": "2026-04-13T16:11:09"
   },
   {
     "id": "q02",
@@ -20,7 +20,7 @@
     ],
     "chunks_retrieved": 3,
     "retrieval_mode": "dense",
-    "timestamp": "2026-04-13T16:35:14"
+    "timestamp": "2026-04-13T16:11:12"
   },
   {
     "id": "q03",
@@ -32,18 +32,18 @@
     ],
     "chunks_retrieved": 3,
     "retrieval_mode": "dense",
-    "timestamp": "2026-04-13T16:35:18"
+    "timestamp": "2026-04-13T16:11:16"
   },
   {
     "id": "q04",
     "question": "Sản phẩm kỹ thuật số có được hoàn tiền không?",
-    "answer": "Sản phẩm kỹ thuật số không được hoàn tiền theo chính sách hoàn tiền hiện hành [1].",
+    "answer": "Sản phẩm kỹ thuật số không được hoàn tiền, theo quy định ngoại lệ trong chính sách hoàn tiền [1].",
     "sources": [
       "policy/refund-v4.pdf"
     ],
     "chunks_retrieved": 3,
     "retrieval_mode": "dense",
-    "timestamp": "2026-04-13T16:35:23"
+    "timestamp": "2026-04-13T16:11:19"
   },
   {
     "id": "q05",
@@ -55,30 +55,30 @@
     ],
     "chunks_retrieved": 3,
     "retrieval_mode": "dense",
-    "timestamp": "2026-04-13T16:35:25"
+    "timestamp": "2026-04-13T16:11:21"
   },
   {
     "id": "q06",
     "question": "Escalation trong sự cố P1 diễn ra như thế nào?",
-    "answer": "Escalation trong sự cố P1 diễn ra như sau:\n\n1. Nếu cần thay đổi quyền hệ thống khẩn cấp, On-call IT Admin có thể cấp quyền tạm thời (tối đa 24 giờ) sau khi được Tech Lead phê duyệt bằng lời [1].\n2. Nếu không có phản hồi từ engineer trong 10 phút, ticket P1 sẽ tự động escalate lên Senior Engineer [3].\n3. Nếu cần hỗ trợ thêm trong quá trình xử lý, engineer có thể thực hiện escalation ngay [2].",
+    "answer": "Escalation trong sự cố P1 diễn ra như sau:\n\n1. Nếu cần thay đổi quyền hệ thống để xử lý sự cố, On-call IT Admin có thể cấp quyền tạm thời (tối đa 24 giờ) sau khi được Tech Lead phê duyệt bằng lời. [1]\n2. Nếu không có phản hồi từ engineer trong 10 phút, ticket tự động escalate lên Senior Engineer. [3]",
     "sources": [
-      "it/access-control-sop.md",
-      "support/sla-p1-2026.pdf"
+      "support/sla-p1-2026.pdf",
+      "it/access-control-sop.md"
     ],
     "chunks_retrieved": 3,
     "retrieval_mode": "dense",
-    "timestamp": "2026-04-13T16:35:31"
+    "timestamp": "2026-04-13T16:11:25"
   },
   {
     "id": "q07",
     "question": "Approval Matrix để cấp quyền hệ thống là tài liệu nào?",
-    "answer": "Approval Matrix để cấp quyền hệ thống là tài liệu \"it/access-control-sop.md\", trước đây có tên \"Approval Matrix for System Access\" [1].",
+    "answer": "Approval Matrix để cấp quyền hệ thống là tài liệu \"it/access-control-sop.md\" trước đây có tên \"Approval Matrix for System Access\" [1].",
     "sources": [
       "it/access-control-sop.md"
     ],
     "chunks_retrieved": 3,
     "retrieval_mode": "dense",
-    "timestamp": "2026-04-13T16:35:34"
+    "timestamp": "2026-04-13T16:11:28"
   },
   {
     "id": "q08",
@@ -90,18 +90,18 @@
     ],
     "chunks_retrieved": 3,
     "retrieval_mode": "dense",
-    "timestamp": "2026-04-13T16:35:36"
+    "timestamp": "2026-04-13T16:11:31"
   },
   {
     "id": "q09",
     "question": "ERR-403-AUTH là lỗi gì và cách xử lý?",
-    "answer": "Tôi không biết. Context không cung cấp thông tin về lỗi ERR-403-AUTH.",
+    "answer": "Tôi không biết.",
     "sources": [
       "it/access-control-sop.md"
     ],
     "chunks_retrieved": 3,
     "retrieval_mode": "dense",
-    "timestamp": "2026-04-13T16:35:40"
+    "timestamp": "2026-04-13T16:11:34"
   },
   {
     "id": "q10",
@@ -112,6 +112,6 @@
     ],
     "chunks_retrieved": 3,
     "retrieval_mode": "dense",
-    "timestamp": "2026-04-13T16:35:44"
+    "timestamp": "2026-04-13T16:11:40"
   }
 ]
