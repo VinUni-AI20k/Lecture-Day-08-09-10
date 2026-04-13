@@ -1,18 +1,16 @@
 # Báo Cáo Cá Nhân — Lab Day 08: RAG Pipeline
 
-**Họ và tên:** ___________  
-**Vai trò trong nhóm:** Tech Lead / Retrieval Owner / Eval Owner / Documentation Owner  
-**Ngày nộp:** ___________  
+**Họ và tên:** Hoàng Thái Dương 
+**Vai trò trong nhóm:**  Eval Owner
+**Ngày nộp:** 13/04/2026 
 **Độ dài yêu cầu:** 500–800 từ
 
 ---
 
 ## 1. Tôi đã làm gì trong lab này? (100-150 từ)
 
-> Mô tả cụ thể phần bạn đóng góp vào pipeline:
-> - Sprint nào bạn chủ yếu làm?
-> - Cụ thể bạn implement hoặc quyết định điều gì?
-> - Công việc của bạn kết nối với phần của người khác như thế nào?
+> Trong lab này, tôi phụ trách phần Sprint 4, bao gồm: evaluation và scorecard cho toàn bộ pipeline RAG. Công việc của tôi là đọc yêu cầu trong `README.md` và `SCORING.md`, sau đó hoàn thiện phần chấm điểm trong `eval.py` để hệ thống có thể chạy end-to-end trên 2 bộ câu hỏi test là `test_questions.json` và bộ `grading_questions.json`. 
+> Tôi triển khai cơ chế chấm 4 tiêu chí gồm faithfulness, answer relevance, context recall và completeness; đồng thời bổ sung phương pháp AI-as-Judge bằng OpenAI để giúp đánh giá output chính xác và công bằng hơn. Ngoài ra, tôi cũng cấu hình baseline và variant, chạy A/B comparison, sinh các file `scorecard_baseline.md`, `scorecard_variant.md`, `ab_comparison.csv` và `logs/grading_run.json`. Kết nối trực tiếp với code retrieval/generation của các bạn khác, vì chính kết quả evaluation là căn cứ để nhóm quyết định giữ baseline hay thử thêm variant.
 
 _________________
 
@@ -20,9 +18,8 @@ _________________
 
 ## 2. Điều tôi hiểu rõ hơn sau lab này (100-150 từ)
 
-> Chọn 1-2 concept từ bài học mà bạn thực sự hiểu rõ hơn sau khi làm lab.
-> Ví dụ: chunking, hybrid retrieval, grounded prompt, evaluation loop.
-> Giải thích bằng ngôn ngữ của bạn — không copy từ slide.
+> Tôi nhận ra evaluation trong RAG không chỉ đơn giản là đánh giá xem output của mô hình là đúng hay sai. Một hệ thống có thể retrieve đúng tài liệu nhưng vẫn trả lời kém nếu context đưa vào prompt không đủ tốt hoặc model quá dễ hallucinate. 
+> Tôi cũng hiểu rõ hơn sự khác nhau giữa bốn metric. Context recall dùng để kiểm tra retriever có kéo được đúng nguồn không, còn faithfulness kiểm tra model có bịa ra ngoài context hay không. Relevance đo mức độ bám sát câu hỏi, còn completeness đo việc câu trả lời có đủ các ý quan trọng không. Trước đây tôi nghĩ chỉ cần precision và recall cao là hệ thống ổn, nhưng sau khi thử nghiệm nhiều lần tôi thấy recall có thể đạt tối đa mà answer vẫn thiếu ý hoặc sai hướng nếu generation chưa được kiểm soát tốt.
 
 _________________
 
@@ -30,9 +27,8 @@ _________________
 
 ## 3. Điều tôi ngạc nhiên hoặc gặp khó khăn (100-150 từ)
 
-> Điều gì xảy ra không đúng kỳ vọng?
-> Lỗi nào mất nhiều thời gian debug nhất?
-> Giả thuyết ban đầu của bạn là gì và thực tế ra sao?
+> Điều làm tôi bất ngờ nhất là có những lúc hệ thống đã retrieve đúng source nhưng kết quả cuối cùng vẫn không tốt. Ban đầu tôi nghĩ lỗi chủ yếu sẽ nằm ở retrieval, nên nhóm thử hybrid và adaptive retrieval để cải thiện. Tuy nhiên khi chạy scorecard, có những câu context recall vẫn là 5/5 nhưng completeness hoặc faithfulness lại thấp. Điều đó cho thấy vấn đề không chỉ nằm ở bước tìm tài liệu, mà còn nằm ở cách chọn chunk đưa vào prompt và cách model diễn giải context. 
+> Một khó khăn khác là phần đánh giá tự động. Nếu chỉ chấm thủ công thì mất thời gian và dễ thiếu nhất quán, nhưng dùng AI-as-Judge thì phải viết prompt đủ chặt để model judge đưa ra kết quả công bằng nhất. 
 
 _________________
 
@@ -46,9 +42,12 @@ _________________
 > - Lỗi nằm ở đâu: indexing / retrieval / generation?
 > - Variant có cải thiện không? Tại sao có/không?
 
-**Câu hỏi:** ___________
+**Câu hỏi:** `gq07` — “Công ty sẽ phạt bao nhiêu nếu team IT vi phạm cam kết SLA P1?”
 
-**Phân tích:**
+**Phân tích:** 
+Đây là câu tôi thấy đáng chú ý nhất vì nó kiểm tra đúng failure mode nguy hiểm nhất của RAG: hallucination. Trong tài liệu `sla_p1_2026.txt`, hệ thống chỉ có thông tin về SLA, escalation, hotline on-call và lịch sử phiên bản; hoàn toàn không có điều khoản nào nói về mức phạt khi vi phạm SLA. Tuy nhiên ở một lần chạy baseline, answer lại trả về một mức phạt cụ thể, làm điểm faithfulness rơi xuống 1/5. Điều này cho thấy retriever không phải là vấn đề chính, vì source đúng vẫn được lấy về; lỗi nằm ở generation và chính sách abstain. Model đã suy diễn từ kiến thức chung thay vì chỉ bám vào context được retrieve.
+
+
 
 _________________
 
@@ -56,9 +55,7 @@ _________________
 
 ## 5. Nếu có thêm thời gian, tôi sẽ làm gì? (50-100 từ)
 
-> 1-2 cải tiến cụ thể bạn muốn thử.
-> Không phải "làm tốt hơn chung chung" mà phải là:
-> "Tôi sẽ thử X vì kết quả eval cho thấy Y."
+> Nếu có thêm thời gian, tôi muốn thử thêm nhiều phương pháp mới để cải thiện pipeline một cách có hệ thống thay vì chỉ tối ưu một điểm đơn lẻ. Cụ thể, tôi muốn thử thêm rerank sau retrieval để giảm noise ở các câu nhiều ngữ cảnh giống nhau, thử query decomposition cho các câu hỏi nhiều vế, và thử cải tiến prompt theo hướng bắt buộc model trả lời đủ từng ý thay vì trả lời ngắn hoặc abstain quá sớm. Ngoài ra, tôi cũng muốn mở rộng bộ evaluation để đo riêng các lỗi như hallucination, thiếu ý và nhầm ngữ cảnh, vì đây là các lỗi xuất hiện khá rõ trong quá trình chạy scorecard của nhóm.
 
 _________________
 
