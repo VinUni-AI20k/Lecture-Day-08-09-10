@@ -1,6 +1,74 @@
+# --- OS Environment Files ---
 .DS_Store
+.AppleDouble
+.LSOverride
+Icon?
+._*
+.Spotlight-V100
+.Trashes
+desktop.ini
+thumbs.db
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# --- Virtual Environments ---
+venv/
+.venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+
+# --- Environment Secrets ---
+.env
+.env.local
+.env.*
+!.env.example
+
+# --- AI/Data Lab Specific ---
+day08/lab/chroma_db/
+day09/lab/chroma_db/
+day10/lab/chroma_db/
+*.sqlite
+*.db
+results/
+reports/individual/*.md
+!reports/individual/template.md
+
+# --- Grading questions (không public trước 17:00) ---
+day08/lab/data/grading_questions.json
+day09/lab/data/grading_questions.json
+day10/lab/data/grading_questions.json
+
+# --- IDEs ---
+.vscode/
+.idea/
 *.swp
 *~
+*.bak
 
-# Grading questions — không public trước 17:00
-day08/lab/data/grading_questions.json
+# --- Logging ---
+*.log
+trace_log.jsonl
