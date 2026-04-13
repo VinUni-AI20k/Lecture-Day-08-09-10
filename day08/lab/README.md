@@ -1,201 +1,74 @@
-# Lab Day 08 — Full RAG Pipeline
+# Lab Day 08 — Full RAG Pipeline: Indexing Completed
 
-**Môn:** AI in Action (AICB-P1)  
-**Chủ đề:** RAG Pipeline: Indexing → Retrieval → Generation → Evaluation  
-**Thời gian:** 4 giờ (4 sprints x 60 phút)
+This repository contains a high-performance RAG (Retrieval-Augmented Generation) indexing pipeline built for an internal CS & IT Helpdesk assistant.
 
----
+## Implementation Status
 
-## Bối cảnh
-
-Nhóm xây dựng **trợ lý nội bộ cho khối CS + IT Helpdesk**: trả lời câu hỏi về chính sách, SLA ticket, quy trình cấp quyền, và FAQ bằng chứng cứ được retrieve có kiểm soát.
-
-**Câu hỏi mẫu hệ thống phải trả lời được:**
-- "SLA xử lý ticket P1 là bao lâu?"
-- "Khách hàng có thể yêu cầu hoàn tiền trong bao nhiêu ngày?"
-- "Ai phải phê duyệt để cấp quyền Level 3?"
+| Sprint | Goal | Status | Key Features |
+| :--- | :--- | :--- | :--- |
+| **Sprint 1** | **Indexing & Metadata** | **DONE** | Specialized chunking, full metadata schema, ChromaDB + Sentence Transformers. |
+| Sprint 2 | Baseline Retrieval | *Pending* | - |
+| Sprint 3 | Tuning | *Pending* | - |
+| Sprint 4 | Evaluation | *Pending* | - |
 
 ---
 
-## Mục tiêu học tập
+## Sprint 1: Indexing Strategy
 
-| Mục tiêu | Sprint liên quan |
-|-----------|----------------|
-| Build indexing pipeline với metadata | Sprint 1 |
-| Build retrieval + grounded answer function | Sprint 2 |
-| So sánh dense / hybrid / rerank, chọn và justify variant | Sprint 3 |
-| Đánh giá pipeline bằng scorecard, A/B comparison | Sprint 4 |
+I have implemented a robust indexing pipeline in `index.py` that handles diverse document types with specialized logic.
 
----
+### 1. Document-Specific Chunking
+| Document | Strategy | Why? |
+| :--- | :--- | :--- |
+| **SLA P1 2026** | Priority Grouping | Combines Definitions and SLAs for each P-level into single chunks for full context. |
+| **Refund Policy v4** | Article-based | Ensures rules for "Exceptions" (Article 3) are isolated to prevent dilution. |
+| **Access Control SOP** | Section-based | Standard split with an injected **Alias Chunk** ("Approval Matrix") for historical queries. |
+| **IT Helpdesk FAQ** | Q&A Pair | Each question is an independent chunk to maximize retrieval precision for micro-queries. |
+| **HR Leave Policy** | Section-based | Isolates "Remote Work Policy" (Part 4) for specific eligibility questions. |
 
-## Cấu trúc repo
+### 2. Full Metadata Schema
+Every chunk is enriched with a comprehensive metadata dictionary to support advanced retrieval:
+- `doc_id`: Unique identifier for the source document.
+- `chunk_id`: Hierarchical ID (e.g., `sla_p1_2026_c01`).
+- `section_title`: Human-readable section name.
+- `department`: IT, HR, CS, etc.
+- `effective_date`: Versioning control.
+- `prev_chunk_id` / `next_chunk_id`: Enables **Sliding Window Retrieval** or context expanding.
+- `aliases`: For historical or alternative names (e.g., `Approval Matrix`).
+- `char_count`: Optimization tracking.
 
-```
-lab/
-├── index.py              # Sprint 1: Preprocess → Chunk → Embed → Store
-├── rag_answer.py         # Sprint 2+3: Retrieve → (Rerank) → Generate
-├── eval.py               # Sprint 4: Scorecard + A/B Comparison
-│
-├── data/
-│   ├── docs/             # Policy documents để index
-│   │   ├── policy_refund_v4.txt
-│   │   ├── sla_p1_2026.txt
-│   │   ├── access_control_sop.txt
-│   │   ├── it_helpdesk_faq.txt
-│   │   └── hr_leave_policy.txt
-│   └── test_questions.json   # 10 test questions với expected answers
-│
-├── docs/
-│   ├── architecture.md   # Template: mô tả thiết kế pipeline
-│   └── tuning-log.md     # Template: ghi lại A/B experiments
-│
-├── reports/
-│   └── individual/
-│       └── template.md   # Template báo cáo cá nhân (500-800 từ)
-│
-├── requirements.txt
-└── .env.example
-```
+### 3.Embedding & Storage
+- **Model**:
+ + `"text-embedding-3-small"`: OpenAI API (if not, fall back to local)
+ + `paraphrase-multilingual-MiniLM-L12-v2` via `SentenceTransformers` (local, no API cost).
+- **Store**: **ChromaDB** with Cosine similarity (`hnsw:space: cosine`).
+- **Batching**: Optimized upsert logic with `tqdm` progress bars.
 
 ---
 
-## Setup
+## How to Run
 
-### 1. Cài dependencies
+### Setup Environment
+1. Install dependencies:
+   ```bash
+   pip install -r requirements.txt
+   ```
+2. (Optional) Configure `.env` if using OpenAI/Gemini later. Sprint 1 is fully local.
+
+### Execute Indexing
+Run the pipeline to preprocess, chunk, and index all documents:
 ```bash
-pip install -r requirements.txt
+python index.py
 ```
 
-### 2. Tạo file .env
-```bash
-cp .env.example .env
-# Điền OPENAI_API_KEY hoặc GOOGLE_API_KEY
-```
-
-### 3. Test setup
-```bash
-python index.py    # Xem preview preprocess + chunking (không cần API key)
-```
+### Verify Index
+The script will automatically run verification steps at the end:
+- `list_chunks()`: Displays the top records in the DB to check format and metadata.
+- `inspect_metadata_coverage()`: Shows the distribution of chunks across departments and identifies missing fields.
 
 ---
 
-## 4 Sprints
-
-### Sprint 1 (60') — Build Index
-**File:** `index.py`
-
-**Việc phải làm:**
-1. Implement `get_embedding()` — chọn OpenAI hoặc Sentence Transformers
-2. Implement phần TODO trong `build_index()` — embed và upsert vào ChromaDB
-3. Chạy `build_index()` và kiểm tra với `list_chunks()`
-
-**Definition of Done:**
-- [ ] Script chạy được, index đủ 5 tài liệu
-- [ ] Mỗi chunk có ít nhất 3 metadata fields: `source`, `section`, `effective_date`
-- [ ] `list_chunks()` cho thấy chunk hợp lý, không bị cắt giữa điều khoản
-
----
-
-### Sprint 2 (60') — Baseline Retrieval + Answer
-**File:** `rag_answer.py`
-
-**Việc phải làm:**
-1. Implement `retrieve_dense()` — query ChromaDB với embedding
-2. Implement `call_llm()` — gọi OpenAI hoặc Gemini
-3. Test `rag_answer()` với 3+ câu hỏi mẫu
-
-**Definition of Done:**
-- [ ] `rag_answer("SLA ticket P1?")` → trả về câu trả lời có citation `[1]`
-- [ ] `rag_answer("ERR-403-AUTH")` → trả về "Không đủ dữ liệu" (abstain)
-- [ ] Output có `sources` field không rỗng
-
----
-
-### Sprint 3 (60') — Tuning Tối Thiểu
-**File:** `rag_answer.py`
-
-**Chọn 1 trong 3 variants:**
-
-| Variant | Implement | Khi nào chọn |
-|---------|-----------|-------------|
-| **Hybrid** | `retrieve_sparse()` + `retrieve_hybrid()` | Corpus có cả câu tự nhiên lẫn keyword/mã lỗi |
-| **Rerank** | `rerank()` với cross-encoder | Dense search nhiều noise |
-| **Query Transform** | `transform_query()` | Query dùng alias, tên cũ |
-
-**Definition of Done:**
-- [ ] Variant chạy được end-to-end
-- [ ] Có bảng so sánh baseline vs variant (dùng `compare_retrieval_strategies()`)
-- [ ] Giải thích được vì sao chọn biến đó (ghi vào `docs/tuning-log.md`)
-
-**A/B Rule:** Chỉ đổi MỘT biến mỗi lần.
-
----
-
-### Sprint 4 (60') — Evaluation + Docs + Report
-**File:** `eval.py`
-
-**Việc phải làm:**
-1. Chấm điểm (thủ công hoặc LLM-as-Judge) cho 10 test questions
-2. Chạy `run_scorecard(BASELINE_CONFIG)` và `run_scorecard(VARIANT_CONFIG)`
-3. Chạy `compare_ab()` để thấy delta
-4. Điền vào `docs/architecture.md` và `docs/tuning-log.md`
-5. Viết báo cáo cá nhân (500-800 từ/người)
-
-**Definition of Done:**
-- [ ] Demo chạy end-to-end: `python index.py && python rag_answer.py && python eval.py`
-- [ ] Scorecard baseline và variant đã điền
-- [ ] `docs/architecture.md` và `docs/tuning-log.md` hoàn chỉnh
-- [ ] Mỗi người có file báo cáo trong `reports/individual/`
-
----
-
-## Deliverables (Nộp bài)
-
-| Item | File | Owner |
-|------|------|-------|
-| Code pipeline | `index.py`, `rag_answer.py`, `eval.py` | Tech Lead |
-| Test questions | `data/test_questions.json` (đã có mẫu) | Eval Owner |
-| Scorecard | `results/scorecard_baseline.md`, `scorecard_variant.md` | Eval Owner |
-| Architecture docs | `docs/architecture.md` | Documentation Owner |
-| Tuning log | `docs/tuning-log.md` | Documentation Owner |
-| Báo cáo cá nhân | `reports/individual/[ten].md` | Từng người |
-
----
-
-## Phân vai (Giao ngay phút đầu)
-
-| Vai trò | Trách nhiệm chính | Sprint lead |
-|---------|------------------|------------|
-| **Tech Lead** | Giữ nhịp sprint, nối code end-to-end | 1, 2 |
-| **Retrieval Owner** | Chunking, metadata, retrieval strategy, rerank | 1, 3 |
-| **Eval Owner** | Test questions, expected evidence, scorecard, A/B | 3, 4 |
-| **Documentation Owner** | architecture.md, tuning-log, báo cáo nhóm | 4 |
-
----
-
-## Gợi ý Debug (Error Tree)
-
-Nếu pipeline trả lời sai, kiểm tra lần lượt:
-
-```
-1. Indexing?
-   → list_chunks() → Chunk có đúng không? Metadata có đủ không?
-
-2. Retrieval?
-   → score_context_recall() → Expected source có được retrieve không?
-   → Thử thay dense → hybrid nếu query có keyword/alias
-
-3. Generation?
-   → score_faithfulness() → Answer có bám context không?
-   → Kiểm tra prompt: có "Answer only from context" không?
-```
-
----
-
-## Tài nguyên tham khảo
-
-- Slide Day 08: `../lecture-08.html`
-- ChromaDB docs: https://docs.trychroma.com
-- OpenAI Embeddings: https://platform.openai.com/docs/guides/embeddings
-- Sentence Transformers: https://www.sbert.net
-- rank-bm25: https://github.com/dorianbrown/rank_bm25
+## Progress Summary
+- **Total Documents**: 5
+- **Total Chunks**: 35
+- **Performance**: Normalized metadata extraction ensures no `UnicodeEncodeError` in the terminal output.
