@@ -57,36 +57,32 @@ def retrieve_dense(query: str, top_k: int = TOP_K_SEARCH) -> List[Dict[str, Any]
           - "text": nội dung chunk
           - "metadata": metadata (source, section, effective_date, ...)
           - "score": cosine similarity score
-    """
-    import chromadb
-    from index import get_embedding, CHROMA_DB_DIR
+
+    TODO Sprint 2:
+    1. Embed query bằng cùng model đã dùng khi index (xem index.py)
+    2. Query ChromaDB với embedding đó
+    3. Trả về kết quả kèm score
+
+    Gợi ý:
+        import chromadb
+        from index import get_embedding, CHROMA_DB_DIR
 
     client = chromadb.PersistentClient(path=str(CHROMA_DB_DIR))
     collection = client.get_collection("rag_lab")
 
-    query_embedding = get_embedding(query)
-    results = collection.query(
-        query_embeddings=[query_embedding],
-        n_results=top_k,
-        include=["documents", "metadatas", "distances"]
+        query_embedding = get_embedding(query)
+        results = collection.query(
+            query_embeddings=[query_embedding],
+            n_results=top_k,
+            include=["documents", "metadatas", "distances"]
+        )
+        # Lưu ý: distances trong ChromaDB cosine = 1 - similarity
+        # Score = 1 - distance
+    """
+    raise NotImplementedError(
+        "TODO Sprint 2: Implement retrieve_dense().\n"
+        "Tham khảo comment trong hàm để biết cách query ChromaDB."
     )
-
-    chunks = []
-    if results and results["documents"] and results["documents"][0]:
-        for doc, meta, dist in zip(
-            results["documents"][0],
-            results["metadatas"][0],
-            results["distances"][0],
-        ):
-            # ChromaDB cosine distance = 1 - similarity
-            score = 1.0 - dist
-            chunks.append({
-                "text": doc,
-                "metadata": meta,
-                "score": score,
-            })
-
-    return chunks
 
 
 # =============================================================================
@@ -125,34 +121,62 @@ def _get_bm25_index():
     return bm25, chunks
 
 
+# Module-level cache for BM25 index (avoid rebuilding per query)
+_bm25_cache = {"bm25": None, "chunks": None}
+
+
+def _get_bm25_index():
+    """Load all chunks from ChromaDB and build BM25 index (cached)."""
+    if _bm25_cache["bm25"] is not None:
+        return _bm25_cache["bm25"], _bm25_cache["chunks"]
+
+    import chromadb
+    from index import CHROMA_DB_DIR
+    from rank_bm25 import BM25Okapi
+
+    client = chromadb.PersistentClient(path=str(CHROMA_DB_DIR))
+    collection = client.get_collection("rag_lab")
+
+    # Load all chunks
+    all_data = collection.get(include=["documents", "metadatas"])
+    chunks = []
+    for doc, meta in zip(all_data["documents"], all_data["metadatas"]):
+        chunks.append({"text": doc, "metadata": meta})
+
+    # Tokenize and build BM25
+    tokenized_corpus = [doc.lower().split() for doc in all_data["documents"]]
+    bm25 = BM25Okapi(tokenized_corpus)
+
+    _bm25_cache["bm25"] = bm25
+    _bm25_cache["chunks"] = chunks
+    return bm25, chunks
+
 def retrieve_sparse(query: str, top_k: int = TOP_K_SEARCH) -> List[Dict[str, Any]]:
     """
     Sparse retrieval: tìm kiếm theo keyword (BM25).
 
     Mạnh ở: exact term, mã lỗi, tên riêng (ví dụ: "ERR-403", "P1", "refund")
     Hay hụt: câu hỏi paraphrase, đồng nghĩa
+
+    TODO Sprint 3 (nếu chọn hybrid):
+    1. Cài rank_bm25: pip install rank-bm25
+    2. Load tất cả chunks từ ChromaDB (hoặc rebuild từ docs)
+    3. Tokenize và tạo BM25Index
+    4. Query và trả về top_k kết quả
+
+    Gợi ý:
+        from rank_bm25 import BM25Okapi
+        corpus = [chunk["text"] for chunk in all_chunks]
+        tokenized_corpus = [doc.lower().split() for doc in corpus]
+        bm25 = BM25Okapi(tokenized_corpus)
+        tokenized_query = query.lower().split()
+        scores = bm25.get_scores(tokenized_query)
+        top_indices = sorted(range(len(scores)), key=lambda i: scores[i], reverse=True)[:top_k]
     """
-    bm25, chunks = _get_bm25_index()
-    tokenized_query = query.lower().split()
-    scores = bm25.get_scores(tokenized_query)
-
-    # Get top_k indices sorted by score descending
-    top_indices = sorted(
-        range(len(scores)),
-        key=lambda i: scores[i],
-        reverse=True,
-    )[:top_k]
-
-    results = []
-    for idx in top_indices:
-        if scores[idx] > 0:  # Only include chunks with non-zero BM25 score
-            results.append({
-                "text": chunks[idx]["text"],
-                "metadata": chunks[idx]["metadata"],
-                "score": float(scores[idx]),
-            })
-
-    return results
+    # TODO Sprint 3: Implement BM25 search
+    # Tạm thời return empty list
+    print("[retrieve_sparse] Chưa implement — Sprint 3")
+    return []
 
 
 # =============================================================================
