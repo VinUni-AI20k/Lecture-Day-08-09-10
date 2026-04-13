@@ -36,14 +36,14 @@
 ### Quyết định chunking
 | Tham số | Giá trị | Lý do |
 |---------|---------|-------|
-| Chunk size | 300 tokens (xấp xỉ 1200 ký tự) | Giữ đủ ngữ cảnh điều khoản nhưng không làm context quá dài |
-| Overlap | 60 tokens (xấp xỉ 240 ký tự) | Giảm mất mát thông tin ở ranh giới chunk |
+| Chunk size | 300 tokens (Tổng data: 10971 chars) | Giữ đủ ngữ cảnh điều khoản nhưng không làm context quá dài |
+| Overlap | 60 tokens | Giảm mất mát thông tin ở ranh giới chunk |
 | Chunking strategy | Heading-based + paragraph-aware split | Ưu tiên ranh giới tự nhiên theo `=== Section ===`, nếu dài thì tách theo đoạn, cuối cùng mới fallback cắt theo ký tự |
 | Metadata fields | source, section, effective_date, department, access | Phục vụ filter, freshness, citation |
 
 ### Embedding model
-- **Model**: `paraphrase-multilingual-MiniLM-L12-v2` (Sentence Transformers local; có thể override bằng `LOCAL_EMBEDDING_MODEL`)
-- **Vector store**: ChromaDB `PersistentClient`, collection `rag_lab`
+- **Model**: `paraphrase-multilingual-MiniLM-L12-v2`
+- **Vector store**: ChromaDB
 - **Similarity metric**: Cosine distance (pipeline convert về score bằng `1 - distance` khi retrieve)
 
 ---
@@ -85,6 +85,7 @@ Decision rules:
 
 Cite the source field (in brackets like [1]) when possible.
 Keep your answer short, clear, and factual.
+Answer only what the question asks; do not add adjacent policy details unless they are required to answer.
 Respond in the same language as the question.
 
 Question: {query}
@@ -98,7 +99,7 @@ Answer:
 ### LLM Configuration
 | Tham số | Giá trị |
 |---------|---------|
-| Model | `gpt-4o-mini` (provider: OpenAI, có thể override bằng biến môi trường `LLM_MODEL`) |
+| Model | `gpt-4o-mini` |
 | Temperature | 0 (để output ổn định cho eval) |
 | Max tokens | 512 |
 
