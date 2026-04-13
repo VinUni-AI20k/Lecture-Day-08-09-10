@@ -28,8 +28,8 @@ llm_model = gemini-2.5-flash
 | Completeness | 4/5 |
 
 **Câu hỏi yếu nhất (điểm thấp):**
-> TODO: Liệt kê 2-3 câu hỏi có điểm thấp nhất và lý do tại sao.
-> Ví dụ: "q07 (Approval Matrix) - context recall = 1/5 vì dense bỏ lỡ alias."
+> Các câu lỗi: q01
+> q05 (Approval Matrix) - context recall = 1/5 vì dense bỏ lỡ alias
 
 **Giả thuyết nguyên nhân (Error Tree):**
 - [ ] Indexing: Chunking cắt giữa điều khoản
@@ -71,24 +71,6 @@ retrieval_mode = "hybrid"   # hoặc biến khác
 **Kết luận:**
 > TODO: Variant 1 có tốt hơn baseline không?
 > Bằng chứng là gì? (điểm số, câu hỏi cụ thể)
-
----
-
-## Variant 2 (nếu có thời gian)
-
-**Biến thay đổi:** ___________  
-**Config:**
-```
-# TODO
-```
-
-**Scorecard Variant 2:**
-| Metric | Baseline | Variant 1 | Variant 2 | Best |
-|--------|----------|-----------|-----------|------|
-| Faithfulness | ? | ? | ? | ? |
-| Answer Relevance | ? | ? | ? | ? |
-| Context Recall | ? | ? | ? | ? |
-| Completeness | ? | ? | ? | ? |
 
 ---
 
