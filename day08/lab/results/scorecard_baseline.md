@@ -1,5 +1,5 @@
 # Scorecard: baseline_dense
-Generated: 2026-04-13 16:19
+Generated: 2026-04-13 16:27
 
 ## Summary
 
@@ -19,7 +19,7 @@ Generated: 2026-04-13 16:19
 | q03 | Access Control | 5 | 5 | 5 | 5 | Grounding ratio: 83.33% |
 | q04 | Refund | 5 | 5 | 5 | 5 | Grounding ratio: 100.00% |
 | q05 | IT Helpdesk | 5 | 5 | 5 | 5 | Grounding ratio: 100.00% |
-| q06 | SLA | 5 | 5 | 5 | 5 | Grounding ratio: 92.00% |
+| q06 | SLA | 5 | 5 | 5 | 5 | Grounding ratio: 95.45% |
 | q07 | Access Control | 1 | 5 | 5 | 1 | Grounding ratio: 0.00% |
 | q08 | HR Policy | 5 | 5 | 5 | 3 | Grounding ratio: 100.00% |
 | q09 | Insufficient Context | 5 | 5 | None | 1 | Grounding ratio: 100.00% |

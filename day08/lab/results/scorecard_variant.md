@@ -1,26 +1,26 @@
 # Scorecard: variant_hybrid_rerank
-Generated: 2026-04-13 16:19
+Generated: 2026-04-13 16:27
 
 ## Summary
 
 | Metric | Average Score |
 |--------|--------------|
-| Faithfulness | 1.00/5 |
-| Relevance | 1.00/5 |
-| Context Recall | 1.00/5 |
-| Completeness | 1.00/5 |
+| Faithfulness | 4.00/5 |
+| Relevance | 5.00/5 |
+| Context Recall | 5.00/5 |
+| Completeness | 3.20/5 |
 
 ## Per-Question Results
 
 | ID | Category | Faithful | Relevant | Recall | Complete | Notes |
 |----|----------|----------|----------|--------|----------|-------|
-| q01 | SLA | 1 | 1 | 1 | 1 | Abstain check: high score if correctly admitted ig |
-| q02 | Refund | 1 | 1 | 1 | 1 | Abstain check: high score if correctly admitted ig |
-| q03 | Access Control | 1 | 1 | 1 | 1 | Abstain check: high score if correctly admitted ig |
-| q04 | Refund | 1 | 1 | 1 | 1 | Abstain check: high score if correctly admitted ig |
-| q05 | IT Helpdesk | 1 | 1 | 1 | 1 | Abstain check: high score if correctly admitted ig |
-| q06 | SLA | 1 | 1 | 1 | 1 | Abstain check: high score if correctly admitted ig |
-| q07 | Access Control | 1 | 1 | 1 | 1 | Abstain check: high score if correctly admitted ig |
-| q08 | HR Policy | 1 | 1 | 1 | 1 | Abstain check: high score if correctly admitted ig |
-| q09 | Insufficient Context | 1 | 1 | None | 1 | Abstain check: high score if correctly admitted ig |
-| q10 | Refund | 1 | 1 | 1 | 1 | Abstain check: high score if correctly admitted ig |
+| q01 | SLA | 5 | 5 | 5 | 3 | Grounding ratio: 100.00% |
+| q02 | Refund | 3 | 5 | 5 | 5 | Grounding ratio: 66.67% |
+| q03 | Access Control | 5 | 5 | 5 | 5 | Grounding ratio: 83.33% |
+| q04 | Refund | 5 | 5 | 5 | 5 | Grounding ratio: 100.00% |
+| q05 | IT Helpdesk | 5 | 5 | 5 | 5 | Grounding ratio: 100.00% |
+| q06 | SLA | 5 | 5 | 5 | 3 | Grounding ratio: 100.00% |
+| q07 | Access Control | 1 | 5 | 5 | 1 | Grounding ratio: 0.00% |
+| q08 | HR Policy | 5 | 5 | 5 | 3 | Grounding ratio: 100.00% |
+| q09 | Insufficient Context | 5 | 5 | None | 1 | Grounding ratio: 100.00% |
+| q10 | Refund | 1 | 5 | 5 | 1 | Grounding ratio: 0.00% |
