@@ -109,10 +109,27 @@ def retrieve_sparse(query: str, top_k: int = TOP_K_SEARCH) -> List[Dict[str, Any
         scores = bm25.get_scores(tokenized_query)
         top_indices = sorted(range(len(scores)), key=lambda i: scores[i], reverse=True)[:top_k]
     """
-    # TODO Sprint 3: Implement BM25 search
-    # Tạm thời return empty list
-    print("[retrieve_sparse] Chưa implement — Sprint 3")
-    return []
+    # [Khai] retrieve_sparse — load BM25S index đã build từ index.py
+    import pickle
+    import bm25s
+
+    bm25_dir = os.getenv("BM25_INDEX_DIR", "./data/bm25_index")
+    with open(f"{bm25_dir}/bm25.pkl", "rb") as f:
+        retriever = pickle.load(f)
+    with open(f"{bm25_dir}/docs.pkl", "rb") as f:
+        bm25_docs = pickle.load(f)
+
+    tokens = bm25s.tokenize([query], stopwords=None)
+    results, scores = retriever.retrieve(tokens, corpus=bm25_docs, k=min(top_k, len(bm25_docs)))
+
+    chunks = []
+    for doc, score in zip(results[0], scores[0]):
+        chunks.append({
+            "text": doc.page_content,
+            "metadata": doc.metadata,
+            "score": float(score),
+        })
+    return chunks
 
 
 # =============================================================================
@@ -148,10 +165,38 @@ def retrieve_hybrid(
     - Corpus có cả câu tự nhiên VÀ tên riêng, mã lỗi, điều khoản
     - Query như "Approval Matrix" khi doc đổi tên thành "Access Control SOP"
     """
-    # TODO Sprint 3: Implement hybrid RRF
-    # Tạm thời fallback về dense
-    print("[retrieve_hybrid] Chưa implement RRF — fallback về dense")
-    return retrieve_dense(query, top_k)
+    # [Khai] retrieve_hybrid — Dense + Sparse → RRF merge
+    # Lý do chọn hybrid: corpus có cả ngôn ngữ tự nhiên (policy) lẫn
+    # tên kỹ thuật/alias (ERR-403, Approval Matrix, ticket P1)
+    # Dense bắt ngữ nghĩa, BM25 bắt keyword chính xác → RRF lấy điểm tốt nhất cả hai
+
+    dense_results = retrieve_dense(query, top_k=top_k)
+    sparse_results = retrieve_sparse(query, top_k=top_k)
+
+    # RRF merge: score(doc) = Σ weight * 1/(k + rank), k=60 là hằng số RRF chuẩn
+    RRF_K = 60
+    score_map: Dict[str, Any] = {}
+
+    for rank, chunk in enumerate(dense_results):
+        cid = chunk["metadata"].get("chunk_id") or chunk["metadata"].get("source", "") + chunk["metadata"].get("section", "")
+        if cid not in score_map:
+            score_map[cid] = {"chunk": chunk, "rrf_score": 0.0}
+        score_map[cid]["rrf_score"] += dense_weight * (1.0 / (RRF_K + rank))
+
+    for rank, chunk in enumerate(sparse_results):
+        cid = chunk["metadata"].get("chunk_id") or chunk["metadata"].get("source", "") + chunk["metadata"].get("section", "")
+        if cid not in score_map:
+            score_map[cid] = {"chunk": chunk, "rrf_score": 0.0}
+        score_map[cid]["rrf_score"] += sparse_weight * (1.0 / (RRF_K + rank))
+
+    merged = sorted(score_map.values(), key=lambda x: x["rrf_score"], reverse=True)
+
+    results = []
+    for item in merged[:top_k]:
+        chunk = item["chunk"].copy()
+        chunk["score"] = item["rrf_score"]
+        results.append(chunk)
+    return results
 
 
 # =============================================================================
@@ -224,9 +269,32 @@ def transform_query(query: str, strategy: str = "expansion") -> List[str]:
     - Decomposition: query hỏi nhiều thứ một lúc
     - HyDE: query mơ hồ, search theo nghĩa không hiệu quả
     """
-    # TODO Sprint 3: Implement query transformation
-    # Tạm thời trả về query gốc
-    return [query]
+    # [Khai] transform_query — HyDE implementation
+    if strategy != "hyde":
+        return [query]
+
+    # HyDE: dùng LLM generate đoạn văn giả định trả lời câu hỏi
+    # Embed đoạn đó thay vì embed câu hỏi gốc → tăng recall với câu hỏi ngắn/mơ hồ
+    # Fallback về query gốc nếu LLM fail (tránh crash pipeline)
+    hyde_prompt = (
+        f"Viết đoạn văn khoảng 80 từ trả lời câu hỏi sau, "
+        f"dựa trên kiến thức về chính sách IT/HR nội bộ công ty.\n"
+        f"Câu hỏi: {query}\nTrả lời:"
+    )
+    try:
+        from openai import OpenAI
+        client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+        response = client.chat.completions.create(
+            model=LLM_MODEL,
+            messages=[{"role": "user", "content": hyde_prompt}],
+            temperature=0.3,
+            max_tokens=150,
+        )
+        hypothetical_doc = response.choices[0].message.content.strip()
+        # Kết hợp query gốc + hypothetical doc để embed
+        return [f"{query}\n\n{hypothetical_doc}"]
+    except Exception:
+        return [query]
 
 
 # =============================================================================
