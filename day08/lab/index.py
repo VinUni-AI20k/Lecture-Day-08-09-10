@@ -19,10 +19,12 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # --- CẤU HÌNH ---
-DOCS_DIR = os.getenv("DOCS_DIR", "./data/docs")
-CHROMA_PERSIST_DIR = os.getenv("CHROMA_PERSIST_DIR", "./data/chroma_db")
-BM25_INDEX_DIR = os.getenv("BM25_INDEX_DIR", "./data/bm25_index")
-EMBEDDING_MODEL = os.getenv("OPENAI_EMBEDDING_MODEL", "text-embedding-3-small")
+# Chạy index.py từ thư mục day08/lab/ để paths trong .env resolve đúng
+LAB_DIR            = Path(__file__).parent.resolve()
+DOCS_DIR           = str(LAB_DIR / os.getenv("DOCS_DIR", "./data/docs").lstrip("./"))
+CHROMA_PERSIST_DIR = str(LAB_DIR / os.getenv("CHROMA_PERSIST_DIR", "./data/chroma_db").lstrip("./"))
+BM25_INDEX_DIR     = str(LAB_DIR / os.getenv("BM25_INDEX_DIR", "./data/bm25_index").lstrip("./"))
+EMBEDDING_MODEL    = os.getenv("OPENAI_EMBEDDING_MODEL", "text-embedding-3-small")
 
 ALIAS_MAP = {
     "it/access-control-sop.md": [
