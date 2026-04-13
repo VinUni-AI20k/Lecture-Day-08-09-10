@@ -563,35 +563,77 @@ def generate_scorecard_summary(results: List[Dict], label: str) -> str:
     TODO Sprint 4: Cập nhật template này theo kết quả thực tế của nhóm.
     """
     metrics = ["faithfulness", "relevance", "context_recall", "completeness"]
-    averages = {}
+    metric_labels = {
+        "faithfulness": "Faithfulness",
+        "relevance": "Relevance",
+        "context_recall": "Context Recall",
+        "completeness": "Completeness",
+    }
+
+    def _fmt_score(value: Any) -> str:
+        return "N/A" if value is None else str(value)
+
+    def _md_cell(value: Any, max_len: int = 80) -> str:
+        if value is None:
+            return "N/A"
+        text = str(value).replace("\n", " ").replace("|", "/")
+        text = re.sub(r"\s{2,}", " ", text).strip()
+        return text[:max_len]
+
+    averages: Dict[str, Optional[float]] = {}
     for metric in metrics:
         scores = [r[metric] for r in results if r[metric] is not None]
         averages[metric] = sum(scores) / len(scores) if scores else None
 
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M")
+    lines: List[str] = [
+        f"# Scorecard: {label}",
+        f"Generated: {timestamp}",
+        "",
+        "## Summary",
+        "",
+        "|Metric|Average Score|",
+        "|------|-------------|",
+    ]
 
-    md = f"""# Scorecard: {label}
-Generated: {timestamp}
-
-## Summary
-
-| Metric | Average Score |
-|--------|--------------|
-"""
-    for metric, avg in averages.items():
+    for metric in metrics:
+        avg = averages[metric]
         avg_str = f"{avg:.2f}/5" if avg is not None else "N/A"
-        md += f"| {metric.replace('_', ' ').title()} | {avg_str} |\n"
+        lines.append(f"|{metric_labels[metric]}|{avg_str}|")
 
-    md += "\n## Per-Question Results\n\n"
-    md += "| ID | Category | Faithful | Relevant | Recall | Complete | Notes |\n"
-    md += "|----|----------|----------|----------|--------|----------|-------|\n"
+    lines.extend([
+        "",
+        "## Per-Question Results",
+        "",
+        "|ID|Category|Faithful|Relevant|Recall|Complete|Notes|",
+        "|--|--------|--------|--------|------|--------|-----|",
+    ])
 
     for r in results:
-        md += (f"| {r['id']} | {r['category']} | {r.get('faithfulness', 'N/A')} | "
-               f"{r.get('relevance', 'N/A')} | {r.get('context_recall', 'N/A')} | "
-               f"{r.get('completeness', 'N/A')} | {r.get('faithfulness_notes', '')[:50]} |\n")
+        note = (
+            r.get("faithfulness_notes")
+            or r.get("relevance_notes")
+            or r.get("context_recall_notes")
+            or r.get("completeness_notes")
+            or ""
+        )
+        lines.append(
+            "|"
+            + "|".join(
+                [
+                    _md_cell(r.get("id"), 20),
+                    _md_cell(r.get("category"), 24),
+                    _fmt_score(r.get("faithfulness")),
+                    _fmt_score(r.get("relevance")),
+                    _fmt_score(r.get("context_recall")),
+                    _fmt_score(r.get("completeness")),
+                    _md_cell(note, 80),
+                ]
+            )
+            + "|"
+        )
 
-    return md
+    return "\n".join(lines) + "\n"
 
 
 # =============================================================================
