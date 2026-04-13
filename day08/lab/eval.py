@@ -38,7 +38,9 @@ from openai import OpenAI
 # =============================================================================
 
 TEST_QUESTIONS_PATH = Path(__file__).parent / "data" / "test_questions.json"
+GRADING_QUESTIONS_PATH = Path(__file__).parent / "data" / "grading_questions.json"
 RESULTS_DIR = Path(__file__).parent / "results"
+LOGS_DIR = Path(__file__).parent / "logs"
 
 # Cấu hình baseline (Sprint 2)
 BASELINE_CONFIG = {
@@ -644,6 +646,45 @@ if __name__ == "__main__":
             variant_results,
             output_csv="ab_comparison.csv"
         )
+
+    # --- Grading Run (dùng VARIANT_CONFIG) ---
+    print("\n--- Grading Run (grading_questions.json → logs/grading_run.json) ---")
+    if GRADING_QUESTIONS_PATH.exists():
+        with open(GRADING_QUESTIONS_PATH, encoding="utf-8") as f:
+            grading_questions = json.load(f)
+
+        grading_log = []
+        for q in grading_questions:
+            result = rag_answer(
+                query=q["question"],
+                retrieval_mode=VARIANT_CONFIG.get("retrieval_mode", "hybrid"),
+                top_k_search=VARIANT_CONFIG.get("top_k_search", 10),
+                top_k_select=VARIANT_CONFIG.get("top_k_select", 3),
+                use_rerank=VARIANT_CONFIG.get("use_rerank", True),
+                use_query_transform=VARIANT_CONFIG.get("use_query_transform", True),
+                transform_strategy=VARIANT_CONFIG.get("transform_strategy", "expansion"),
+                dense_weight=VARIANT_CONFIG.get("dense_weight", 0.6),
+                sparse_weight=VARIANT_CONFIG.get("sparse_weight", 0.4),
+                verbose=False,
+            )
+            grading_log.append({
+                "id": q["id"],
+                "question": q["question"],
+                "answer": result["answer"],
+                "sources": result["sources"],
+                "chunks_retrieved": len(result["chunks_used"]),
+                "retrieval_mode": result["config"]["retrieval_mode"],
+                "timestamp": datetime.now().isoformat(),
+            })
+            print(f"  [{q['id']}] {result['answer'][:80]}...")
+
+        LOGS_DIR.mkdir(parents=True, exist_ok=True)
+        grading_out = LOGS_DIR / "grading_run.json"
+        with open(grading_out, "w", encoding="utf-8") as f:
+            json.dump(grading_log, f, ensure_ascii=False, indent=2)
+        print(f"\nGrading log saved → {grading_out}")
+    else:
+        print(f"  Không tìm thấy {GRADING_QUESTIONS_PATH} — bỏ qua grading run.")
 
     print("\n\nViệc cần làm Sprint 4:")
     print("  1. Hoàn thành Sprint 2 + 3 trước")

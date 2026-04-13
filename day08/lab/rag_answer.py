@@ -434,8 +434,8 @@ Output strictly as a JSON array with exactly 1 string."""
         # Fall back to original query if transformation fails or output is malformed.
         pass
 
-    # # Tạm thời trả về query gốc
-    # return [query]
+    # Fallback: đảm bảo luôn trả về List[str] (không bao giờ None)
+    return [query]
 
 
 # =============================================================================
