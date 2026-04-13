@@ -1,26 +1,26 @@
 # Scorecard: baseline_dense
-Generated: 2026-04-13 15:48
+Generated: 2026-04-13 16:33
 
 ## Summary
 
 | Metric | Average Score |
 |--------|--------------|
-| Faithfulness | 4.50/5 |
-| Relevance | 3.30/5 |
+| Faithfulness | 4.60/5 |
+| Relevance | 3.00/5 |
 | Context Recall | 5.00/5 |
-| Completeness | 3.80/5 |
+| Completeness | 3.50/5 |
 
 ## Per-Question Results
 
 | ID | Category | Faithful | Relevant | Recall | Complete | Notes |
 |----|----------|----------|----------|--------|----------|-------|
-| q01 | SLA | 4 | 4 | 5 | 5 | Heuristic overlap with retrieved context suggests  |
+| q01 | SLA | 4 | 2 | 5 | 3 | Heuristic overlap with retrieved context suggests  |
 | q02 | Refund | 5 | 3 | 5 | 5 | Heuristic overlap with retrieved context suggests  |
 | q03 | Access Control | 5 | 3 | 5 | 4 | Heuristic overlap with retrieved context suggests  |
-| q04 | Refund | 4 | 3 | 5 | 5 | Heuristic overlap with retrieved context suggests  |
+| q04 | Refund | 4 | 3 | 5 | 4 | Heuristic overlap with retrieved context suggests  |
 | q05 | IT Helpdesk | 5 | 4 | 5 | 5 | Heuristic overlap with retrieved context suggests  |
 | q06 | SLA | 5 | 1 | 5 | 2 | Heuristic overlap with retrieved context suggests  |
-| q07 | Access Control | 4 | 4 | 5 | 4 | Heuristic overlap with retrieved context suggests  |
+| q07 | Access Control | 5 | 3 | 5 | 4 | Heuristic overlap with retrieved context suggests  |
 | q08 | HR Policy | 5 | 3 | 5 | 4 | Heuristic overlap with retrieved context suggests  |
 | q09 | Insufficient Context | 4 | 5 | None | 2 | Answer abstains instead of hallucinating |
 | q10 | Refund | 4 | 3 | 5 | 2 | Answer abstains instead of hallucinating |
