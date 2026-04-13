@@ -7,5 +7,6 @@ dependencies = [
     "google-cloud-aiplatform>=1.147.0",
     "openai>=2.31.0",
     "python-dotenv>=1.2.2",
+    "rank-bm25>=0.2.2",
     "tqdm>=4.67.3",
 ]

@@ -108,6 +108,37 @@ def retrieve_dense(query: str, top_k: int = TOP_K_SEARCH) -> List[Dict[str, Any]
 # Dùng cho Sprint 3 Variant hoặc kết hợp Hybrid
 # =============================================================================
 
+# Module-level BM25 singleton cache to avoid rebuilding the index on every call
+_bm25_cache: Optional[Dict[str, Any]] = None
+
+
+def _get_bm25_index() -> Dict[str, Any]:
+    """
+    Lazily build and cache the BM25 index from ChromaDB documents.
+    Returns a dict with keys: 'bm25', 'docs', 'metas'.
+    """
+    global _bm25_cache
+    if _bm25_cache is not None:
+        return _bm25_cache
+
+    import chromadb
+    from index import CHROMA_DB_DIR
+    from rank_bm25 import BM25Okapi
+
+    client = chromadb.PersistentClient(path=str(CHROMA_DB_DIR))
+    collection = client.get_collection("rag_lab")
+    all_data = collection.get(include=["documents", "metadatas"])
+
+    docs = all_data["documents"]
+    metas = all_data["metadatas"]
+
+    tokenized_corpus = [doc.lower().split() for doc in docs]
+    bm25 = BM25Okapi(tokenized_corpus)
+
+    _bm25_cache = {"bm25": bm25, "docs": docs, "metas": metas}
+    return _bm25_cache
+
+
 def retrieve_sparse(query: str, top_k: int = TOP_K_SEARCH) -> List[Dict[str, Any]]:
     """
     Sparse retrieval: tìm kiếm theo keyword (BM25).
@@ -130,10 +161,24 @@ def retrieve_sparse(query: str, top_k: int = TOP_K_SEARCH) -> List[Dict[str, Any
         scores = bm25.get_scores(tokenized_query)
         top_indices = sorted(range(len(scores)), key=lambda i: scores[i], reverse=True)[:top_k]
     """
-    # TODO Sprint 3: Implement BM25 search
-    # Tạm thời return empty list
-    print("[retrieve_sparse] Chưa implement — Sprint 3")
-    return []
+    cache = _get_bm25_index()
+    bm25 = cache["bm25"]
+    docs = cache["docs"]
+    metas = cache["metas"]
+
+    # Score and rank
+    tokenized_query = query.lower().split()
+    scores = bm25.get_scores(tokenized_query)
+    top_indices = sorted(range(len(scores)), key=lambda i: scores[i], reverse=True)[:top_k]
+
+    return [
+        {
+            "text": docs[i],
+            "metadata": metas[i],
+            "score": float(scores[i]),
+        }
+        for i in top_indices
+    ]
 
 
 # =============================================================================
@@ -170,9 +215,47 @@ def retrieve_hybrid(
     - Query như "Approval Matrix" khi doc đổi tên thành "Access Control SOP"
     """
     # TODO Sprint 3: Implement hybrid RRF
-    # Tạm thời fallback về dense
-    print("[retrieve_hybrid] Chưa implement RRF — fallback về dense")
-    return retrieve_dense(query, top_k)
+    dense_results = retrieve_dense(query, top_k=top_k)
+    sparse_results = retrieve_sparse(query, top_k=top_k)
+
+    # Build rank lookup for each result list
+    def rrf_scores(results, weight):
+        return {
+            r["text"]: weight / (60 + rank)
+            for rank, r in enumerate(results, start=1)
+        }
+
+    dense_rrf_scores = rrf_scores(dense_results, dense_weight)
+    sparse_rrf_scores = rrf_scores(sparse_results, sparse_weight)
+
+    dense_by_text = {r["text"]: r for r in dense_results}
+    sparse_by_text = {r["text"]: r for r in sparse_results}
+
+    # Merge all unique chunks and expose the fused RRF score as `score`
+    # so downstream logging/debugging reflects the actual hybrid ranking.
+    ranked: List[Dict[str, Any]] = []
+    for text in {r["text"] for r in dense_results + sparse_results}:
+        dense_result = dense_by_text.get(text)
+        sparse_result = sparse_by_text.get(text)
+
+        base_result = dict(dense_result if dense_result is not None else (sparse_result if sparse_result is not None else {}))
+        dense_rrf = dense_rrf_scores.get(text, 0.0)
+        sparse_rrf = sparse_rrf_scores.get(text, 0.0)
+
+        base_result["dense_score"] = (
+            dense_result.get("score") if dense_result is not None else None
+        )
+        base_result["sparse_score"] = (
+            sparse_result.get("score") if sparse_result is not None else None
+        )
+        base_result["dense_rrf_score"] = dense_rrf
+        base_result["sparse_rrf_score"] = sparse_rrf
+        base_result["score"] = dense_rrf + sparse_rrf
+
+        ranked.append(base_result)
+
+    ranked.sort(key=lambda r: r["score"], reverse=True)
+    return ranked[:top_k]
 
 
 # =============================================================================
@@ -471,7 +554,7 @@ def compare_retrieval_strategies(query: str) -> None:
     print(f"Query: {query}")
     print('=' * 60)
 
-    strategies = ["dense", "hybrid"]  # Thêm "sparse" sau khi implement
+    strategies = ["dense", "sparse", "hybrid"]
 
     for strategy in strategies:
         print(f"\n--- Strategy: {strategy} ---")
@@ -515,9 +598,9 @@ if __name__ == "__main__":
             print(f"Lỗi: {e}")
 
     # Uncomment sau khi Sprint 3 hoàn thành:
-    # print("\n--- Sprint 3: So sánh strategies ---")
-    # compare_retrieval_strategies("Approval Matrix để cấp quyền là tài liệu nào?")
-    # compare_retrieval_strategies("ERR-403-AUTH")
+    print("\n--- Sprint 3: So sánh strategies ---")
+    compare_retrieval_strategies("Approval Matrix để cấp quyền là tài liệu nào?")
+    compare_retrieval_strategies("ERR-403-AUTH")
 
     print("\n\nViệc cần làm Sprint 2:")
     print("  1. Implement retrieve_dense() — query ChromaDB")
