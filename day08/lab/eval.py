@@ -105,11 +105,6 @@ def score_faithfulness(
     res = ask_llm_judge(prompt)
     return {"score": res.get("score"), "notes": res.get("reason")}
 
-    return {
-        "score": None,
-        "notes": "TODO: Chấm thủ công hoặc implement LLM-as-Judge",
-    }
-
 
 def score_answer_relevance(
     query: str,
@@ -135,11 +130,6 @@ def score_answer_relevance(
     Output JSON: {{"score": int, "reason": "string"}}"""
     res = ask_llm_judge(prompt)
     return {"score": res.get("score"), "notes": res.get("reason")}
-
-    return {
-        "score": None,
-        "notes": "TODO: Implement score_answer_relevance",
-    }
 
 
 def score_context_recall(
@@ -203,38 +193,6 @@ def score_context_recall(
         "notes": f"Retrieved: {found}/{len(expected_sources)}. Missing: {missing}" if missing else "All sources found."
     }
 
-    if not expected_sources:
-        # Câu hỏi không có expected source (ví dụ: "Không đủ dữ liệu" cases)
-        return {"score": None, "recall": None, "notes": "No expected sources"}
-
-    retrieved_sources = {
-        c.get("metadata", {}).get("source", "")
-        for c in chunks_used
-    }
-
-    # TODO: Kiểm tra matching theo partial path (vì source paths có thể khác format)
-    found = 0
-    missing = []
-    for expected in expected_sources:
-        # Kiểm tra partial match (tên file)
-        expected_name = expected.split("/")[-1].replace(".pdf", "").replace(".md", "")
-        matched = any(expected_name.lower() in r.lower() for r in retrieved_sources)
-        if matched:
-            found += 1
-        else:
-            missing.append(expected)
-
-    recall = found / len(expected_sources) if expected_sources else 0
-
-    return {
-        "score": round(recall * 5),  # Convert to 1-5 scale
-        "recall": recall,
-        "found": found,
-        "missing": missing,
-        "notes": f"Retrieved: {found}/{len(expected_sources)} expected sources" +
-                 (f". Missing: {missing}" if missing else ""),
-    }
-
 
 def score_completeness(
     query: str,
@@ -269,11 +227,6 @@ def score_completeness(
     Output JSON: {{"score": int, "reason": "string"}}"""
     res = ask_llm_judge(prompt)
     return {"score": res.get("score"), "notes": res.get("reason")}
-
-    return {
-        "score": None,
-        "notes": "TODO: Implement score_completeness (so sánh với expected_answer)",
-    }
 
 
 # =============================================================================
@@ -576,23 +529,23 @@ if __name__ == "__main__":
 
     # --- Chạy Variant (sau khi Sprint 3 hoàn thành) ---
     # TODO Sprint 4: Uncomment sau khi implement variant trong rag_answer.py
-    # print("\n--- Chạy Variant ---")
-    # variant_results = run_scorecard(
-    #     config=VARIANT_CONFIG,
-    #     test_questions=test_questions,
-    #     verbose=True,
-    # )
-    # variant_md = generate_scorecard_summary(variant_results, VARIANT_CONFIG["label"])
-    # (RESULTS_DIR / "scorecard_variant.md").write_text(variant_md, encoding="utf-8")
+    print("\n--- Chạy Variant ---")
+    variant_results = run_scorecard(
+        config=VARIANT_CONFIG,
+        test_questions=test_questions,
+        verbose=True,
+    )
+    variant_md = generate_scorecard_summary(variant_results, VARIANT_CONFIG["label"])
+    (RESULTS_DIR / "scorecard_variant.md").write_text(variant_md, encoding="utf-8")
 
     # --- A/B Comparison ---
     # TODO Sprint 4: Uncomment sau khi có cả baseline và variant
-    # if baseline_results and variant_results:
-    #     compare_ab(
-    #         baseline_results,
-    #         variant_results,
-    #         output_csv="ab_comparison.csv"
-    #     )
+    if baseline_results and variant_results:
+        compare_ab(
+            baseline_results,
+            variant_results,
+            output_csv="ab_comparison.csv"
+        )
 
     print("\n\nViệc cần làm Sprint 4:")
     print("  1. Hoàn thành Sprint 2 + 3 trước")
