@@ -8,12 +8,6 @@
 ---
 
 ## 1. Tôi đã làm gì trong lab này? (100-150 từ)
-
-> Mô tả cụ thể phần bạn đóng góp vào pipeline:
-> - Sprint nào bạn chủ yếu làm?
-> - Cụ thể bạn implement hoặc quyết định điều gì?
-> - Công việc của bạn kết nối với phần của người khác như thế nào?
-
  Đảm nhiệm vai trò Tech Lead và tập trung chính vào Sprint 2 và Sprint 3. Ở Sprint 2, em hoàn thiện luồng baseline RAG trong `rag_answer.py`: implement `retrieve_dense()` để truy vấn ChromaDB bằng embedding, hoàn thiện `call_llm()` để gọi model với chế độ ổn định, và nối các bước retrieve → select → generate trong `rag_answer()`. em cũng bổ sung guardrail abstain: khi không có bằng chứng hoặc model xác nhận thiếu dữ liệu thì trả về câu trả lời từ chối và `sources = []`.  
 
 Sang Sprint 3,em chọn hướng Hybrid Retrieval. Cụ thể, em implement `retrieve_sparse()` bằng BM25 (`rank_bm25`) và `retrieve_hybrid()` theo công thức Reciprocal Rank Fusion để kết hợp dense + sparse. Ngoài ra, em thêm hàm so sánh baseline vs variant theo dạng bảng Markdown để nhóm dễ đối chiếu khi điền tuning log. Phần của em kết nối trực tiếp với công việc của các bạn phụ trách đánh giá/điểm số vì output đã có citation, source list và logic abstain nhất quán để chấm scorecard thuận lợi hơn.
@@ -21,10 +15,6 @@ Sang Sprint 3,em chọn hướng Hybrid Retrieval. Cụ thể, em implement `ret
 ---
 
 ## 2. Điều tôi hiểu rõ hơn sau lab này (100-150 từ)
-
-> Chọn 1-2 concept từ bài học mà bạn thực sự hiểu rõ hơn sau khi làm lab.
-> Ví dụ: chunking, hybrid retrieval, grounded prompt, evaluation loop.
-> Giải thích bằng ngôn ngữ của bạn — không copy từ slide.
 
 Điều em hiểu rõ nhất sau lab này là retrieval chất lượng cao quan trọng hơn việc “chỉ đổi model mạnh hơn”. Việc chỉ cần prompt chặt là đủ, nhưng khi làm thực tế thấy nếu top-k context ban đầu sai hoặc nhiễu thì model vẫn trả lời kém dù prompt tốt. Vì vậy, khâu retrieve (dense/hybrid/rerank) là nền móng của toàn pipeline.  
 
@@ -34,9 +24,6 @@ Concept thứ hai em hiểu sâu hơn là grounded answer không chỉ nằm ở
 
 ## 3. Điều tôi ngạc nhiên hoặc gặp khó khăn (100-150 từ)
 
-> Điều gì xảy ra không đúng kỳ vọng?
-> Lỗi nào mất nhiều thời gian debug nhất?
-> Giả thuyết ban đầu của bạn là gì và thực tế ra sao?
 
 Khó khăn lớn nhất của em là mô hình đôi khi trả lời đúng nội dung nhưng lại không gắn citation `[1]`, đặc biệt ở câu liên quan approval/level quyền. Ban đầuu giả thuyết lỗi nằm ở retrieval vì sợ top chunk chưa đúng. Nhưng khi soi log thấy source trả về đúng tài liệu (`it/access-control-sop.md`) và answer cũng đúng factual, chỉ thiếu định dạng citation. Như vậy nguyên nhân chính nằm ở generation format consistency, không phải retrieval recall.  
 
@@ -45,12 +32,6 @@ Một vấn đề khác là phần so sánh strategy in log bị lặp ở vài 
 ---
 
 ## 4. Phân tích một câu hỏi trong scorecard (150-200 từ)
-
-> Chọn 1 câu hỏi trong test_questions.json mà nhóm bạn thấy thú vị.
-> Phân tích:
-> - Baseline trả lời đúng hay sai? Điểm như thế nào?
-> - Lỗi nằm ở đâu: indexing / retrieval / generation?
-> - Variant có cải thiện không? Tại sao có/không?
 
 **Câu hỏi:** ERR-403-AUTH là lỗi gì?
 
@@ -64,13 +45,8 @@ Khi chạy variant hybrid (dense + BM25), kết quả không cải thiện về 
 
 ## 5. Nếu có thêm thời gian, tôi sẽ làm gì? (50-100 từ)
 
-> 1-2 cải tiến cụ thể bạn muốn thử.
-> Không phải "làm tốt hơn chung chung" mà phải là:
-> "Tôi sẽ thử X vì kết quả eval cho thấy Y."
 
 Nếu có thêm thời gian, em sẽ thử hybrid có chuẩn hóa tiếng Việt tốt hơn ở tầng sparse tokenizer (tách từ, xử lý dấu và ký hiệu) vì BM25 hiện tại còn đơn giản, có thể bỏ sót biến thể câu hỏi.em cũng muốn thêm một bước lightweight rerank sau hybrid (ví dụ top-10 → top-3) để giảm nhiễu trước khi vào prompt, vì một số câu trả lời đúng nhưng chưa nhất quán citation cho thấy context đưa vào vẫn còn “na ná đúng” thay vì thật sự tối ưu.
 
 ---
 
-*Lưu file này với tên: `reports/individual/[ten_ban].md`*
-*Ví dụ: `reports/individual/nguyen_van_a.md`*
