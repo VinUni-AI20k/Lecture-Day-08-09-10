@@ -37,7 +37,6 @@ ENV/
 # Environment variables
 # =========================
 .env
-.env.*
 
 # =========================
 # Logs
