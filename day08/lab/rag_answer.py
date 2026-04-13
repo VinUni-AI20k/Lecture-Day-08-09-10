@@ -37,9 +37,18 @@ Dưới đây là các đoạn thông tin được trích xuất từ tài liệ
 
 # CONSTRAINTS (BẮT BUỘC)
 1. **Grounding**: Chỉ trả lời dựa trên thông tin có trong Context ở trên.
-2. **Abstain**: Nếu Context không chứa đáp án, phải trả lời: "Tôi không tìm thấy thông tin này trong tài liệu".
-3. **Citations**: Trích dẫn nguồn theo định dạng `[1]`, `[2]` ngay sau thông tin được lấy ra.
-4. **No Hallucination**: Tuyệt đối không sử dụng kiến thức bên ngoài để bổ sung.
+2. **Abstain & phạm vi**:
+   - Nếu Context **hoàn toàn không** chứa thông tin liên quan (ví dụ mã lỗi kỹ thuật không xuất hiện): bắt đầu bằng
+     "Tôi không tìm thấy thông tin này trong tài liệu", sau đó có thể gợi ý liên hệ IT Helpdesk (ext. 9000) cho lỗi kỹ thuật/xác thực nếu phù hợp.
+   - Nếu Context **có** chính sách chung nhưng **không** có điều khoản riêng (ví dụ hoàn tiền khẩn cấp cho VIP): trả lời theo quy trình chuẩn đã trích dẫn, nêu rõ tài liệu không đề cập quy trình đặc biệt cho trường hợp đó, kèm `[n]`.
+   - Nếu hỏi về **mức phạt / penalty** mà tài liệu chỉ mô tả SLA target và quy trình: nêu rõ tài liệu không quy định mức phạt hay chế tài tài chính, chỉ có mục tiêu SLA và quy trình, kèm `[n]`.
+3. **Citations**: Trích dẫn nguồn theo định dạng `[1]`, `[2]` ngay sau thông tin được lấy ra; với câu cần nhiều nguồn, mỗi nguồn khác nhau ít nhất một lần `[n]` tương ứng.
+4. **So sánh phiên bản / lịch sử SLA**: Chỉ nêu thay đổi trực tiếp liên quan câu hỏi và có trong Context (phiên bản, ngày hiệu lực nếu có). Không thêm mục lịch sử khác trừ khi cần để trả lời đúng phần "so với phiên bản trước" và đoạn đó có trong Context.
+5. **Access Control / Approval Matrix**: Khi Context là Access Control SOP, ghi rõ tài liệu trước đây tên "Approval Matrix for System Access" (nếu có trong Context) và tên hiện tại.
+6. **So sánh HR (hai con số "3 ngày")**: Nếu cả nghỉ phép năm và nghỉ ốm đều nhắc mốc "3 ngày", giải thích rõ **hai ngữ cảnh khác nhau** (báo trước vs. giấy tờ khi nghỉ dài), tránh kết luận mơ hồ.
+7. **Chính sách hoàn tiền**: Khi liệt kê ngoại lệ, có thể tham chiếu "Điều 3" nếu Context có cấu trúc điều khoản; với store credit, nêu rõ là **tùy chọn**, không bắt buộc nếu Context có.
+8. **Liên hệ / hotline trong Context**: Đưa đủ ext. (9999 on-call, 9000 Helpdesk, …) hoặc URL SSO nếu xuất hiện trong Context và liên quan câu hỏi.
+9. **No Hallucination**: Không bịa số liệu, URL, điều khoản không có trong Context.
 
 # OUTPUT FORMAT
 - Ngôn ngữ: Tiếng Việt.
@@ -340,9 +349,12 @@ def rag_answer(
 
     # Bước 3: Lọc theo threshold, generate
     threshold = float(os.getenv("RELEVANCE_THRESHOLD", RELEVANCE_THRESHOLD))
-    filtered  = [c for c in candidates if c.get("score", 1.0) >= threshold]
-    has_context = len(filtered) > 0
-    result = generate_answer(query, filtered if filtered else candidates, has_context=has_context)
+    filtered = [c for c in candidates if c.get("score", 1.0) >= threshold]
+    # Điểm hybrid (RRF) thường << RELEVANCE_THRESHOLD — không được coi là "không có context"
+    # khi vẫn còn chunk sau retrieve; nếu không có chunk nào vượt ngưỡng vẫn dùng top candidates.
+    docs_for_answer = filtered if filtered else candidates
+    has_context = len(docs_for_answer) > 0
+    result = generate_answer(query, docs_for_answer, has_context=has_context)
 
     return {
         "query": query,
