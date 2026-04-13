@@ -93,7 +93,7 @@ def retrieve_dense(query: str, top_k: int = TOP_K_SEARCH) -> List[Dict[str, Any]
         include=["documents", "metadatas", "distances"]
     )
 
-    print(results)
+    # print(results)
 
     chunks = []
     for doc, meta, dist in zip(
