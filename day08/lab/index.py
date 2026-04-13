@@ -219,7 +219,10 @@ def _split_by_size(
 # STEP 3: EMBED + STORE
 # Embed các chunk và lưu vào ChromaDB
 # =============================================================================
-
+# --- Thêm import ở đầu file ---
+from openai import OpenAI
+# --- Thêm biến client ngay sau load_dotenv() ---
+openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 def get_embedding(text: str) -> List[float]:
     """
     Tạo embedding vector cho một đoạn text.
@@ -241,11 +244,15 @@ def get_embedding(text: str) -> List[float]:
         model = SentenceTransformer("paraphrase-multilingual-MiniLM-L12-v2")
         return model.encode(text).tolist()
     """
-    raise NotImplementedError(
-        "TODO: Implement get_embedding().\n"
-        "Chọn Option A (OpenAI) hoặc Option B (Sentence Transformers) trong TODO comment."
+    # raise NotImplementedError(
+    #     "TODO: Implement get_embedding().\n"
+    #     "Chọn Option A (OpenAI) hoặc Option B (Sentence Transformers) trong TODO comment."
+    # )
+    response = openai_client.embeddings.create(
+        input=text,
+        model="text-embedding-3-small"
     )
-
+    return response.data[0].embedding
 
 def build_index(docs_dir: Path = DOCS_DIR, db_dir: Path = CHROMA_DB_DIR) -> None:
     """
