@@ -39,7 +39,6 @@ TOP_K_SELECT = 3     # Số chunk gửi vào prompt sau rerank/select (top-3 swe
 LLM_MODEL = os.getenv("LLM_MODEL", "gpt-4o-mini")
 _bm25_index = None
 _bm25_chunks = None
-_rerank_model = None
 
 # =============================================================================
 # RETRIEVAL — DENSE (Vector Search)
@@ -300,35 +299,33 @@ def rerank(
     """
     # TODO Sprint 3: Implement rerank
     # Tạm thời trả về top_k đầu tiên (không rerank)
-    global _rerank_model
-
     if not candidates:
         return candidates
 
-    try:
-        from sentence_transformers import CrossEncoder
-        if _rerank_model is None:
-            print("  [Rerank] Loading cross-encoder model...")
-            _rerank_model = CrossEncoder("cross-encoder/ms-marco-MiniLM-L-6-v2")
+    client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+    scored = []
+    for chunk in candidates:
+        prompt = f"""Rate how relevant this text passage is to answering the question.
+Question: {query}
+Passage: {chunk['text'][:500]}
 
-        pairs = [[query, chunk["text"]] for chunk in candidates]
-        scores = _rerank_model.predict(pairs)
+Output ONLY a single integer from 0 to 10. Higher = more relevant."""
+        try:
+            response = client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[{"role": "user", "content": prompt}],
+                temperature=0,
+                max_tokens=5,
+            )
+            score = int(response.choices[0].message.content.strip())
+        except Exception:
+            score = 5
+        chunk_copy = chunk.copy()
+        chunk_copy["rerank_score"] = score / 10.0
+        scored.append((chunk_copy, score))
 
-        # Sort theo cross-encoder score
-        ranked = sorted(zip(candidates, scores), key=lambda x: x[1], reverse=True)
-        result = []
-        for chunk, score in ranked[:top_k]:
-            chunk_copy = chunk.copy()
-            chunk_copy["rerank_score"] = float(score)
-            result.append(chunk_copy)
-        return result
-
-    except ImportError:
-        print("  [Rerank] CrossEncoder không available, fallback top_k")
-        return candidates[:top_k]
-    except Exception as e:
-        print(f"  [Rerank] Lỗi: {e}, fallback top_k")
-        return candidates[:top_k]
+    scored.sort(key=lambda x: x[1], reverse=True)
+    return [c for c, _ in scored[:top_k]]
 
 
 # =============================================================================

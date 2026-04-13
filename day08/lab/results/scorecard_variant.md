@@ -1,11 +1,11 @@
 # Scorecard: variant_hybrid
-Generated: 2026-04-13 16:33
+Generated: 2026-04-13 17:03
 
 ## Summary
 
 | Metric | Average Score |
 |--------|--------------|
-| Faithfulness | 3.40/5 |
+| Faithfulness | 3.30/5 |
 | Relevance | 3.50/5 |
 | Context Recall | 5.00/5 |
 | Completeness | 2.70/5 |
@@ -22,5 +22,5 @@ Generated: 2026-04-13 16:33
 | q06 | SLA | 5 | 5 | 5 | 2 | High coverage of answer terms in context |
 | q07 | Access Control | 2 | 2 | 5 | 1 | Low coverage, significant information not in conte |
 | q08 | HR Policy | 5 | 4 | 5 | 3 | High coverage of answer terms in context |
-| q09 | Insufficient Context | 2 | 2 | None | 2 | Low coverage, significant information not in conte |
+| q09 | Insufficient Context | 1 | 2 | None | 2 | Very low coverage, answer likely not grounded |
 | q10 | Refund | 1 | 1 | 5 | 1 | Very low coverage, answer likely not grounded |
