@@ -1,6 +1,6 @@
 # Báo Cáo Cá Nhân — Lab Day 08: RAG Pipeline
 
-**Họ và tên:** [Tên Tech Lead]  
+**Họ và tên:** Trần Thanh Phong  
 **Vai trò trong nhóm:** Tech Lead  
 **Ngày nộp:** 2026-04-13  
 **Độ dài yêu cầu:** 500–800 từ
