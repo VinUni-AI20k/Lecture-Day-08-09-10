@@ -336,14 +336,35 @@ def _split_by_size(
 
 def get_embedding(text: str) -> List[float]:
     """
-    Tạo embedding vector cho một đoạn text sử dụng Sentence Transformers.
+    Tạo embedding vector cho một đoạn text.
+    Ưu tiên dùng OpenAI API, fallback về local Sentence Transformers nếu không có API key.
     """
+    import os
+    from openai import OpenAI
+    
+    # Thử dùng OpenAI API trước
+    openai_key = os.getenv("OPENAI_API_KEY")
+    if openai_key:
+        try:
+            # Cache OpenAI client
+            if not hasattr(get_embedding, "openai_client"):
+                get_embedding.openai_client = OpenAI(api_key=openai_key)
+            
+            response = get_embedding.openai_client.embeddings.create(
+                input=text,
+                model="text-embedding-3-small"  
+            )
+            return response.data[0].embedding
+        except Exception as e:
+            print(f"OpenAI embedding failed: {e}. Falling back to local model.")
+    
+    # Fallback về local Sentence Transformers
     from sentence_transformers import SentenceTransformer
     # Cache model instance to avoid reloading every call
-    if not hasattr(get_embedding, "model"):
-        get_embedding.model = SentenceTransformer("paraphrase-multilingual-MiniLM-L12-v2")
+    if not hasattr(get_embedding, "local_model"):
+        get_embedding.local_model = SentenceTransformer("paraphrase-multilingual-MiniLM-L12-v2")
     
-    return get_embedding.model.encode(text).tolist()
+    return get_embedding.local_model.encode(text).tolist()
 
 
 def build_index(docs_dir: Path = DOCS_DIR, db_dir: Path = CHROMA_DB_DIR) -> None:
@@ -357,10 +378,39 @@ def build_index(docs_dir: Path = DOCS_DIR, db_dir: Path = CHROMA_DB_DIR) -> None
     db_dir.mkdir(parents=True, exist_ok=True)
 
     client = chromadb.PersistentClient(path=str(db_dir))
-    collection = client.get_or_create_collection(
-        name="rag_lab",
-        metadata={"hnsw:space": "cosine"}
-    )
+    
+    # Check if collection exists and handle dimension mismatch
+    try:
+        collection = client.get_collection("rag_lab")
+        print("Existing collection found. Checking embedding dimension...")
+        
+        # Test with a sample embedding to check dimension
+        sample_embedding = get_embedding("test")
+        expected_dim = len(sample_embedding)
+        
+        # Try to query with the sample embedding to see if it matches
+        try:
+            collection.query(query_embeddings=[sample_embedding], n_results=1)
+            print(f"Collection dimension matches ({expected_dim}). Using existing collection.")
+        except Exception as e:
+            if "dimension" in str(e).lower():
+                print(f"Dimension mismatch detected. Deleting existing collection...")
+                client.delete_collection("rag_lab")
+                print("Creating new collection with correct embedding dimension.")
+                collection = client.create_collection(
+                    name="rag_lab",
+                    metadata={"hnsw:space": "cosine"}
+                )
+            else:
+                raise e
+                
+    except ValueError:
+        # Collection doesn't exist, create new one
+        print("Creating new collection...")
+        collection = client.create_collection(
+            name="rag_lab",
+            metadata={"hnsw:space": "cosine"}
+        )
 
     total_chunks = 0
     doc_files = list(docs_dir.glob("*.txt"))

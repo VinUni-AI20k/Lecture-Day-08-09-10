@@ -37,8 +37,10 @@ Every chunk is enriched with a comprehensive metadata dictionary to support adva
 - `aliases`: For historical or alternative names (e.g., `Approval Matrix`).
 - `char_count`: Optimization tracking.
 
-### 3. Local Embedding & Storage
-- **Model**: `paraphrase-multilingual-MiniLM-L12-v2` via `SentenceTransformers` (local, no API cost).
+### 3.Embedding & Storage
+- **Model**:
+ + `"text-embedding-3-small"`: OpenAI API (if not, fall back to local)
+ + `paraphrase-multilingual-MiniLM-L12-v2` via `SentenceTransformers` (local, no API cost).
 - **Store**: **ChromaDB** with Cosine similarity (`hnsw:space: cosine`).
 - **Batching**: Optimized upsert logic with `tqdm` progress bars.
 
