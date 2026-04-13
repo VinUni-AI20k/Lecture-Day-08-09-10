@@ -36,6 +36,31 @@ TOP_K_SELECT = 3     # Số chunk gửi vào prompt sau rerank/select (top-3 swe
 
 LLM_MODEL = os.getenv("LLM_MODEL", "gpt-4o-mini")
 
+# =============================================================================
+# SYSTEM PROMPT — Grounding Rules (Sprint 2)
+# =============================================================================
+
+SYSTEM_PROMPT = """
+# ROLE
+Bạn là AI chuyên gia hỗ trợ nội bộ cho khối CS và IT Helpdesk.
+
+# CONTEXT GUIDELINES
+Dưới đây là các đoạn thông tin được trích xuất từ tài liệu chính thức.
+---
+{context_block}
+---
+
+# CONSTRAINTS (BẮT BUỘC)
+1. **Grounding**: Chỉ trả lời dựa trên thông tin có trong Context ở trên.
+2. **Abstain**: Nếu Context không chứa đáp án, phải trả lời: "Tôi không tìm thấy thông tin này trong tài liệu".
+3. **Citations**: Trích dẫn nguồn theo định dạng `[1]`, `[2]` ngay sau thông tin được lấy ra.
+4. **No Hallucination**: Tuyệt đối không sử dụng kiến thức bên ngoài để bổ sung.
+
+# OUTPUT FORMAT
+- Ngôn ngữ: Tiếng Việt.
+- Văn phong: Chuyên nghiệp, ngắn gọn.
+"""
+
 
 # =============================================================================
 # RETRIEVAL — DENSE (Vector Search)
@@ -262,31 +287,116 @@ def build_context_block(chunks: List[Dict[str, Any]]) -> str:
 
 def build_grounded_prompt(query: str, context_block: str) -> str:
     """
-    Xây dựng grounded prompt theo 4 quy tắc từ slide:
-    1. Evidence-only: Chỉ trả lời từ retrieved context
-    2. Abstain: Thiếu context thì nói không đủ dữ liệu
-    3. Citation: Gắn source/section khi có thể
-    4. Short, clear, stable: Output ngắn, rõ, nhất quán
-
-    TODO Sprint 2:
-    Đây là prompt baseline. Trong Sprint 3, bạn có thể:
-    - Thêm hướng dẫn về format output (JSON, bullet points)
-    - Thêm ngôn ngữ phản hồi (tiếng Việt vs tiếng Anh)
-    - Điều chỉnh tone phù hợp với use case (CS helpdesk, IT support)
+    Xây dựng grounded prompt.
+    Sử dụng SYSTEM_PROMPT được định nghĩa ở trên làm template.
     """
-    prompt = f"""Answer only from the retrieved context below.
-If the context is insufficient to answer the question, say you do not know and do not make up information.
-Cite the source field (in brackets like [1]) when possible.
-Keep your answer short, clear, and factual.
-Respond in the same language as the question.
+    system_part = SYSTEM_PROMPT.format(context_block=context_block)
+    
+    prompt = f"{system_part}\n\nCâu hỏi: {query}\n\nTrả lời (trích dẫn [số] sau mỗi ý):"
+    return prompt.strip()
 
-Question: {query}
 
-Context:
-{context_block}
+def generate_answer(
+    query: str,
+    reranked_docs: List[Dict[str, Any]],
+    has_context: bool,
+    llm=None,
+) -> Dict[str, Any]:
+    """
+    Core generation function cho Sprint 2.
 
-Answer:"""
-    return prompt
+    Args:
+        query: Câu hỏi của người dùng
+        reranked_docs: List các chunk đã qua rerank/select, mỗi phần tử là dict
+                       với keys "text", "metadata", "score".
+                       Hỗ trợ cả tuple (doc, score) để tương thích với ROLE_INDIVIDUALS spec.
+        has_context: True nếu có chunk liên quan, False nếu retrieval không tìm thấy gì
+        llm: Tuỳ chọn — LLM client bên ngoài (nếu None thì dùng call_llm() nội bộ)
+
+    Returns:
+        Dict với:
+          - "answer": câu trả lời grounded có citation
+          - "sources": list tên file nguồn
+          - "citations": list số thứ tự trích dẫn
+
+    Grounding rules (theo SYSTEM_PROMPT):
+    - Nếu không có context → trả về câu "Không tìm thấy thông tin"
+    - Nếu có context → build citation-marked context block rồi gọi LLM
+    """
+    # --- Trường hợp 1: Không có context ---
+    if not has_context or not reranked_docs:
+        return {
+            "answer": "Không tìm thấy thông tin về câu hỏi này trong tài liệu hiện có.",
+            "sources": [],
+            "citations": [],
+        }
+
+    # --- Bước 1: Build context với citation markers [1], [2]... ---
+    context_parts = []
+    sources = []
+    citation_indices = []
+
+    for i, item in enumerate(reranked_docs, 1):
+        # Hỗ trợ cả tuple (doc, score) lẫn dict thuần
+        if isinstance(item, tuple):
+            doc, score = item
+            # doc có thể là LangChain Document (có .page_content / .metadata)
+            # hoặc dict thông thường
+            if hasattr(doc, "page_content"):
+                text = doc.page_content
+                meta = doc.metadata
+            else:
+                text = doc.get("text", "")
+                meta = doc.get("metadata", {})
+        else:
+            # dict thuần (format nội bộ của rag_answer.py)
+            text = item.get("text", "")
+            meta = item.get("metadata", {})
+            score = item.get("score", 0)
+
+        src = meta.get("source", "unknown")
+        section = meta.get("section", "")
+
+        header = f"[{i}] Nguồn: {src}"
+        if section:
+            header += f" | {section}"
+
+        context_parts.append(f"{header}\n{text}")
+        sources.append(src)
+        citation_indices.append(i)
+
+    context_block = "\n\n---\n\n".join(context_parts)
+
+    # --- Bước 2: Build prompt ---
+    prompt = build_grounded_prompt(query, context_block)
+
+    # --- Bước 3: Gọi LLM ---
+    if llm is not None:
+        # Nếu caller truyền LLM client (ví dụ LangChain ChatOpenAI)
+        from langchain_core.messages import HumanMessage
+        response = llm.invoke([
+            HumanMessage(content=prompt),
+        ])
+        answer_text = response.content
+    else:
+        # Dùng OpenAI client nội bộ
+        from openai import OpenAI
+        client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+        response = client.chat.completions.create(
+            model=LLM_MODEL,
+            messages=[
+                {"role": "user", "content": prompt},
+            ],
+            temperature=0,
+            max_tokens=512,
+        )
+        answer_text = response.choices[0].message.content
+
+    return {
+        "answer": answer_text,
+        "sources": list(dict.fromkeys(sources)),   # deduplicated, order preserved
+        "citations": citation_indices,
+    }
 
 
 def call_llm(prompt: str) -> str:
