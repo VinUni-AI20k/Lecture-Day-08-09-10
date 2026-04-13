@@ -16,11 +16,11 @@ overlap = 80 tokens
 top_k_search = 10
 top_k_select = 3
 use_rerank = False
-llm_model = _____
+llm_model = Deepseek Chat
 ```
 
 **Scorecard Baseline:**
-| Metric | Average Score |
+| Metric | Average Score |gi
 |--------|--------------|
 | Faithfulness | ? /5 |
 | Answer Relevance | ? /5 |

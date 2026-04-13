@@ -1,8 +1,8 @@
 # Báo Cáo Cá Nhân — Lab Day 08: RAG Pipeline
 
-**Họ và tên:** ___________  
-**Vai trò trong nhóm:** Tech Lead / Retrieval Owner / Eval Owner / Documentation Owner  
-**Ngày nộp:** ___________  
+**Họ và tên:** Hồ Hải Thuận - 2A202600058  
+**Vai trò trong nhóm:** Documentation Owner  
+**Ngày nộp:** 13/04/2026  
 **Độ dài yêu cầu:** 500–800 từ
 
 ---
@@ -13,6 +13,10 @@
 > - Sprint nào bạn chủ yếu làm?
 > - Cụ thể bạn implement hoặc quyết định điều gì?
 > - Công việc của bạn kết nối với phần của người khác như thế nào?
+
+Tôi chịu trách nhiệm hoàn thành các yêu cầu trong file 'architecture.md' và 'tuning-log.md'. Cụ thể, tôi đã:
+- Ở sprint 1: Định nghĩa bài toán và cập nhật các thông tin về số chunk, các tham số (chunk_size, overlap), embedding model, vector store.
+- Ở sprint 2&3: Mô tả sơ bộ về retrieval và generation pipeline.
 
 _________________
 

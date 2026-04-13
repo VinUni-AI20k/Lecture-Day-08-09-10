@@ -38,7 +38,7 @@
 |---------|---------|-------|
 | Chunk size | 400 tokens | Nhóm chọn 400 tokens ước lượng (khoảng 1600 ký tự) để giữ trọn ngữ nghĩa của các đoạn policy/SLA vốn hay đi theo cụm điều kiện, ngoại lệ, và quy trình. Nếu nhỏ quá thì dễ vỡ ý, còn lớn quá thì retrieval kém chính xác vì một chunk chứa nhiều nội dung khác nhau; mức này là điểm cân bằng tốt cho bộ tài liệu hiện tại. |
 | Overlap | 80 tokens | Nhóm đặt overlap 80 tokens (khoảng 320 ký tự) để giảm mất mát thông tin ở ranh giới chunk, nhất là với danh sách bước và câu có nhiều vế liên tiếp. Mức overlap này đủ nối mạch ngữ cảnh giữa hai chunk mà chưa gây trùng lặp quá nhiều khi truy hồi.
- |
+|
 | Chunking strategy | Heading-based  | Nhóm dùng chiến lược theo cấu trúc tài liệu: Đầu tiên tách theo heading "=== ... ===" trước, sau đó mới chia nhỏ theo độ dài khi cần; riêng FAQ thì tách theo cặp Q/A để giữ đúng đơn vị hỏi-đáp. Cách này tận dụng format có sẵn trong dữ liệu, giúp chunk rõ nghĩa và tăng độ chính xác retrieval so với cắt theo độ dài thuần túy. |
 | Metadata fields | source, section, effective_date, department, access | Phục vụ filter, freshness, citation |
 
@@ -101,7 +101,7 @@ Câu 4: Context đưa vào có score không?
 ### LLM Configuration
 | Tham số | Giá trị |
 |---------|---------|
-| Model | TODO (gpt-4o-mini / gemini-1.5-flash) |
+| Model | Deepseek Chat |
 | Temperature | 0 (để output ổn định cho eval) |
 | Max tokens | 512 |
 
@@ -139,3 +139,34 @@ graph LR
     I --> J[LLM]
     J --> K[Answer + Citation]
 ```
+graph TD
+    %% Định dạng phong cách cho các khối
+    classDef database fill:#f9f,stroke:#333,stroke-width:2px;
+    classDef process fill:#bbf,stroke:#333,stroke-width:1px;
+    classDef input fill:#cfc,stroke:#333,stroke-width:1px;
+    classDef llm fill:#fca,stroke:#333,stroke-width:2px;
+
+    subgraph "Phase 1: Indexing Pipeline (Sprint 1)"
+        R1[Raw Documents <br> PDF, Markdown]:::input --> CH[Document Loader & Chunking <br> Size: 400, Overlap: 80]:::process
+        CH --> MT[Attach Metadata <br> source, section...]:::process
+        MT --> EM1[Embedding Model <br> MiniLM-L12-v2]:::process
+        EM1 -->|Lưu Vector & Text| VDB[(ChromaDB Vector Store)]:::database
+    end
+
+    subgraph "Phase 2 & 3: Retrieval & Generation (Sprint 2, 3)"
+        UQ[User Query]:::input --> EM2[Embedding Model]:::process
+        EM2 -.->|Search Vector| VDB
+        UQ -.->|Keyword Search <br>Nếu dùng Hybrid| VDB
+        VDB --> T10[Retrieve Top-10 Chunks]:::process
+        
+        T10 --> RR{Có dùng Rerank?}
+        RR -->|Có| CE[Cross-Encoder Reranker]:::process
+        RR -->|Không| T3[Lấy Top-3 Chunks]:::process
+        CE -->|Tính lại điểm| T3
+        
+        T3 --> CB[Build Context Block <br> kẹp thêm Citation]:::process
+        CB --> PMT[Grounded Prompt]:::llm
+        UQ --> PMT
+        PMT --> LL[LLM Generation <br> Temperature = 0]:::llm
+        LL --> OUT[Grounded Answer <br> kèm trích dẫn nguồn]:::input
+    end
