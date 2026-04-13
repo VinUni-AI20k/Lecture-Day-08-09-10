@@ -65,12 +65,14 @@ Hệ thống dùng RAG để **retrieve chứng cứ từ tài liệu nội bộ
 | Strategy | Hybrid (Dense + BM25 Sparse) với Reciprocal Rank Fusion (RRF) | Thay retrieval từ pure dense → hybrid để tăng recall với keyword/mã lỗi/tên riêng |
 | Top-k search | 10 | Giữ nguyên |
 | Top-k select | 3 | Giữ nguyên |
-| Rerank | Tắt (có sẵn cross-encoder, chỉ bật khi cần giảm noise) | Không đổi mặc định |
-| Query transform | Không dùng | Không đổi |
+| Rerank | Bật cross-encoder (SentenceTransformers CrossEncoder) | Thêm rerank để giảm noise trước khi chọn top-3 chunks vào prompt |
+| Query transform | Bật (expansion) | Thêm bước mở rộng query để tăng recall với alias/tên cũ |
+| Hybrid weights | dense=0.6, sparse=0.4 | Cân bằng paraphrase (dense) và exact keyword/mã lỗi (sparse) |
 
 **Lý do chọn variant này:**
 Chọn **hybrid** vì corpus có cả câu tự nhiên (policy) lẫn **keyword/mã lỗi/tên gọi chuyên môn**; sparse (BM25) bắt đúng term, dense bắt được paraphrase.
 RRF giúp gộp hai ranking mà vẫn giữ logic “search rộng → chọn top nhỏ” ổn định cho evaluation.
+Ngoài ra nhóm bật **rerank** để giảm các chunk nhiễu trong top-k search, và bật **query expansion** để tăng khả năng bắt alias (ví dụ: “Approval Matrix” có thể nằm trong tài liệu quy trình cấp quyền).
 
 ---
 
@@ -119,7 +121,7 @@ Answer:
 
 ## 6. Diagram (tùy chọn)
 
-> TODO: Vẽ sơ đồ pipeline nếu có thời gian. Có thể dùng Mermaid hoặc drawio.
+Sơ đồ pipeline (Mermaid):
 
 ```mermaid
 graph LR
