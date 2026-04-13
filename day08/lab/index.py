@@ -334,7 +334,7 @@ def list_chunks(db_dir: Path = CHROMA_DB_DIR, n: int = 5) -> None:
             print(f"  Source: {meta.get('source', 'N/A')}")
             print(f"  Section: {meta.get('section', 'N/A')}")
             print(f"  Effective Date: {meta.get('effective_date', 'N/A')}")
-            print(f"  Text preview: {doc[:120]}...")
+            print(f"  Text preview: {doc}")
             print()
     except Exception as e:
         print(f"Lỗi khi đọc index: {e}")
@@ -401,7 +401,7 @@ if __name__ == "__main__":
         print(f"  Số chunks: {len(chunks)}")
         for i, chunk in enumerate(chunks[:3]):
             print(f"\n  [Chunk {i+1}] Section: {chunk['metadata']['section']}")
-            print(f"  Text: {chunk['text'][:150]}...")
+            print(f"  Text: {chunk['text']}")
 
     # Bước 3: Build index (yêu cầu implement get_embedding)
     print("\n--- Build Full Index ---")
@@ -413,8 +413,8 @@ if __name__ == "__main__":
     inspect_metadata_coverage()
 
     print("\nSprint 1 setup hoàn thành!")
-    print("Việc cần làm:")
-    print("  1. Implement get_embedding() - chọn OpenAI hoặc Sentence Transformers")
-    print("  2. Implement phần TODO trong build_index()")
-    print("  3. Chạy build_index() và kiểm tra với list_chunks()")
-    print("  4. Nếu chunking chưa tốt: cải thiện _split_by_size() để split theo paragraph")
+    # print("Việc cần làm:")
+    # print("  1. Implement get_embedding() - chọn OpenAI hoặc Sentence Transformers")
+    # print("  2. Implement phần TODO trong build_index()")
+    # print("  3. Chạy build_index() và kiểm tra với list_chunks()")
+    # print("  4. Nếu chunking chưa tốt: cải thiện _split_by_size() để split theo paragraph")

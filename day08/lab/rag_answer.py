@@ -22,6 +22,8 @@ Definition of Done Sprint 3:
 """
 
 import os
+import json
+import re
 from typing import List, Dict, Any, Optional, Tuple
 from dotenv import load_dotenv
 
@@ -76,6 +78,31 @@ def retrieve_dense(query: str, top_k: int = TOP_K_SEARCH) -> List[Dict[str, Any]
         # Lưu ý: distances trong ChromaDB cosine = 1 - similarity
         # Score = 1 - distance
     """
+    import chromadb
+    from index import get_embedding, CHROMA_DB_DIR
+
+    client = chromadb.PersistentClient(path=str(CHROMA_DB_DIR))
+    collection = client.get_collection("rag_lab")
+
+    query_embedding = get_embedding(query)
+    results = collection.query(
+        query_embeddings=[query_embedding],
+        n_results=top_k,
+        include=["documents", "metadatas", "distances"]
+    )
+    retrieved_chunks = []
+    documents = results.get("documents", [[]])[0]
+    metadatas = results.get("metadatas", [[]])[0]
+    distances = results.get("distances", [[]])[0]
+
+    for doc, meta, distance in zip(documents, metadatas, distances):
+        retrieved_chunks.append({
+            "text": doc,
+            "metadata": meta,
+            "score": 1 - distance,
+        })
+
+    return retrieved_chunks
     raise NotImplementedError(
         "TODO Sprint 2: Implement retrieve_dense().\n"
         "Tham khảo comment trong hàm để biết cách query ChromaDB."
@@ -111,8 +138,47 @@ def retrieve_sparse(query: str, top_k: int = TOP_K_SEARCH) -> List[Dict[str, Any
     """
     # TODO Sprint 3: Implement BM25 search
     # Tạm thời return empty list
-    print("[retrieve_sparse] Chưa implement — Sprint 3")
-    return []
+    import chromadb
+    from rank_bm25 import BM25Okapi
+    from index import CHROMA_DB_DIR
+
+    def simple_tokenize(text: str) -> List[str]:
+        return re.findall(r"\w+", text.lower())
+
+    if not query or not query.strip():
+        return []
+
+    client = chromadb.PersistentClient(path=str(CHROMA_DB_DIR))
+    collection = client.get_collection("rag_lab")
+
+    results = collection.get(include=["documents", "metadatas"])
+    documents = results.get("documents", [])
+    metadatas = results.get("metadatas", [])
+
+    if not documents:
+        return []
+
+    tokenized_corpus = [simple_tokenize(doc) for doc in documents]
+    bm25 = BM25Okapi(tokenized_corpus)
+
+    tokenized_query = simple_tokenize(query)
+    scores = bm25.get_scores(tokenized_query)
+
+    top_indices = sorted(
+        range(len(scores)),
+        key=lambda i: scores[i],
+        reverse=True
+    )[:top_k]
+
+    retrieved_chunks = []
+    for idx in top_indices:
+        retrieved_chunks.append({
+            "text": documents[idx],
+            "metadata": metadatas[idx],
+            "score": float(scores[idx]),
+        })
+
+    return retrieved_chunks
 
 
 # =============================================================================
@@ -150,9 +216,55 @@ def retrieve_hybrid(
     """
     # TODO Sprint 3: Implement hybrid RRF
     # Tạm thời fallback về dense
-    print("[retrieve_hybrid] Chưa implement RRF — fallback về dense")
-    return retrieve_dense(query, top_k)
+    if not query or not query.strip():
+        return []
 
+    total_weight = dense_weight + sparse_weight
+    if total_weight == 0:
+        dense_weight, sparse_weight = 0.5, 0.5
+    else:
+        dense_weight /= total_weight
+        sparse_weight /= total_weight
+
+    dense_results = retrieve_dense(query, top_k=top_k)
+    sparse_results = retrieve_sparse(query, top_k=top_k)
+
+    rrf_k = 60
+    merged = {}
+
+    for rank, item in enumerate(dense_results, start=1):
+        key = (
+            item["text"],
+            json.dumps(item["metadata"], sort_keys=True, ensure_ascii=False)
+        )
+        if key not in merged:
+            merged[key] = {
+                "text": item["text"],
+                "metadata": item["metadata"],
+                "score": 0.0,
+            }
+        merged[key]["score"] += dense_weight * (1 / (rrf_k + rank))
+
+    for rank, item in enumerate(sparse_results, start=1):
+        key = (
+            item["text"],
+            json.dumps(item["metadata"], sort_keys=True, ensure_ascii=False)
+        )
+        if key not in merged:
+            merged[key] = {
+                "text": item["text"],
+                "metadata": item["metadata"],
+                "score": 0.0,
+            }
+        merged[key]["score"] += sparse_weight * (1 / (rrf_k + rank))
+
+    fused_results = sorted(
+        merged.values(),
+        key=lambda x: x["score"],
+        reverse=True
+    )
+
+    return fused_results[:top_k]
 
 # =============================================================================
 # RERANK (Sprint 3 alternative)
@@ -316,6 +428,15 @@ def call_llm(prompt: str) -> str:
 
     Lưu ý: Dùng temperature=0 hoặc thấp để output ổn định cho evaluation.
     """
+    from openai import OpenAI
+    client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+    response = client.chat.completions.create(
+        model=LLM_MODEL,
+        messages=[{"role": "user", "content": prompt}],
+        temperature=0,     # temperature=0 để output ổn định, dễ đánh giá
+        max_tokens=512,
+    )
+    return response.choices[0].message.content
     raise NotImplementedError(
         "TODO Sprint 2: Implement call_llm().\n"
         "Chọn Option A (OpenAI) hoặc Option B (Gemini) trong TODO comment."
@@ -437,7 +558,7 @@ def compare_retrieval_strategies(query: str) -> None:
     print(f"Query: {query}")
     print('='*60)
 
-    strategies = ["dense", "hybrid"]  # Thêm "sparse" sau khi implement
+    strategies = ["dense", "sparse", "hybrid"]  # Thêm "sparse" sau khi implement
 
     for strategy in strategies:
         print(f"\n--- Strategy: {strategy} ---")
@@ -481,18 +602,18 @@ if __name__ == "__main__":
             print(f"Lỗi: {e}")
 
     # Uncomment sau khi Sprint 3 hoàn thành:
-    # print("\n--- Sprint 3: So sánh strategies ---")
-    # compare_retrieval_strategies("Approval Matrix để cấp quyền là tài liệu nào?")
-    # compare_retrieval_strategies("ERR-403-AUTH")
+    print("\n--- Sprint 3: So sánh strategies ---")
+    compare_retrieval_strategies("Approval Matrix để cấp quyền là tài liệu nào?")
+    compare_retrieval_strategies("ERR-403-AUTH")
 
-    print("\n\nViệc cần làm Sprint 2:")
-    print("  1. Implement retrieve_dense() — query ChromaDB")
-    print("  2. Implement call_llm() — gọi OpenAI hoặc Gemini")
-    print("  3. Chạy rag_answer() với 3+ test queries")
-    print("  4. Verify: output có citation không? Câu không có docs → abstain không?")
+    # print("\n\nViệc cần làm Sprint 2:")
+    # print("  1. Implement retrieve_dense() — query ChromaDB")
+    # print("  2. Implement call_llm() — gọi OpenAI hoặc Gemini")
+    # print("  3. Chạy rag_answer() với 3+ test queries")
+    # print("  4. Verify: output có citation không? Câu không có docs → abstain không?")
 
-    print("\nViệc cần làm Sprint 3:")
-    print("  1. Chọn 1 trong 3 variants: hybrid, rerank, hoặc query transformation")
-    print("  2. Implement variant đó")
-    print("  3. Chạy compare_retrieval_strategies() để thấy sự khác biệt")
-    print("  4. Ghi lý do chọn biến đó vào docs/tuning-log.md")
+    # print("\nViệc cần làm Sprint 3:")
+    # print("  1. Chọn 1 trong 3 variants: hybrid, rerank, hoặc query transformation")
+    # print("  2. Implement variant đó")
+    # print("  3. Chạy compare_retrieval_strategies() để thấy sự khác biệt")
+    # print("  4. Ghi lý do chọn biến đó vào docs/tuning-log.md")
