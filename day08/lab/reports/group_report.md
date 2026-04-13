@@ -4,11 +4,11 @@
 **Thành viên:**
 | Tên | Vai trò | Email |
 |-----|---------|-------|
-| Nguyen Duc Anh | Tech Lead / Retrieval Integration | N/A |
-| Do Minh Hieu | Indexing Owner (Sprint 1) | N/A |
-| Khuong Quang Vinh | Retrieval Owner (Dense/Sparse/Hybrid) | N/A |
-| Nguyen Tien Dung | Generation Owner (Prompt + LLM) | N/A |
-| Tran Long Hai | Eval Owner (Sprint 4) | N/A |
+| Nguyen Duc Anh | Tech Lead / Retrieval Integration | ndaismeee@gmail.com |
+| Do Minh Hieu | Indexing Owner (Sprint 1) | Dohieunt1102@gmail.com |
+| Khuong Quang Vinh | Retrieval Owner (Dense/Sparse/Hybrid) | vinhkhuongquang@gmail.com |
+| Nguyen Tien Dung | Generation Owner (Prompt + LLM) | dungnguyentien138@gmail.com |
+| Tran Long Hai | Eval Owner (Sprint 4) | longhai7803@gmail.com |
 
 **Ngày nộp:** 13/04/2026  
 **Repo:** https://github.com/NDAismeee/E403_Team61
