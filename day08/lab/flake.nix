@@ -17,10 +17,13 @@
             python3
             python3Packages.pip
             python3Packages.virtualenv
+            stdenv.cc.cc.lib
             # Add other system dependencies here (e.g., git, sqlite)
           ];
 
           shellHook = ''
+            # Make C/C++ runtime libs visible for binary wheels (numpy, chromadb deps).
+            export LD_LIBRARY_PATH="${pkgs.lib.makeLibraryPath [ pkgs.stdenv.cc.cc.lib ]}:$LD_LIBRARY_PATH"
             echo "Python development shell loaded!"
             if [ ! -d .venv ]; then
               python -m venv .venv

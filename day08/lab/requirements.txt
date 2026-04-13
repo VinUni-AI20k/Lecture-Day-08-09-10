@@ -16,7 +16,10 @@ chromadb>=0.5.0                  # Vector database (local, không cần server)
 # (đã có trong openai package)
 
 # Option B: Sentence Transformers (local, không cần API key)
-sentence-transformers>=2.7.0     # Model: paraphrase-multilingual-MiniLM-L12-v2
+# sentence-transformers>=2.7.0    # Optional: kéo torch (Linux wheel thường kéo nvidia-* runtime)
+# Nếu muốn local embedding/rerank mà không tải CUDA runtime, cài torch CPU trước:
+#   pip install --index-url https://download.pytorch.org/whl/cpu torch
+# rồi mới cài sentence-transformers.
 
 # === Sprint 3: Sparse/Hybrid Retrieval ===
 rank-bm25>=0.2.2                 # BM25 keyword search
