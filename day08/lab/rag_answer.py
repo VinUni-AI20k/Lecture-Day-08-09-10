@@ -22,6 +22,7 @@ Definition of Done Sprint 3:
 """
 
 import os
+from pathlib import Path
 from typing import List, Dict, Any, Optional, Tuple
 from dotenv import load_dotenv
 
@@ -124,25 +125,7 @@ def retrieve_dense(query: str, top_k: int = TOP_K_SEARCH) -> List[Dict[str, Any]
 
 def retrieve_sparse(query: str, top_k: int = TOP_K_SEARCH) -> List[Dict[str, Any]]:
     """
-    Sparse retrieval: tìm kiếm theo keyword (BM25).
-
-    Mạnh ở: exact term, mã lỗi, tên riêng (ví dụ: "ERR-403", "P1", "refund")
-    Hay hụt: câu hỏi paraphrase, đồng nghĩa
-
-    TODO Sprint 3 (nếu chọn hybrid):
-    1. Cài rank_bm25: pip install rank-bm25
-    2. Load tất cả chunks từ ChromaDB (hoặc rebuild từ docs)
-    3. Tokenize và tạo BM25Index
-    4. Query và trả về top_k kết quả
-
-    Gợi ý:
-        from rank_bm25 import BM25Okapi
-        corpus = [chunk["text"] for chunk in all_chunks]
-        tokenized_corpus = [doc.lower().split() for doc in corpus]
-        bm25 = BM25Okapi(tokenized_corpus)
-        tokenized_query = query.lower().split()
-        scores = bm25.get_scores(tokenized_query)
-        top_indices = sorted(range(len(scores)), key=lambda i: scores[i], reverse=True)[:top_k]
+    Sparse retrieval: tìm kiếm theo keyword (BM25S).
     """
     # [Khai] retrieve_sparse — load BM25S index đã build từ index.py
     import pickle
@@ -167,10 +150,6 @@ def retrieve_sparse(query: str, top_k: int = TOP_K_SEARCH) -> List[Dict[str, Any
     return chunks
 
 
-# =============================================================================
-# RETRIEVAL — HYBRID (Dense + Sparse với Reciprocal Rank Fusion)
-# =============================================================================
-
 def retrieve_hybrid(
     query: str,
     top_k: int = TOP_K_SEARCH,
@@ -179,26 +158,10 @@ def retrieve_hybrid(
 ) -> List[Dict[str, Any]]:
     """
     Hybrid retrieval: kết hợp dense và sparse bằng Reciprocal Rank Fusion (RRF).
-
-    Mạnh ở: giữ được cả nghĩa (dense) lẫn keyword chính xác (sparse)
-    Phù hợp khi: corpus lẫn lộn ngôn ngữ tự nhiên và tên riêng/mã lỗi/điều khoản
-
-    Args:
-        dense_weight: Trọng số cho dense score (0-1)
-        sparse_weight: Trọng số cho sparse score (0-1)
-
-    TODO Sprint 3 (nếu chọn hybrid):
-    1. Chạy retrieve_dense() → dense_results
-    2. Chạy retrieve_sparse() → sparse_results
-    3. Merge bằng RRF:
-       RRF_score(doc) = dense_weight * (1 / (60 + dense_rank)) +
-                        sparse_weight * (1 / (60 + sparse_rank))
-       60 là hằng số RRF tiêu chuẩn
-    4. Sort theo RRF score giảm dần, trả về top_k
-
-    Khi nào dùng hybrid (từ slide):
-    - Corpus có cả câu tự nhiên VÀ tên riêng, mã lỗi, điều khoản
-    - Query như "Approval Matrix" khi doc đổi tên thành "Access Control SOP"
+    Hỗ trợ xử lý:
+    - Tìm kiếm theo ý nghĩa (Dense)
+    - Tìm kiếm theo từ khóa (Sparse): các tên riêng, mã lỗi, điều khoản
+    - Query dùng alias/tên cũ (ví dụ: "Approval Matrix" → "Access Control SOP")
     """
     # [Khai] retrieve_hybrid — Dense + Sparse → RRF merge
     # Lý do chọn hybrid: corpus có cả ngôn ngữ tự nhiên (policy) lẫn
@@ -236,7 +199,6 @@ def retrieve_hybrid(
 
 # =============================================================================
 # RERANK (Sprint 3 alternative)
-# Cross-encoder để chấm lại relevance sau search rộng
 # =============================================================================
 
 def rerank(
@@ -246,32 +208,27 @@ def rerank(
 ) -> List[Dict[str, Any]]:
     """
     Rerank các candidate chunks bằng cross-encoder.
-
-    Cross-encoder: chấm lại "chunk nào thực sự trả lời câu hỏi này?"
-    MMR (Maximal Marginal Relevance): giữ relevance nhưng giảm trùng lặp
-
-    Funnel logic (từ slide):
-      Search rộng (top-20) → Rerank (top-6) → Select (top-3)
-
-    TODO Sprint 3 (nếu chọn rerank):
-    Option A — Cross-encoder:
-        from sentence_transformers import CrossEncoder
-        model = CrossEncoder("cross-encoder/ms-marco-MiniLM-L-6-v2")
-        pairs = [[query, chunk["text"]] for chunk in candidates]
-        scores = model.predict(pairs)
-        ranked = sorted(zip(candidates, scores), key=lambda x: x[1], reverse=True)
-        return [chunk for chunk, _ in ranked[:top_k]]
-
-    Option B — Rerank bằng LLM (đơn giản hơn nhưng tốn token):
-        Gửi list chunks cho LLM, yêu cầu chọn top_k relevant nhất
-
-    Khi nào dùng rerank:
-    - Dense/hybrid trả về nhiều chunk nhưng có noise
-    - Muốn chắc chắn chỉ 3-5 chunk tốt nhất vào prompt
     """
-    # TODO Sprint 3: Implement rerank
-    # Tạm thời trả về top_k đầu tiên (không rerank)
-    return candidates[:top_k]
+    if not candidates:
+        return []
+        
+    from sentence_transformers import CrossEncoder
+    
+    # Model nhỏ, chạy nhanh trên CPU
+    model = CrossEncoder("cross-encoder/ms-marco-MiniLM-L-6-v2")
+    
+    pairs = [[query, c["text"]] for c in candidates]
+    scores = model.predict(pairs)
+    
+    # Sắp xếp lại dựa trên score của Cross-Encoder
+    ranked_candidates = []
+    for i in range(len(candidates)):
+        c = candidates[i].copy()
+        c["rerank_score"] = float(scores[i])
+        ranked_candidates.append(c)
+        
+    ranked_candidates.sort(key=lambda x: x["rerank_score"], reverse=True)
+    return ranked_candidates[:top_k]
 
 
 # =============================================================================
@@ -637,16 +594,22 @@ if __name__ == "__main__":
     ]
 
     print("\n--- Sprint 2: Test Baseline (Dense) ---")
-    for query in test_queries:
-        print(f"\nQuery: {query}")
-        try:
-            result = rag_answer(query, retrieval_mode="dense", verbose=True)
-            print(f"Answer: {result['answer']}")
-            print(f"Sources: {result['sources']}")
-        except NotImplementedError:
-            print("Chưa implement — hoàn thành TODO trong retrieve_dense() và call_llm() trước.")
-        except Exception as e:
-            print(f"Lỗi: {e}")
+    # --- Sprint 3: Hybrid Search + Rerank ---
+    print("\n" + "="*60)
+    print("--- Sprint 3: Hybrid Search + Rerank ---")
+    print("="*60)
+    
+    # Query khó: dùng tên cũ (alias) hoặc mã lỗi không có trong embedding tốt
+    query_s3 = "Làm sao để có Approval Matrix và cấp quyền hệ thống?"
+    print(f"\nQuery: {query_s3}")
+    
+    result_s3 = rag_answer(
+        query_s3, 
+        retrieval_mode="hybrid", 
+        use_rerank=True, 
+        verbose=True
+    )
+    print(f"\nAnswer: {result_s3['answer']}")
 
     # Uncomment sau khi Sprint 3 hoàn thành:
     # print("\n--- Sprint 3: So sánh strategies ---")
