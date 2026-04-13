@@ -44,42 +44,36 @@ LLM_MODEL = os.getenv("LLM_MODEL", "gpt-4o-mini")
 def retrieve_dense(query: str, top_k: int = TOP_K_SEARCH) -> List[Dict[str, Any]]:
     """
     Dense retrieval: tìm kiếm theo embedding similarity trong ChromaDB.
-
-    Args:
-        query: Câu hỏi của người dùng
-        top_k: Số chunk tối đa trả về
-
-    Returns:
-        List các dict, mỗi dict là một chunk với:
-          - "text": nội dung chunk
-          - "metadata": metadata (source, section, effective_date, ...)
-          - "score": cosine similarity score
-
-    TODO Sprint 2:
-    1. Embed query bằng cùng model đã dùng khi index (xem index.py)
-    2. Query ChromaDB với embedding đó
-    3. Trả về kết quả kèm score
-
-    Gợi ý:
-        import chromadb
-        from index import get_embedding, CHROMA_DB_DIR
-
-        client = chromadb.PersistentClient(path=str(CHROMA_DB_DIR))
-        collection = client.get_collection("rag_lab")
-
-        query_embedding = get_embedding(query)
-        results = collection.query(
-            query_embeddings=[query_embedding],
-            n_results=top_k,
-            include=["documents", "metadatas", "distances"]
-        )
-        # Lưu ý: distances trong ChromaDB cosine = 1 - similarity
-        # Score = 1 - distance
     """
-    raise NotImplementedError(
-        "TODO Sprint 2: Implement retrieve_dense().\n"
-        "Tham khảo comment trong hàm để biết cách query ChromaDB."
+    from index import get_embeddings_fn, CHROMA_PERSIST_DIR
+    
+    # Initialize embeddings using fallback logic
+    embedding_fn = get_embeddings_fn()
+    
+    # Load Chroma
+    from langchain_community.vectorstores import Chroma
+    vectorstore = Chroma(
+        persist_directory=CHROMA_PERSIST_DIR,
+        embedding_function=embedding_fn
     )
+    
+    # Search
+    results = vectorstore.similarity_search_with_score(query, k=top_k)
+    
+    # Convert to expected format
+    formatted_results = []
+    for doc, distance in results:
+        # Distance to score (similarity)
+        # Similarity approx = 1 - distance
+        score = 1.0 - distance
+        
+        formatted_results.append({
+            "text": doc.page_content,
+            "metadata": doc.metadata,
+            "score": score
+        })
+        
+    return formatted_results
 
 
 # =============================================================================
@@ -304,28 +298,32 @@ def transform_query(query: str, strategy: str = "expansion") -> List[str]:
 def build_context_block(chunks: List[Dict[str, Any]]) -> str:
     """
     Đóng gói danh sách chunks thành context block để đưa vào prompt.
-
-    Format: structured snippets với source, section, score (từ slide).
-    Mỗi chunk có số thứ tự [1], [2], ... để model dễ trích dẫn.
     """
     context_parts = []
     for i, chunk in enumerate(chunks, 1):
         meta = chunk.get("metadata", {})
         source = meta.get("source", "unknown")
         section = meta.get("section", "")
-        score = chunk.get("score", 0)
         text = chunk.get("text", "")
 
-        # TODO: Tùy chỉnh format nếu muốn (thêm effective_date, department, ...)
-        header = f"[{i}] {source}"
+        header = f"[{i}] Nguồn: {source}"
         if section:
-            header += f" | {section}"
-        if score > 0:
-            header += f" | score={score:.2f}"
+            header += f" | Section: {section}"
 
         context_parts.append(f"{header}\n{text}")
 
     return "\n\n".join(context_parts)
+
+def format_citations(sources: List[str]) -> str:
+    """
+    Tạo citation list ở cuối câu trả lời (Dành riêng cho Sprint 2 requirements).
+    """
+    if not sources:
+        return ""
+    lines = ["\n\n**Nguồn tham khảo:**"]
+    for i, src in enumerate(sources, 1):
+        lines.append(f"[{i}] {src}")
+    return "\n".join(lines)
 
 
 def build_grounded_prompt(query: str, context_block: str) -> str:
@@ -359,35 +357,20 @@ Answer:"""
 
 def call_llm(prompt: str) -> str:
     """
-    Gọi LLM để sinh câu trả lời.
-
-    TODO Sprint 2:
-    Chọn một trong hai:
-
-    Option A — OpenAI (cần OPENAI_API_KEY):
-        from openai import OpenAI
-        client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-        response = client.chat.completions.create(
-            model=LLM_MODEL,
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0,     # temperature=0 để output ổn định, dễ đánh giá
-            max_tokens=512,
-        )
-        return response.choices[0].message.content
-
-    Option B — Google Gemini (cần GOOGLE_API_KEY):
-        import google.generativeai as genai
-        genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
-        model = genai.GenerativeModel("gemini-1.5-flash")
-        response = model.generate_content(prompt)
-        return response.text
-
-    Lưu ý: Dùng temperature=0 hoặc thấp để output ổn định cho evaluation.
+    Gọi LLM để sinh câu trả lời sử dụng OpenAI.
     """
-    raise NotImplementedError(
-        "TODO Sprint 2: Implement call_llm().\n"
-        "Chọn Option A (OpenAI) hoặc Option B (Gemini) trong TODO comment."
+    from openai import OpenAI
+    client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+    
+    model_name = os.getenv("LLM_MODEL", "gpt-4o-mini")
+    
+    response = client.chat.completions.create(
+        model=model_name,
+        messages=[{"role": "user", "content": prompt}],
+        temperature=0,
+        max_tokens=1024,
     )
+    return response.choices[0].message.content
 
 
 def rag_answer(
@@ -471,12 +454,18 @@ def rag_answer(
 
     # --- Bước 4: Generate ---
     answer = call_llm(prompt)
-
+    
     # --- Bước 5: Extract sources ---
-    sources = list({
-        c["metadata"].get("source", "unknown")
-        for c in candidates
-    })
+    sources = []
+    seen_sources = set()
+    for c in candidates:
+        src = c["metadata"].get("source", "unknown")
+        if src not in seen_sources:
+            sources.append(src)
+            seen_sources.add(src)
+
+    # Append citation list to answer (Khánh's Sprint 2 task)
+    answer += format_citations(sources)
 
     return {
         "query": query,
