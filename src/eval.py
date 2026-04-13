@@ -19,10 +19,11 @@ A/B Rule (từ slide):
 
 import json
 import csv
+import re
 from pathlib import Path
 from typing import List, Dict, Any, Optional
 from datetime import datetime
-from rag_answer import rag_answer
+from rag_answer_nhan import rag_answer
 
 # =============================================================================
 # CẤU HÌNH
@@ -46,9 +47,45 @@ VARIANT_CONFIG = {
     "retrieval_mode": "hybrid",   # Hoặc "dense" nếu chỉ đổi rerank
     "top_k_search": 10,
     "top_k_select": 3,
-    "use_rerank": True,           # Hoặc False nếu variant là hybrid không rerank
-    "label": "variant_hybrid_rerank",
+    "use_rerank": False,          # Rerank trong rag_answer.py hiện chưa implement
+    "label": "variant_hybrid",
 }
+
+
+STOPWORDS = {
+    "la", "là", "va", "và", "cua", "của", "cho", "toi", "tôi", "ban", "bạn",
+    "duoc", "được", "trong", "bao", "nhieu", "nhiêu", "the", "thể", "co", "có",
+    "khong", "không", "mot", "một", "nhung", "những", "nay", "này", "do", "đó",
+    "voi", "với", "cac", "các", "khi", "neu", "nếu", "can", "cần", "ve", "về",
+}
+
+
+def _norm(text: str) -> str:
+    return re.sub(r"\s+", " ", (text or "").strip().lower())
+
+
+def _is_abstain(answer: str) -> bool:
+    ans = _norm(answer)
+    signals = [
+        "không đủ dữ liệu",
+        "khong du du lieu",
+        "i don't know",
+        "do not know",
+        "insufficient",
+    ]
+    return any(sig in ans for sig in signals)
+
+
+def _tokens(text: str) -> List[str]:
+    toks = re.findall(r"[a-zA-Z0-9_]+", _norm(text))
+    return [t for t in toks if len(t) > 1 and t not in STOPWORDS]
+
+
+def _overlap_ratio(a: List[str], b: List[str]) -> float:
+    if not a or not b:
+        return 0.0
+    sa, sb = set(a), set(b)
+    return len(sa & sb) / max(1, len(sa))
 
 
 # =============================================================================
@@ -88,11 +125,37 @@ def score_faithfulness(
 
     Trả về dict với: score (1-5) và notes (lý do)
     """
-    # TODO Sprint 4: Implement scoring
-    # Tạm thời trả về None (yêu cầu chấm thủ công)
+    ans = _norm(answer)
+
+    if ans.startswith("error:") or ans == "pipeline_not_implemented":
+        return {"score": 1, "notes": "Pipeline error / not implemented"}
+
+    if _is_abstain(answer):
+        return {"score": 5 if not chunks_used else 4, "notes": "Abstain response"}
+
+    context_text = " ".join(c.get("text", "") for c in chunks_used)
+    ans_toks = _tokens(answer)
+    ctx_toks = _tokens(context_text)
+    ratio = _overlap_ratio(ans_toks, ctx_toks)
+    has_citation = bool(re.search(r"\[\d+\]", answer or ""))
+
+    if ratio >= 0.70:
+        score = 5
+    elif ratio >= 0.50:
+        score = 4
+    elif ratio >= 0.35:
+        score = 3
+    elif ratio >= 0.20:
+        score = 2
+    else:
+        score = 1
+
+    if has_citation and score < 5:
+        score += 1
+
     return {
-        "score": None,
-        "notes": "TODO: Chấm thủ công hoặc implement LLM-as-Judge",
+        "score": min(5, score),
+        "notes": f"Token overlap with context={ratio:.2f}, citation={has_citation}",
     }
 
 
@@ -113,9 +176,38 @@ def score_answer_relevance(
 
     TODO Sprint 4: Implement tương tự score_faithfulness
     """
+    ans = _norm(answer)
+
+    if ans.startswith("error:") or ans == "pipeline_not_implemented":
+        return {"score": 1, "notes": "Pipeline error / not implemented"}
+
+    if _is_abstain(answer):
+        return {"score": 3, "notes": "Abstain response"}
+
+    query_toks = _tokens(query)
+    ans_toks = _tokens(answer)
+    ratio = _overlap_ratio(query_toks, ans_toks)
+
+    query_codes = re.findall(r"[A-Z]{2,}[-_]?\d+[A-Z0-9-]*|P\d+", query or "")
+    code_hit = any(code.lower() in ans for code in query_codes)
+
+    if ratio >= 0.60:
+        score = 5
+    elif ratio >= 0.45:
+        score = 4
+    elif ratio >= 0.30:
+        score = 3
+    elif ratio >= 0.15:
+        score = 2
+    else:
+        score = 1
+
+    if code_hit and score < 5:
+        score += 1
+
     return {
-        "score": None,
-        "notes": "TODO: Implement score_answer_relevance",
+        "score": min(5, score),
+        "notes": f"Query-answer overlap={ratio:.2f}, code_hit={code_hit}",
     }
 
 
@@ -166,7 +258,7 @@ def score_context_recall(
     recall = found / len(expected_sources) if expected_sources else 0
 
     return {
-        "score": round(recall * 5),  # Convert to 1-5 scale
+        "score": max(1, round(recall * 5)),  # Convert to 1-5 scale
         "recall": recall,
         "found": found,
         "missing": missing,
@@ -198,9 +290,40 @@ def score_completeness(
          Rate completeness 1-5. Are all key points covered?
          Output: {'score': int, 'missing_points': [str]}"
     """
+    ans = _norm(answer)
+
+    if ans.startswith("error:") or ans == "pipeline_not_implemented":
+        return {"score": 1, "notes": "Pipeline error / not implemented"}
+
+    if _is_abstain(answer):
+        if not _tokens(expected_answer):
+            return {"score": 5, "notes": "Expected answer empty and model abstains"}
+        return {"score": 2, "notes": "Abstain while expected has content"}
+
+    expected_toks = _tokens(expected_answer)
+    ans_toks = _tokens(answer)
+    coverage = _overlap_ratio(expected_toks, ans_toks)
+
+    expected_numbers = re.findall(r"\d+", expected_answer or "")
+    number_hit = all(n in (answer or "") for n in expected_numbers) if expected_numbers else True
+
+    if coverage >= 0.75:
+        score = 5
+    elif coverage >= 0.55:
+        score = 4
+    elif coverage >= 0.35:
+        score = 3
+    elif coverage >= 0.20:
+        score = 2
+    else:
+        score = 1
+
+    if number_hit and score < 5:
+        score += 1
+
     return {
-        "score": None,
-        "notes": "TODO: Implement score_completeness (so sánh với expected_answer)",
+        "score": min(5, score),
+        "notes": f"Expected coverage={coverage:.2f}, number_hit={number_hit}",
     }
 
 
@@ -354,11 +477,11 @@ def compare_ab(
 
         b_avg = sum(b_scores) / len(b_scores) if b_scores else None
         v_avg = sum(v_scores) / len(v_scores) if v_scores else None
-        delta = (v_avg - b_avg) if (b_avg and v_avg) else None
+        delta = (v_avg - b_avg) if (b_avg is not None and v_avg is not None) else None
 
-        b_str = f"{b_avg:.2f}" if b_avg else "N/A"
-        v_str = f"{v_avg:.2f}" if v_avg else "N/A"
-        d_str = f"{delta:+.2f}" if delta else "N/A"
+        b_str = f"{b_avg:.2f}" if b_avg is not None else "N/A"
+        v_str = f"{v_avg:.2f}" if v_avg is not None else "N/A"
+        d_str = f"{delta:+.2f}" if delta is not None else "N/A"
 
         print(f"{metric:<20} {b_str:>10} {v_str:>10} {d_str:>8}")
 
@@ -425,7 +548,7 @@ Generated: {timestamp}
 |--------|--------------|
 """
     for metric, avg in averages.items():
-        avg_str = f"{avg:.2f}/5" if avg else "N/A"
+        avg_str = f"{avg:.2f}/5" if avg is not None else "N/A"
         md += f"| {metric.replace('_', ' ').title()} | {avg_str} |\n"
 
     md += "\n## Per-Question Results\n\n"
@@ -486,30 +609,22 @@ if __name__ == "__main__":
         print("Pipeline chưa implement. Hoàn thành Sprint 2 trước.")
         baseline_results = []
 
-    # --- Chạy Variant (sau khi Sprint 3 hoàn thành) ---
-    # TODO Sprint 4: Uncomment sau khi implement variant trong rag_answer.py
-    # print("\n--- Chạy Variant ---")
-    # variant_results = run_scorecard(
-    #     config=VARIANT_CONFIG,
-    #     test_questions=test_questions,
-    #     verbose=True,
-    # )
-    # variant_md = generate_scorecard_summary(variant_results, VARIANT_CONFIG["label"])
-    # (RESULTS_DIR / "scorecard_variant.md").write_text(variant_md, encoding="utf-8")
+    # --- Chạy Variant ---
+    print("\n--- Chạy Variant ---")
+    variant_results = run_scorecard(
+        config=VARIANT_CONFIG,
+        test_questions=test_questions,
+        verbose=True,
+    )
+    variant_md = generate_scorecard_summary(variant_results, VARIANT_CONFIG["label"])
+    variant_path = RESULTS_DIR / "scorecard_variant.md"
+    variant_path.write_text(variant_md, encoding="utf-8")
+    print(f"\nScorecard lưu tại: {variant_path}")
 
     # --- A/B Comparison ---
-    # TODO Sprint 4: Uncomment sau khi có cả baseline và variant
-    # if baseline_results and variant_results:
-    #     compare_ab(
-    #         baseline_results,
-    #         variant_results,
-    #         output_csv="ab_comparison.csv"
-    #     )
-
-    print("\n\nViệc cần làm Sprint 4:")
-    print("  1. Hoàn thành Sprint 2 + 3 trước")
-    print("  2. Chấm điểm thủ công hoặc implement LLM-as-Judge trong score_* functions")
-    print("  3. Chạy run_scorecard(BASELINE_CONFIG)")
-    print("  4. Chạy run_scorecard(VARIANT_CONFIG)")
-    print("  5. Gọi compare_ab() để thấy delta")
-    print("  6. Cập nhật docs/tuning-log.md với kết quả và nhận xét")
+    if baseline_results and variant_results:
+        compare_ab(
+            baseline_results,
+            variant_results,
+            output_csv="ab_comparison.csv",
+        )
