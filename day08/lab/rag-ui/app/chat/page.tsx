@@ -327,9 +327,6 @@ export default function ChatPage() {
                     onStop={stop}
                     loading={loading}
                   />
-                  <p className="mt-1.5 text-center text-[10px] text-muted-foreground">
-                    Enter để gửi · Shift+Enter xuống dòng
-                  </p>
                 </div>
               </div>
             </Panel>
