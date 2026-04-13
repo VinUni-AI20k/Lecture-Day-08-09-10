@@ -47,11 +47,11 @@ BASELINE_CONFIG = {
 # Cấu hình variant (Sprint 3 — điều chỉnh theo lựa chọn của nhóm)
 # TODO Sprint 4: Cập nhật VARIANT_CONFIG theo variant nhóm đã implement
 VARIANT_CONFIG = {
-    "retrieval_mode": "hybrid",  # Hoặc "dense" nếu chỉ đổi rerank
+    "retrieval_mode": "hybrid",  # Variant: đổi DUY NHẤT retrieval_mode (A/B Rule)
     "top_k_search": 10,
     "top_k_select": 3,
-    "use_rerank": True,  # Hoặc False nếu variant là hybrid không rerank
-    "label": "variant_hybrid_rerank",
+    "use_rerank": False,  # Rerank chưa implement cross-encoder → giữ False
+    "label": "variant_hybrid",
 }
 
 
