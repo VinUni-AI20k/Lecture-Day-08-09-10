@@ -63,6 +63,32 @@ lab/
 
 ## Setup
 
+### Quick Start (Copy/Paste)
+Chạy nhanh trên Windows PowerShell:
+
+```powershell
+# Đứng tại thư mục gốc repo, rồi vào lab:
+cd ".\day08\lab"
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+copy .env.example .env
+python index.py build
+python rag_answer.py
+```
+
+Nếu chạy trên macOS/Linux:
+
+```bash
+cd /path/to/Lab08-Lab9-Lab10_C401_E3/day08/lab
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+cp .env.example .env
+python index.py build
+python rag_answer.py
+```
+
 ### 1. Cài dependencies
 ```bash
 pip install -r requirements.txt
@@ -77,6 +103,21 @@ cp .env.example .env
 ### 3. Test setup
 ```bash
 python index.py    # Xem preview preprocess + chunking (không cần API key)
+```
+
+### 4. Build / Rebuild index
+```bash
+python index.py build
+```
+
+Cần rebuild khi:
+- Thêm hoặc sửa file trong `data/docs/`
+- Thay đổi `CHUNK_SIZE`, `CHUNK_OVERLAP`, hoặc logic chunking trong `index.py`
+- Đổi `EMBEDDING_PROVIDER` hoặc model embedding
+
+Để xoá index cũ trước khi build lại:
+```bash
+rm -rf chroma_db/ && python index.py build
 ```
 
 ---
@@ -236,3 +277,29 @@ Mở [http://localhost:3000](http://localhost:3000) → **Mở chat**. Debug cli
 - OpenAI Embeddings: https://platform.openai.com/docs/guides/embeddings
 - Sentence Transformers: https://www.sbert.net
 - rank-bm25: https://github.com/dorianbrown/rank_bm25
+
+---
+
+## Lỗi Thường Gặp Và Cách Xử Lý Nhanh
+
+### 1. API chưa chạy nên UI không trả lời
+- Dấu hiệu: UI chat báo lỗi fetch/API, không nhận được response.
+- Cách xử lý:
+  - Mở terminal tại `day08/lab/`.
+  - Chạy `uvicorn api_server:app --reload --host 127.0.0.1 --port 8000`.
+  - Thử lại `http://127.0.0.1:8000/api/health`.
+
+### 2. Port bị chiếm (`Address already in use`)
+- Dấu hiệu: Uvicorn hoặc Next.js báo port đã được sử dụng.
+- Cách xử lý:
+  - Đổi port API: `uvicorn api_server:app --reload --host 127.0.0.1 --port 8010`
+  - Đổi port UI: `npm run dev -- -p 3001`
+  - Nếu đổi port API, tạo `rag-ui/.env.local`:
+    `NEXT_PUBLIC_RAG_API_URL=http://127.0.0.1:8010`
+
+### 3. Thiếu biến môi trường trong `.env`
+- Dấu hiệu: Script báo thiếu API key, model không gọi được.
+- Cách xử lý:
+  - Tạo file: `copy .env.example .env`
+  - Điền ít nhất một key: `OPENAI_API_KEY` hoặc `GOOGLE_API_KEY`
+  - Chạy lại `python rag_answer.py`

@@ -117,6 +117,9 @@ def preprocess_document(raw_text: str, filepath: str) -> Dict[str, Any]:
 # Chia tài liệu thành các đoạn nhỏ theo cấu trúc tự nhiên
 # =============================================================================
 
+MIN_DOC_CHARS = 100  # cảnh báo nếu tài liệu ngắn hơn ngưỡng này
+
+
 def chunk_document(doc: Dict[str, Any]) -> List[Dict[str, Any]]:
     """
     Chunk một tài liệu đã preprocess thành danh sách các chunk nhỏ.
@@ -138,6 +141,20 @@ def chunk_document(doc: Dict[str, Any]) -> List[Dict[str, Any]]:
     Gợi ý: Ưu tiên cắt tại ranh giới tự nhiên (section, paragraph)
     thay vì cắt theo token count cứng.
     """
+    # Validate: input rỗng/null
+    if not doc or not isinstance(doc, dict):
+        raise ValueError("chunk_document: doc phải là dict hợp lệ, nhận được None hoặc kiểu khác.")
+    text = doc.get("text")
+    if not text or not text.strip():
+        source = doc.get("metadata", {}).get("source", "unknown")
+        print(f"[WARN] chunk_document: tài liệu '{source}' rỗng hoặc không có text, bỏ qua.")
+        return []
+
+    # Cảnh báo tài liệu quá ngắn
+    if len(text.strip()) < MIN_DOC_CHARS:
+        source = doc.get("metadata", {}).get("source", "unknown")
+        print(f"[WARN] chunk_document: tài liệu '{source}' rất ngắn ({len(text.strip())} ký tự < {MIN_DOC_CHARS}). Kiểm tra lại nội dung.")
+
     text = doc["text"]
     base_metadata = doc["metadata"].copy()
     chunks = []

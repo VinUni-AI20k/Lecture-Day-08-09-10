@@ -8,21 +8,24 @@ Chạy từ thư mục lab:
 
 from __future__ import annotations
 
+import json
 import logging
 import os
+import threading
 import time
 import uuid
 from pathlib import Path
-from typing import Any, Dict, Literal, Optional
+from typing import Any, Dict, Iterator, Literal, Optional
 
 from dotenv import load_dotenv
 from fastapi import FastAPI, Header, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
 load_dotenv()
 
-from rag_answer import rag_answer  # noqa: E402
+from rag_answer import rag_answer, rag_answer_stream  # noqa: E402
 from run_telemetry import RunTelemetry, telemetry_ctx  # noqa: E402
 
 LAB_DIR = Path(__file__).resolve().parent
@@ -162,8 +165,8 @@ def post_rag(
                 "client": "fastapi",
                 "query_preview": qprev,
                 "retrieval_mode": body.retrieval_mode,
-                "ok": err is None,
-                "error": type(err).__name__ if err else None,
+                "success": err is None,
+                "error_type": type(err).__name__ if err else None,
             }
         )
         telemetry_ctx.reset(tok)
@@ -188,3 +191,83 @@ def post_rag(
         "telemetry": telemetry,
         "request_id": rid,
     }
+
+
+# ---------------------------------------------------------------------------
+# SSE streaming abort registry
+# ---------------------------------------------------------------------------
+_abort_registry: Dict[str, threading.Event] = {}
+_abort_lock = threading.Lock()
+
+
+def _register_abort(rid: str) -> threading.Event:
+    ev = threading.Event()
+    with _abort_lock:
+        _abort_registry[rid] = ev
+    return ev
+
+
+def _unregister_abort(rid: str) -> None:
+    with _abort_lock:
+        _abort_registry.pop(rid, None)
+
+
+class AbortRequest(BaseModel):
+    request_id: str
+
+
+@app.post("/api/rag/abort")
+def abort_rag(body: AbortRequest) -> Dict[str, Any]:
+    """Signal an in-flight streaming request to stop."""
+    with _abort_lock:
+        ev = _abort_registry.get(body.request_id)
+    if ev is not None:
+        ev.set()
+        return {"ok": True, "request_id": body.request_id}
+    return {"ok": False, "detail": "request_id not found or already complete"}
+
+
+@app.post("/api/rag/stream")
+def post_rag_stream(
+    request: Request,
+    body: RagRequest,
+    x_request_id: Optional[str] = Header(default=None, alias="X-Request-ID"),
+):
+    """Server-Sent Events streaming endpoint for RAG pipeline."""
+    rid = x_request_id or getattr(request.state, "request_id", None) or str(uuid.uuid4())
+    abort_ev = _register_abort(rid)
+
+    def generate() -> Iterator[str]:
+        try:
+            kw: Dict[str, Any] = {
+                "query": body.query,
+                "retrieval_mode": body.retrieval_mode,
+                "use_rerank": body.use_rerank,
+                "request_id": rid,
+                "abort_event": abort_ev,
+            }
+            if body.top_k_search is not None:
+                kw["top_k_search"] = body.top_k_search
+            if body.top_k_select is not None:
+                kw["top_k_select"] = body.top_k_select
+
+            for item in rag_answer_stream(**kw):
+                event_type = item.get("event", "message")
+                data_str = json.dumps(item.get("data", {}), ensure_ascii=False)
+                yield f"event: {event_type}\ndata: {data_str}\n\n"
+        except Exception as exc:
+            log.exception("rag_answer_stream failed request_id=%s", rid)
+            err_data = json.dumps({"message": str(exc)}, ensure_ascii=False)
+            yield f"event: error\ndata: {err_data}\n\n"
+        finally:
+            _unregister_abort(rid)
+
+    return StreamingResponse(
+        generate(),
+        media_type="text/event-stream",
+        headers={
+            "X-Request-ID": rid,
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",
+        },
+    )

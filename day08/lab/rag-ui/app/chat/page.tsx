@@ -1,283 +1,437 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useId, useRef, useState } from "react";
 import Link from "next/link";
+import { Settings2, PanelRight, AlertCircle, X, Zap, Database, Filter, Lightbulb, ChevronDown, ChevronUp } from "lucide-react";
+import { Group as PanelGroup, Panel, Separator as PanelResizeHandle } from "react-resizable-panels";
+import { streamRag, type RagResponse, type PipelineStep, type StreamRagHandle } from "@/lib/rag-client";
+import { MessageList } from "@/components/Chat/MessageList";
+import { ChatInput } from "@/components/Chat/ChatInput";
+import type { Message, ChunkMeta } from "@/components/Chat/MessageBubble";
+import { InspectorPanel } from "@/components/Inspector/InspectorPanel";
 import {
-  getRagApiBase,
-  postRag,
-  type PipelineStep,
-  type RagResponse,
-} from "@/lib/rag-client";
+  SettingsDrawer,
+  type Settings,
+} from "@/components/Settings/SettingsDrawer";
+import { Button } from "@/components/ui/button";
+import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
+import { cn } from "@/lib/utils";
 
-const STEP_LABELS: Record<number, string> = {
-  1: "Câu hỏi của bạn",
-  2: "Tìm trong kho tài liệu",
-  3: "Chọn đoạn liên quan",
-  4: "Chuẩn bị bằng chứng cho AI",
-  5: "Soạn câu trả lời",
+// ── Example questions ────────────────────────────────────────────────────────
+const EXAMPLE_QUESTIONS = [
+  "SLA xử lý ticket P1 là bao lâu?",
+  "Nhân viên có bao nhiêu ngày nghỉ phép năm?",
+  "Các cấp quyền truy cập hệ thống gồm những gì?",
+];
+const TEST_QUESTIONS = [
+  "SLA xử lý ticket P1 là bao lâu?",
+  "Khách hàng có thể yêu cầu hoàn tiền trong bao nhiêu ngày?",
+  "Ai phải phê duyệt để cấp quyền Level 3?",
+  "Sản phẩm kỹ thuật số có được hoàn tiền không?",
+  "Tài khoản bị khóa sau bao nhiêu lần đăng nhập sai?",
+  "Escalation trong sự cố P1 diễn ra như thế nào?",
+  "Approval Matrix để cấp quyền hệ thống là tài liệu nào?",
+  "Nhân viên được làm remote tối đa mấy ngày mỗi tuần?",
+  "ERR-403-AUTH là lỗi gì và cách xử lý?",
+  "Nếu cần hoàn tiền khẩn cấp cho khách hàng VIP, quy trình có khác không?",
+];
+
+// ── Mode badges ──────────────────────────────────────────────────────────────
+const MODE_ICONS = {
+  dense: <Zap className="h-3 w-3" />,
+  sparse: <Database className="h-3 w-3" />,
+  hybrid: <Filter className="h-3 w-3" />,
 };
+const MODE_LABELS = {
+  dense: "Ngữ nghĩa",
+  sparse: "Từ khóa",
+  hybrid: "Kết hợp",
+} as const;
 
-function StepCard({ s }: { s: PipelineStep }) {
-  const [open, setOpen] = useState(false);
-  const title = STEP_LABELS[s.step] ?? s.name;
-  return (
-    <div className="rounded-lg border border-zinc-200 bg-zinc-50/80 p-3 dark:border-zinc-700 dark:bg-zinc-900/50">
-      <button
-        type="button"
-        onClick={() => setOpen(!open)}
-        className="flex w-full items-start gap-2 text-left"
-      >
-        <span className="text-lg shrink-0" aria-hidden>
-          {s.emoji ?? "•"}
-        </span>
-        <span className="font-medium text-zinc-900 dark:text-zinc-100">
-          {s.step}. {title}
-        </span>
-      </button>
-      {s.detail ? (
-        <p className="mt-2 text-sm text-zinc-600 whitespace-pre-wrap dark:text-zinc-400">
-          {s.detail}
-        </p>
-      ) : null}
-      {open && s.context_preview ? (
-        <pre className="mt-2 max-h-40 overflow-auto rounded bg-zinc-100 p-2 text-xs dark:bg-zinc-800">
-          {s.context_preview}
-        </pre>
-      ) : null}
-      {open && s.prompt_preview ? (
-        <pre className="mt-2 max-h-40 overflow-auto rounded bg-zinc-100 p-2 text-xs dark:bg-zinc-800">
-          {s.prompt_preview}
-        </pre>
-      ) : null}
-    </div>
-  );
-}
+// ── Component ────────────────────────────────────────────────────────────────
 
 export default function ChatPage() {
-  const [query, setQuery] = useState("");
-  const [mode, setMode] = useState<"dense" | "sparse" | "hybrid">("dense");
-  const [useRerank, setUseRerank] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [err, setErr] = useState<string | null>(null);
-  const [messages, setMessages] = useState<
-    { role: "user" | "assistant"; text: string }[]
-  >([]);
-  const [last, setLast] = useState<RagResponse | null>(null);
-  const [panelOpen, setPanelOpen] = useState(false);
+  const genId = useId();
+  const msgCounter = useRef(0);
+  const streamHandle = useRef<StreamRagHandle | null>(null);
 
-  const send = useCallback(async () => {
-    const q = query.trim();
-    if (!q || loading) return;
-    setErr(null);
-    setLoading(true);
-    setPanelOpen(true);
-    setMessages((m) => [...m, { role: "user", text: q }]);
-    setQuery("");
-    try {
-      const res = await postRag({
-        query: q,
-        retrieval_mode: mode,
-        use_rerank: useRerank,
-      });
-      setLast(res);
-      setMessages((m) => [...m, { role: "assistant", text: res.answer }]);
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : String(e);
-      setErr(msg);
-      setMessages((m) => [
-        ...m,
-        {
-          role: "assistant",
-          text: "Không gọi được API. Kiểm tra FastAPI đang chạy và NEXT_PUBLIC_RAG_API_URL.",
-        },
+  const [query, setQuery] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<{ msg: string; reqId?: string } | null>(null);
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [last, setLast] = useState<RagResponse | null>(null);
+  const [streamingSteps, setStreamingSteps] = useState<PipelineStep[]>([]);
+  const [inspectorOpen, setInspectorOpen] = useState(true);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+
+  const [settings, setSettings] = useState<Settings>({
+    mode: "dense",
+    useRerank: false,
+    topKSearch: 10,
+    topKSelect: 4,
+  });
+
+  function nextId() {
+    msgCounter.current += 1;
+    return `${genId}-${msgCounter.current}`;
+  }
+
+  const stop = useCallback(() => {
+    streamHandle.current?.abort();
+    streamHandle.current = null;
+    setLoading(false);
+    // Mark streaming message as complete
+    setMessages((prev) =>
+      prev.map((m) => (m.isStreaming ? { ...m, isStreaming: false } : m))
+    );
+  }, []);
+
+  const send = useCallback(
+    (overrideQuery?: string) => {
+      const q = (overrideQuery ?? query).trim();
+      if (!q || loading) return;
+
+      setError(null);
+      setLoading(true);
+      setStreamingSteps([]);
+      setLast(null);
+
+      const userMsgId = nextId();
+      const asstMsgId = nextId();
+
+      setMessages((prev) => [
+        ...prev,
+        { id: userMsgId, role: "user", text: q },
+        { id: asstMsgId, role: "assistant", text: "", isStreaming: true },
       ]);
-    } finally {
-      setLoading(false);
-    }
-  }, [query, mode, useRerank, loading]);
+      if (!overrideQuery) setQuery("");
+
+      const handle = streamRag(
+        {
+          query: q,
+          retrieval_mode: settings.mode,
+          use_rerank: settings.useRerank,
+          top_k_search: settings.topKSearch,
+          top_k_select: settings.topKSelect,
+        },
+        {
+          onStep(step) {
+            setStreamingSteps((prev) => [...prev, step]);
+          },
+          onToken(delta) {
+            setMessages((prev) =>
+              prev.map((m) =>
+                m.id === asstMsgId
+                  ? { ...m, text: m.text + delta, isStreaming: true }
+                  : m
+              )
+            );
+          },
+          onDone(result) {
+            setLast(result);
+            // Do NOT clear streamingSteps here — InspectorPanel will switch to
+            // last.pipeline_steps (which also contains step5) once loading=false.
+            // streamingSteps is cleared at the start of the next send().
+            setMessages((prev) =>
+              prev.map((m) =>
+                m.id === asstMsgId
+                  ? {
+                      ...m,
+                      text: result.answer,
+                      isStreaming: false,
+                      chunks: result.chunks_used as ChunkMeta[],
+                    }
+                  : m
+              )
+            );
+            setLoading(false);
+            streamHandle.current = null;
+          },
+          onError(err) {
+            const raw = err.message || String(err);
+            // First line of error is the human-readable summary
+            const firstLine = raw.split("\n")[0];
+            setError({ msg: firstLine });
+            setMessages((prev) =>
+              prev.map((m) =>
+                m.id === asstMsgId
+                  ? {
+                      ...m,
+                      text: `⚠️ ${firstLine}`,
+                      isStreaming: false,
+                    }
+                  : m
+              )
+            );
+            setLoading(false);
+            streamHandle.current = null;
+          },
+        }
+      );
+      streamHandle.current = handle;
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [query, settings, loading]
+  );
+
+  const isEmpty = messages.length === 0 && !loading;
 
   return (
-    <div className="flex flex-1 min-h-0 flex-col md:flex-row">
-      <div className="flex min-h-0 min-w-0 flex-1 flex-col border-zinc-200 md:border-r dark:border-zinc-800">
-        <header className="flex shrink-0 items-center justify-between gap-2 border-b border-zinc-200 px-4 py-3 dark:border-zinc-800">
+    <TooltipProvider>
+      <div className="flex h-screen flex-col overflow-hidden">
+        {/* ── Top header ──────────────────────────────────────────────── */}
+        <header
+          className="shrink-0 flex items-center justify-between gap-2 px-4 py-2.5 z-10"
+          style={{ background: "var(--gradient-header)" }}
+        >
           <div className="flex items-center gap-3">
             <Link
               href="/"
-              className="text-sm text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200"
+              className="text-xs text-blue-200 hover:text-white transition-colors font-medium"
             >
               ← Trang chủ
             </Link>
-            <h1 className="text-lg font-semibold">Hỏi đáp RAG</h1>
+            <div className="h-4 w-px bg-white/20" />
+            <div className="flex items-center gap-2">
+              <div className="h-6 w-6 rounded-lg flex items-center justify-center bg-white/20 backdrop-blur-sm">
+                <span className="text-[10px] font-bold text-white">RAG</span>
+              </div>
+              <h1 className="text-sm font-bold text-white tracking-tight">
+                Ngày 08 — Luồng RAG
+              </h1>
+            </div>
           </div>
-          <button
-            type="button"
-            className="rounded-md border border-zinc-300 px-2 py-1 text-sm md:hidden dark:border-zinc-600"
-            onClick={() => setPanelOpen((o) => !o)}
-          >
-            {panelOpen ? "Ẩn luồng" : "Luồng RAG"}
-          </button>
-        </header>
 
-        <div className="flex shrink-0 flex-wrap items-center gap-3 border-b border-zinc-200 px-4 py-2 text-sm dark:border-zinc-800">
-          <label className="flex items-center gap-1">
-            <span className="text-zinc-500">Chế độ</span>
-            <select
-              value={mode}
-              onChange={(e) =>
-                setMode(e.target.value as "dense" | "sparse" | "hybrid")
-              }
-              className="rounded border border-zinc-300 bg-transparent px-2 py-1 dark:border-zinc-600"
-            >
-              <option value="dense">Dense</option>
-              <option value="sparse">Sparse</option>
-              <option value="hybrid">Hybrid</option>
-            </select>
-          </label>
-          <label className="flex items-center gap-2">
-            <input
-              type="checkbox"
-              checked={useRerank}
-              onChange={(e) => setUseRerank(e.target.checked)}
-            />
-            Rerank
-          </label>
-          <span className="text-xs text-zinc-400">
-            API: {getRagApiBase()}
-          </span>
-        </div>
-
-        <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4">
-          {messages.length === 0 ? (
-            <p className="text-center text-zinc-500">
-              Nhập câu hỏi về tài liệu đã index. Panel bên phải (hoặc nút trên
-              mobile) cho thấy các bước hệ thống đã chạy.
-            </p>
-          ) : (
-            <ul className="mx-auto flex max-w-3xl flex-col gap-4">
-              {messages.map((m, i) => (
-                <li
-                  key={i}
-                  className={
-                    m.role === "user"
-                      ? "self-end rounded-2xl bg-zinc-200 px-4 py-2 dark:bg-zinc-700"
-                      : "self-start rounded-2xl border border-zinc-200 px-4 py-3 dark:border-zinc-700"
-                  }
-                >
-                  <p className="whitespace-pre-wrap text-sm">{m.text}</p>
-                </li>
-              ))}
-            </ul>
-          )}
-          {err ? (
-            <p className="mt-4 text-center text-sm text-red-600">{err}</p>
-          ) : null}
-        </div>
-
-        <div className="shrink-0 border-t border-zinc-200 p-4 dark:border-zinc-800">
-          <div className="mx-auto flex max-w-3xl gap-2">
-            <textarea
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey) {
-                  e.preventDefault();
-                  void send();
-                }
-              }}
-              rows={2}
-              placeholder="Câu hỏi…"
-              className="min-h-[48px] flex-1 resize-y rounded-xl border border-zinc-300 bg-transparent px-3 py-2 text-sm dark:border-zinc-600"
-            />
+          {/* Right controls */}
+          <div className="flex items-center gap-1.5">
+            {/* Mode badge */}
             <button
               type="button"
-              onClick={() => void send()}
-              disabled={loading || !query.trim()}
-              className="self-end rounded-xl bg-zinc-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-40 dark:bg-zinc-100 dark:text-zinc-900"
+              onClick={() => setSettingsOpen(true)}
+              className="flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-semibold bg-white/15 text-white hover:bg-white/25 transition-colors"
             >
-              {loading ? "…" : "Gửi"}
+              {MODE_ICONS[settings.mode as keyof typeof MODE_ICONS]}
+              {MODE_LABELS[settings.mode as keyof typeof MODE_LABELS]}
+              <span className="opacity-60">·</span>
+              <span className="opacity-80">{settings.topKSearch}/{settings.topKSelect}</span>
+              {settings.useRerank && <span className="text-yellow-300 text-[10px]">✦</span>}
+            </button>
+
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 text-white/70 hover:text-white hover:bg-white/15"
+                  onClick={() => setSettingsOpen(true)}
+                >
+                  <Settings2 className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Cài đặt truy xuất</TooltipContent>
+            </Tooltip>
+
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className={cn(
+                    "h-8 w-8 text-white/70 hover:text-white hover:bg-white/15",
+                    inspectorOpen && "bg-white/20 text-white"
+                  )}
+                  onClick={() => setInspectorOpen((o) => !o)}
+                >
+                  <PanelRight className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Bật/tắt bảng theo dõi</TooltipContent>
+            </Tooltip>
+          </div>
+        </header>
+
+        {/* ── Error banner ────────────────────────────────────────────── */}
+        {error && (
+          <div className="shrink-0 flex items-start gap-2.5 border-b border-destructive/20 bg-destructive/5 px-4 py-2.5 z-10">
+            <AlertCircle className="h-4 w-4 shrink-0 mt-0.5 text-destructive" />
+            <div className="flex-1 min-w-0 text-xs text-destructive">
+              <p className="font-semibold">{error.msg}</p>
+              {error.reqId && (
+                <p className="mt-0.5 opacity-70">mã yêu cầu: <code>{error.reqId}</code></p>
+              )}
+            </div>
+            <button
+              type="button"
+              onClick={() => setError(null)}
+              className="shrink-0 text-destructive/60 hover:text-destructive"
+            >
+              <X className="h-3.5 w-3.5" />
             </button>
           </div>
+        )}
+
+        {/* ── Resizable panels ────────────────────────────────────────── */}
+        <div className="flex-1 min-h-0 overflow-hidden">
+          <PanelGroup orientation="horizontal" className="h-full">
+            {/* ── Chat panel ────────────────────────────────────────── */}
+            <Panel defaultSize="65%" minSize="35%" className="flex flex-col min-h-0">
+              {/* Suggestion strip (always available, user can toggle) */}
+              <div className="shrink-0 border-b border-primary/15 bg-white/70 px-4 py-2">
+                <div className="mx-auto max-w-3xl">
+                  <button
+                    type="button"
+                    onClick={() => setShowSuggestions((v) => !v)}
+                    className="inline-flex items-center gap-1.5 rounded-full border border-primary/25 bg-primary/5 px-3 py-1 text-[11px] font-semibold text-primary hover:bg-primary/10 transition-colors"
+                  >
+                    <Lightbulb className="h-3.5 w-3.5" />
+                    Câu hỏi gợi ý từ bộ test
+                    {showSuggestions ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+                  </button>
+                  {showSuggestions && (
+                    <div className="mt-2 flex gap-1.5 overflow-x-auto pb-1">
+                      {TEST_QUESTIONS.map((q, idx) => (
+                        <button
+                          key={`${idx}-${q}`}
+                          type="button"
+                          onClick={() => setQuery(q)}
+                          className="shrink-0 rounded-full border border-primary/25 bg-white px-3 py-1 text-[11px] font-medium text-foreground hover:border-primary/50 hover:bg-primary/10 hover:text-primary transition-colors"
+                          title={q}
+                        >
+                          {q.length > 54 ? `${q.slice(0, 54)}...` : q}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Messages area */}
+              <div className="flex-1 min-h-0 overflow-y-auto">
+                {isEmpty ? (
+                  <EmptyState onQuestion={(q) => send(q)} />
+                ) : (
+                  <div className="mx-auto max-w-3xl">
+                    <MessageList messages={messages} loading={loading} />
+                  </div>
+                )}
+              </div>
+
+              {/* Input bar */}
+              <div className="shrink-0 border-t border-primary/20 bg-white/60 backdrop-blur-sm px-4 py-3">
+                <div className="mx-auto max-w-3xl">
+                  <ChatInput
+                    value={query}
+                    onChange={setQuery}
+                    onSend={() => send()}
+                    onStop={stop}
+                    loading={loading}
+                  />
+                </div>
+              </div>
+            </Panel>
+
+            {/* ── Resize handle ─────────────────────────────────────── */}
+            {inspectorOpen && (
+              <PanelResizeHandle className="resize-separator group">
+                <div className="flex h-full items-center justify-center w-1">
+                  <div className="flex flex-col items-center gap-0.5">
+                    {[0, 1, 2].map((i) => (
+                      <div
+                        key={i}
+                        className="h-1 w-1 rounded-full bg-border group-hover:bg-primary transition-colors"
+                      />
+                    ))}
+                  </div>
+                </div>
+              </PanelResizeHandle>
+            )}
+
+            {/* ── Inspector panel ───────────────────────────────────── */}
+            {inspectorOpen && (
+              <Panel defaultSize="35%" minSize="20%" maxSize="55%" className="flex flex-col min-h-0">
+                <InspectorPanel
+                  last={last}
+                  loading={loading}
+                  streamingSteps={streamingSteps}
+                  className="flex-1"
+                />
+              </Panel>
+            )}
+          </PanelGroup>
         </div>
       </div>
 
-      <aside
-        className={
-          (panelOpen ? "flex" : "hidden") +
-          " w-full shrink-0 flex-col border-t border-zinc-200 bg-zinc-50 md:flex md:w-[min(100%,24rem)] md:border-t-0 md:border-l dark:border-zinc-800 dark:bg-zinc-950"
-        }
-      >
-        <div className="shrink-0 border-b border-zinc-200 p-3 dark:border-zinc-800">
-          <h2 className="font-semibold">Luồng RAG</h2>
-          <p className="mt-1 text-xs text-zinc-500">
-            Các bước hệ thống vừa thực hiện — bạn có thể chỉ đọc câu trả lời ở
-            giữa.
-          </p>
+      <SettingsDrawer
+        open={settingsOpen}
+        onOpenChange={setSettingsOpen}
+        settings={settings}
+        onChange={setSettings}
+      />
+    </TooltipProvider>
+  );
+}
+
+// ── Empty state hero ─────────────────────────────────────────────────────────
+
+function EmptyState({ onQuestion }: { onQuestion: (q: string) => void }) {
+  return (
+    <div className="flex flex-col items-center justify-center h-full min-h-[400px] px-6 py-12 text-center">
+      {/* Animated logo */}
+      <div className="relative mb-6">
+        <div
+          className="flex h-16 w-16 items-center justify-center rounded-2xl shadow-xl"
+          style={{ background: "var(--gradient-header)" }}
+        >
+          <svg
+            width="28"
+            height="28"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="white"
+            strokeWidth="1.8"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+          </svg>
         </div>
-        <div className="min-h-0 flex-1 overflow-y-auto p-3 space-y-3">
-          {!last && !loading ? (
-            <p className="text-sm text-zinc-500">
-              Gửi câu hỏi để xem tham số và từng bước.
-            </p>
-          ) : null}
-          {loading ? (
-            <p className="text-sm text-zinc-600">Đang chạy pipeline…</p>
-          ) : null}
-          {last ? (
-            <>
-              <div className="rounded-lg border border-zinc-200 bg-white p-3 text-sm dark:border-zinc-700 dark:bg-zinc-900">
-                <p className="font-medium">Tham số lần chạy</p>
-                <ul className="mt-2 space-y-1 text-zinc-600 dark:text-zinc-400">
-                  <li>
-                    Chế độ:{" "}
-                    <strong>{String(last.config.retrieval_mode)}</strong>
-                  </li>
-                  <li>
-                    top_k_search:{" "}
-                    <strong>{String(last.config.top_k_search)}</strong>
-                  </li>
-                  <li>
-                    top_k_select:{" "}
-                    <strong>{String(last.config.top_k_select)}</strong>
-                  </li>
-                  <li>
-                    Rerank:{" "}
-                    <strong>
-                      {last.config.use_rerank ? "Bật" : "Tắt"}
-                    </strong>
-                  </li>
-                </ul>
-              </div>
-              <div className="rounded-lg border border-zinc-200 bg-white p-3 text-xs dark:border-zinc-700 dark:bg-zinc-900">
-                <p className="font-medium text-sm">Telemetry</p>
-                <p className="mt-1 text-zinc-600 dark:text-zinc-400">
-                  request_id:{" "}
-                  <code className="break-all">{last.request_id}</code>
-                </p>
-                <p className="text-zinc-600 dark:text-zinc-400">
-                  duration_ms: {last.telemetry.duration_ms} · cost USD (ước
-                  tính):{" "}
-                  {last.telemetry.cost_usd?.total_usd?.toFixed?.(6) ?? "—"}
-                </p>
-              </div>
-              <div className="space-y-2">
-                {last.pipeline_steps?.map((s) => (
-                  <StepCard key={s.step} s={s} />
-                ))}
-              </div>
-              {last.sources?.length ? (
-                <div className="text-sm">
-                  <p className="font-medium">Nguồn</p>
-                  <ul className="mt-1 list-disc pl-5 text-zinc-600 dark:text-zinc-400">
-                    {last.sources.map((src) => (
-                      <li key={src}>{src}</li>
-                    ))}
-                  </ul>
-                </div>
-              ) : null}
-            </>
-          ) : null}
-        </div>
-      </aside>
+        {/* Glow ring */}
+        <div
+          className="absolute inset-0 rounded-2xl opacity-40 blur-xl"
+          style={{ background: "var(--gradient-primary)" }}
+        />
+      </div>
+
+      <h2 className="text-xl font-bold tracking-tight mb-1 text-gradient">
+        Hỏi tài liệu của bạn
+      </h2>
+      <p className="text-sm text-muted-foreground max-w-xs leading-relaxed mb-8">
+        Được hỗ trợ bởi RAG — mỗi câu trả lời đều có căn cứ từ tài liệu đã lập chỉ mục, với trực quan hóa pipeline 5 bước đầy đủ.
+      </p>
+
+      {/* Example chips */}
+      <div className="flex flex-col gap-2 w-full max-w-sm">
+        <p className="text-[11px] font-bold uppercase tracking-widest text-primary/60 mb-1">
+          Thử hỏi
+        </p>
+        {EXAMPLE_QUESTIONS.map((q, i) => (
+          <button
+            key={q}
+            type="button"
+            onClick={() => onQuestion(q)}
+            className="flex items-center gap-3 rounded-xl border border-primary/20 bg-white px-4 py-3 text-left text-xs font-medium text-foreground hover:border-primary/50 hover:bg-primary/5 hover:text-primary transition-all group shadow-sm"
+          >
+            <span
+              className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[9px] font-bold text-white"
+              style={{ background: "var(--gradient-primary)" }}
+            >
+              {i + 1}
+            </span>
+            {q}
+          </button>
+        ))}
+      </div>
     </div>
   );
 }

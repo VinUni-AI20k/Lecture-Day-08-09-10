@@ -60,6 +60,14 @@ CHROMA_COLLECTION = "rag_lab"
 RRF_K = _env_int("RRF_K", 60, 10, 120)
 ABSTAIN_ANSWER = "Không đủ dữ liệu trong tài liệu để trả lời."
 
+# Ngưỡng score tối thiểu để coi context là "đủ mạnh".
+# Dense/Hybrid score = 1 - cosine_distance (0..1); BM25 raw score có thể > 1.
+# Nếu max score trong top-k < ngưỡng → context quá yếu → abstain trước khi gọi LLM.
+# Mặc định 0.15 (thực nghiệm): dưới ngưỡng này gần như không có nội dung liên quan.
+WEAK_CONTEXT_SCORE_THRESHOLD = float(
+    os.getenv("WEAK_CONTEXT_SCORE_THRESHOLD", "0.15")
+)
+
 # Cache BM25 corpus (reload sau khi build_index)
 _bm25_bundle: Optional[Tuple[Any, List[str], List[str], List[Dict[str, Any]]]] = None
 
@@ -354,16 +362,23 @@ def build_context_block(chunks: List[Dict[str, Any]]) -> str:
 def build_grounded_prompt(query: str, context_block: str) -> str:
     """
     Grounded prompt: evidence-only, abstain, citation [n], cùng ngôn ngữ với câu hỏi.
-    """
-    prompt = f"""You are an internal CS/IT policy assistant. Follow strictly:
 
-1) Use ONLY information from the numbered context snippets below. Do not use outside knowledge.
-2) **Same-or-different / comparison questions (e.g. leave types, access levels):** If the context defines two or more separate categories (e.g. distinct headings like "Annual Leave" vs "Sick Leave", or separate numbered items), you MUST answer by contrasting them using that text. State clearly whether the question's wording treats them as one thing or not, per policy. Cite [n]. **Do not abstain** when those definitions appear in any snippet.
-3) **Abstain** only when no snippet contains facts needed to address the question at all. Then reply exactly:
+    Abstain rules (hardened):
+      - Abstain khi không có snippet nào chứa dữ kiện liên quan.
+      - Tuyệt đối không tự bịa số, ngày, tên, quy trình không có trong context.
+      - Mọi claim phải có [n] trích dẫn; không citation → không claim.
+    """
+    prompt = f"""You are an internal CS/IT policy assistant. Follow these rules strictly:
+
+1) Use ONLY information from the numbered context snippets below. Do NOT use any outside knowledge.
+2) **Never invent specifics.** Do NOT fabricate numbers, dates, names, thresholds, or procedures that are not explicitly stated in the snippets — even if they seem plausible. If a detail is missing, treat it as absent.
+3) **Same-or-different / comparison questions:** If the context defines two or more separate categories with distinct headings or numbered items, contrast them and cite [n]. Do NOT abstain when those definitions appear in any snippet.
+4) **Abstain** when no snippet contains facts needed to address the question. Then reply exactly:
     "{ABSTAIN_ANSWER}"
-   (English questions may use: "Insufficient information in the documents to answer.")
-4) When you cite evidence, include bracket references like [1], [2] matching snippet numbers.
-5) Be concise and factual. Same language as the user's question (Vietnamese or English).
+   (For English questions use: "Insufficient information in the documents to answer.")
+   Also abstain for any sub-part of a question whose answer is not in the snippets — do not answer the missing part with guesses.
+5) Every factual claim MUST be supported by a bracket reference [1], [2], … matching snippet numbers. Answers without citations are not allowed when context is available.
+6) Be concise and factual. Use the same language as the user's question (Vietnamese or English).
 
 Question: {query}
 
@@ -428,6 +443,72 @@ def call_llm(prompt: str) -> str:
     if tel is not None:
         tel.add_chat_usage(response.usage)
     return (response.choices[0].message.content or "").strip()
+
+
+def call_llm_stream(prompt: str):
+    """
+    Generator variant of call_llm. Yields str tokens one at a time.
+    Falls back to single-chunk yield for Gemini (no SSE SDK support in basic genai).
+    """
+    if LLM_PROVIDER == "gemini":
+        import google.generativeai as genai
+        from types import SimpleNamespace
+
+        key = os.getenv("GOOGLE_API_KEY")
+        if not key:
+            raise RuntimeError("GOOGLE_API_KEY required when LLM_PROVIDER=gemini")
+        genai.configure(api_key=key)
+        model = genai.GenerativeModel(GEMINI_MODEL)
+        full_text = ""
+        response = model.generate_content(
+            prompt,
+            generation_config={"temperature": 0, "max_output_tokens": 512},
+            stream=True,
+        )
+        for chunk in response:
+            delta = getattr(chunk, "text", "") or ""
+            if delta:
+                full_text += delta
+                yield delta
+        # Record usage after stream ends
+        from run_telemetry import get_telemetry
+        t = get_telemetry()
+        if t is not None:
+            # Gemini streaming doesn't reliably expose usage per-chunk; estimate
+            t.add_chat_usage(SimpleNamespace(prompt_tokens=0, completion_tokens=len(full_text) // 4))
+        return
+
+    from openai import OpenAI
+    from run_telemetry import get_telemetry
+
+    key = os.getenv("OPENAI_API_KEY")
+    if not key:
+        raise RuntimeError("OPENAI_API_KEY required when LLM_PROVIDER=openai")
+    if not hasattr(call_llm, "_client"):
+        setattr(call_llm, "_client", OpenAI(api_key=key))
+    client = getattr(call_llm, "_client")
+    stream = client.chat.completions.create(
+        model=LLM_MODEL,
+        messages=[{"role": "user", "content": prompt}],
+        temperature=0,
+        max_tokens=512,
+        stream=True,
+    )
+    prompt_tokens = 0
+    completion_tokens = 0
+    for chunk in stream:
+        delta = chunk.choices[0].delta.content if chunk.choices else None
+        if delta:
+            completion_tokens += 1
+            yield delta
+        # Capture usage from final chunk (OpenAI sends it on the last chunk)
+        if hasattr(chunk, "usage") and chunk.usage is not None:
+            prompt_tokens = getattr(chunk.usage, "prompt_tokens", 0) or 0
+            completion_tokens = getattr(chunk.usage, "completion_tokens", completion_tokens)
+    tel = get_telemetry()
+    if tel is not None:
+        from types import SimpleNamespace
+        tel.add_chat_usage(SimpleNamespace(prompt_tokens=prompt_tokens, completion_tokens=completion_tokens))
 
 
 def _trace_chunk_rows(chunks: List[Dict[str, Any]], text_snippet: int = 200) -> List[Dict[str, Any]]:
@@ -695,6 +776,37 @@ def rag_answer_impl(
             out["pipeline_steps"] = steps
         return out
 
+    # --- Hardened abstain: kiểm tra context quá yếu trước khi gọi LLM ---
+    # Nếu toàn bộ chunk đều có score thấp hơn ngưỡng, không đủ bằng chứng → abstain.
+    # Áp dụng cho dense/hybrid (score 0..1). BM25 raw score thường > 1 khi có hit,
+    # nên ngưỡng 0.15 sẽ không phát sinh false-positive với BM25.
+    max_score = max((float(c.get("score", 0.0)) for c in candidates), default=0.0)
+    if max_score < WEAK_CONTEXT_SCORE_THRESHOLD:
+        weak_detail = (
+            f"Max chunk score {max_score:.4f} < ngưỡng {WEAK_CONTEXT_SCORE_THRESHOLD} "
+            f"— context quá yếu, không đủ bằng chứng. Abstain sớm để tránh hallucination."
+        )
+        out: Dict[str, Any] = {
+            "query": query,
+            "answer": ABSTAIN_ANSWER,
+            "sources": [],
+            "chunks_used": [],
+            "config": config,
+            "abstain_reason": "weak_context_score",
+        }
+        if trace:
+            steps.append({
+                "step": 4,
+                "name": "Context check",
+                "emoji": "4️⃣",
+                "detail": weak_detail,
+                "table": _trace_chunk_rows(candidates),
+            })
+            out["pipeline_steps"] = steps
+        if verbose:
+            print(f"[RAG] Abstain (weak context): {weak_detail}")
+        return out
+
     # --- Bước 3: Build context và prompt ---
     context_block = build_context_block(candidates)
     if not context_block.strip():
@@ -769,6 +881,261 @@ def rag_answer_impl(
     if trace:
         out["pipeline_steps"] = steps
     return out
+
+
+def rag_answer_stream(
+    query: str,
+    retrieval_mode: str = "dense",
+    top_k_search: int = TOP_K_SEARCH,
+    top_k_select: int = TOP_K_SELECT,
+    use_rerank: bool = False,
+    request_id: Optional[str] = None,
+    abort_event=None,
+):
+    """
+    Generator variant of rag_answer_impl for Server-Sent Events streaming.
+
+    Yields dicts:
+      {"event": "step",  "data": <pipeline_step_dict>}   -- after each pre-LLM step
+      {"event": "token", "data": "<text_delta>"}          -- per LLM token
+      {"event": "done",  "data": {answer, sources, chunks_used, config, telemetry, request_id}}
+      {"event": "error", "data": "<message>"}             -- on failure
+
+    abort_event: optional threading.Event; generator stops between yields when set.
+    """
+    import threading
+    from run_telemetry import RunTelemetry, telemetry_ctx
+    import uuid as _uuid
+    import time as _time
+
+    if abort_event is None:
+        abort_event = threading.Event()
+
+    rid = request_id or str(_uuid.uuid4())
+    tel = RunTelemetry("rag_stream", label=retrieval_mode)
+    tok = telemetry_ctx.set(tel)
+
+    def _aborted():
+        return abort_event.is_set()
+
+    try:
+        config = {
+            "retrieval_mode": retrieval_mode,
+            "top_k_search": top_k_search,
+            "top_k_select": top_k_select,
+            "use_rerank": use_rerank,
+        }
+
+        # ── Step 1: Query ────────────────────────────────────────────
+        step1 = {
+            "step": 1, "name": "Câu hỏi", "emoji": "1️⃣",
+            "detail": _retrieval_mode_note(retrieval_mode),
+            "query": query,
+        }
+        yield {"event": "step", "data": step1}
+        if _aborted():
+            return
+
+        # ── Step 2: Retrieve ─────────────────────────────────────────
+        retriever = _get_retriever(retrieval_mode)
+        candidates = retriever(query, top_k=top_k_search)
+
+        if not candidates:
+            step2 = {
+                "step": 2, "name": "Retrieve", "emoji": "2️⃣",
+                "detail": f"**{retrieval_mode}** → **0** chunk. Kiểm tra đã index và EMBEDDING_PROVIDER khớp.",
+                "table": [],
+            }
+            yield {"event": "step", "data": step2}
+            done_data = {
+                "answer": ABSTAIN_ANSWER,
+                "sources": [], "chunks_used": [], "query": query, "config": config,
+                "pipeline_steps": [step1, step2],
+                "telemetry": _finish_tel(tel, tok, rid, config, query, ok=True),
+                "request_id": rid,
+            }
+            yield {"event": "done", "data": done_data}
+            return
+
+        retrieve_stats = _trace_score_stats(candidates)
+        retrieve_score_txt = "N/A"
+        if retrieve_stats is not None:
+            retrieve_score_txt = (
+                f"{retrieve_stats['min']:.4f}..{retrieve_stats['max']:.4f} "
+                f"(avg {retrieve_stats['avg']:.4f})"
+            )
+        step2 = {
+            "step": 2, "name": "Retrieve", "emoji": "2️⃣",
+            "detail": (
+                f"**{retrieval_mode}** · lấy **{len(candidates)}** ứng viên (`top_k_search={top_k_search}`). "
+                f"Score: **{retrieve_score_txt}**. Nguồn: {_trace_sources_preview(candidates)}."
+            ),
+            "stats": {"score": retrieve_stats, "sources_preview": _trace_sources_preview(candidates)},
+            "table": _trace_chunk_rows(candidates),
+        }
+        yield {"event": "step", "data": step2}
+        if _aborted():
+            return
+
+        # ── Step 3: Rerank / top-k select ────────────────────────────
+        after_retrieve = list(candidates)
+        if use_rerank:
+            candidates = rerank(query, candidates, top_k=top_k_select)
+            select_detail = (
+                f"**Cross-encoder** đánh giá cặp (query, chunk), giữ **{len(candidates)}** chunk tốt nhất "
+                f"(target `top_k_select={top_k_select}`)."
+            )
+            select_title, select_emoji = "Rerank", "3️⃣"
+        else:
+            candidates = candidates[:top_k_select]
+            select_detail = f"Không rerank — lấy **{len(candidates)}** chunk đầu theo thứ tự điểm retrieve."
+            select_title, select_emoji = "Chọn top-k", "3️⃣"
+
+        selected_stats = _trace_score_stats(candidates)
+        selected_score_txt = "N/A"
+        if selected_stats is not None:
+            selected_score_txt = (
+                f"{selected_stats['min']:.4f}..{selected_stats['max']:.4f} "
+                f"(avg {selected_stats['avg']:.4f})"
+            )
+        dropped = max(0, len(after_retrieve) - len(candidates))
+        step3 = {
+            "step": 3, "name": select_title, "emoji": select_emoji,
+            "detail": (
+                select_detail
+                + f" (từ **{len(after_retrieve)}** ứng viên, bỏ **{dropped}**). "
+                + f"Score sau chọn: **{selected_score_txt}**."
+            ),
+            "stats": {"score": selected_stats, "dropped_candidates": dropped},
+            "table": _trace_chunk_rows(candidates),
+        }
+        yield {"event": "step", "data": step3}
+        if _aborted():
+            return
+
+        # ── Guard: filter empty chunks ────────────────────────────────
+        candidates = [c for c in candidates if (c.get("text") or "").strip()]
+        if not candidates:
+            done_data = {
+                "answer": ABSTAIN_ANSWER,
+                "sources": [], "chunks_used": [], "query": query, "config": config,
+                "pipeline_steps": [step1, step2, step3],
+                "telemetry": _finish_tel(tel, tok, rid, config, query, ok=True),
+                "request_id": rid,
+            }
+            yield {"event": "done", "data": done_data}
+            return
+
+        # ── Hardened abstain: kiểm tra context quá yếu trước khi gọi LLM ──
+        max_score = max((float(c.get("score", 0.0)) for c in candidates), default=0.0)
+        if max_score < WEAK_CONTEXT_SCORE_THRESHOLD:
+            weak_step = {
+                "step": 4, "name": "Context check", "emoji": "4️⃣",
+                "detail": (
+                    f"Max chunk score {max_score:.4f} < ngưỡng {WEAK_CONTEXT_SCORE_THRESHOLD} "
+                    f"— context quá yếu. Abstain sớm để tránh hallucination."
+                ),
+                "table": _trace_chunk_rows(candidates),
+            }
+            yield {"event": "step", "data": weak_step}
+            done_data = {
+                "answer": ABSTAIN_ANSWER,
+                "sources": [], "chunks_used": [], "query": query, "config": config,
+                "abstain_reason": "weak_context_score",
+                "pipeline_steps": [step1, step2, step3, weak_step],
+                "telemetry": _finish_tel(tel, tok, rid, config, query, ok=True),
+                "request_id": rid,
+            }
+            yield {"event": "done", "data": done_data}
+            return
+
+        # ── Step 4: Context + prompt ──────────────────────────────────
+        context_block = build_context_block(candidates)
+        if not context_block.strip():
+            done_data = {
+                "answer": ABSTAIN_ANSWER,
+                "sources": [], "chunks_used": [], "query": query, "config": config,
+                "pipeline_steps": [step1, step2, step3],
+                "telemetry": _finish_tel(tel, tok, rid, config, query, ok=True),
+                "request_id": rid,
+            }
+            yield {"event": "done", "data": done_data}
+            return
+
+        prompt = build_grounded_prompt(query, context_block)
+        step4 = {
+            "step": 4, "name": "Context + prompt", "emoji": "4️⃣",
+            "detail": (
+                f"Đánh số **[1],[2],…** → **{len(context_block)}** ký tự context. "
+                f"Prompt tổng **{len(prompt)}** ký tự. "
+                f"Nguồn: {_trace_sources_preview(candidates)}."
+            ),
+            "stats": {"prompt_sources_preview": _trace_sources_preview(candidates)},
+            "context_preview": context_block[:1800] + ("…" if len(context_block) > 1800 else ""),
+            "prompt_preview": prompt[:1400] + ("…" if len(prompt) > 1400 else ""),
+        }
+        yield {"event": "step", "data": step4}
+        if _aborted():
+            return
+
+        # ── Step 5: Stream LLM tokens ─────────────────────────────────
+        answer_parts: List[str] = []
+        for delta in call_llm_stream(prompt):
+            if _aborted():
+                break
+            answer_parts.append(delta)
+            yield {"event": "token", "data": delta}
+
+        answer = ("".join(answer_parts)).strip() or ABSTAIN_ANSWER
+
+        step5 = {
+            "step": 5, "name": "LLM Generation", "emoji": "5️⃣",
+            "detail": f"**{LLM_MODEL}** · temperature=0 · {len(answer)} chars · grounded answer.",
+            "answer_chars": len(answer),
+        }
+        yield {"event": "step", "data": step5}
+
+        sources = list({c["metadata"].get("source", "unknown") for c in candidates})
+        pipeline_steps = [step1, step2, step3, step4, step5]
+
+        done_data = {
+            "answer": answer,
+            "sources": sources,
+            "chunks_used": candidates,
+            "query": query,
+            "config": config,
+            "pipeline_steps": pipeline_steps,
+            "telemetry": _finish_tel(tel, tok, rid, config, query, ok=True),
+            "request_id": rid,
+        }
+        yield {"event": "done", "data": done_data}
+
+    except Exception as exc:
+        try:
+            _finish_tel(tel, tok, rid, {}, query, ok=False, error=str(exc))
+        except Exception:
+            pass
+        yield {"event": "error", "data": str(exc)}
+
+
+def _finish_tel(tel, tok, rid: str, config: Dict[str, Any], query: str, ok: bool, error: str = "") -> Dict[str, Any]:
+    """Helper: finish telemetry and reset context var; return telemetry dict."""
+    from run_telemetry import telemetry_ctx
+    entry = tel.finish({
+        "request_id": rid,
+        "client": "fastapi_stream",
+        "query_preview": (query[:200] + "…") if len(query) > 200 else query,
+        "retrieval_mode": config.get("retrieval_mode", ""),
+        "success": ok,
+        "error_type": (error.split(":")[0] if ":" in error else error) or None,
+    })
+    telemetry_ctx.reset(tok)
+    return {
+        "run_id": entry["run_id"],
+        "duration_ms": entry["duration_ms"],
+        "cost_usd": entry["cost_usd"],
+        "usage": entry["usage"],
+    }
 
 
 def rag_answer(

@@ -23,6 +23,9 @@ LOGS_DIR = LAB_DIR / "logs"
 RUNS_JSONL = LOGS_DIR / "runs.jsonl"
 
 # USD / 1 triệu tokens — cập nhật theo https://openai.com/api/pricing (ghi đè bằng .env)
+# LAB_PRICE_CHAT_INPUT_PER_M   — giá input chat (gpt-4o-mini mặc định: $0.15/M)
+# LAB_PRICE_CHAT_OUTPUT_PER_M  — giá output chat (gpt-4o-mini mặc định: $0.60/M)
+# LAB_PRICE_EMBEDDING_PER_M    — giá embedding   (text-embedding-3-small: $0.02/M)
 _DEFAULT_PRICING = {
     "LAB_PRICE_CHAT_INPUT_PER_M": "0.15",
     "LAB_PRICE_CHAT_OUTPUT_PER_M": "0.60",
@@ -81,9 +84,28 @@ class RunTelemetry:
             "total_usd": round(c_chat + c_emb, 6),
         }
 
+    # Tên field chuẩn dùng trong extra (nhất quán giữa api_server, rag_answer, eval):
+    #   success      bool  — True nếu run hoàn thành không lỗi
+    #   error_type   str   — tên exception class khi lỗi, None nếu thành công
+    #   query_preview str  — 200 ký tự đầu của query (không log toàn bộ)
+    #   retrieval_mode str — "dense" | "sparse" | "hybrid"
+    #   request_id   str  — X-Request-ID từ HTTP header (api_server)
+
+    # Các key chứa secret bị lọc khỏi extra trước khi ghi log
+    _SECRET_KEYS = frozenset({"key", "token", "secret", "password", "api_key", "hf_token"})
+
     def finish(self, extra: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         duration_ms = round((time.perf_counter() - self.t0) * 1000, 2)
         cost = self._cost_usd()
+
+        # Lọc bỏ các field có thể chứa secret trước khi ghi ra file log
+        safe_extra: Optional[Dict[str, Any]] = None
+        if extra:
+            safe_extra = {
+                k: v for k, v in extra.items()
+                if not any(s in k.lower() for s in self._SECRET_KEYS)
+            }
+
         entry: Dict[str, Any] = {
             "run_id": self.run_id,
             "started_at": self.started_iso,
@@ -104,8 +126,8 @@ class RunTelemetry:
             },
             "cost_usd": cost,
         }
-        if extra:
-            entry["extra"] = extra
+        if safe_extra:
+            entry["extra"] = safe_extra
         LOGS_DIR.mkdir(parents=True, exist_ok=True)
         with open(RUNS_JSONL, "a", encoding="utf-8") as f:
             f.write(json.dumps(entry, ensure_ascii=False) + "\n")

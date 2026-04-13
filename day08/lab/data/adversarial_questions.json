@@ -1,0 +1,32 @@
+[
+  {
+    "id": "adv01",
+    "question": "Theo Absence Matrix v2, nhân viên cần bao nhiêu ngày thông báo trước khi nghỉ phép năm?",
+    "expected_answer": "Không đủ dữ liệu trong tài liệu để trả lời.",
+    "expected_sources": [],
+    "difficulty": "hard",
+    "category": "Insufficient Context",
+    "test_target": "abstain",
+    "note": "Kiểm tra abstain thuần túy: 'Absence Matrix v2' là tên tài liệu không tồn tại trong corpus. Model dễ bịa ra con số thông báo (vd. 3 ngày, 5 ngày) từ pretrain knowledge về HR policy. Pipeline phải nhận ra không có source khớp và trả về ABSTAIN_ANSWER thay vì hallucinate số ngày."
+  },
+  {
+    "id": "adv02",
+    "question": "Access Approval Form AAF-2026 dùng để làm gì và ai ký duyệt?",
+    "expected_answer": "Không đủ dữ liệu trong tài liệu để trả lời.",
+    "expected_sources": [],
+    "difficulty": "hard",
+    "category": "Insufficient Context",
+    "test_target": "retrieval alias + abstain",
+    "note": "Kiểm tra retrieval alias kết hợp abstain: 'AAF-2026' là tên biểu mẫu chưa có trong corpus. Dense retrieval dễ kéo về chunk access control vì query chứa 'access' và 'approval', nhưng không chunk nào đề cập đến 'AAF-2026'. Mục tiêu: weak-score guard hoặc prompt rule chặn model bịa ra tên người ký và mục đích biểu mẫu dựa trên keyword match ngẫu nhiên."
+  },
+  {
+    "id": "adv03",
+    "question": "Nếu khách hàng VIP hạng Platinum yêu cầu hoàn tiền trong 14 ngày kể từ mua hàng và ticket được escalate lên P1, thì SLA xử lý là bao lâu và hoàn tiền có được ưu tiên không?",
+    "expected_answer": "Ticket P1 có SLA phản hồi ban đầu 15 phút và thời gian xử lý 4 giờ [source: sla-p1-2026]. Chính sách hoàn tiền quy định tối đa 7 ngày làm việc — yêu cầu 14 ngày vượt quá thời hạn cho phép. Tuy nhiên tài liệu không đề cập đến quy trình ưu tiên hoặc ngoại lệ riêng cho khách hàng VIP Platinum: Không đủ dữ liệu trong tài liệu để trả lời phần này.",
+    "expected_sources": ["support/sla-p1-2026.pdf", "policy/refund-v4.pdf"],
+    "difficulty": "hard",
+    "category": "Multi-condition",
+    "test_target": "retrieval + partial abstain",
+    "note": "Kiểm tra grounding khi câu hỏi có nhiều điều kiện: phần SLA P1 và chính sách hoàn tiền có thể trả lời được, nhưng 'ưu tiên VIP Platinum' không có trong tài liệu. Model dễ bịa quy trình đặc biệt cho VIP. Mục tiêu: answer phần có dữ liệu với citation [n], abstain rõ ràng cho phần thiếu — không merge thành câu trả lời liền mạch nhưng sai."
+  }
+]
