@@ -7,4 +7,4 @@ day08/lab/data/grading_questions.json
 
 /.venv
 .env
-/chroma_db
+day08/lab/chroma_db/
