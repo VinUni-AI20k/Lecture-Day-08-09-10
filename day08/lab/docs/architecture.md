@@ -122,10 +122,8 @@ Answer: Nhân viên phải báo trước ít nhất 3 ngày làm việc để xi
 
 ## 6. Diagram (tùy chọn)
 
-```
-mermaid
+```mermaid
 graph TD
-    %% Định dạng phong cách cho các khối
     classDef database fill:#f9f,stroke:#333,stroke-width:2px;
     classDef process fill:#bbf,stroke:#333,stroke-width:1px;
     classDef input fill:#cfc,stroke:#333,stroke-width:1px;
