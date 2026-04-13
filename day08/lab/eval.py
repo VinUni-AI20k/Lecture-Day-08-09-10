@@ -46,8 +46,8 @@ VARIANT_CONFIG = {
     "retrieval_mode": "hybrid",   # Hoặc "dense" nếu chỉ đổi rerank
     "top_k_search": 10,
     "top_k_select": 3,
-    "use_rerank": True,           # Hoặc False nếu variant là hybrid không rerank
-    "label": "variant_hybrid_rerank",
+    "use_rerank": False,           # Hoặc False nếu variant là hybrid không rerank
+    "label": "variant_hybrid",
 }
 
 
@@ -90,10 +90,83 @@ def score_faithfulness(
     """
     # TODO Sprint 4: Implement scoring
     # Tạm thời trả về None (yêu cầu chấm thủ công)
-    return {
-        "score": None,
-        "notes": "TODO: Chấm thủ công hoặc implement LLM-as-Judge",
-    }
+    if not answer or not answer.strip():
+        return {
+            "score": 1,
+            "notes": "Answer rỗng hoặc không hợp lệ.",
+        }
+
+    if not chunks_used:
+        return {
+            "score": 1,
+            "notes": "Không có retrieved chunks để đối chiếu faithfulness.",
+        }
+
+    from rag_answer import call_llm
+
+    context_parts = []
+    for i, chunk in enumerate(chunks_used, 1):
+        meta = chunk.get("metadata", {})
+        source = meta.get("source", "unknown")
+        section = meta.get("section", "")
+        text = chunk.get("text", "")
+
+        header = f"[{i}] {source}"
+        if section:
+            header += f" | {section}"
+
+        context_parts.append(f"{header}\n{text}")
+
+    context_block = "\n\n".join(context_parts)
+
+    prompt = f"""You are evaluating faithfulness of an answer to the provided evidence.
+
+Task:
+Rate how well the answer is grounded in the retrieved chunks on a scale of 1 to 5.
+
+Scoring rubric:
+5 = Every important claim in the answer is supported by the retrieved chunks.
+4 = Almost entirely grounded; only one small detail is uncertain.
+3 = Mostly grounded, but some details may come from outside knowledge or are weakly supported.
+2 = Several parts of the answer are not supported by the retrieved chunks.
+1 = The answer is largely ungrounded or contains substantial fabricated information.
+
+Rules:
+- Judge only based on the retrieved chunks.
+- Do not reward answers for being plausible.
+- If the answer adds facts not present in the chunks, lower the score.
+- Output ONLY valid JSON.
+- Use this exact schema:
+{{"score": <integer 1-5>, "notes": "<short reason>"}}
+
+Retrieved chunks:
+{context_block}
+
+Answer:
+{answer}
+
+JSON:"""
+
+    try:
+        raw_output = call_llm(prompt)
+        result = json.loads(raw_output)
+
+        score = result.get("score")
+        notes = result.get("notes", "")
+
+        if not isinstance(score, int) or not (1 <= score <= 5):
+            raise ValueError("Invalid score")
+
+        return {
+            "score": score,
+            "notes": notes,
+        }
+
+    except Exception:
+        return {
+            "score": None,
+            "notes": "LLM-as-judge failed. Cần chấm thủ công.",
+        }
 
 
 def score_answer_relevance(
@@ -113,10 +186,60 @@ def score_answer_relevance(
 
     TODO Sprint 4: Implement tương tự score_faithfulness
     """
-    return {
-        "score": None,
-        "notes": "TODO: Implement score_answer_relevance",
-    }
+    if not query or not query.strip():
+        return {"score": 1, "notes": "Query rỗng."}
+
+    if not answer or not answer.strip():
+        return {"score": 1, "notes": "Answer rỗng."}
+
+    from rag_answer import call_llm
+
+    prompt = f"""You are evaluating answer relevance.
+
+Task:
+Rate how well the answer directly addresses the user's question on a scale of 1 to 5.
+
+Scoring rubric:
+5 = Directly and fully answers the question.
+4 = Correctly answers the question but misses a minor detail.
+3 = Related to the question but not fully focused on the core ask.
+2 = Partially off-topic or only weakly answers the question.
+1 = Does not answer the question.
+
+Rules:
+- Judge relevance to the question, not faithfulness to sources.
+- Output ONLY valid JSON.
+- Use this exact schema:
+{{"score": <integer 1-5>, "notes": "<short reason>"}}
+
+Question:
+{query}
+
+Answer:
+{answer}
+
+JSON:"""
+
+    try:
+        raw_output = call_llm(prompt)
+        result = json.loads(raw_output)
+
+        score = result.get("score")
+        notes = result.get("notes", "")
+
+        if not isinstance(score, int) or not (1 <= score <= 5):
+            raise ValueError("Invalid score")
+
+        return {
+            "score": score,
+            "notes": notes,
+        }
+
+    except Exception:
+        return {
+            "score": None,
+            "notes": "LLM-as-judge failed. Cần chấm thủ công.",
+        }
 
 
 def score_context_recall(
@@ -198,10 +321,64 @@ def score_completeness(
          Rate completeness 1-5. Are all key points covered?
          Output: {'score': int, 'missing_points': [str]}"
     """
-    return {
-        "score": None,
-        "notes": "TODO: Implement score_completeness (so sánh với expected_answer)",
-    }
+    if not answer or not answer.strip():
+        return {"score": 1, "notes": "Answer rỗng."}
+
+    if not expected_answer or not expected_answer.strip():
+        return {"score": None, "notes": "Không có expected_answer để chấm completeness."}
+
+    from rag_answer import call_llm
+
+    prompt = f"""You are evaluating completeness of a model answer.
+
+Task:
+Compare the model answer with the expected answer and rate completeness on a scale of 1 to 5.
+
+Scoring rubric:
+5 = Covers all important points from the expected answer.
+4 = Missing one small detail.
+3 = Missing some important information.
+2 = Missing many important points.
+1 = Misses most of the core content.
+
+Rules:
+- Focus on coverage of key points.
+- Do not require identical wording.
+- Output ONLY valid JSON.
+- Use this exact schema:
+{{"score": <integer 1-5>, "notes": "<short reason>"}}
+
+Question:
+{query}
+
+Expected answer:
+{expected_answer}
+
+Model answer:
+{answer}
+
+JSON:"""
+
+    try:
+        raw_output = call_llm(prompt)
+        result = json.loads(raw_output)
+
+        score = result.get("score")
+        notes = result.get("notes", "")
+
+        if not isinstance(score, int) or not (1 <= score <= 5):
+            raise ValueError("Invalid score")
+
+        return {
+            "score": score,
+            "notes": notes,
+        }
+
+    except Exception:
+        return {
+            "score": None,
+            "notes": "LLM-as-judge failed. Cần chấm thủ công.",
+        }
 
 
 # =============================================================================
@@ -488,28 +665,28 @@ if __name__ == "__main__":
 
     # --- Chạy Variant (sau khi Sprint 3 hoàn thành) ---
     # TODO Sprint 4: Uncomment sau khi implement variant trong rag_answer.py
-    # print("\n--- Chạy Variant ---")
-    # variant_results = run_scorecard(
-    #     config=VARIANT_CONFIG,
-    #     test_questions=test_questions,
-    #     verbose=True,
-    # )
-    # variant_md = generate_scorecard_summary(variant_results, VARIANT_CONFIG["label"])
-    # (RESULTS_DIR / "scorecard_variant.md").write_text(variant_md, encoding="utf-8")
+    print("\n--- Chạy Variant ---")
+    variant_results = run_scorecard(
+        config=VARIANT_CONFIG,
+        test_questions=test_questions,
+        verbose=True,
+    )
+    variant_md = generate_scorecard_summary(variant_results, VARIANT_CONFIG["label"])
+    (RESULTS_DIR / "scorecard_variant.md").write_text(variant_md, encoding="utf-8")
 
     # --- A/B Comparison ---
     # TODO Sprint 4: Uncomment sau khi có cả baseline và variant
-    # if baseline_results and variant_results:
-    #     compare_ab(
-    #         baseline_results,
-    #         variant_results,
-    #         output_csv="ab_comparison.csv"
-    #     )
+    if baseline_results and variant_results:
+        compare_ab(
+            baseline_results,
+            variant_results,
+            output_csv="ab_comparison.csv"
+        )
 
-    print("\n\nViệc cần làm Sprint 4:")
-    print("  1. Hoàn thành Sprint 2 + 3 trước")
-    print("  2. Chấm điểm thủ công hoặc implement LLM-as-Judge trong score_* functions")
-    print("  3. Chạy run_scorecard(BASELINE_CONFIG)")
-    print("  4. Chạy run_scorecard(VARIANT_CONFIG)")
-    print("  5. Gọi compare_ab() để thấy delta")
-    print("  6. Cập nhật docs/tuning-log.md với kết quả và nhận xét")
+    # print("\n\nViệc cần làm Sprint 4:")
+    # print("  1. Hoàn thành Sprint 2 + 3 trước")
+    # print("  2. Chấm điểm thủ công hoặc implement LLM-as-Judge trong score_* functions")
+    # print("  3. Chạy run_scorecard(BASELINE_CONFIG)")
+    # print("  4. Chạy run_scorecard(VARIANT_CONFIG)")
+    # print("  5. Gọi compare_ab() để thấy delta")
+    # print("  6. Cập nhật docs/tuning-log.md với kết quả và nhận xét")
