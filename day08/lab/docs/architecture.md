@@ -1,7 +1,7 @@
 # Architecture — RAG Pipeline (Day 08 Lab)
 
 > Template: Điền vào các mục này khi hoàn thành từng sprint.
-> Deliverable của Documentation Owner.
+> Deliverable của Documentation Owner
 
 ## 1. Tổng quan kiến trúc
 
@@ -18,7 +18,7 @@
 ```
 
 **Mô tả ngắn gọn:**
-> Xây dựng **trợ lý nội bộ tự động hỏi-đáp** để giải quyết câu hỏi của nhân viên CS/IT Helpdesk về chính sách công ty, SLA ticket, quy trình cấp quyền, và FAQ. Hệ thống retrieve dữ liệu từ 5 tài liệu chính sách đã index, sau đó sử dụng LLM để sinh câu trả lời **có chứng cứ** (grounded), tránh hallucination. Mục tiêu: giảm thời gian support, đảm bảo tính nhất quán của chính sách.
+> Xây dựng **trợ lý nội bộ tự động hỏi-đáp** để giải quyết câu hỏi của nhân viên CS/IT Helpdesk về chính sách công ty, SLA ticket, quy trình cấp quyền, và FAQ. Hệ thống retrieve dữ liệu từ 5 tài liệu chính sách đã index, sau đó sử dụng LLM để sinh câu trả lời **có chứng cứ** (grounded-truth), tránh hallucination. Mục tiêu: giảm thời gian support, đảm bảo tính nhất quán của chính sách.
 
 ---
 
