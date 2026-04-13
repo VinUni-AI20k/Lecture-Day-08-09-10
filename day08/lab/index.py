@@ -14,10 +14,9 @@ Definition of Done Sprint 1:
 """
 
 import os
-import json
 import re
 from pathlib import Path
-from typing import List, Dict, Any, Optional
+from typing import Any, Dict, Iterable, List
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -33,6 +32,15 @@ CHROMA_DB_DIR = Path(__file__).parent / "chroma_db"
 # Gợi ý từ slide: chunk 300-500 tokens, overlap 50-80 tokens
 CHUNK_SIZE = 400       # tokens (ước lượng bằng số ký tự / 4)
 CHUNK_OVERLAP = 80     # tokens overlap giữa các chunk
+
+# Embedding/index config (override bằng ENV nếu cần)
+EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "text-embedding-3-small")
+EMBEDDING_BATCH_SIZE = int(os.getenv("EMBEDDING_BATCH_SIZE", "32"))
+
+_OPENAI_CLIENT = None
+
+HEADER_META_RE = re.compile(r"^(Source|Department|Effective Date|Access):\s*(.+?)\s*$")
+SECTION_HEADING_RE = re.compile(r"^===\s*(.+?)\s*===\s*$")
 
 
 # =============================================================================
@@ -60,7 +68,7 @@ def preprocess_document(raw_text: str, filepath: str) -> Dict[str, Any]:
 
     Gợi ý: dùng regex để parse dòng "Key: Value" ở đầu file.
     """
-    lines = raw_text.strip().split("\n")
+    lines = raw_text.splitlines()
     metadata = {
         "source": filepath,
         "section": "",
@@ -69,29 +77,32 @@ def preprocess_document(raw_text: str, filepath: str) -> Dict[str, Any]:
         "access": "internal",
     }
     content_lines = []
-    header_done = False
+    in_header = True
+    metadata_key_map = {
+        "Source": "source",
+        "Department": "department",
+        "Effective Date": "effective_date",
+        "Access": "access",
+    }
 
-    for line in lines:
-        if not header_done:
-            # TODO: Parse metadata từ các dòng "Key: Value"
-            # Ví dụ: "Source: policy/refund-v4.pdf" → metadata["source"] = "policy/refund-v4.pdf"
-            if line.startswith("Source:"):
-                metadata["source"] = line.replace("Source:", "").strip()
-            elif line.startswith("Department:"):
-                metadata["department"] = line.replace("Department:", "").strip()
-            elif line.startswith("Effective Date:"):
-                metadata["effective_date"] = line.replace("Effective Date:", "").strip()
-            elif line.startswith("Access:"):
-                metadata["access"] = line.replace("Access:", "").strip()
-            elif line.startswith("==="):
-                # Gặp section heading đầu tiên → kết thúc header
-                header_done = True
-                content_lines.append(line)
-            elif line.strip() == "" or line.isupper():
-                # Dòng tên tài liệu (toàn chữ hoa) hoặc dòng trống
+    for raw_line in lines:
+        stripped = raw_line.strip()
+
+        if in_header:
+            meta_match = HEADER_META_RE.match(stripped)
+            if meta_match:
+                key, value = meta_match.groups()
+                metadata[metadata_key_map[key]] = value.strip()
                 continue
-        else:
-            content_lines.append(line)
+
+            # Bỏ dòng tiêu đề in hoa và dòng trống ở phần header.
+            if stripped == "" or stripped.isupper():
+                continue
+
+            # Header kết thúc tại dòng nội dung đầu tiên (không bắt buộc phải là heading).
+            in_header = False
+
+        content_lines.append(raw_line.rstrip())
 
     cleaned_text = "\n".join(content_lines)
 
@@ -136,46 +147,90 @@ def chunk_document(doc: Dict[str, Any]) -> List[Dict[str, Any]]:
     """
     text = doc["text"]
     base_metadata = doc["metadata"].copy()
-    chunks = []
-
-    # TODO: Implement chunking theo section heading
-    # Bước 1: Split theo heading pattern "=== ... ==="
-    sections = re.split(r"(===.*?===)", text)
+    chunks: List[Dict[str, Any]] = []
 
     current_section = "General"
-    current_section_text = ""
+    current_lines: List[str] = []
+    sections: List[Dict[str, str]] = []
 
-    for part in sections:
-        if re.match(r"===.*?===", part):
-            # Lưu section trước (nếu có nội dung)
-            if current_section_text.strip():
-                section_chunks = _split_by_size(
-                    current_section_text.strip(),
-                    base_metadata=base_metadata,
-                    section=current_section,
-                )
-                chunks.extend(section_chunks)
-            # Bắt đầu section mới
-            current_section = part.strip("= ").strip()
-            current_section_text = ""
-        else:
-            current_section_text += part
+    for line in text.splitlines():
+        heading_match = SECTION_HEADING_RE.match(line.strip())
+        if heading_match:
+            previous_text = "\n".join(current_lines).strip()
+            if previous_text:
+                sections.append({"section": current_section, "text": previous_text})
+            current_section = heading_match.group(1).strip()
+            current_lines = []
+            continue
 
-    # Lưu section cuối cùng
-    if current_section_text.strip():
-        section_chunks = _split_by_size(
-            current_section_text.strip(),
-            base_metadata=base_metadata,
-            section=current_section,
+        current_lines.append(line)
+
+    final_text = "\n".join(current_lines).strip()
+    if final_text:
+        sections.append({"section": current_section, "text": final_text})
+
+    for section in sections:
+        chunks.extend(
+            _split_by_size(
+                section["text"],
+                base_metadata=base_metadata,
+                section=section["section"],
+            )
         )
-        chunks.extend(section_chunks)
 
     return chunks
 
 
+def _split_long_paragraph(paragraph: str, max_chars: int) -> List[str]:
+    """Tách paragraph dài thành các đoạn nhỏ hơn, ưu tiên tách theo câu."""
+    paragraph = paragraph.strip()
+    if not paragraph:
+        return []
+    if len(paragraph) <= max_chars:
+        return [paragraph]
+
+    sentences = [s.strip() for s in re.split(r"(?<=[.!?;:])\s+", paragraph) if s.strip()]
+    if len(sentences) <= 1:
+        return [
+            paragraph[i:i + max_chars].strip()
+            for i in range(0, len(paragraph), max_chars)
+            if paragraph[i:i + max_chars].strip()
+        ]
+
+    pieces: List[str] = []
+    current: List[str] = []
+    current_len = 0
+
+    for sentence in sentences:
+        sentence_len = len(sentence) + 1
+
+        if current and current_len + sentence_len > max_chars:
+            pieces.append(" ".join(current).strip())
+            current = []
+            current_len = 0
+
+        if len(sentence) > max_chars:
+            pieces.extend(
+                [
+                    sentence[i:i + max_chars].strip()
+                    for i in range(0, len(sentence), max_chars)
+                    if sentence[i:i + max_chars].strip()
+                ]
+            )
+            continue
+
+        current.append(sentence)
+        current_len += sentence_len
+
+    if current:
+        pieces.append(" ".join(current).strip())
+
+    return pieces
+
+
 def _split_by_size(
     text: str,
-    base_metadata: Dict,
+    base_metadata: Dict[str, Any],
     section: str,
     chunk_chars: int = CHUNK_SIZE * 4,
     overlap_chars: int = CHUNK_OVERLAP * 4,
@@ -187,40 +242,55 @@ def _split_by_size(
     Hiện tại dùng split đơn giản theo ký tự.
     Cải thiện: split theo paragraph (\n\n) trước, rồi mới ghép đến khi đủ size.
     """
-    paragraphs = [p.strip() for p in text.split("\n\n") if p.strip()]
-    chunks = []
-    current = []
+    paragraphs = [p.strip() for p in re.split(r"\n\s*\n", text) if p.strip()]
+    if not paragraphs:
+        return []
+
+    units: List[str] = []
+    for paragraph in paragraphs:
+        units.extend(_split_long_paragraph(paragraph, max_chars=chunk_chars))
+
+    chunks: List[Dict[str, Any]] = []
+    current_units: List[str] = []
     current_len = 0
-    i = 0
-    while i < len(paragraphs):
-        para = paragraphs[i]
-        if current_len + len(para) + 2 <= chunk_chars or not current:
-            current.append(para)
-            current_len += len(para) + 2
-            i += 1
-        else:
-            chunk_text = "\n\n".join(current)
-            chunks.append({
-                "text": chunk_text,
+
+    for unit in units:
+        unit_len = len(unit) + 2
+
+        if current_units and current_len + unit_len > chunk_chars:
+            chunks.append(
+                {
+                    "text": "\n\n".join(current_units).strip(),
+                    "metadata": {**base_metadata, "section": section},
+                }
+            )
+
+            if overlap_chars > 0:
+                overlap_units: List[str] = []
+                overlap_len = 0
+                for prev in reversed(current_units):
+                    prev_len = len(prev) + 2
+                    if overlap_units and overlap_len + prev_len > overlap_chars:
+                        break
+                    overlap_units.insert(0, prev)
+                    overlap_len += prev_len
+                current_units = overlap_units
+                current_len = sum(len(p) + 2 for p in current_units)
+            else:
+                current_units = []
+                current_len = 0
+
+        current_units.append(unit)
+        current_len += unit_len
+
+    if current_units:
+        chunks.append(
+            {
+                "text": "\n\n".join(current_units).strip(),
                 "metadata": {**base_metadata, "section": section},
-            })
-            # Overlap: lấy đoạn cuối của chunk trước làm đầu chunk sau
-            overlap = []
-            overlap_len = 0
-            for p in reversed(current):
-                overlap.insert(0, p)
-                overlap_len += len(p) + 2
-                if overlap_len >= overlap_chars:
-                    break
-            current = overlap
-            current_len = sum(len(p) + 2 for p in current)
-    # Chunk cuối cùng
-    if current:
-        chunk_text = "\n\n".join(current)
-        chunks.append({
-            "text": chunk_text,
-            "metadata": {**base_metadata, "section": section},
-        })
+            }
+        )
+
     return chunks
 
 
@@ -228,6 +298,41 @@ def _split_by_size(
 # STEP 3: EMBED + STORE
 # Embed các chunk và lưu vào ChromaDB
 # =============================================================================
+
+
+def _get_openai_client():
+    """Khởi tạo OpenAI client một lần để giảm overhead."""
+    global _OPENAI_CLIENT
+    if _OPENAI_CLIENT is None:
+        from openai import OpenAI
+        api_key = os.getenv("OPENAI_API_KEY")
+        if not api_key:
+            raise ValueError("Thiếu OPENAI_API_KEY. Hãy thêm key vào file .env")
+        _OPENAI_CLIENT = OpenAI(api_key=api_key)
+    return _OPENAI_CLIENT
+
+
+def _batched(items: List[Any], batch_size: int) -> Iterable[List[Any]]:
+    """Chia list thành các batch cố định."""
+    if batch_size <= 0:
+        raise ValueError("batch_size phải > 0")
+
+    for i in range(0, len(items), batch_size):
+        yield items[i:i + batch_size]
+
+
+def get_embeddings(texts: List[str]) -> List[List[float]]:
+    """Tạo embeddings theo batch để index nhanh hơn gọi từng chunk."""
+    if not texts:
+        return []
+
+    client = _get_openai_client()
+    response = client.embeddings.create(
+        input=texts,
+        model=EMBEDDING_MODEL,
+    )
+    return [item.embedding for item in response.data]
+
 
 def get_embedding(text: str) -> List[float]:
     """
@@ -250,13 +355,7 @@ def get_embedding(text: str) -> List[float]:
         model = SentenceTransformer("paraphrase-multilingual-MiniLM-L12-v2")
         return model.encode(text).tolist()
     """
-    from openai import OpenAI
-    client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-    response = client.embeddings.create(
-        input=text,
-        model="text-embedding-3-small"
-    )
-    return response.data[0].embedding
+    return get_embeddings([text])[0]
 
 
 def build_index(docs_dir: Path = DOCS_DIR, db_dir: Path = CHROMA_DB_DIR) -> None:
@@ -293,7 +392,7 @@ def build_index(docs_dir: Path = DOCS_DIR, db_dir: Path = CHROMA_DB_DIR) -> None
     )
 
     total_chunks = 0
-    doc_files = list(docs_dir.glob("*.txt"))
+    doc_files = sorted(docs_dir.glob("*.txt"))
 
     if not doc_files:
         print(f"Không tìm thấy file .txt trong {docs_dir}")
@@ -305,19 +404,53 @@ def build_index(docs_dir: Path = DOCS_DIR, db_dir: Path = CHROMA_DB_DIR) -> None
         doc = preprocess_document(raw_text, str(filepath))
         chunks = chunk_document(doc)
         print(f"    → {len(chunks)} chunks")
-        for i, chunk in enumerate(chunks):
-            chunk_id = f"{filepath.stem}_{i}"
+        if not chunks:
+            continue
+
+        source_value = doc["metadata"].get("source", str(filepath))
+        try:
+            existing = collection.get(where={"source": source_value}, include=[])
+            existing_ids = existing.get("ids", [])
+            if existing_ids:
+                collection.delete(ids=existing_ids)
+        except Exception as e:
+            print(f"      Cảnh báo: không xóa được chunk cũ ({e})")
+
+        indexed_for_doc = 0
+        for batch_idx, chunk_batch in enumerate(_batched(chunks, EMBEDDING_BATCH_SIZE)):
+            batch_start = batch_idx * EMBEDDING_BATCH_SIZE
+            batch_ids = [f"{filepath.stem}_{batch_start + i}" for i in range(len(chunk_batch))]
+            batch_texts = [chunk["text"] for chunk in chunk_batch]
+            batch_metas = [chunk["metadata"] for chunk in chunk_batch]
+
             try:
-                embedding = get_embedding(chunk["text"])
+                batch_embeddings = get_embeddings(batch_texts)
                 collection.upsert(
-                    ids=[chunk_id],
-                    embeddings=[embedding],
-                    documents=[chunk["text"]],
-                    metadatas=[chunk["metadata"]],
+                    ids=batch_ids,
+                    embeddings=batch_embeddings,
+                    documents=batch_texts,
+                    metadatas=batch_metas,
                 )
-            except Exception as e:
-                print(f"      Lỗi embedding chunk {i}: {e}")
-        total_chunks += len(chunks)
+                indexed_for_doc += len(chunk_batch)
+            except Exception as batch_error:
+                print(f"      Lỗi batch {batch_idx + 1}, fallback từng chunk: {batch_error}")
+                for i, chunk in enumerate(chunk_batch):
+                    chunk_idx = batch_start + i
+                    chunk_id = f"{filepath.stem}_{chunk_idx}"
+                    try:
+                        embedding = get_embedding(chunk["text"])
+                        collection.upsert(
+                            ids=[chunk_id],
+                            embeddings=[embedding],
+                            documents=[chunk["text"]],
+                            metadatas=[chunk["metadata"]],
+                        )
+                        indexed_for_doc += 1
+                    except Exception as chunk_error:
+                        print(f"      Lỗi embedding chunk {chunk_idx}: {chunk_error}")
+
+        total_chunks += indexed_for_doc
+        print(f"    ✓ Indexed: {indexed_for_doc}/{len(chunks)} chunks")
 
     print(f"\nHoàn thành! Tổng số chunks: {total_chunks}")
     print("Đã lưu embedding và metadata vào ChromaDB.")
