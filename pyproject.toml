@@ -7,7 +7,7 @@ name = "Lab8"
 version = "0.1.0"
 description = "Nothing yet"
 readme = "README.md"
-requires-python = ">=3.13"
+requires-python = ">=3.12"
 dependencies = [
  "chromadb>=1.5.7",
  "llama-index-core>=0.14.20",
