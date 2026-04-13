@@ -37,6 +37,20 @@ TOP_K_SELECT = 3     # Số chunk gửi vào prompt sau rerank/select (top-3 swe
 LLM_MODEL = os.getenv("LLM_MODEL", "gpt-4o-mini")
 
 
+def _make_openai_client():
+    """
+    Client OpenAI SDK. Không đặt OPENAI_BASE_URL (hoặc để trống) → dùng API mặc định của OpenAI.
+    Đặt OPENAI_BASE_URL (vd. http://127.0.0.1:11434/v1/) cho Ollama hoặc proxy tương thích OpenAI.
+    """
+    from openai import OpenAI
+
+    api_key = os.getenv("OPENAI_API_KEY")
+    base_url = (os.getenv("OPENAI_BASE_URL") or "").strip()
+    if base_url:
+        return OpenAI(api_key=api_key, base_url=base_url)
+    return OpenAI(api_key=api_key)
+
+
 # =============================================================================
 # RETRIEVAL — DENSE (Vector Search)
 # =============================================================================
@@ -262,8 +276,10 @@ def transform_query(query: str, strategy: str = "expansion") -> List[str]:
     - Decomposition: query hỏi nhiều thứ một lúc
     - HyDE: query mơ hồ, search theo nghĩa không hiệu quả
     """
-    from openai import OpenAI
-    client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+    if not os.getenv("OPENAI_API_KEY"):
+        return [query]
+
+    client = _make_openai_client()
 
     if strategy == "expansion":
         prompt = (
@@ -368,19 +384,16 @@ Answer:"""
 
 def call_llm(prompt: str) -> str:
     """
-    Gọi LLM để sinh câu trả lời (Sử dụng OpenAI).
+    Gọi LLM qua OpenAI SDK (endpoint mặc định OpenAI, hoặc OPENAI_BASE_URL nếu có).
     Lưu ý: Dùng temperature=0 hoặc thấp để output ổn định cho evaluation.
     """
-    from openai import OpenAI
-    import os
-    
     api_key = os.getenv("OPENAI_API_KEY")
     llm_model = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
     if not api_key:
         return "Lỗi: Không tìm thấy OPENAI_API_KEY trong .env. Vui lòng cấu hình."
         
     try:
-        client = OpenAI(api_key=api_key)
+        client = _make_openai_client()
         response = client.chat.completions.create(
             model=llm_model,
             messages=[{"role": "user", "content": prompt}],
