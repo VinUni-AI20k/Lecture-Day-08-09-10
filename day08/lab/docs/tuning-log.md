@@ -23,10 +23,10 @@ llm_model = openai-gpt-4o
 **Scorecard Baseline:**
 | Metric | Average Score |
 |--------|--------------|
-| Faithfulness | 4.50/5 |
-| Answer Relevance | 3.30/5 |
+| Faithfulness | 4.60/5 |
+| Answer Relevance | 3.00/5 |
 | Context Recall | 5.00/5 |
-| Completeness | 3.80/5 |
+| Completeness | 3.50/5 |
 
 **Câu hỏi yếu nhất (điểm thấp):**
 > q06 (SLA) - Answer Relevance = 1/5, Completeness = 2/5 vì câu hỏi dễ kéo nhiều ngữ cảnh nhưng baseline dense vẫn chưa chọn đúng chunk ưu tiên.
@@ -35,8 +35,9 @@ llm_model = openai-gpt-4o
 
 **Giả thuyết nguyên nhân (Error Tree):**
 - [ ] Indexing: Chunking cắt giữa điều khoản
-- [x] Indexing: Metadata thiếu effective_date
+- [ ] Indexing: Metadata thiếu effective_date
 - [x] Retrieval: Dense bỏ lỡ exact keyword / alias
+- [x] Retrieval: Thứ tự ranking chunk chưa tối ưu trước khi generate
 - [ ] Retrieval: Top-k quá ít → thiếu evidence
 - [ ] Generation: Prompt không đủ grounding
 - [ ] Generation: Context quá dài → lost in the middle
@@ -66,20 +67,20 @@ llm_model = openai-gpt-4o
 **Scorecard Variant 1:**
 | Metric | Baseline | Variant 1 | Delta |
 |--------|----------|-----------|-------|
-| Faithfulness | 4.50/5 | 4.60/5 | +0.10 |
-| Answer Relevance | 3.30/5 | 3.00/5 | -0.30 |
+| Faithfulness | 4.60/5 | 4.70/5 | +0.10 |
+| Answer Relevance | 3.00/5 | 3.20/5 | +0.20 |
 | Context Recall | 5.00/5 | 5.00/5 | +0.00 |
-| Completeness | 3.80/5 | 3.50/5 | -0.30 |
+| Completeness | 3.50/5 | 3.60/5 | +0.10 |
 
 **Nhận xét:**
-> Variant 1 cải thiện nhẹ faithfulness, đặc biệt ở các câu cần giữ câu trả lời an toàn hơn, ví dụ q01 và q07.
-> Tuy nhiên relevance và completeness giảm nhẹ ở một số câu như q06, cho thấy rerank làm model ưu tiên chunk an toàn hơn nhưng đôi khi bỏ mất chunk có thông tin phụ trợ cần thiết.
-> Context recall giữ nguyên 5.0/5, tức là retrieval vẫn lấy đúng evidence, khác biệt nằm ở thứ tự chunk trước khi generate.
+> Variant 1 cải thiện đều ở Faithfulness (+0.10), Relevance (+0.20), và Completeness (+0.10), trong khi Context Recall giữ nguyên 5.00/5.
+> Cải thiện thấy rõ ở q04 (Relevant 3 -> 4) và q06 (Complete 2 -> 3), cho thấy rerank giúp chọn thứ tự evidence phù hợp hơn trước khi generate.
+> Một số câu vẫn khó như q06 (Relevant = 1) và q09/q10 (Complete = 2) do bản chất câu hỏi thiếu context hoặc cần tổng hợp nhiều ý.
 
 **Kết luận:**
-> Variant 1 chỉ tốt hơn baseline ở faithfulness, nhưng không vượt baseline về relevance và completeness.
-> Nếu mục tiêu chính là câu trả lời ngắn, chắc chắn, ít hallucination thì rerank đáng giữ; nếu mục tiêu là trả lời đầy đủ hơn, baseline dense lại cân bằng hơn.
-> Bằng chứng: Faithfulness tăng từ 4.50 lên 4.60, trong khi Relevance giảm từ 3.30 xuống 3.00 và Completeness giảm từ 3.80 xuống 3.50.
+> Variant 1 tốt hơn baseline theo tổng thể: tăng 3/4 metric và không làm giảm Context Recall.
+> Nhóm chọn `dense + rerank` làm cấu hình ưu tiên cho grading vì cân bằng tốt hơn giữa độ đúng (faithfulness) và độ phù hợp câu trả lời (relevance/completeness).
+> Bằng chứng: Faithfulness 4.60 -> 4.70, Relevance 3.00 -> 3.20, Completeness 3.50 -> 3.60, Context Recall giữ 5.00.
 
 ---
 
@@ -94,10 +95,10 @@ llm_model = openai-gpt-4o
 **Scorecard Variant 2:**
 | Metric | Baseline | Variant 1 | Variant 2 | Best |
 |--------|----------|-----------|-----------|------|
-| Faithfulness | ? | ? | ? | ? |
-| Answer Relevance | ? | ? | ? | ? |
-| Context Recall | ? | ? | ? | ? |
-| Completeness | ? | ? | ? | ? |
+| Faithfulness | 4.60 | 4.70 | N/A | Variant 1 |
+| Answer Relevance | 3.00 | 3.20 | N/A | Variant 1 |
+| Context Recall | 5.00 | 5.00 | N/A | Tie |
+| Completeness | 3.50 | 3.60 | N/A | Variant 1 |
 
 ---
 
