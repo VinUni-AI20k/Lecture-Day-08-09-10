@@ -109,28 +109,46 @@ def retrieve_dense(query: str, top_k: int = TOP_K_SEARCH) -> List[Dict[str, Any]
 # Dùng cho Sprint 3 Variant hoặc kết hợp Hybrid
 # =============================================================================
 
+BM25_INDEX = None
+BM25_CHUNKS = []
+
 def retrieve_sparse(query: str, top_k: int = TOP_K_SEARCH) -> List[Dict[str, Any]]:
-    """
-    Sparse retrieval: tìm kiếm theo keyword (BM25).
+    global BM25_INDEX, BM25_CHUNKS
 
-    Mạnh ở: exact term, mã lỗi, tên riêng (ví dụ: "ERR-403", "P1", "refund")
-    Hay hụt: câu hỏi paraphrase, đồng nghĩa
+    if BM25_INDEX is None:
+        print("[BM25] Building index...")
 
-    TODO Sprint 3 (nếu chọn hybrid):
-    1. Cài rank_bm25: pip install rank-bm25
-    2. Load tất cả chunks từ ChromaDB (hoặc rebuild từ docs)
-    3. Tokenize và tạo BM25Index
-    4. Query và trả về top_k kết quả
+        # ⚠️ Lấy toàn bộ chunk từ Chroma
+        
 
-    Gợi ý:
-        from rank_bm25 import BM25Okapi
-        corpus = [chunk["text"] for chunk in all_chunks]
-        tokenized_corpus = [doc.lower().split() for doc in corpus]
-        bm25 = BM25Okapi(tokenized_corpus)
-        tokenized_query = query.lower().split()
-        scores = bm25.get_scores(tokenized_query)
-        top_indices = sorted(range(len(scores)), key=lambda i: scores[i], reverse=True)[:top_k]
-    """
+        client = chromadb.PersistentClient(path=str(CHROMA_DB_DIR))
+        collection = client.get_collection("rag_lab")
+
+        data = collection.get(include=["documents", "metadatas"])
+
+        BM25_CHUNKS = [
+            {"text": doc, "metadata": meta}
+            for doc, meta in zip(data["documents"], data["metadatas"])
+        ]
+
+        corpus = [c["text"] for c in BM25_CHUNKS]
+        tokenized = [doc.lower().split() for doc in corpus]
+
+        BM25_INDEX = BM25Okapi(tokenized)
+
+    tokenized_query = query.lower().split()
+    scores = BM25_INDEX.get_scores(tokenized_query)
+
+    top_indices = sorted(
+        range(len(scores)), key=lambda i: scores[i], reverse=True
+    )[:top_k]
+
+    results = []
+    for i in top_indices:
+        chunk = BM25_CHUNKS[i].copy()
+        chunk["score"] = float(scores[i])
+        results.append(chunk)
+    return results
     from rank_bm25 import BM25Okapi
     import chromadb
     from index import CHROMA_DB_DIR
@@ -162,49 +180,40 @@ def retrieve_hybrid(
     dense_weight: float = 0.6,
     sparse_weight: float = 0.4,
 ) -> List[Dict[str, Any]]:
-    """
-    Hybrid retrieval: kết hợp dense và sparse bằng Reciprocal Rank Fusion (RRF).
 
-    Mạnh ở: giữ được cả nghĩa (dense) lẫn keyword chính xác (sparse)
-    Phù hợp khi: corpus lẫn lộn ngôn ngữ tự nhiên và tên riêng/mã lỗi/điều khoản
-
-    Args:
-        dense_weight: Trọng số cho dense score (0-1)
-        sparse_weight: Trọng số cho sparse score (0-1)
-
-    TODO Sprint 3 (nếu chọn hybrid):
-    1. Chạy retrieve_dense() → dense_results
-    2. Chạy retrieve_sparse() → sparse_results
-    3. Merge bằng RRF:
-       RRF_score(doc) = dense_weight * (1 / (60 + dense_rank)) +
-                        sparse_weight * (1 / (60 + sparse_rank))
-       60 là hằng số RRF tiêu chuẩn
-    4. Sort theo RRF score giảm dần, trả về top_k
-
-    Khi nào dùng hybrid (từ slide):
-    - Corpus có cả câu tự nhiên VÀ tên riêng, mã lỗi, điều khoản
-    - Query như "Approval Matrix" khi doc đổi tên thành "Access Control SOP"
-    """
     dense_results = retrieve_dense(query, top_k)
     sparse_results = retrieve_sparse(query, top_k)
 
-    # Reciprocal Rank Fusion: score(doc) = Σ weight * 1/(60 + rank)
-    rrf_map: Dict[str, Dict] = {}
+    def rank_map(results):
+        return {c["text"]: i+1 for i, c in enumerate(results)}
 
-    for rank, chunk in enumerate(dense_results):
-        key = chunk["text"]
-        if key not in rrf_map:
-            rrf_map[key] = {"chunk": chunk, "score": 0.0}
-        rrf_map[key]["score"] += dense_weight * (1.0 / (60 + rank))
+    d_rank = rank_map(dense_results)
+    s_rank = rank_map(sparse_results)
 
-    for rank, chunk in enumerate(sparse_results):
-        key = chunk["text"]
-        if key not in rrf_map:
-            rrf_map[key] = {"chunk": chunk, "score": 0.0}
-        rrf_map[key]["score"] += sparse_weight * (1.0 / (60 + rank))
+    all_keys = set(d_rank) | set(s_rank)
 
-    sorted_items = sorted(rrf_map.values(), key=lambda x: x["score"], reverse=True)
-    return [item["chunk"] for item in sorted_items[:top_k]]
+    fused = []
+
+    for key in all_keys:
+        dr = d_rank.get(key, 1e6)
+        sr = s_rank.get(key, 1e6)
+
+        score = (
+            dense_weight * (1 / (60 + dr)) +
+            sparse_weight * (1 / (60 + sr))
+        )
+
+        chunk = next(
+            (c for c in dense_results + sparse_results if c["text"] == key),
+            None
+        )
+
+        if chunk:
+            c = chunk.copy()
+            c["score"] = score
+            fused.append(c)
+
+    return sorted(fused, key=lambda x: x["score"], reverse=True)[:top_k]
 
 
 # =============================================================================
@@ -212,74 +221,57 @@ def retrieve_hybrid(
 # Cross-encoder để chấm lại relevance sau search rộng
 # =============================================================================
 
+RERANK_MODEL = None
+
 def rerank(
     query: str,
     candidates: List[Dict[str, Any]],
     top_k: int = TOP_K_SELECT,
 ) -> List[Dict[str, Any]]:
-    """
-    Rerank các candidate chunks bằng cross-encoder.
 
-    Cross-encoder: chấm lại "chunk nào thực sự trả lời câu hỏi này?"
-    MMR (Maximal Marginal Relevance): giữ relevance nhưng giảm trùng lặp
+    global RERANK_MODEL
 
-    Funnel logic (từ slide):
-      Search rộng (top-20) → Rerank (top-6) → Select (top-3)
+    if RERANK_MODEL is None:
+        print("[Rerank] Loading model...")
+        RERANK_MODEL = CrossEncoder("cross-encoder/ms-marco-MiniLM-L-6-v2")
 
-    TODO Sprint 3 (nếu chọn rerank):
-    Option A — Cross-encoder:
-        from sentence_transformers import CrossEncoder
-        model = CrossEncoder("cross-encoder/ms-marco-MiniLM-L-6-v2")
-        pairs = [[query, chunk["text"]] for chunk in candidates]
-        scores = model.predict(pairs)
-        ranked = sorted(zip(candidates, scores), key=lambda x: x[1], reverse=True)
-        return [chunk for chunk, _ in ranked[:top_k]]
+    pairs = [[query, c["text"]] for c in candidates]
+    scores = RERANK_MODEL.predict(pairs)
 
-    Option B — Rerank bằng LLM (đơn giản hơn nhưng tốn token):
-        Gửi list chunks cho LLM, yêu cầu chọn top_k relevant nhất
+    ranked = sorted(
+        zip(candidates, scores),
+        key=lambda x: x[1],
+        reverse=True
+    )
 
-    Khi nào dùng rerank:
-    - Dense/hybrid trả về nhiều chunk nhưng có noise
-    - Muốn chắc chắn chỉ 3-5 chunk tốt nhất vào prompt
-    """
-    # TODO Sprint 3: Implement rerank
-    # Tạm thời trả về top_k đầu tiên (không rerank)
-    return candidates[:top_k]
+    results = []
+    for chunk, score in ranked[:top_k]:
+        c = chunk.copy()
+        c["score"] = float(score)
+        results.append(c)
 
+    return results
 
 # =============================================================================
 # QUERY TRANSFORMATION (Sprint 3 alternative)
 # =============================================================================
 
 def transform_query(query: str, strategy: str = "expansion") -> List[str]:
-    """
-    Biến đổi query để tăng recall.
+    if strategy == "none":
+        return [query]
 
-    Strategies:
-      - "expansion": Thêm từ đồng nghĩa, alias, tên cũ
-      - "decomposition": Tách query phức tạp thành 2-3 sub-queries
-      - "hyde": Sinh câu trả lời giả (hypothetical document) để embed thay query
+    prompt = f"""
+Given the query: "{query}"
+Generate 2 alternative phrasings or related search terms.
+Return JSON array of strings.
+"""
 
-    TODO Sprint 3 (nếu chọn query transformation):
-    Gọi LLM với prompt phù hợp với từng strategy.
-
-    Ví dụ expansion prompt:
-        "Given the query: '{query}'
-         Generate 2-3 alternative phrasings or related terms in Vietnamese.
-         Output as JSON array of strings."
-
-    Ví dụ decomposition:
-        "Break down this complex query into 2-3 simpler sub-queries: '{query}'
-         Output as JSON array."
-
-    Khi nào dùng:
-    - Expansion: query dùng alias/tên cũ (ví dụ: "Approval Matrix" → "Access Control SOP")
-    - Decomposition: query hỏi nhiều thứ một lúc
-    - HyDE: query mơ hồ, search theo nghĩa không hiệu quả
-    """
-    # TODO Sprint 3: Implement query transformation
-    # Tạm thời trả về query gốc
-    return [query]
+    try:
+        raw = call_llm(prompt)
+        queries = json.loads(raw)
+        return [query] + queries
+    except:
+        return [query]
 
 
 # =============================================================================
