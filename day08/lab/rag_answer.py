@@ -35,8 +35,11 @@ load_dotenv()
 TOP_K_SEARCH = 10    # Số chunk lấy từ vector store trước rerank (search rộng)
 TOP_K_SELECT = 3     # Số chunk gửi vào prompt sau rerank/select (top-3 sweet spot)
 
+LAB_DIR            = Path(__file__).parent.resolve()
+
 LLM_MODEL          = os.getenv("LLM_MODEL", "gpt-4o-mini")
-CHROMA_PERSIST_DIR = os.getenv("CHROMA_PERSIST_DIR", "./data/chroma_db")
+CHROMA_PERSIST_DIR = str(LAB_DIR / os.getenv("CHROMA_PERSIST_DIR", "data/chroma_db").lstrip("./"))
+BM25_INDEX_DIR     = str(LAB_DIR / os.getenv("BM25_INDEX_DIR", "data/bm25_index").lstrip("./"))
 EMBEDDING_MODEL    = os.getenv("OPENAI_EMBEDDING_MODEL", "text-embedding-3-small")
 
 # =============================================================================
@@ -131,7 +134,8 @@ def retrieve_sparse(query: str, top_k: int = TOP_K_SEARCH) -> List[Dict[str, Any
     import pickle
     import bm25s
 
-    bm25_dir = os.getenv("BM25_INDEX_DIR", "./data/bm25_index")
+    # Retrieve global BM25_INDEX_DIR
+    bm25_dir = BM25_INDEX_DIR
     with open(f"{bm25_dir}/bm25.pkl", "rb") as f:
         retriever = pickle.load(f)
     with open(f"{bm25_dir}/docs.pkl", "rb") as f:
@@ -198,37 +202,11 @@ def retrieve_hybrid(
 
 
 # =============================================================================
-# RERANK (Sprint 3 alternative)
+# CHÚ THÍCH SPRINT 3
 # =============================================================================
-
-def rerank(
-    query: str,
-    candidates: List[Dict[str, Any]],
-    top_k: int = TOP_K_SELECT,
-) -> List[Dict[str, Any]]:
-    """
-    Rerank các candidate chunks bằng cross-encoder.
-    """
-    if not candidates:
-        return []
-        
-    from sentence_transformers import CrossEncoder
-    
-    # Model nhỏ, chạy nhanh trên CPU
-    model = CrossEncoder("cross-encoder/ms-marco-MiniLM-L-6-v2")
-    
-    pairs = [[query, c["text"]] for c in candidates]
-    scores = model.predict(pairs)
-    
-    # Sắp xếp lại dựa trên score của Cross-Encoder
-    ranked_candidates = []
-    for i in range(len(candidates)):
-        c = candidates[i].copy()
-        c["rerank_score"] = float(scores[i])
-        ranked_candidates.append(c)
-        
-    ranked_candidates.sort(key=lambda x: x["rerank_score"], reverse=True)
-    return ranked_candidates[:top_k]
+# Thay vì dùng Cross-Encoder (Local Model) gây chậm và nặng máy,
+# Nhóm quyết định sử dụng Hybrid Search (Dense + Sparse) làm Variant chính
+# cho Sprint 3. Do đó, tính năng Rerank bằng model local đã được loại bỏ.
 
 
 # =============================================================================
@@ -458,49 +436,28 @@ def call_llm(prompt: str) -> str:
 
 def rag_answer(
     query: str,
-    retrieval_mode: str = "dense",
+    retrieval_mode: str = "hybrid",
     top_k_search: int = TOP_K_SEARCH,
     top_k_select: int = TOP_K_SELECT,
-    use_rerank: bool = False,
     verbose: bool = False,
 ) -> Dict[str, Any]:
     """
-    Pipeline RAG hoàn chỉnh: query → retrieve → (rerank) → generate.
-
+    Pipeline RAG hoàn chỉnh: query → retrieve → generate.
+    
     Args:
         query: Câu hỏi
         retrieval_mode: "dense" | "sparse" | "hybrid"
         top_k_search: Số chunk lấy từ vector store (search rộng)
-        top_k_select: Số chunk đưa vào prompt (sau rerank/select)
-        use_rerank: Có dùng cross-encoder rerank không
+        top_k_select: Số chunk đưa vào lời nhắc (lấy top đầu sau retrieve)
         verbose: In thêm thông tin debug
-
-    Returns:
-        Dict với:
-          - "answer": câu trả lời grounded
-          - "sources": list source names trích dẫn
-          - "chunks_used": list chunks đã dùng
-          - "query": query gốc
-          - "config": cấu hình pipeline đã dùng
-
-    TODO Sprint 2 — Implement pipeline cơ bản:
-    1. Chọn retrieval function dựa theo retrieval_mode
-    2. Gọi rerank() nếu use_rerank=True
-    3. Truncate về top_k_select chunks
-    4. Build context block và grounded prompt
-    5. Gọi call_llm() để sinh câu trả lời
-    6. Trả về kết quả kèm metadata
-
-    TODO Sprint 3 — Thử các variant:
-    - Variant A: đổi retrieval_mode="hybrid"
-    - Variant B: bật use_rerank=True
-    - Variant C: thêm query transformation trước khi retrieve
+        
+    Returns: Dict chứa kết quả (answer, sources, query, v.v)
     """
     config = {
         "retrieval_mode": retrieval_mode,
         "top_k_search": top_k_search,
         "top_k_select": top_k_select,
-        "use_rerank": use_rerank,
+        "model": "gpt-4o-mini",
     }
 
     # --- Bước 1: Retrieve ---
@@ -519,11 +476,8 @@ def rag_answer(
         for i, c in enumerate(candidates[:3]):
             print(f"  [{i+1}] score={c.get('score', 0):.3f} | {c['metadata'].get('source', '?')}")
 
-    # --- Bước 2: Rerank (optional) ---
-    if use_rerank:
-        candidates = rerank(query, candidates, top_k=top_k_select)
-    else:
-        candidates = candidates[:top_k_select]
+    # --- Bước 2: Chọn top K chunk chất lượng nhất ---
+    candidates = candidates[:top_k_select]
 
     if verbose:
         print(f"[RAG] After select: {len(candidates)} chunks")
@@ -585,18 +539,22 @@ if __name__ == "__main__":
     print("Sprint 2 + 3: RAG Answer Pipeline")
     print("=" * 60)
 
-    # Test queries từ data/test_questions.json
-    test_queries = [
-        "SLA xử lý ticket P1 là bao lâu?",
-        "Khách hàng có thể yêu cầu hoàn tiền trong bao nhiêu ngày?",
-        "Ai phải phê duyệt để cấp quyền Level 3?",
-        "ERR-403-AUTH là lỗi gì?",  # Query không có trong docs → kiểm tra abstain
-    ]
-
     print("\n--- Sprint 2: Test Baseline (Dense) ---")
-    # --- Sprint 3: Hybrid Search + Rerank ---
+    
+    # Test câu hỏi cơ bản (Có trong Docs)
+    query_s2 = "SLA xử lý ticket P1 là bao lâu?"
+    print(f"\nQuery: {query_s2}")
+    result_s2 = rag_answer(query_s2, retrieval_mode="dense", verbose=False)
+    print(f"Answer: {result_s2['answer']}")
+    
+    print("\n--- Kiểm tra Abstain Loop ---")
+    query_abstain = "ERR-403-AUTH là lỗi gì?"
+    result_abstain = rag_answer(query_abstain, retrieval_mode="dense", verbose=False)
+    print(f"\nQuery: {query_abstain}")
+    print(f"Answer: {result_abstain['answer']}")
+    
     print("\n" + "="*60)
-    print("--- Sprint 3: Hybrid Search + Rerank ---")
+    print("--- Sprint 3: Hybrid Search (Variant) ---")
     print("="*60)
     
     # Query khó: dùng tên cũ (alias) hoặc mã lỗi không có trong embedding tốt
@@ -606,24 +564,6 @@ if __name__ == "__main__":
     result_s3 = rag_answer(
         query_s3, 
         retrieval_mode="hybrid", 
-        use_rerank=True, 
         verbose=True
     )
-    print(f"\nAnswer: {result_s3['answer']}")
-
-    # Uncomment sau khi Sprint 3 hoàn thành:
-    # print("\n--- Sprint 3: So sánh strategies ---")
-    # compare_retrieval_strategies("Approval Matrix để cấp quyền là tài liệu nào?")
-    # compare_retrieval_strategies("ERR-403-AUTH")
-
-    print("\n\nViệc cần làm Sprint 2:")
-    print("  1. Implement retrieve_dense() — query ChromaDB")
-    print("  2. Implement call_llm() — gọi OpenAI hoặc Gemini")
-    print("  3. Chạy rag_answer() với 3+ test queries")
-    print("  4. Verify: output có citation không? Câu không có docs → abstain không?")
-
-    print("\nViệc cần làm Sprint 3:")
-    print("  1. Chọn 1 trong 3 variants: hybrid, rerank, hoặc query transformation")
-    print("  2. Implement variant đó")
-    print("  3. Chạy compare_retrieval_strategies() để thấy sự khác biệt")
-    print("  4. Ghi lý do chọn biến đó vào docs/tuning-log.md")
+    print(f"\nAnswer: {result_s3['answer']}\n")
