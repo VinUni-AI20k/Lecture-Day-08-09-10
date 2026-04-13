@@ -78,7 +78,7 @@ def retrieve_dense(query: str, top_k: int = TOP_K_SEARCH) -> List[Dict[str, Any]
     Dùng LangChain Chroma — cùng cách index.py build index → tránh lỗi collection name mismatch.
     """
     from index import get_embeddings_fn, CHROMA_PERSIST_DIR
-    from langchain_community.vectorstores import Chroma
+    from langchain_chroma import Chroma
 
     embedding_fn = get_embeddings_fn()
     vectorstore = Chroma(
