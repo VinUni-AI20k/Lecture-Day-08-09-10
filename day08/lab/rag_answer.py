@@ -34,7 +34,10 @@ load_dotenv()
 TOP_K_SEARCH = 10    # Số chunk lấy từ vector store trước rerank (search rộng)
 TOP_K_SELECT = 3     # Số chunk gửi vào prompt sau rerank/select (top-3 sweet spot)
 
-LLM_MODEL = os.getenv("LLM_MODEL", "gpt-4o-mini")
+LLM_PROVIDER = os.getenv("LLM_PROVIDER", "groq").strip().lower()
+LLM_MODEL = os.getenv("LLM_MODEL", "llama-3.1-8b-instant").strip()
+FALLBACK_LLM_PROVIDER = os.getenv("FALLBACK_LLM_PROVIDER", "openai").strip().lower()
+FALLBACK_LLM_MODEL = os.getenv("FALLBACK_LLM_MODEL", "gpt-5.4-nano").strip()
 
 
 # =============================================================================
@@ -293,33 +296,68 @@ def call_llm(prompt: str) -> str:
     """
     Gọi LLM để sinh câu trả lời.
 
-    TODO Sprint 2:
-    Chọn một trong hai:
+    Primary provider: Groq (OpenAI-compatible API) nếu được cấu hình.
+    Fallback provider: OpenAI với model gpt-5.4-nano.
 
-    Option A — OpenAI (cần OPENAI_API_KEY):
+    Hỗ trợ thêm Gemini để giữ tương thích với TODO cũ.
+
+    Lưu ý: Dùng temperature=0 để output ổn định cho evaluation.
+    """
+    def _call_openai_compatible(api_key: str, model_name: str, base_url: Optional[str] = None) -> str:
         from openai import OpenAI
-        client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+
+        client_kwargs = {"api_key": api_key}
+        if base_url:
+            client_kwargs["base_url"] = base_url
+
+        client = OpenAI(**client_kwargs)
         response = client.chat.completions.create(
-            model=LLM_MODEL,
+            model=model_name,
             messages=[{"role": "user", "content": prompt}],
-            temperature=0,     # temperature=0 để output ổn định, dễ đánh giá
+            temperature=0,
             max_tokens=512,
         )
-        return response.choices[0].message.content
+        return response.choices[0].message.content or ""
 
-    Option B — Google Gemini (cần GOOGLE_API_KEY):
+    def _call_gemini(model_name: str) -> str:
         import google.generativeai as genai
-        genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
-        model = genai.GenerativeModel("gemini-1.5-flash")
-        response = model.generate_content(prompt)
-        return response.text
 
-    Lưu ý: Dùng temperature=0 hoặc thấp để output ổn định cho evaluation.
-    """
-    raise NotImplementedError(
-        "TODO Sprint 2: Implement call_llm().\n"
-        "Chọn Option A (OpenAI) hoặc Option B (Gemini) trong TODO comment."
-    )
+        genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
+        model = genai.GenerativeModel(model_name)
+        response = model.generate_content(prompt)
+        return getattr(response, "text", "") or ""
+
+    def _call_provider(provider: str, model_name: str) -> str:
+        if provider == "groq":
+            groq_api_key = os.getenv("GROQ_API_KEY", "").strip()
+            if not groq_api_key:
+                raise RuntimeError("Missing GROQ_API_KEY for Groq provider")
+            return _call_openai_compatible(
+                api_key=groq_api_key,
+                model_name=model_name,
+                base_url="https://api.groq.com/openai/v1",
+            )
+
+        if provider == "openai":
+            openai_api_key = os.getenv("OPENAI_API_KEY", "").strip()
+            if not openai_api_key:
+                raise RuntimeError("Missing OPENAI_API_KEY for OpenAI provider")
+            return _call_openai_compatible(api_key=openai_api_key, model_name=model_name)
+
+        if provider == "gemini":
+            return _call_gemini(model_name)
+
+        raise ValueError(f"Unsupported LLM provider: {provider}")
+
+    try:
+        return _call_provider(LLM_PROVIDER, LLM_MODEL)
+    except Exception as primary_error:
+        if FALLBACK_LLM_PROVIDER == LLM_PROVIDER and FALLBACK_LLM_MODEL == LLM_MODEL:
+            raise
+
+        print(f"[call_llm] Primary provider '{LLM_PROVIDER}' failed: {primary_error}")
+        print(f"[call_llm] Falling back to '{FALLBACK_LLM_PROVIDER}' with model '{FALLBACK_LLM_MODEL}'")
+        return _call_provider(FALLBACK_LLM_PROVIDER, FALLBACK_LLM_MODEL)
 
 
 def rag_answer(
