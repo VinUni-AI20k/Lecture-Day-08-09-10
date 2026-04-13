@@ -11,7 +11,7 @@
 
 > Trong dự án RAG Pipeline lần này, với vai trò là Retrieval Owner, tôi chịu trách nhiệm chính trong việc tối ưu hóa quy trình từ lúc lấy dữ liệu từ Vector Database cho đến khi đưa vào Prompt. Tôi tập trung chủ yếu vào Sprint 2 và 3.
 
-> Cụ thể, tôi đã thiết lập hàm build_grounded_prompt để đảm bảo LLM luôn trả lời dựa trên ngữ cảnh (context) và thực hiện nghiêm ngặt quy tắc "không bịa đặt" (abstain logic). Tôi cũng tham gia vào việc phát triển hàm call_llm để hỗ trợ đa mô hình, cho phép hệ thống linh hoạt chuyển đổi giữa OpenAI và Gemini thông qua biến cấu hình LLM_Provider. Công việc của tôi đóng vai trò là "cầu nối" quan trọng: tiếp nhận các chunk dữ liệu từ index.py và kết quả truy xuất từ các hàm retrieve_dense/retrieve_hybrid trong rag_answer.py, sau đó tinh chỉnh chúng thành một cấu trúc prompt mạch lạc để LLM có thể trích xuất thông tin chính xác nhất kèm theo citation [1], [2].
+> Cụ thể, tôi đã thiết lập hàm build_grounded_prompt để đảm bảo LLM luôn trả lời dựa trên ngữ cảnh (context) và thực hiện nghiêm ngặt quy tắc "không bịa đặt" (abstain logic). Tôi cũng tham gia với nhóm vào việc phát triển hàm call_llm để hỗ trợ đa mô hình, cho phép hệ thống linh hoạt chuyển đổi giữa OpenAI và Gemini thông qua biến cấu hình LLM_Provider. Công việc của tôi đóng vai trò là "cầu nối" quan trọng: tiếp nhận các chunk dữ liệu từ index.py và kết quả truy xuất từ các hàm retrieve_dense/retrieve_hybrid trong rag_answer.py, sau đó tinh chỉnh chúng thành một cấu trúc prompt mạch lạc để LLM có thể trích xuất thông tin chính xác nhất kèm theo citation [1], [2].
 
 
 
