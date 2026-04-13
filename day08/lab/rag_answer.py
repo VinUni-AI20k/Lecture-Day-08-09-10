@@ -22,14 +22,14 @@ Definition of Done Sprint 3:
 """
 
 import os
-from typing import List, Dict, Any, Optional, Tuple
-from xmlrpc import client
+from typing import List, Dict, Any, Optional, Tuple, Callable
 from dotenv import load_dotenv
 import chromadb
 from openai import OpenAI
 from rank_bm25 import BM25Okapi
 from index import get_embedding, CHROMA_DB_DIR
-import re 
+import re
+from query_trans import apply_query_transformations, deduplicate_chunks
 bm25 = None
 all_chunks = None
 
@@ -257,8 +257,15 @@ def retrieve_hybrid(
     #3. Sắp xếp theo RRF score giảm dần
     sorted_docs = sorted(doc_scores.items(), key=lambda x: x[1]["rrf_score"], reverse=True)
     top_docs = [doc_id for doc_id, _ in sorted_docs[:top_k]]
-    #4. Trả về top_k docs
-    id_to_doc = {doc["metadata"].get("id", f"unknown_{i}"): doc for i, doc in enumerate(dense_results + sparse_results)}
+    #4. Trả về top_k docs — dùng cùng key logic với doc_scores để không bị mismatch
+    id_to_doc = {}
+    for rank, doc in enumerate(dense_results, 1):
+        key = doc["metadata"].get("id", f"dense_{rank}")
+        id_to_doc[key] = doc
+    for rank, doc in enumerate(sparse_results, 1):
+        key = doc["metadata"].get("id", f"sparse_{rank}")
+        if key not in id_to_doc:
+            id_to_doc[key] = doc
     return [id_to_doc[doc_id] for doc_id in top_docs if doc_id in id_to_doc]
 
 
@@ -303,38 +310,108 @@ def rerank(
 
 
 # =============================================================================
+# RETRIEVE BY EMBEDDING — dùng cho HyDE
+# =============================================================================
+
+def retrieve_by_embedding(embedding: List[float], top_k: int = TOP_K_SEARCH) -> List[Dict[str, Any]]:
+    """
+    Retrieve chunks bằng embedding vector trực tiếp (không embed query).
+    Dùng cho HyDE: embed hypothetical doc rồi retrieve bằng vector đó.
+    """
+    client = chromadb.PersistentClient(path=str(CHROMA_DB_DIR))
+    collection = client.get_collection("rag_lab")
+    results = collection.query(
+        query_embeddings=[embedding],
+        n_results=top_k,
+        include=["documents", "metadatas", "distances"]
+    )
+    documents = results.get("documents", [[]])[0]
+    metadatas = results.get("metadatas", [[]])[0]
+    distances = results.get("distances", [[]])[0]
+
+    chunks: List[Dict[str, Any]] = []
+    for idx, doc_text in enumerate(documents):
+        metadata = metadatas[idx] if idx < len(metadatas) else {}
+        distance = distances[idx] if idx < len(distances) else None
+        score = 1 - distance if isinstance(distance, (int, float)) else 0.0
+        chunks.append({"text": doc_text, "metadata": metadata, "score": score})
+    return chunks
+
+
+# =============================================================================
 # QUERY TRANSFORMATION (Sprint 3 alternative)
 # =============================================================================
 
-def transform_query(query: str, strategy: str = "expansion") -> List[str]:
+def transform_query(
+    query: str,
+    retrieve_fn: Callable,
+    get_embedding: Optional[Callable] = None,
+    retrieve_by_emb: Optional[Callable] = None,
+    strategy: str = "auto",
+    top_k: int = TOP_K_SEARCH,
+    verbose: bool = False,
+) -> Dict[str, Any]:
     """
-    Biến đổi query để tăng recall.
+    Biến đổi query và retrieve kết quả.
+    Internally gọi apply_query_transformations().
 
-    Strategies:
-      - "expansion": Thêm từ đồng nghĩa, alias, tên cũ
-      - "decomposition": Tách query phức tạp thành 2-3 sub-queries
-      - "hyde": Sinh câu trả lời giả (hypothetical document) để embed thay query
+    Args:
+        query:        Câu hỏi gốc
+        retrieve_fn:  Hàm retrieve: (query_str, top_k) -> chunks
+        get_embedding: Hàm embed (cần cho HyDE)
+        strategy:     "auto" | "expansion" | "stepback" | "decomposition" | "hyde"
+                      - "auto": tự động detect kỹ thuật phù hợp (recommended)
+                      - specific: force một kỹ thuật cụ thể
+        top_k:        Số chunks mỗi retrieve call
+        verbose:      In debug log
 
-    TODO Sprint 3 (nếu chọn query transformation):
-    Gọi LLM với prompt phù hợp với từng strategy.
-
-    Ví dụ expansion prompt:
-        "Given the query: '{query}'
-         Generate 2-3 alternative phrasings or related terms in Vietnamese.
-         Output as JSON array of strings."
-
-    Ví dụ decomposition:
-        "Break down this complex query into 2-3 simpler sub-queries: '{query}'
-         Output as JSON array."
-
-    Khi nào dùng:
-    - Expansion: query dùng alias/tên cũ (ví dụ: "Approval Matrix" → "Access Control SOP")
-    - Decomposition: query hỏi nhiều thứ một lúc
-    - HyDE: query mơ hồ, search theo nghĩa không hiệu quả
+    Returns:
+        Dict {"chunks": [...], "techniques": [...], "queries": [...]}
     """
-    # TODO Sprint 3: Implement query transformation
-    # Tạm thời trả về query gốc
-    return [query]
+    from query_trans import (
+        apply_query_transformations,
+        expand_query,
+        stepback_query,
+        decompose_query,
+        generate_hypothetical_doc,
+        deduplicate_chunks,
+    )
+
+    if strategy == "auto":
+        # Tự động detect: gọi apply_query_transformations
+        return apply_query_transformations(
+            query=query,
+            retrieve_fn=retrieve_fn,
+            call_llm=call_llm,
+            get_embedding=get_embedding,
+            retrieve_by_embedding=retrieve_by_emb,
+            top_k=top_k,
+            verbose=verbose,
+        )
+
+    # Force strategy cụ thể → sinh query variants → retrieve → dedup
+    if strategy == "expansion":
+        variants = expand_query(query, call_llm)
+    elif strategy == "stepback":
+        abstract = stepback_query(query, call_llm)
+        variants = [query, abstract] if abstract != query else [query]
+    elif strategy == "decomposition":
+        sub_questions = decompose_query(query, call_llm)
+        variants = [query] + [q for q in sub_questions if q != query]
+    elif strategy == "hyde":
+        hypo_doc = generate_hypothetical_doc(query, call_llm)
+        variants = [hypo_doc]
+    else:
+        raise ValueError(f"strategy không hợp lệ: {strategy!r}. Chọn: auto | expansion | stepback | decomposition | hyde")
+
+    if verbose:
+        print(f"[transform_query] strategy={strategy!r} → {len(variants)} variants")
+        for v in variants:
+            print(f"  - {v}")
+
+    chunk_lists = [retrieve_fn(q, top_k) for q in variants]
+    chunks = deduplicate_chunks(chunk_lists, max_chunks=top_k)
+    return {"chunks": chunks, "techniques": [strategy], "queries": variants}
 
 
 # =============================================================================
@@ -444,6 +521,7 @@ def rag_answer(
     top_k_search: int = TOP_K_SEARCH,
     top_k_select: int = TOP_K_SELECT,
     use_rerank: bool = False,
+    use_query_transform: bool = False,
     verbose: bool = False,
 ) -> Dict[str, Any]:
     """
@@ -483,17 +561,43 @@ def rag_answer(
         "top_k_search": top_k_search,
         "top_k_select": top_k_select,
         "use_rerank": use_rerank,
+        "use_query_transform": use_query_transform,
     }
 
     # --- Bước 1: Retrieve ---
-    if retrieval_mode == "dense":
-        candidates = retrieve_dense(query, top_k=top_k_search)
-    elif retrieval_mode == "sparse":
-        candidates = retrieve_sparse(query, top_k=top_k_search)
-    elif retrieval_mode == "hybrid":
-        candidates = retrieve_hybrid(query, top_k=top_k_search)
+    if use_query_transform:
+        # Chọn retrieve_fn theo retrieval_mode
+        if retrieval_mode == "dense":
+            retrieve_fn = lambda q, k: retrieve_dense(q, top_k=k)
+        elif retrieval_mode == "sparse":
+            retrieve_fn = lambda q, k: retrieve_sparse(q, top_k=k)
+        elif retrieval_mode == "hybrid":
+            retrieve_fn = lambda q, k: retrieve_hybrid(q, top_k=k)
+        else:
+            raise ValueError(f"retrieval_mode không hợp lệ: {retrieval_mode}")
+
+        # transform_query() gọi apply_query_transformations() bên trong (luôn dùng auto)
+        trans_result = transform_query(
+            query=query,
+            retrieve_fn=retrieve_fn,
+            get_embedding=get_embedding,
+            retrieve_by_emb=retrieve_by_embedding,
+            strategy="auto",
+            top_k=top_k_search,
+            verbose=verbose,
+        )
+        candidates = trans_result["chunks"]
+        config["techniques"] = trans_result["techniques"]
+        config["queries_used"] = trans_result["queries"]
     else:
-        raise ValueError(f"retrieval_mode không hợp lệ: {retrieval_mode}")
+        if retrieval_mode == "dense":
+            candidates = retrieve_dense(query, top_k=top_k_search)
+        elif retrieval_mode == "sparse":
+            candidates = retrieve_sparse(query, top_k=top_k_search)
+        elif retrieval_mode == "hybrid":
+            candidates = retrieve_hybrid(query, top_k=top_k_search)
+        else:
+            raise ValueError(f"retrieval_mode không hợp lệ: {retrieval_mode}")
 
     if verbose:
         print(f"\n[RAG] Query: {query}")
@@ -600,4 +704,78 @@ if __name__ == "__main__":
     print("\n--- Sprint 3: So sánh strategies ---")
     compare_retrieval_strategies("Approval Matrix để cấp quyền là tài liệu nào?")
     compare_retrieval_strategies("ERR-403-AUTH")
+
+    # =========================================================================
+    # TEST QUERY TRANSFORMATION
+    # use_query_transform=True để bật toàn bộ pipeline transform (auto-detect)
+    # =========================================================================
+
+    # --- EXPANSION triggers ---
+    # Trigger khi: query <= 4 từ HOẶC chứa từ lóng/alias trong _INFORMAL_TERMS
+    expansion_queries = [
+        "nghỉ đẻ bao lâu?",           # "nghỉ đẻ" → alias cho "nghỉ thai sản"
+        "bị lock tài khoản",           # "bị lock" → alias cho "tài khoản bị khóa"
+        "approval matrix",             # tên cũ của Access Control SOP (≤ 2 từ)
+        "wfh policy",                  # "wfh" → remote work
+        "đổi trả hàng",               # "đổi trả" → hoàn tiền
+    ]
+
+    # --- STEP-BACK triggers ---
+    # Trigger khi: query chứa mã lỗi, Jira ID, ticket#, IP, tool name, ext, URL
+    stepback_queries = [
+        "ERR-403-AUTH là lỗi gì?",             # ERR-\w+ pattern
+        "Cisco AnyConnect cài đặt thế nào?",   # tool name pattern
+        "ext. 9000 là số máy lẻ của ai?",      # ext.\d{3,4} pattern
+        "Ticket IT-1234 bị delay xử lý sao?",  # Jira ID pattern [A-Z]{2,}-\d+
+    ]
+
+    # --- DECOMPOSITION triggers ---
+    # Trigger khi: probe retrieve trả về chunks từ >= 2 nguồn khác nhau trong top-4
+    # → query hỏi nhiều thứ liên quan đến nhiều tài liệu cùng lúc
+    decomposition_queries = [
+        # Cần SLA (sla_p1_2026) + Access Control (access_control_sop)
+        "Khi xảy ra sự cố P1 ngoài giờ hành chính, quy trình on-call "
+        "và cấp quyền truy cập khẩn cấp thế nào?",
+        # Cần HR (hr_leave_policy) + Access Control (access_control_sop)
+        "Nhân viên nghỉ việc thì hệ thống thu hồi quyền truy cập "
+        "và chính sách hoàn tiền xử lý ra sao?",
+    ]
+
+    # --- HyDE triggers ---
+    # Trigger khi: max score sau probe nằm trong [0.45, 0.58] — retriever không chắc
+    # → query mơ hồ, vocabulary không khớp với văn phong doc
+    hyde_queries = [
+        "Hệ thống không phản hồi thì làm gì?",  # vague → SLA/incident
+        "Tôi không vào được ứng dụng",            # vague → VPN/account lock
+    ]
+
+    print("\n" + "="*60)
+    print("TEST QUERY TRANSFORMATION (use_query_transform=True)")
+    print("="*60)
+
+    all_transform_tests = [
+        ("EXPANSION", expansion_queries),
+        ("STEP-BACK", stepback_queries),
+        ("DECOMPOSITION", decomposition_queries),
+        ("HyDE", hyde_queries),
+    ]
+
+    for technique, queries in all_transform_tests:
+        print(f"\n{'─'*60}")
+        print(f"[{technique}] — expected trigger")
+        print(f"{'─'*60}")
+        for q in queries:
+            print(f"\nQuery: {q}")
+            try:
+                result = rag_answer(
+                    q,
+                    retrieval_mode="hybrid",
+                    use_query_transform=True,
+                    verbose=True,
+                )
+                print(f"Techniques used: {result['config'].get('techniques', [])}")
+                print(f"Answer: {result['answer']}")
+                print(f"Sources: {result['sources']}")
+            except Exception as e:
+                print(f"Lỗi: {e}")
 
