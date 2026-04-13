@@ -16,6 +16,7 @@ Definition of Done Sprint 1:
 import json
 import os
 import re
+import argparse
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -34,8 +35,9 @@ CHROMA_DB_DIR = BASE_DIR / "chroma_db"
 
 # TODO Sprint 1: Điều chỉnh chunk size và overlap theo quyết định của nhóm
 # Gợi ý từ slide: chunk 300-500 tokens, overlap 50-80 tokens
-CHUNK_SIZE = 400  # tokens (ước lượng bằng số ký tự / 4)
-CHUNK_OVERLAP = 80  # tokens overlap giữa các chunk
+CHUNK_SIZE = 400       # tokens (ước lượng bằng số ký tự / 4)
+CHUNK_OVERLAP = 80     # tokens overlap giữa các chunk
+CHUNK_DUMP_PATH = BASE_DIR / "docs" / "chunks" / "indexed_chunks.jsonl"
 
 
 # =============================================================================
@@ -377,7 +379,11 @@ def get_embedding(text: str) -> List[float]:
     return response.data[0].embedding
 
 
-def build_index(docs_dir: Path = DOCS_DIR, db_dir: Path = CHROMA_DB_DIR) -> None:
+def build_index(
+    docs_dir: Path = DOCS_DIR,
+    db_dir: Path = CHROMA_DB_DIR,
+    chunk_dump_path: Optional[Path] = CHUNK_DUMP_PATH,
+) -> None:
     """
     Pipeline hoàn chỉnh: đọc docs → preprocess → chunk → embed → store.
 
@@ -412,6 +418,7 @@ def build_index(docs_dir: Path = DOCS_DIR, db_dir: Path = CHROMA_DB_DIR) -> None
 
     total_chunks = 0
     doc_files = list(docs_dir.glob("*.txt"))
+    chunk_dump_lines: List[str] = []
 
     if not doc_files:
         print(f"Không tìm thấy file .txt trong {docs_dir}")
@@ -445,6 +452,15 @@ def build_index(docs_dir: Path = DOCS_DIR, db_dir: Path = CHROMA_DB_DIR) -> None
             print(chunk_text)
             print("    " + "=" * 68)
 
+            chunk_record = {
+                "source_file": filepath.name,
+                "chunk_id": chunk_id,
+                "section": chunk["metadata"].get("section", ""),
+                "metadata": chunk["metadata"],
+                "text": chunk_text,
+            }
+            chunk_dump_lines.append(json.dumps(chunk_record, ensure_ascii=False))
+
             embedding = get_embedding(chunk_text)
 
             ids.append(chunk_id)
@@ -465,6 +481,31 @@ def build_index(docs_dir: Path = DOCS_DIR, db_dir: Path = CHROMA_DB_DIR) -> None
 
     print(f"\nHoàn thành! Tổng số chunks: {total_chunks}")
     print(f"Vector DB lưu tại: {db_dir}")
+
+    if chunk_dump_path is not None:
+        chunk_dump_path.parent.mkdir(parents=True, exist_ok=True)
+        chunk_dump_path.write_text("\n".join(chunk_dump_lines) + "\n", encoding="utf-8")
+        print(f"Chunks JSONL đã lưu tại: {chunk_dump_path}")
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Build RAG index from policy docs")
+    parser.add_argument(
+        "--docs-dir",
+        default=str(DOCS_DIR),
+        help="Directory containing .txt docs to index",
+    )
+    parser.add_argument(
+        "--db-dir",
+        default=str(CHROMA_DB_DIR),
+        help="Directory for persistent ChromaDB storage",
+    )
+    parser.add_argument(
+        "--chunk-dump",
+        default=str(CHUNK_DUMP_PATH),
+        help="Output .jsonl file to save full chunk contents and metadata",
+    )
+    return parser.parse_args()
 
 
 # =============================================================================
@@ -550,12 +591,20 @@ def inspect_metadata_coverage(db_dir: Path = CHROMA_DB_DIR) -> None:
 # =============================================================================
 
 if __name__ == "__main__":
+    args = parse_args()
+    docs_dir = Path(args.docs_dir)
+    db_dir = Path(args.db_dir)
+    chunk_dump_path = Path(args.chunk_dump)
+
     print("=" * 60)
     print("Sprint 1: Build RAG Index")
     print("=" * 60)
+    print(f"Docs dir: {docs_dir}")
+    print(f"DB dir: {db_dir}")
+    print(f"Chunk dump: {chunk_dump_path}")
 
     # Bước 1: Kiểm tra docs
-    doc_files = list(DOCS_DIR.glob("*.txt"))
+    doc_files = list(docs_dir.glob("*.txt"))
     print(f"\nTìm thấy {len(doc_files)} tài liệu:")
     for f in doc_files:
         print(f"  - {f.name}")
@@ -577,7 +626,7 @@ if __name__ == "__main__":
     print("\n--- Build Full Index ---")
     print("Lưu ý: Cần implement get_embedding() trước khi chạy bước này!")
     # Uncomment dòng dưới sau khi implement get_embedding():
-    build_index()
+    build_index(docs_dir=docs_dir, db_dir=db_dir, chunk_dump_path=chunk_dump_path)
 
     # Bước 4: Kiểm tra index
     # Uncomment sau khi build_index() thành công:
