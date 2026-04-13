@@ -22,26 +22,26 @@ llm_model = gpt-4o-mini
 **Scorecard Baseline:**
 | Metric | Average Score |
 |--------|--------------|
-| Faithfulness | 4.20/5 |
-| Answer Relevance | 4.70/5 |
+| Faithfulness | 4.50/5 |
+| Answer Relevance | 4.80/5 |
 | Context Recall | 5.00/5 |
-| Completeness | 3.50/5 |
+| Completeness | 3.90/5 |
 
 **Câu hỏi yếu nhất (điểm thấp):**
-- `q09` - Faithfulness = 2/5, Relevance = 3/5, Completeness = 2/5. Hệ thống trả lời "không đủ dữ liệu", nhưng chưa nói rõ đây có thể là lỗi liên quan đến authentication và chưa gợi ý liên hệ IT Helpdesk.
-- `q04` - Faithfulness = 2/5, Completeness = 2/5. Hệ thống trả lời "không đủ dữ liệu" trong khi tài liệu có nêu rõ sản phẩm kỹ thuật số không được hoàn tiền.
-- `q07` - Completeness = 3/5. Hệ thống tìm đúng tài liệu `access-control-sop.md` nhưng bỏ sót chi tiết tài liệu này là tên mới của "Approval Matrix for System Access".
+- `q09` - Faithfulness = 3/5, Relevance = 4/5, Completeness = 2/5. Hệ thống abstain đúng, nhưng chưa nói ERR-403-AUTH có thể liên quan đến authentication và chưa gợi ý liên hệ IT Helpdesk.
+- `q07` - Faithfulness = 2/5, Relevance = 4/5, Completeness = 2/5. Hệ thống trả về tên cũ "Approval Matrix for System Access", trong khi expected answer yêu cầu nêu rõ tên hiện tại là `Access Control SOP`.
+- `q10` - Completeness = 2/5. Hệ thống trả lời "không đủ dữ liệu" là đúng hướng, nhưng chưa bổ sung ngữ cảnh rằng tài liệu hiện hành không có quy trình riêng cho VIP và quy trình chuẩn vẫn là 3-5 ngày làm việc.
 
 **Giả thuyết nguyên nhân (Error Tree):**
 - [ ] Indexing: Chunking cắt giữa điều khoản
 - [ ] Indexing: Metadata thiếu effective_date
-- [x] Retrieval: Dense bỏ lỡ exact keyword / alias
-- [ ] Retrieval: Top-k quá ít → thiếu evidence
-- [ ] Generation: Prompt không đủ grounding
-- [ ] Generation: Context quá dài → lost in the middle
+- [ ] Retrieval: Dense bỏ lỡ tài liệu cần thiết
+- [ ] Retrieval: Top-k quá ít nên thiếu evidence
+- [x] Generation: Câu trả lời còn ngắn, thiếu các chi tiết phụ nhưng quan trọng trong expected answer
+- [ ] Generation: Context quá dài gây lost in the middle
 
 **Nhận xét baseline:**
-Baseline dense đã có `Context Recall = 5.00/5`, nghĩa là hệ thống thường lấy đúng tài liệu cần thiết. Vấn đề lớn hơn nằm ở pha generation: câu trả lời đúng hướng nhưng hay thiếu chi tiết, dẫn đến `Completeness = 3.50/5`.
+Baseline dense đang là cấu hình tốt nhất trong repo hiện tại. `Context Recall = 5.00/5` cho thấy hệ thống retrieve đúng tài liệu rất ổn. Điểm còn yếu chủ yếu nằm ở generation: model thường trả lời đúng ý chính nhưng chưa tổng hợp đủ chi tiết nền hoặc thông tin đổi tên/ngữ cảnh bổ sung, nên `Completeness` vẫn thấp hơn các metric còn lại.
 
 ---
 
@@ -66,58 +66,59 @@ llm_model = gpt-4o-mini
 **Scorecard Variant 1:**
 | Metric | Baseline | Variant 1 | Delta |
 |--------|----------|-----------|-------|
-| Faithfulness | 4.20/5 | 4.20/5 | 0.00 |
-| Answer Relevance | 4.70/5 | 4.60/5 | -0.10 |
+| Faithfulness | 4.50/5 | 4.30/5 | -0.20 |
+| Answer Relevance | 4.80/5 | 4.40/5 | -0.40 |
 | Context Recall | 5.00/5 | 5.00/5 | 0.00 |
-| Completeness | 3.50/5 | 3.20/5 | -0.30 |
+| Completeness | 3.90/5 | 3.70/5 | -0.20 |
 
 **Nhận xét:**
-- Cải thiện:
-  - `q02`: Completeness tăng từ 4/5 lên 5/5. Variant đã trả lời đủ cụm "7 ngày làm việc".
-  - `q04`: Faithfulness tăng từ 2/5 lên 5/5, vì câu trả lời abstain khớp hơn với context đã retrieve trong lần chấm này.
-- Không đổi đáng kể:
-  - `q03`, `q05`, `q07`, `q08`, `q10` gần như giữ nguyên.
+- Giữ nguyên:
+  - `q01`, `q02`, `q03`, `q04`, `q05`, `q08` gần như không thay đổi; cả baseline và hybrid đều trả lời tốt.
+- Cải thiện nhẹ:
+  - `q09`: Faithfulness tăng từ 3/5 lên 4/5, nhưng Relevance vẫn giảm xuống 3/5 và Completeness không đổi.
+  - `q10`: Completeness tăng từ 2/5 lên 3/5, nhưng đây chỉ là cải thiện nhỏ.
 - Kém hơn:
-  - `q01`: Faithfulness giảm từ 5/5 xuống 3/5, Completeness giảm từ 3/5 xuống 2/5.
-  - `q06`: Faithfulness giảm từ 5/5 xuống 2/5, Relevance giảm từ 5/5 xuống 3/5, Completeness giảm từ 5/5 xuống 2/5. Hybrid kéo sang context về temporary access, làm model trả lời lệch ý hỏi về escalation của sự cố P1.
+  - `q06`: Faithfulness giảm từ 5/5 xuống 2/5, Relevance giảm từ 5/5 xuống 3/5, Completeness giảm từ 5/5 xuống 2/5. Hybrid kéo model sang context về temporary access thay vì escalation của ticket P1.
+  - `q07`: Relevance giảm từ 4/5 xuống 3/5, các lỗi về tên tài liệu vẫn không được sửa.
 
 **Kết luận:**
 Variant `hybrid` không tốt hơn baseline trong bộ test này. Bằng chứng là:
-- `Completeness` giảm từ `3.50` xuống `3.20`
-- `Answer Relevance` giảm từ `4.70` xuống `4.60`
-- `Faithfulness` và `Context Recall` không cải thiện
+- `Faithfulness` giảm từ `4.50` xuống `4.30`
+- `Answer Relevance` giảm từ `4.80` xuống `4.40`
+- `Completeness` giảm từ `3.90` xuống `3.70`
+- `Context Recall` không tăng, vẫn là `5.00/5`
 
-Điều này cho thấy bài toán của nhóm không nằm ở việc "không retrieve được đúng tài liệu", vì cả baseline và variant đều đạt `Context Recall = 5.00/5`. Nút thắt chính có thể nằm ở:
-- prompt generation chưa ép model tổng hợp đủ ý của expected answer
-- top-3 chunk đưa vào prompt chưa đủ sạch, gây nhiễu cho query đã truy xuất đúng tài liệu
-- hybrid đưa thêm chunk keyword match nhưng không liên quan nhất, làm model bị lệch trọng tâm
+Điều này cho thấy bài toán hiện tại của nhóm không nằm ở việc thiếu recall, vì cả hai cấu hình đều retrieve đúng nguồn. Vấn đề chính nằm ở chất lượng chunk đưa vào generation và cách model tổng hợp câu trả lời từ context. Trong trường hợp `q06`, hybrid còn làm tăng nhiễu do đưa thêm chunk keyword match nhưng không đúng trọng tâm của câu hỏi.
 
 ---
 
 ## Variant 2 (nếu có thời gian)
 
-**Biến thay đổi:** ___________  
-**Config:**
+**Biến đề xuất:** thêm `rerank` sau retrieval, giữ nguyên `retrieval_mode = "dense"`
+
+**Lý do:**
+Vì baseline đã có recall tốt, thay đổi hợp lý tiếp theo không phải là mở rộng retrieval mà là làm sạch top chunks trước khi đưa vào prompt. Rerank có khả năng giải quyết đúng failure mode đang thấy ở `q06`, `q07`, `q09`, `q10` tốt hơn hybrid.
+
+**Config dự kiến:**
 ```
-# TODO
+retrieval_mode = "dense"
+use_rerank = True
+# Các tham số khác giữ nguyên như baseline
 ```
 
-**Scorecard Variant 2:**
-| Metric | Baseline | Variant 1 | Variant 2 | Best |
-|--------|----------|-----------|-----------|------|
-| Faithfulness | ? | ? | ? | ? |
-| Answer Relevance | ? | ? | ? | ? |
-| Context Recall | ? | ? | ? | ? |
-| Completeness | ? | ? | ? | ? |
+**Kỳ vọng đo lường:**
+- Tăng `Completeness` cho `q07`, `q09`, `q10`
+- Giữ hoặc tăng `Faithfulness`
+- Không làm giảm `Context Recall`
 
 ---
 
 ## Tóm tắt học được
 1. **Lỗi phổ biến nhất trong pipeline này là gì?**
-   > *Retrieve đúng tài liệu nhưng generation bỏ sót chi tiết quan trọng, nên điểm Completeness thấp hơn các metric còn lại.*
+   > *Retrieve đúng tài liệu nhưng generation chưa tổng hợp đủ các chi tiết phụ quan trọng, nên điểm Completeness thấp hơn Faithfulness và Relevance.*
 
 2. **Biến nào có tác động lớn nhất tới chất lượng?**
-   > *Trong kết quả hiện tại, đổi retrieval từ dense sang hybrid không giúp tổng thể. Biến có khả năng tác động lớn hơn là rerank hoặc chỉnh prompt generation.*
+   > *Trong dữ liệu hiện tại, đổi retrieval từ dense sang hybrid không giúp tổng thể, thậm chí còn làm giảm chất lượng ở một số câu. Dense baseline vẫn là lựa chọn tốt hơn.*
 
 3. **Nếu có thêm 1 giờ, nhóm sẽ thử gì tiếp theo?**
    > *Thử dense + rerank, hoặc sửa prompt để bắt buộc model tổng hợp đủ các chi tiết chính thay vì trả lời ngắn chỉ một ý.*
