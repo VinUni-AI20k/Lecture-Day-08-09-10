@@ -70,6 +70,7 @@
 | Top-k search | 10 |
 | Top-k select | 3 |
 | Rerank | Không |
+| Query transform | Không (`None`) |
 
 ### Variant (Sprint 3)
 | Tham số | Giá trị | Thay đổi so với baseline |
@@ -79,6 +80,10 @@
 | Top-k select | 3 | Giữ nguyên để kiểm soát độ dài context |
 | Rerank | LLM-based rerank (`use_rerank=True`, model `RERANK_MODEL`) | Thêm bước chọn lại top-3 chunk liên quan nhất sau khi retrieve rộng |
 | Query transform | `expansion` / `decomposition` / `hyde` (optional) | Bật theo từng case để tăng recall, mặc định `None` |
+
+**Ghi chú triển khai trong code:**
+- Pipeline thực hiện: query -> (query transform optional) -> retrieve -> deduplicate theo `text` (giữ score cao nhất) -> (rerank optional) -> generate.
+- Hàm `compare_retrieval_strategies()` hiện so sánh `dense` và `hybrid`; rerank/query transform được bật khi gọi `rag_answer()` với config tương ứng.
 
 **Lý do chọn variant này:**
 > Chọn hybrid + rerank vì corpus có cả câu tự nhiên lẫn keyword kỹ thuật (P1/P2, ERR-403, Approval Matrix), nên dense đơn thuần dễ hụt hoặc lẫn noise.
@@ -99,7 +104,7 @@ Respond in the same language as the question.
 Question: {query}
 
 Context:
-[1] {source} | {section} | score={score}
+[1] {source} | {section} | dept={department} | effective={effective_date} | score={score}
 {chunk_text}
 
 [2] ...
@@ -111,6 +116,7 @@ Answer:
 | Tham số | Giá trị |
 |---------|---------|
 | Model | `LLM_MODEL` (default: `openai-gpt-4o`, đọc từ biến môi trường) |
+| Rerank model | `RERANK_MODEL` (default: `openai-gpt-4o`) |
 | API key | `SHOPAIKEY_API_KEY` |
 | Base URL | `https://api.shopaikey.com/v1` |
 | Temperature | 0 (để output ổn định cho eval) |
