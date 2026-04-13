@@ -383,7 +383,11 @@ def run_scorecard(
         for metric in ["faithfulness", "relevance", "context_recall", "completeness"]:
             scores = [r[metric] for r in results if r[metric] is not None]
             avg = sum(scores) / len(scores) if scores else None
-            print(f"\nAverage {metric}: {avg:.2f}" if avg else f"\nAverage {metric}: N/A (chưa chấm)")
+            print(
+                f"\nAverage {metric}: {avg:.2f}"
+                if avg is not None
+                else f"\nAverage {metric}: N/A (chưa chấm)"
+            )
 
         return results
     finally:
@@ -506,8 +510,8 @@ def compare_ab(
         v_avg = sum(v_scores) / len(v_scores) if v_scores else None
         delta = (v_avg - b_avg) if (b_avg is not None and v_avg is not None) else None
 
-        b_str = f"{b_avg:.2f}" if b_avg else "N/A"
-        v_str = f"{v_avg:.2f}" if v_avg else "N/A"
+        b_str = f"{b_avg:.2f}" if b_avg is not None else "N/A"
+        v_str = f"{v_avg:.2f}" if v_avg is not None else "N/A"
         d_str = f"{delta:+.2f}" if delta is not None else "N/A"
 
         print(f"{metric:<20} {b_str:>10} {v_str:>10} {d_str:>8}")
@@ -575,7 +579,7 @@ Generated: {timestamp}
 |--------|--------------|
 """
     for metric, avg in averages.items():
-        avg_str = f"{avg:.2f}/5" if avg else "N/A"
+        avg_str = f"{avg:.2f}/5" if avg is not None else "N/A"
         md += f"| {metric.replace('_', ' ').title()} | {avg_str} |\n"
 
     md += "\n## Per-Question Results\n\n"
