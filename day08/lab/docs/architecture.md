@@ -74,15 +74,15 @@
 ### Variant (Sprint 3)
 | Tham số | Giá trị | Thay đổi so với baseline |
 |---------|---------|------------------------|
-| Strategy | TODO (hybrid / dense) | TODO |
-| Top-k search | TODO | TODO |
-| Top-k select | TODO | TODO |
-| Rerank | TODO (cross-encoder / MMR) | TODO |
-| Query transform | TODO (expansion / HyDE / decomposition) | TODO |
+| Strategy | Hybrid (Dense + Sparse BM25, RRF `dense_weight=0.6`, `sparse_weight=0.4`) | Đổi từ dense sang hybrid để tăng recall cho query chứa keyword/alias/mã lỗi |
+| Top-k search | 10 | Giữ nguyên để so sánh công bằng (A/B chỉ đổi biến chính) |
+| Top-k select | 3 | Giữ nguyên để kiểm soát độ dài context |
+| Rerank | LLM-based rerank (`use_rerank=True`, model `RERANK_MODEL`) | Thêm bước chọn lại top-3 chunk liên quan nhất sau khi retrieve rộng |
+| Query transform | `expansion` / `decomposition` / `hyde` (optional) | Bật theo từng case để tăng recall, mặc định `None` |
 
 **Lý do chọn variant này:**
-> TODO: Giải thích tại sao chọn biến này để tune.
-> Ví dụ: "Chọn hybrid vì corpus có cả câu tự nhiên (policy) lẫn mã lỗi và tên chuyên ngành (SLA ticket P1, ERR-403)."
+> Chọn hybrid + rerank vì corpus có cả câu tự nhiên lẫn keyword kỹ thuật (P1/P2, ERR-403, Approval Matrix), nên dense đơn thuần dễ hụt hoặc lẫn noise.
+> Hybrid tăng khả năng tìm đúng tài liệu theo cả nghĩa và từ khóa; rerank giúp chỉ giữ các chunk liên quan nhất trước khi generate để giảm hallucination.
 
 ---
 
@@ -91,9 +91,10 @@
 ### Grounded Prompt Template
 ```
 Answer only from the retrieved context below.
-If the context is insufficient, say you do not know.
-Cite the source field when possible.
+If the context is insufficient to answer the question, say you do not know and do not make up information.
+Cite the source field (in brackets like [1]) when possible.
 Keep your answer short, clear, and factual.
+Respond in the same language as the question.
 
 Question: {query}
 
@@ -109,7 +110,9 @@ Answer:
 ### LLM Configuration
 | Tham số | Giá trị |
 |---------|---------|
-| Model | TODO (gpt-4o-mini / gemini-1.5-flash) |
+| Model | `LLM_MODEL` (default: `openai-gpt-4o`, đọc từ biến môi trường) |
+| API key | `SHOPAIKEY_API_KEY` |
+| Base URL | `https://api.shopaikey.com/v1` |
 | Temperature | 0 (để output ổn định cho eval) |
 | Max tokens | 512 |
 
