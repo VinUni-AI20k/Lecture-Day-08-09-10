@@ -11,31 +11,33 @@
 **Config:**
 ```
 retrieval_mode = "dense"
-chunk_size = _____ tokens
-overlap = _____ tokens
+chunking_strategy = "semantic split"
 top_k_search = 10
 top_k_select = 3
 use_rerank = False
-llm_model = _____
+threshold = 0.35
+llm_model = "gpt-4o-mini"
+
+**System Prompt:** "Chỉ trả lời dựa trên CONTEXT được cung cấp. Nếu không tìm thấy thông tin → trả lời: 'Không tìm thấy thông tin...'. Luôn trích dẫn nguồn."
 ```
 
 **Scorecard Baseline:**
 | Metric | Average Score |
 |--------|--------------|
-| Faithfulness | ? /5 |
-| Answer Relevance | ? /5 |
-| Context Recall | ? /5 |
-| Completeness | ? /5 |
+| Faithfulness | 1.00 /5 |
+| Answer Relevance | 3.00 /5 |
+| Context Recall | 0.50 /5 |
+| Completeness | 3.00 /5 |
 
 **Câu hỏi yếu nhất (điểm thấp):**
-> TODO: Liệt kê 2-3 câu hỏi có điểm thấp nhất và lý do tại sao.
-> Ví dụ: "q07 (Approval Matrix) - context recall = 1/5 vì dense bỏ lỡ alias."
+*   Tất cả các câu hỏi (đặc biệt các câu q01, q02, q03) đều có phần Recall = 0.
+*   Hiện tượng: "No retrieved chunks, answer likely not faithful", có nghĩa là hệ thống Dense baseline ở mức khởi điểm không trả về đúng/đủ chunk cho các tài liệu tương ứng, dẫn tới Faithfulness thấp chạm mốc 1.0. (Riêng q09 về Insufficient Context có recall 5 vì vốn dĩ không có expected_sources).
 
 **Giả thuyết nguyên nhân (Error Tree):**
 - [ ] Indexing: Chunking cắt giữa điều khoản
 - [ ] Indexing: Metadata thiếu effective_date
-- [ ] Retrieval: Dense bỏ lỡ exact keyword / alias
-- [ ] Retrieval: Top-k quá ít → thiếu evidence
+- [x] Retrieval: Dense bỏ lỡ exact keyword / alias (Do tính chất của dữ liệu CS & IT)
+- [x] Retrieval: Không retrieve được chunk nào (Do pipeline Dense đang chưa setup đầy đủ hoặc vector query không khớp vector metadata)
 - [ ] Generation: Prompt không đủ grounding
 - [ ] Generation: Context quá dài → lost in the middle
 

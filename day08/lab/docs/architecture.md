@@ -18,7 +18,7 @@
 ```
 
 **Mô tả ngắn gọn:**
-> TODO: Mô tả hệ thống trong 2-3 câu. Nhóm xây gì? Cho ai dùng? Giải quyết vấn đề gì?
+Hệ thống là một trợ lý ảo RAG nội bộ dành cho khối CS (Customer Service) và IT Helpdesk. Trợ lý này giúp nhân viên truy xuất nhanh và trả lời chính xác các câu hỏi về chính sách, SLA, và quy trình cấp quyền dựa trên chứng cứ cụ thể, giúp giảm thiểu rủi ro sai sót thông tin.
 
 ---
 
@@ -36,10 +36,8 @@
 ### Quyết định chunking
 | Tham số | Giá trị | Lý do |
 |---------|---------|-------|
-| Chunk size | TODO tokens | TODO |
-| Overlap | TODO tokens | TODO |
-| Chunking strategy | Heading-based / paragraph-based | TODO |
-| Metadata fields | source, section, effective_date, department, access | Phục vụ filter, freshness, citation |
+| Chunking strategy | Semantic split (theo heading `===`) | Giữ nguyên vẹn toàn bộ một đoạn điều khoản/quy trình, tránh tình trạng bị chia cắt ngang câu như chia theo character split cứng. |
+| Metadata fields | `source`, `section`, `effective_date`, `department`, `chunk_id`, `aliases` | Phục vụ filter, đánh giá freshness, tạo citation chính xác, và hỗ trợ tìm kiếm bằng alias. |
 
 ### Embedding model
 - **Model**: TODO (OpenAI text-embedding-3-small / paraphrase-multilingual-MiniLM-L12-v2)
@@ -116,21 +114,24 @@ Answer:
 
 ---
 
-## 6. Diagram (tùy chọn)
-
-> TODO: Vẽ sơ đồ pipeline nếu có thời gian. Có thể dùng Mermaid hoặc drawio.
+## 6. Pipeline Diagram
 
 ```mermaid
-graph LR
-    A[User Query] --> B[Query Embedding]
-    B --> C[ChromaDB Vector Search]
-    C --> D[Top-10 Candidates]
-    D --> E{Rerank?}
-    E -->|Yes| F[Cross-Encoder]
-    E -->|No| G[Top-3 Select]
-    F --> G
-    G --> H[Build Context Block]
-    H --> I[Grounded Prompt]
-    I --> J[LLM]
-    J --> K[Answer + Citation]
+graph TD
+    A[docs/*.txt] --> B[parse_metadata]
+    B --> C[split_into_chunks]
+    C --> D[Chroma Vector Index]
+    C --> E[BM25S Keyword Index]
+    F[User Query] --> G[HyDE Rewriting]
+    G --> H[Dense Search]
+    G --> I[BM25 Search]
+    H --> J[RRF Merge]
+    I --> J
+    J --> K[CrossEncoder Rerank]
+    K --> L{Score >= 0.35?}
+    L -->|Yes| M[gpt-4o-mini Generation]
+    L -->|No| N[Abstain Response]
+    M --> O[Answer + Citations]
+    D --> H
+    E --> I
 ```

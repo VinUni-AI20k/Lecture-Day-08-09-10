@@ -23,6 +23,8 @@ from pathlib import Path
 from typing import List, Dict, Any, Optional
 from datetime import datetime
 from rag_answer import rag_answer
+from langchain_openai import ChatOpenAI
+import os
 
 # =============================================================================
 # CẤU HÌNH
@@ -49,13 +51,22 @@ VARIANT_CONFIG = {
     "use_rerank": True,           # Hoặc False nếu variant là hybrid không rerank
     "label": "variant_hybrid_rerank",
 }
-
+api_base = os.getenv("OPENAI_API_BASE")
+# taans
+def get_judge_llm():
+    """Khởi tạo LLM làm giám khảo chấm điểm"""
+    return ChatOpenAI(
+        model=os.getenv("LLM_MODEL", "openai/gpt-4o-mini"),
+        openai_api_key=os.getenv("OPENAI_API_KEY"),
+        openai_api_base=api_base if api_base else None,
+        temperature=0
+    )
 
 # =============================================================================
 # SCORING FUNCTIONS
 # 4 metrics từ slide: Faithfulness, Answer Relevance, Context Recall, Completeness
 # =============================================================================
-
+#taan
 def score_faithfulness(
     answer: str,
     chunks_used: List[Dict[str, Any]],
@@ -90,12 +101,37 @@ def score_faithfulness(
     """
     # TODO Sprint 4: Implement scoring
     # Tạm thời trả về None (yêu cầu chấm thủ công)
-    return {
-        "score": None,
-        "notes": "TODO: Chấm thủ công hoặc implement LLM-as-Judge",
+    context = "\n".join([c.get("page_content", "") for c in chunks_used])
+    if not context:
+        return {
+            "score": 1,  # Không có evidence nào, answer chắc chắn không faithful
+            "notes": "No retrieved chunks, answer likely not faithful",
+        }
+    llm = get_judge_llm()
+    prompt = f"""Given these retrieved chunks: {context}
+             And this answer: {answer}
+             Rate the faithfulness on a scale of 1-5.
+             5 = completely grounded in the provided context.
+             1 = answer contains information not in the context.
+             Output JSON: {'score': <int>, 'reason': '<string>'}"""
+    try:
+        response = llm.invoke(prompt)
+        import re,json
+        match = re.search(r"\{.*\}", response.content, re.DOTALL)
+        result = json.loads(match.group())
+        return {
+                "score": result.get("score"),
+                "notes": result.get("reason"),
+            }
+    except Exception as e:
+        return {
+        "score": 1,
+        "notes": "No context provided",
     }
+    
+    
 
-
+#taan
 def score_answer_relevance(
     query: str,
     answer: str,
@@ -113,12 +149,20 @@ def score_answer_relevance(
 
     TODO Sprint 4: Implement tương tự score_faithfulness
     """
-    return {
-        "score": None,
-        "notes": "TODO: Implement score_answer_relevance",
-    }
-
-
+    llm = get_judge_llm()
+    prompt = f"""Rate RELEVANCE (1-5): Does the answer directly address the question?
+    QUERY: {query}
+    ANSWER: {answer}
+    Return JSON: {{"score": int, "reason": "string"}}"""
+    try:
+        llm_response = llm.invoke(prompt)
+        import re,json
+        match = re.search(r"\{.*\}", llm_response.content, re.DOTALL)
+        result = json.loads(match.group())
+        return {"score": result['score'], "notes": result['reason']}
+    except Exception as e:
+        return {"score": 3, "notes": "Error in LLM evaluation"}
+#tan
 def score_context_recall(
     chunks_used: List[Dict[str, Any]],
     expected_sources: List[str],
@@ -144,7 +188,11 @@ def score_context_recall(
     """
     if not expected_sources:
         # Câu hỏi không có expected source (ví dụ: "Không đủ dữ liệu" cases)
-        return {"score": None, "recall": None, "notes": "No expected sources"}
+        return {
+            "score": 5 if not chunks_used else 3, # Thưởng điểm nếu không lấy chunk thừa cho câu ko có data
+            "recall": 1.0 if not chunks_used else 0.0, 
+            "notes": "Abstain case: No expected sources."
+        }
 
     retrieved_sources = {
         c.get("metadata", {}).get("source", "")
@@ -152,6 +200,14 @@ def score_context_recall(
     }
 
     # TODO: Kiểm tra matching theo partial path (vì source paths có thể khác format)
+    retrieved_sources = set()
+    for c in chunks_used:
+        source_path = c.get("metadata", {}).get("source", "")
+        # Lấy tên file cuối cùng (ví dụ: hr/policy.pdf -> policy.pdf)
+        clean_name = source_path.split("/")[-1].split("\\")[-1].lower()
+        if clean_name:
+            retrieved_sources.add(clean_name)
+
     found = 0
     missing = []
     for expected in expected_sources:
@@ -164,9 +220,11 @@ def score_context_recall(
             missing.append(expected)
 
     recall = found / len(expected_sources) if expected_sources else 0
+    score_5 = round(recall * 5)
+    score_5 = max(1, min(5, score_5)) if found > 0 else 0
 
     return {
-        "score": round(recall * 5),  # Convert to 1-5 scale
+        "score": score_5,  # Convert to 1-5 scale
         "recall": recall,
         "found": found,
         "missing": missing,
@@ -174,7 +232,7 @@ def score_context_recall(
                  (f". Missing: {missing}" if missing else ""),
     }
 
-
+# taan
 def score_completeness(
     query: str,
     answer: str,
@@ -198,11 +256,22 @@ def score_completeness(
          Rate completeness 1-5. Are all key points covered?
          Output: {'score': int, 'missing_points': [str]}"
     """
-    return {
-        "score": None,
-        "notes": "TODO: Implement score_completeness (so sánh với expected_answer)",
-    }
-
+    if not expected_answer:
+        # Không có expected answer để so sánh
+        return {"score": None, "notes": "No expected answer for comparison"}
+    llm = get_judge_llm()
+    prompt =f"""Rate COMPLETENESS (1-5): Compare answer to expected answer. Are all key points covered?
+    EXPECTED: {expected_answer}
+    ACTUAL: {answer}
+    Return JSON: {{"score": int, "reason": "string"}}"""
+    try: 
+        response = llm.invoke(prompt)
+        import re,json
+        match = re.search(r"\{.*\}", response.content, re.DOTALL)
+        result = json.loads(match.group())
+        return {"score": result['score'], "notes": result['reason']}
+    except Exception as e:
+        return {"score": 3, "notes": "Error in LLM evaluation"}
 
 # =============================================================================
 # SCORECARD RUNNER
