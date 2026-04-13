@@ -46,7 +46,7 @@ const MODES: {
 }[] = [
   {
     value: "dense",
-    label: "Dense",
+    label: "Ngữ nghĩa",
     icon: Zap,
     color: "#2563eb",
     description: "Tìm kiếm theo ngữ nghĩa qua vector embedding. Tốt nhất cho câu hỏi ngữ nghĩa.",
@@ -54,7 +54,7 @@ const MODES: {
   },
   {
     value: "sparse",
-    label: "Sparse (BM25)",
+    label: "Từ khóa (BM25)",
     icon: BookOpen,
     color: "#7c3aed",
     description: "Tìm kiếm theo từ khóa BM25. Tốt cho khớp chính xác thuật ngữ kỹ thuật.",
@@ -62,10 +62,10 @@ const MODES: {
   },
   {
     value: "hybrid",
-    label: "Hybrid",
+    label: "Kết hợp",
     icon: GitMerge,
     color: "#0891b2",
-    description: "Kết hợp Dense + BM25 qua RRF fusion. Phủ rộng nhất, tổng quát nhất.",
+    description: "Kết hợp tìm theo ngữ nghĩa và theo từ khóa bằng thuật toán RRF. Phủ rộng và ổn định nhất.",
     badge: "Phủ rộng nhất",
   },
 ];
@@ -157,7 +157,7 @@ export function SettingsDrawer({ open, onOpenChange, settings, onChange }: Props
             </div>
           </section>
 
-          {/* ── Retrieval Mode ──────────────────────────────────────── */}
+          {/* ── Chế độ truy xuất ────────────────────────────────────── */}
           <section>
             <SectionLabel>Chế Độ Truy Xuất</SectionLabel>
             <div className="space-y-2">
@@ -228,10 +228,10 @@ export function SettingsDrawer({ open, onOpenChange, settings, onChange }: Props
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-semibold text-foreground">
-                    Số chunk tìm kiếm
+                    Số đoạn trích để tìm
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    Pool rộng hơn = nhớ lại nhiều hơn, chậm hơn
+                    Dải tìm rộng hơn = bắt được nhiều ngữ cảnh hơn, nhưng chậm hơn
                   </p>
                 </div>
                 <div
@@ -266,10 +266,10 @@ export function SettingsDrawer({ open, onOpenChange, settings, onChange }: Props
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-semibold text-foreground">
-                    Chunk đưa vào prompt
+                    Đoạn trích đưa vào câu lệnh cho AI
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    Nhiều chunk = ngữ cảnh phong phú hơn, chi phí cao hơn
+                    Nhiều đoạn hơn = ngữ cảnh đầy đủ hơn, chi phí cao hơn
                   </p>
                 </div>
                 <div
@@ -313,15 +313,15 @@ export function SettingsDrawer({ open, onOpenChange, settings, onChange }: Props
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-semibold text-foreground">
-                  Sắp Xếp Lại (Cross-encoder)
+                  Sắp xếp lại kết quả (mô hình chấm điểm sâu)
                 </p>
                 <p className="mt-0.5 text-xs text-muted-foreground leading-relaxed">
-                  Chấm điểm lại từng cặp (câu hỏi, chunk) bằng model cross-encoder.
+                  Chấm điểm lại từng cặp (câu hỏi, đoạn trích) bằng mô hình chấm điểm sâu.
                   Chậm hơn nhưng chính xác hơn đáng kể.
                 </p>
                 {settings.useRerank && (
                   <p className="mt-1 text-xs font-medium text-primary">
-                    ✓ Đang bật — cross-encoder/ms-marco-MiniLM-L-6-v2
+                    ✓ Đang bật — dùng mô hình chấm điểm sâu
                   </p>
                 )}
               </div>
@@ -344,16 +344,16 @@ export function SettingsDrawer({ open, onOpenChange, settings, onChange }: Props
               />
               <PipelinePill
                 label="Tìm"
-                value={`${settings.topKSearch} chunk`}
+                value={`${settings.topKSearch} đoạn`}
                 color="#059669"
               />
               <PipelinePill
                 label="Dùng"
-                value={`${effectiveTopKSelect} chunk`}
+                value={`${effectiveTopKSelect} đoạn`}
                 color="#0891b2"
               />
               <PipelinePill
-                label="Rerank"
+                label="Sắp xếp lại"
                 value={settings.useRerank ? "BẬT" : "tắt"}
                 color={settings.useRerank ? "#ea580c" : undefined}
               />
@@ -364,7 +364,7 @@ export function SettingsDrawer({ open, onOpenChange, settings, onChange }: Props
           <section className="pb-1">
             <div className="flex items-center justify-between rounded-lg bg-muted/50 border border-border px-3 py-2">
               <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                FastAPI endpoint
+                Điểm gọi FastAPI
               </span>
               <code className="text-[11px] font-mono text-foreground">
                 {api || "http://127.0.0.1:8010"}/api/rag

@@ -16,8 +16,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "RAG Lab — Day 08",
-  description: "Chat + transparent RAG pipeline inspector",
+  title: "RAG Lab — Buổi 08",
+  description: "Trò chuyện với tài liệu và theo dõi luồng RAG minh bạch",
 };
 
 export default function RootLayout({

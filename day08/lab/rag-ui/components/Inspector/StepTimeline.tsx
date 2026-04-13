@@ -45,7 +45,7 @@ const STEP_META: Record<
   },
   4: {
     label: "Ghép Ngữ Cảnh",
-    description: "Xây dựng prompt có trích dẫn và nguồn tham chiếu",
+    description: "Xây dựng câu lệnh cho AI có trích dẫn và nguồn tham chiếu",
     icon: FileText,
     color: "var(--step-4)",
   },
@@ -135,7 +135,7 @@ function StepCard({
                       className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full"
                       style={{ background: `${meta.color}18`, color: meta.color }}
                     >
-                      {step.table.length} chunks
+                      {step.table.length} đoạn
                     </span>
                   )}
                   {!isPending && step.stats?.score && (
@@ -146,7 +146,7 @@ function StepCard({
                       className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full"
                       style={{ background: `${meta.color}18`, color: meta.color }}
                     >
-                      {step.answer_chars} chars
+                      {step.answer_chars} ký tự
                     </span>
                   )}
                   {hasExpand && (
@@ -275,7 +275,7 @@ export function StepTimeline({ steps, loading, totalSteps = 5 }: Props) {
           <Database className="h-5 w-5 text-primary/60" />
         </div>
         <div>
-          <p className="text-sm font-semibold text-foreground">Pipeline RAG</p>
+          <p className="text-sm font-semibold text-foreground">Luồng RAG</p>
           <p className="mt-1 text-xs text-muted-foreground leading-relaxed max-w-[200px]">
             Gửi câu hỏi để xem pipeline 5 bước chạy theo thời gian thực.
           </p>

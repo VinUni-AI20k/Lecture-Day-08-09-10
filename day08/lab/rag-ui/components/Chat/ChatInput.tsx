@@ -81,7 +81,7 @@ export function ChatInput({
           disabled={!value.trim() || disabled}
           className="h-9 w-9 shrink-0 rounded-xl shadow-sm"
           style={{ background: "var(--gradient-primary)" }}
-          aria-label="Send"
+          aria-label="Gửi"
         >
           <Send className="h-3.5 w-3.5" />
         </Button>

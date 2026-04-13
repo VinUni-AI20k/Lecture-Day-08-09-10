@@ -49,7 +49,7 @@ export function InspectorPanel({ last, loading, streamingSteps, className }: Pro
 
           {/* Pipeline Steps — always first */}
           <section>
-            <SectionLabel>Các Bước Pipeline</SectionLabel>
+            <SectionLabel>Các bước xử lý</SectionLabel>
             <StepTimeline
               steps={steps}
               loading={loading}

@@ -19,9 +19,9 @@ import { cn } from "@/lib/utils";
 
 // ── Example questions ────────────────────────────────────────────────────────
 const EXAMPLE_QUESTIONS = [
-  "What is the SLA for P1 tickets?",
-  "How many days of annual leave do employees get?",
-  "What are the security access levels?",
+  "SLA xử lý ticket P1 là bao lâu?",
+  "Nhân viên có bao nhiêu ngày nghỉ phép năm?",
+  "Các cấp quyền truy cập hệ thống gồm những gì?",
 ];
 
 // ── Mode badges ──────────────────────────────────────────────────────────────
@@ -30,6 +30,11 @@ const MODE_ICONS = {
   sparse: <Database className="h-3 w-3" />,
   hybrid: <Filter className="h-3 w-3" />,
 };
+const MODE_LABELS = {
+  dense: "Ngữ nghĩa",
+  sparse: "Từ khóa",
+  hybrid: "Kết hợp",
+} as const;
 
 // ── Component ────────────────────────────────────────────────────────────────
 
@@ -180,7 +185,7 @@ export default function ChatPage() {
                 <span className="text-[10px] font-bold text-white">RAG</span>
               </div>
               <h1 className="text-sm font-bold text-white tracking-tight">
-                Ngày 08 — Pipeline RAG
+                Ngày 08 — Luồng RAG
               </h1>
             </div>
           </div>
@@ -194,7 +199,7 @@ export default function ChatPage() {
               className="flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-semibold bg-white/15 text-white hover:bg-white/25 transition-colors"
             >
               {MODE_ICONS[settings.mode as keyof typeof MODE_ICONS]}
-              {settings.mode}
+              {MODE_LABELS[settings.mode as keyof typeof MODE_LABELS]}
               <span className="opacity-60">·</span>
               <span className="opacity-80">{settings.topKSearch}/{settings.topKSelect}</span>
               {settings.useRerank && <span className="text-yellow-300 text-[10px]">✦</span>}
@@ -228,7 +233,7 @@ export default function ChatPage() {
                   <PanelRight className="h-4 w-4" />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent>Bật/tắt Inspector</TooltipContent>
+              <TooltipContent>Bật/tắt bảng theo dõi</TooltipContent>
             </Tooltip>
           </div>
         </header>
@@ -240,7 +245,7 @@ export default function ChatPage() {
             <div className="flex-1 min-w-0 text-xs text-destructive">
               <p className="font-semibold">{error.msg}</p>
               {error.reqId && (
-                <p className="mt-0.5 opacity-70">request_id: <code>{error.reqId}</code></p>
+                <p className="mt-0.5 opacity-70">mã yêu cầu: <code>{error.reqId}</code></p>
               )}
             </div>
             <button

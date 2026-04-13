@@ -16,7 +16,7 @@ export function TelemetryCard({ telemetry, requestId, config }: TelemetryProps) 
   const completionTokens = telemetry.usage?.chat?.completion_tokens ?? 0;
   const totalTokens = promptTokens + completionTokens;
   const mode = String(config.retrieval_mode ?? "dense");
-  const rerank = config.use_rerank ? "On" : "Off";
+  const rerank = config.use_rerank ? "Bật" : "Tắt";
 
   // Duration bar — cap at 15 000ms for visual
   const durationPct = Math.min((durationMs / 15000) * 100, 100);
@@ -103,7 +103,7 @@ export function TelemetryCard({ telemetry, requestId, config }: TelemetryProps) 
       <div className="flex flex-wrap gap-1.5">
         <ConfigChip icon={<Cpu className="h-2.5 w-2.5" />} label={mode} />
         <ConfigChip icon={<span className="text-[9px] font-bold">K</span>} label={`${config.top_k_search ?? "—"}→${config.top_k_select ?? "—"}`} />
-        <ConfigChip icon={<Zap className="h-2.5 w-2.5" />} label={`Rerank: ${rerank === "On" ? "Bật" : "Tắt"}`} />
+        <ConfigChip icon={<Zap className="h-2.5 w-2.5" />} label={`Sắp xếp lại: ${rerank}`} />
       </div>
 
       {/* Request ID */}

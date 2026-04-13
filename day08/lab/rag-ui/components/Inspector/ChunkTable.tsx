@@ -22,9 +22,9 @@ export function ChunkTable({ rows, maxVisible = 3 }: Props) {
         <thead>
           <tr className="bg-muted/60 text-muted-foreground">
             <th className="px-2 py-1.5 text-left font-semibold w-6">#</th>
-            <th className="px-2 py-1.5 text-left font-semibold">Source</th>
-            <th className="px-2 py-1.5 text-left font-semibold hidden sm:table-cell">Section</th>
-            <th className="px-2 py-1.5 text-left font-semibold w-20">Score</th>
+            <th className="px-2 py-1.5 text-left font-semibold">Nguồn</th>
+            <th className="px-2 py-1.5 text-left font-semibold hidden sm:table-cell">Mục</th>
+            <th className="px-2 py-1.5 text-left font-semibold w-20">Điểm</th>
           </tr>
         </thead>
         <tbody>
@@ -72,7 +72,7 @@ export function ChunkTable({ rows, maxVisible = 3 }: Props) {
           onClick={() => setExpanded((e) => !e)}
           className="w-full py-1.5 text-[11px] text-muted-foreground hover:text-primary hover:bg-muted/30 transition-colors border-t border-border font-medium"
         >
-          {expanded ? "Show less" : `Show all ${rows.length} chunks`}
+          {expanded ? "Thu gọn" : `Xem đủ ${rows.length} đoạn`}
         </button>
       )}
     </div>

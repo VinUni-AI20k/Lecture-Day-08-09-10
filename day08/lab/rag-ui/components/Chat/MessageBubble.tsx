@@ -53,7 +53,7 @@ function CitationChip({ n, chunk, disabled }: CitationChipProps) {
     );
   }
 
-  const source = chunk.metadata?.source ?? chunk.document ?? "unknown";
+  const source = chunk.metadata?.source ?? chunk.document ?? "không rõ nguồn";
   const section = chunk.metadata?.section ?? "";
   const preview =
     chunk.page_content ?? chunk.content ?? "";
@@ -122,7 +122,7 @@ function CitationChip({ n, chunk, disabled }: CitationChipProps) {
             {/* Chunk id */}
             {chunk.chunk_id && (
               <span className="citation-card-footer">
-                chunk: {chunk.chunk_id}
+                mã đoạn: {chunk.chunk_id}
               </span>
             )}
           </span>
