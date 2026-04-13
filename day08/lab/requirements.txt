@@ -31,3 +31,7 @@ numpy>=1.22.0                    # BM25 / Chroma dependencies
 # === Demo UI ===
 streamlit>=1.28.0
 pandas>=2.0.0                 # Bảng scorecard trong app.py
+
+# === HTTP API (Next.js / curl) ===
+fastapi>=0.109.0
+uvicorn[standard]>=0.27.0
