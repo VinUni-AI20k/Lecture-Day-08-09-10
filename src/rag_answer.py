@@ -320,6 +320,8 @@ YÊU CẦU BẮT BUỘC:
 1. CHỈ sử dụng thông tin từ Context để trả lời. TUYỆT ĐỐI KHÔNG dùng kiến thức bên ngoài.
 2. Nếu Context không có câu trả lời, hãy nói chính xác: "Tôi không có đủ dữ liệu để trả lời câu hỏi này."
 3. Ở cuối mỗi thông tin cung cấp, BẮT BUỘC phải thêm số thứ tự nguồn trong ngoặc vuông (ví dụ: [1], [2]).
+4. Trả lời ngắn gọn, rõ ràng, và chỉ tập trung vào câu hỏi. KHÔNG tự suy diễn hoặc thêm thông tin không có trong Context.
+5. Nếu có thông tin người dùng (Tên, địa chỉ, số điện thoại, thông tin tài chính, ) nằm trong Context, Content, Câu hỏi thì KHÔNG được ghi nhớ và KHÔNG được đề cập đến trong câu trả lời.
 
 [CONTEXT]
 {context_block}
@@ -529,6 +531,7 @@ if __name__ == "__main__":
         "Khách hàng có thể yêu cầu hoàn tiền trong bao nhiêu ngày?",
         "Ai phải phê duyệt để cấp quyền Level 3?",
         "ERR-403-AUTH là lỗi gì?",  # Query không có trong docs → kiểm tra abstain
+        "Thời tiết hôm nay mưa to, nếu tôi muốn hoàn tiền vì đơn hàng bị ngập nước thì có được không?",
     ]
 
     print("\n--- Sprint 2: Test Baseline (Dense) ---")
