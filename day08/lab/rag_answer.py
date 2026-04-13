@@ -881,24 +881,18 @@ def rag_answer_stream(
         }
 
         # ── Step 1: Query ────────────────────────────────────────────
-        if retrieval_mode == "sparse":
-            retrieve_note = "**Sparse (BM25):** tokenize query, chấm điểm keyword trên toàn corpus trong Chroma."
-        elif retrieval_mode == "dense":
-            retrieve_note = "**Dense:** embed query → cosine search trong Chroma."
-        else:
-            retrieve_note = "**Hybrid:** dense + BM25, hợp nhất thứ hạng bằng **RRF**."
-        step1 = {"step": 1, "name": "Câu hỏi", "emoji": "1️⃣", "detail": retrieve_note, "query": query}
+        step1 = {
+            "step": 1, "name": "Câu hỏi", "emoji": "1️⃣",
+            "detail": _retrieval_mode_note(retrieval_mode),
+            "query": query,
+        }
         yield {"event": "step", "data": step1}
         if _aborted():
             return
 
         # ── Step 2: Retrieve ─────────────────────────────────────────
-        if retrieval_mode == "dense":
-            candidates = retrieve_dense(query, top_k=top_k_search)
-        elif retrieval_mode == "sparse":
-            candidates = retrieve_sparse(query, top_k=top_k_search)
-        else:
-            candidates = retrieve_hybrid(query, top_k=top_k_search)
+        retriever = _get_retriever(retrieval_mode)
+        candidates = retriever(query, top_k=top_k_search)
 
         if not candidates:
             step2 = {
@@ -908,7 +902,7 @@ def rag_answer_stream(
             }
             yield {"event": "step", "data": step2}
             done_data = {
-                "answer": "Không đủ dữ liệu trong tài liệu để trả lời.",
+                "answer": ABSTAIN_ANSWER,
                 "sources": [], "chunks_used": [], "query": query, "config": config,
                 "pipeline_steps": [step1, step2],
                 "telemetry": _finish_tel(tel, tok, rid, config, query, ok=True),
@@ -917,9 +911,20 @@ def rag_answer_stream(
             yield {"event": "done", "data": done_data}
             return
 
+        retrieve_stats = _trace_score_stats(candidates)
+        retrieve_score_txt = "N/A"
+        if retrieve_stats is not None:
+            retrieve_score_txt = (
+                f"{retrieve_stats['min']:.4f}..{retrieve_stats['max']:.4f} "
+                f"(avg {retrieve_stats['avg']:.4f})"
+            )
         step2 = {
             "step": 2, "name": "Retrieve", "emoji": "2️⃣",
-            "detail": f"**{retrieval_mode}** · lấy **{len(candidates)}** ứng viên (`top_k_search={top_k_search}`).",
+            "detail": (
+                f"**{retrieval_mode}** · lấy **{len(candidates)}** ứng viên (`top_k_search={top_k_search}`). "
+                f"Score: **{retrieve_score_txt}**. Nguồn: {_trace_sources_preview(candidates)}."
+            ),
+            "stats": {"score": retrieve_stats, "sources_preview": _trace_sources_preview(candidates)},
             "table": _trace_chunk_rows(candidates),
         }
         yield {"event": "step", "data": step2}
@@ -940,24 +945,63 @@ def rag_answer_stream(
             select_detail = f"Không rerank — lấy **{len(candidates)}** chunk đầu theo thứ tự điểm retrieve."
             select_title, select_emoji = "Chọn top-k", "3️⃣"
 
+        selected_stats = _trace_score_stats(candidates)
+        selected_score_txt = "N/A"
+        if selected_stats is not None:
+            selected_score_txt = (
+                f"{selected_stats['min']:.4f}..{selected_stats['max']:.4f} "
+                f"(avg {selected_stats['avg']:.4f})"
+            )
+        dropped = max(0, len(after_retrieve) - len(candidates))
         step3 = {
             "step": 3, "name": select_title, "emoji": select_emoji,
-            "detail": select_detail + f" (từ **{len(after_retrieve)}** ứng viên).",
+            "detail": (
+                select_detail
+                + f" (từ **{len(after_retrieve)}** ứng viên, bỏ **{dropped}**). "
+                + f"Score sau chọn: **{selected_score_txt}**."
+            ),
+            "stats": {"score": selected_stats, "dropped_candidates": dropped},
             "table": _trace_chunk_rows(candidates),
         }
         yield {"event": "step", "data": step3}
         if _aborted():
             return
 
+        # ── Guard: filter empty chunks ────────────────────────────────
+        candidates = [c for c in candidates if (c.get("text") or "").strip()]
+        if not candidates:
+            done_data = {
+                "answer": ABSTAIN_ANSWER,
+                "sources": [], "chunks_used": [], "query": query, "config": config,
+                "pipeline_steps": [step1, step2, step3],
+                "telemetry": _finish_tel(tel, tok, rid, config, query, ok=True),
+                "request_id": rid,
+            }
+            yield {"event": "done", "data": done_data}
+            return
+
         # ── Step 4: Context + prompt ──────────────────────────────────
         context_block = build_context_block(candidates)
+        if not context_block.strip():
+            done_data = {
+                "answer": ABSTAIN_ANSWER,
+                "sources": [], "chunks_used": [], "query": query, "config": config,
+                "pipeline_steps": [step1, step2, step3],
+                "telemetry": _finish_tel(tel, tok, rid, config, query, ok=True),
+                "request_id": rid,
+            }
+            yield {"event": "done", "data": done_data}
+            return
+
         prompt = build_grounded_prompt(query, context_block)
         step4 = {
             "step": 4, "name": "Context + prompt", "emoji": "4️⃣",
             "detail": (
                 f"Đánh số **[1],[2],…** → **{len(context_block)}** ký tự context. "
-                f"Prompt tổng **{len(prompt)}** ký tự."
+                f"Prompt tổng **{len(prompt)}** ký tự. "
+                f"Nguồn: {_trace_sources_preview(candidates)}."
             ),
+            "stats": {"prompt_sources_preview": _trace_sources_preview(candidates)},
             "context_preview": context_block[:1800] + ("…" if len(context_block) > 1800 else ""),
             "prompt_preview": prompt[:1400] + ("…" if len(prompt) > 1400 else ""),
         }
@@ -973,7 +1017,7 @@ def rag_answer_stream(
             answer_parts.append(delta)
             yield {"event": "token", "data": delta}
 
-        answer = "".join(answer_parts).strip()
+        answer = ("".join(answer_parts)).strip() or ABSTAIN_ANSWER
 
         step5 = {
             "step": 5, "name": "LLM", "emoji": "5️⃣",
@@ -1012,8 +1056,8 @@ def _finish_tel(tel, tok, rid: str, config: Dict[str, Any], query: str, ok: bool
         "client": "fastapi_stream",
         "query_preview": (query[:200] + "…") if len(query) > 200 else query,
         "retrieval_mode": config.get("retrieval_mode", ""),
-        "ok": ok,
-        "error": error or None,
+        "success": ok,
+        "error_type": (error.split(":")[0] if ":" in error else error) or None,
     })
     telemetry_ctx.reset(tok)
     return {
