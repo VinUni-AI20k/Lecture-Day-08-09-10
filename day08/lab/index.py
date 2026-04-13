@@ -175,6 +175,14 @@ def chunk_sla_p1_2026(doc: Dict[str, Any]) -> List[Dict[str, Any]]:
         "metadata": {**base_meta, "section_title": "Công cụ", "chunk_type": "Tools"}
     })
 
+    # Chunk 6: Lịch sử phiên bản (NEW)
+    version_sec = "Phần 5: Lịch sử phiên bản"
+    if version_sec in sec_map:
+        chunks.append({
+            "text": f"{version_sec}\n{sec_map[version_sec]}",
+            "metadata": {**base_meta, "section_title": "Lịch sử phiên bản", "chunk_type": "Version-History"}
+        })
+
     return chunks
 
 def chunk_policy_refund_v4(doc: Dict[str, Any]) -> List[Dict[str, Any]]:
