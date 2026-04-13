@@ -131,8 +131,49 @@ def retrieve_sparse(query: str, top_k: int = TOP_K_SEARCH) -> List[Dict[str, Any
     """
     # TODO Sprint 3: Implement BM25 search
     # Tạm thời return empty list
-    print("[retrieve_sparse] Chưa implement — Sprint 3")
-    return []
+    # print("[retrieve_sparse] Chưa implement — Sprint 3")
+
+    from rank_bm25 import BM25Okapi
+    import chromadb
+    from index import CHROMA_DB_DIR
+
+    # Bước 1: Load tất cả chunks từ ChromaDB
+    client = chromadb.PersistentClient(path=str(CHROMA_DB_DIR))
+    collection = client.get_collection("rag_lab")
+    all_results = collection.get(include=["documents", "metadatas"])
+
+    all_docs = all_results["documents"]
+    all_metas = all_results["metadatas"]
+
+    if not all_docs:
+        print("[retrieve_sparse] Không có chunk nào trong index")
+        return []
+
+    # Bước 2: Tokenize corpus và tạo BM25 index
+    tokenized_corpus = [doc.lower().split() for doc in all_docs]
+    bm25 = BM25Okapi(tokenized_corpus)
+
+    # Bước 3: Query BM25
+    tokenized_query = query.lower().split()
+    scores = bm25.get_scores(tokenized_query)
+
+    # Bước 4: Lấy top_k kết quả theo score giảm dần
+    top_indices = sorted(
+        range(len(scores)),
+        key=lambda i: scores[i],
+        reverse=True,
+    )[:top_k]
+
+    retrieved_chunks = []
+    for idx in top_indices:
+        chunk = {
+            "text": all_docs[idx],
+            "metadata": all_metas[idx],
+            "score": float(scores[idx]),
+        }
+        retrieved_chunks.append(chunk)
+
+    return retrieved_chunks
 
 
 # =============================================================================
@@ -170,8 +211,66 @@ def retrieve_hybrid(
     """
     # TODO Sprint 3: Implement hybrid RRF
     # Tạm thời fallback về dense
-    print("[retrieve_hybrid] Chưa implement RRF — fallback về dense")
-    return retrieve_dense(query, top_k)
+    # print("[retrieve_hybrid] Chưa implement RRF — fallback về dense")
+    # return retrieve_dense(query, top_k)
+
+    RRF_K = 60  # Hằng số RRF tiêu chuẩn
+
+    # Bước 1: Chạy cả 2 retrieval strategies
+    dense_results = retrieve_dense(query, top_k=top_k)
+    sparse_results = retrieve_sparse(query, top_k=top_k)
+
+    # Bước 2: Tính RRF score cho mỗi document
+    # Dùng text làm key để merge (vì cùng chunk text = cùng document)
+    doc_scores: Dict[str, Dict[str, Any]] = {}
+
+    # Dense ranking
+    for rank, chunk in enumerate(dense_results):
+        text_key = chunk["text"]
+        rrf_score = dense_weight * (1.0 / (RRF_K + rank + 1))
+        if text_key not in doc_scores:
+            doc_scores[text_key] = {
+                "text": chunk["text"],
+                "metadata": chunk["metadata"],
+                "rrf_score": 0.0,
+                "dense_rank": rank + 1,
+                "sparse_rank": None,
+            }
+        doc_scores[text_key]["rrf_score"] += rrf_score
+
+    # Sparse ranking
+    for rank, chunk in enumerate(sparse_results):
+        text_key = chunk["text"]
+        rrf_score = sparse_weight * (1.0 / (RRF_K + rank + 1))
+        if text_key not in doc_scores:
+            doc_scores[text_key] = {
+                "text": chunk["text"],
+                "metadata": chunk["metadata"],
+                "rrf_score": 0.0,
+                "dense_rank": None,
+                "sparse_rank": rank + 1,
+            }
+        else:
+            doc_scores[text_key]["sparse_rank"] = rank + 1
+        doc_scores[text_key]["rrf_score"] += rrf_score
+
+    # Bước 3: Sort theo RRF score giảm dần và trả về top_k
+    sorted_docs = sorted(
+        doc_scores.values(),
+        key=lambda x: x["rrf_score"],
+        reverse=True,
+    )[:top_k]
+
+    # Format lại kết quả
+    results = []
+    for doc in sorted_docs:
+        results.append({
+            "text": doc["text"],
+            "metadata": doc["metadata"],
+            "score": doc["rrf_score"],  # RRF score thay vì cosine similarity
+        })
+
+    return results
 
 
 # =============================================================================
@@ -470,7 +569,7 @@ def compare_retrieval_strategies(query: str) -> None:
     print(f"Query: {query}")
     print('='*60)
 
-    strategies = ["dense", "hybrid"]  # Thêm "sparse" sau khi implement
+    strategies = ["dense", "sparse", "hybrid"]
 
     for strategy in strategies:
         print(f"\n--- Strategy: {strategy} ---")
@@ -514,9 +613,9 @@ if __name__ == "__main__":
             print(f"Lỗi: {e}")
 
     # Uncomment sau khi Sprint 3 hoàn thành:
-    # print("\n--- Sprint 3: So sánh strategies ---")
-    # compare_retrieval_strategies("Approval Matrix để cấp quyền là tài liệu nào?")
-    # compare_retrieval_strategies("ERR-403-AUTH")
+    print("\n--- Sprint 3: So sánh strategies ---")
+    compare_retrieval_strategies("Approval Matrix để cấp quyền là tài liệu nào?")
+    compare_retrieval_strategies("ERR-403-AUTH")
 
     print("\n\nViệc cần làm Sprint 2:")
     print("  1. Implement retrieve_dense() — query ChromaDB")
