@@ -93,6 +93,7 @@ def retrieve_dense(query: str, top_k: int = TOP_K_SEARCH) -> List[Dict[str, Any]
         include=["documents", "metadatas", "distances"]
     )
 
+    # print(results)
 
     chunks = []
     for doc, meta, dist in zip(
@@ -599,7 +600,7 @@ def compare_retrieval_strategies(query: str) -> None:
     print(f"Query: {query}")
     print('='*60)
 
-    strategies = ["dense", "hybrid"]  # Thêm "sparse" sau khi implement
+    strategies = ["dense", "sparse", "hybrid"]  # Thêm "sparse" sau khi implement
 
     for strategy in strategies:
         print(f"\n--- Strategy: {strategy} ---")

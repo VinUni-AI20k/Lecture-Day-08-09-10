@@ -51,7 +51,7 @@ BASELINE_CONFIG = {
 VARIANT_CONFIG = {
     "retrieval_mode": "hybrid",   # Hoặc "dense" nếu chỉ đổi rerank
     "top_k_search": 10,
-    "top_k_select": 3,
+    "top_k_select": 5,
     "use_rerank": True,           # Hoặc False nếu variant là hybrid không rerank
     "label": "variant_hybrid_rerank",
 }
@@ -89,7 +89,7 @@ def score_faithfulness(
              And this answer: {answer}
              Rate the faithfulness on a scale of 1-5.
              5 = completely grounded in the provided context.
-             1 = answer contains information not in the context.
+             1 = answer contains information NOT in the context.
              Output JSON: {'score': <int>, 'reason': '<string>'}"
 
     Trả về dict với: score (1-5) và notes (lý do)
@@ -472,10 +472,11 @@ def ask_llm_judge(prompt: str) -> Dict[str, Any]:
         response = client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[
-                {"role": "system", "content": "You are an objective RAG evaluator. Always output valid JSON."},
+                {"role": "system", "content": "You are an objective RAG evaluator, LLM as judge. Always output valid JSON."},
                 {"role": "user", "content": prompt}
             ],
-            response_format={"type": "json_object"}
+            response_format={"type": "json_object"},
+            temperature=0.9
         )
         return json.loads(response.choices[0].message.content)
     except Exception as e:
