@@ -19,15 +19,21 @@ A/B Rule (từ slide):
 
 import json
 import csv
+import os
 from pathlib import Path
 from typing import List, Dict, Any, Optional
 from datetime import datetime
+
+from dotenv import load_dotenv
+import openai
 from rag_answer import rag_answer
 
 # =============================================================================
 # CẤU HÌNH
 # =============================================================================
-
+load_dotenv()
+client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+    
 TEST_QUESTIONS_PATH = Path(__file__).parent / "data" / "test_questions.json"
 RESULTS_DIR = Path(__file__).parent / "results"
 
@@ -90,6 +96,15 @@ def score_faithfulness(
     """
     # TODO Sprint 4: Implement scoring
     # Tạm thời trả về None (yêu cầu chấm thủ công)
+
+    context = "\n---\n".join([c.get("content", "") for c in chunks_used])
+    prompt = f"""Rate FAITHFULNESS (1-5). Does the answer only use info from the context?
+    CONTEXT: {context}
+    ANSWER: {answer}
+    Output JSON: {{"score": int, "reason": "string"}}"""
+    res = ask_llm_judge(prompt)
+    return {"score": res.get("score"), "notes": res.get("reason")}
+
     return {
         "score": None,
         "notes": "TODO: Chấm thủ công hoặc implement LLM-as-Judge",
@@ -113,6 +128,14 @@ def score_answer_relevance(
 
     TODO Sprint 4: Implement tương tự score_faithfulness
     """
+
+    prompt = f"""Rate RELEVANCE (1-5). Does the answer address the user's question?
+    QUESTION: {query}
+    ANSWER: {answer}
+    Output JSON: {{"score": int, "reason": "string"}}"""
+    res = ask_llm_judge(prompt)
+    return {"score": res.get("score"), "notes": res.get("reason")}
+
     return {
         "score": None,
         "notes": "TODO: Implement score_answer_relevance",
@@ -142,6 +165,44 @@ def score_context_recall(
     2. Kiểm tra xem expected_sources có trong retrieved sources không
     3. Tính recall score
     """
+
+    if not expected_sources:
+        return {"score": 5, "recall": 1.0, "notes": "No expected sources required"}
+
+    # Lấy danh sách tên file thực tế đã lấy được (chỉ lấy tên file, bỏ đường dẫn)
+    retrieved_names = {
+        Path(c.get("metadata", {}).get("source", "")).name.lower() 
+        for c in chunks_used if c.get("metadata", {}).get("source")
+    }
+
+    found = 0
+    missing = []
+    
+    for expected in expected_sources:
+        # Lấy tên file mong đợi (ví dụ: refund-v4.pdf)
+        expected_name = Path(expected).name.lower()
+        
+        # Kiểm tra xem tên file này có xuất hiện trong đống retrieved không
+        # Dùng any() với in để cover trường hợp path dài ngắn khác nhau
+        if any(expected_name in r for r in retrieved_names):
+            found += 1
+        else:
+            missing.append(expected)
+
+    recall = found / len(expected_sources)
+    
+    # Map recall (0-1) sang thang điểm (1-5)
+    # 0.0 -> 1 | 0.5 -> 3 | 1.0 -> 5
+    score = round(recall * 4) + 1
+
+    return {
+        "score": score,
+        "recall": recall,
+        "found": found,
+        "missing": missing,
+        "notes": f"Retrieved: {found}/{len(expected_sources)}. Missing: {missing}" if missing else "All sources found."
+    }
+
     if not expected_sources:
         # Câu hỏi không có expected source (ví dụ: "Không đủ dữ liệu" cases)
         return {"score": None, "recall": None, "notes": "No expected sources"}
@@ -198,6 +259,17 @@ def score_completeness(
          Rate completeness 1-5. Are all key points covered?
          Output: {'score': int, 'missing_points': [str]}"
     """
+    
+    if not expected_answer:
+        return {"score": None, "notes": "No ground truth available."}
+    prompt = f"""Rate COMPLETENESS (1-5). Compare the model answer against the ground truth.
+    QUESTION: {query}
+    MODEL_ANSWER: {answer}
+    GROUND_TRUTH: {expected_answer}
+    Output JSON: {{"score": int, "reason": "string"}}"""
+    res = ask_llm_judge(prompt)
+    return {"score": res.get("score"), "notes": res.get("reason")}
+
     return {
         "score": None,
         "notes": "TODO: Implement score_completeness (so sánh với expected_answer)",
@@ -439,6 +511,22 @@ Generated: {timestamp}
 
     return md
 
+client = openai.OpenAI(api_key="OPENAI_API_KEY")
+    
+def ask_llm_judge(prompt: str) -> Dict[str, Any]:
+    """Gửi yêu cầu chấm điểm tới LLM và bắt JSON trả về."""
+    try:
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": "You are an objective RAG evaluator. Always output valid JSON."},
+                {"role": "user", "content": prompt}
+            ],
+            response_format={"type": "json_object"}
+        )
+        return json.loads(response.choices[0].message.content)
+    except Exception as e:
+        return {"score": 1, "reason": f"Error calling judge: {e}"}
 
 # =============================================================================
 # MAIN — Chạy evaluation
