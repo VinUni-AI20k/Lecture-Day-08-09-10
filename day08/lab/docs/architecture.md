@@ -18,7 +18,8 @@
 ```
 
 **Mô tả ngắn gọn:**
-> TODO: Mô tả hệ thống trong 2-3 câu. Nhóm xây gì? Cho ai dùng? Giải quyết vấn đề gì?
+**Mô tả ngắn gọn:**
+Hệ thống trợ lý nội bộ hỗ trợ CS và IT Helpdesk trả lời các câu hỏi về chính sách (Policy), quy trình xử lý sự cố (SLA), và quy trình cấp quyền (Access Control). Hệ thống sử dụng quy trình RAG (Retrieval-Augmented Generation) để đảm bảo câu trả lời luôn đi kèm chứng cứ từ tài liệu chính thống của công ty.
 
 ---
 
@@ -27,24 +28,24 @@
 ### Tài liệu được index
 | File | Nguồn | Department | Số chunk |
 |------|-------|-----------|---------|
-| `policy_refund_v4.txt` | policy/refund-v4.pdf | CS | TODO |
-| `sla_p1_2026.txt` | support/sla-p1-2026.pdf | IT | TODO |
-| `access_control_sop.txt` | it/access-control-sop.md | IT Security | TODO |
-| `it_helpdesk_faq.txt` | support/helpdesk-faq.md | IT | TODO |
-| `hr_leave_policy.txt` | hr/leave-policy-2026.pdf | HR | TODO |
+| `policy_refund_v4.txt` | policy/refund-v4.pdf | CS | 6 |
+| `sla_p1_2026.txt` | support/sla-p1-2026.pdf | IT | 5 |
+| `access_control_sop.txt` | it/access-control-sop.md | IT Security | 8 |
+| `it_helpdesk_faq.txt` | support/helpdesk-faq.md | IT | 6 |
+| `hr_leave_policy.txt` | hr/leave-policy-2026.pdf | HR | 5 |
 
 ### Quyết định chunking
 | Tham số | Giá trị | Lý do |
 |---------|---------|-------|
-| Chunk size | TODO tokens | TODO |
-| Overlap | TODO tokens | TODO |
-| Chunking strategy | Heading-based / paragraph-based | TODO |
-| Metadata fields | source, section, effective_date, department, access | Phục vụ filter, freshness, citation |
+| Chunk size | 400 tokens (~1600 ký tự) | Kích thước vừa đủ để chứa trọn vẹn một điều khoản hoặc một cặp FAQ Q&A. |
+| Overlap | 80 tokens (~320 ký tự) | Đảm bảo ngữ cảnh không bị mất khi một đoạn text dài bị chia cắt. |
+| Chunking strategy | Structural Chunking (Heading-based + Paragraph-aware) | Giữ được tính toàn vẹn của các section và các bước quy trình tự nhiên. |
+| Metadata fields | source, section, effective_date, department, channels, emails, hotlines | Hỗ trợ lọc theo phòng ban, kiểm tra tính hiệu lực và trích dẫn chính xác. |
 
 ### Embedding model
-- **Model**: TODO (OpenAI text-embedding-3-small / paraphrase-multilingual-MiniLM-L12-v2)
+- **Model**: paraphrase-multilingual-MiniLM-L12-v2 (Embedding local, hỗ trợ đa ngôn ngữ/tiếng Việt tốt)
 - **Vector store**: ChromaDB (PersistentClient)
-- **Similarity metric**: Cosine
+- **Similarity metric**: Cosine (1 - distance)
 
 ---
 
