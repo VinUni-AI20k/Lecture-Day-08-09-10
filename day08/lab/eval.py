@@ -17,12 +17,17 @@ A/B Rule (từ slide):
   Đổi đồng thời chunking + hybrid + rerank + prompt = không biết biến nào có tác dụng.
 """
 
+import os
+import re
 import json
 import csv
 from pathlib import Path
 from typing import List, Dict, Any, Optional
 from datetime import datetime
+from dotenv import load_dotenv
 from rag_answer import rag_answer
+
+load_dotenv()
 
 # =============================================================================
 # CẤU HÌNH
@@ -51,6 +56,292 @@ VARIANT_CONFIG = {
     "label": "variant_hybrid",
 }
 
+JUDGE_MODEL = os.getenv("EVAL_JUDGE_MODEL", os.getenv("LLM_MODEL", "gpt-4o-mini"))
+JUDGE_USE_LLM = os.getenv("EVAL_USE_LLM_JUDGE", "1").strip().lower() not in {"0", "false", "no"}
+JUDGE_MAX_CHUNK_CHARS = int(os.getenv("EVAL_JUDGE_MAX_CHUNK_CHARS", "700"))
+_JUDGE_CACHE: Dict[str, Dict[str, Dict[str, Any]]] = {}
+
+
+def _normalize_text(text: str) -> str:
+    return re.sub(r"\s+", " ", (text or "").strip()).lower()
+
+
+def _extract_keywords(text: str) -> List[str]:
+    return [
+        token for token in re.findall(r"\w+", _normalize_text(text), flags=re.UNICODE)
+        if len(token) > 2
+    ]
+
+
+def _is_abstain_answer(answer: str) -> bool:
+    normalized = _normalize_text(answer)
+    markers = [
+        "không đủ dữ liệu",
+        "khong du du lieu",
+        "không tìm thấy thông tin",
+        "khong tim thay thong tin",
+        "không có thông tin",
+        "khong co thong tin",
+        "i do not know",
+        "insufficient",
+    ]
+    return any(marker in normalized for marker in markers)
+
+
+def _expected_prefers_abstain(expected_answer: str) -> bool:
+    normalized = _normalize_text(expected_answer)
+    markers = [
+        "không tìm thấy thông tin",
+        "không đề cập",
+        "không có thông tin",
+        "không đủ dữ liệu",
+        "hãy liên hệ",
+        "co the la",
+        "có thể là",
+    ]
+    return any(marker in normalized for marker in markers)
+
+
+def _clamp_score(value: Any) -> int:
+    try:
+        return max(1, min(5, int(value)))
+    except (TypeError, ValueError):
+        return 1
+
+
+def _safe_note(text: Any, fallback: str) -> str:
+    note = re.sub(r"\s+", " ", str(text or "")).strip()
+    return note or fallback
+
+
+def _serialize_chunks_for_judge(chunks_used: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    serialized = []
+    for idx, chunk in enumerate(chunks_used[:3], start=1):
+        metadata = chunk.get("metadata", {})
+        serialized.append({
+            "rank": idx,
+            "source": metadata.get("source", ""),
+            "section": metadata.get("section", ""),
+            "score": chunk.get("score"),
+            "text": (chunk.get("text", "") or "")[:JUDGE_MAX_CHUNK_CHARS],
+        })
+    return serialized
+
+
+def _heuristic_judge(
+    query: str,
+    answer: str,
+    expected_answer: str,
+    chunks_used: List[Dict[str, Any]],
+) -> Dict[str, Dict[str, Any]]:
+    if answer in {"PIPELINE_NOT_IMPLEMENTED"} or _normalize_text(answer).startswith("error:"):
+        return {
+            "faithfulness": {"score": 1, "notes": "Pipeline loi hoac chua implement."},
+            "relevance": {"score": 1, "notes": "Khong the danh gia vi pipeline khong tra loi hop le."},
+            "completeness": {"score": 1, "notes": "Khong co cau tra loi hop le de so sanh."},
+        }
+
+    answer_norm = _normalize_text(answer)
+    expected_norm = _normalize_text(expected_answer)
+    context_text = " ".join(chunk.get("text", "") for chunk in chunks_used)
+    context_tokens = set(_extract_keywords(context_text))
+    answer_tokens = set(_extract_keywords(answer))
+    expected_tokens = set(_extract_keywords(expected_answer))
+    query_tokens = set(_extract_keywords(query))
+
+    support_ratio = (
+        len(answer_tokens & context_tokens) / max(1, len(answer_tokens))
+        if answer_tokens else 0.0
+    )
+    expected_overlap = (
+        len(answer_tokens & expected_tokens) / max(1, len(expected_tokens))
+        if expected_tokens else 0.0
+    )
+    query_overlap = (
+        len(answer_tokens & query_tokens) / max(1, len(query_tokens))
+        if query_tokens else 0.0
+    )
+
+    abstain = _is_abstain_answer(answer)
+    should_abstain = _expected_prefers_abstain(expected_answer)
+
+    if abstain and should_abstain:
+        completeness_score = 5 if "hãy liên hệ" in expected_norm or "hay lien he" in expected_norm else 4
+        return {
+            "faithfulness": {"score": 5, "notes": "Abstain phu hop voi expected answer va tranh hallucination."},
+            "relevance": {"score": 5, "notes": "Tra loi dung huong cho cau hoi thieu du lieu."},
+            "completeness": {
+                "score": completeness_score,
+                "notes": "Cau tra loi da nhan biet thieu du lieu; co the thieu mot chi dan hanh dong nho.",
+            },
+        }
+
+    if abstain and not should_abstain:
+        return {
+            "faithfulness": {"score": 4, "notes": "Khong bịa thong tin, nhung co the bo sot evidence da retrieve."},
+            "relevance": {"score": 2, "notes": "Abstain trong khi expected answer co thong tin cu the."},
+            "completeness": {"score": 1, "notes": "Bo sot phan lon noi dung can tra loi."},
+        }
+
+    if support_ratio >= 0.7:
+        faith_score = 5
+    elif support_ratio >= 0.5:
+        faith_score = 4
+    elif support_ratio >= 0.3:
+        faith_score = 3
+    elif chunks_used:
+        faith_score = 2
+    else:
+        faith_score = 1
+
+    if expected_overlap >= 0.75:
+        completeness_score = 5
+    elif expected_overlap >= 0.5:
+        completeness_score = 4
+    elif expected_overlap >= 0.3:
+        completeness_score = 3
+    elif answer_tokens:
+        completeness_score = 2
+    else:
+        completeness_score = 1
+
+    if query_overlap >= 0.6:
+        relevance_score = 5
+    elif query_overlap >= 0.4:
+        relevance_score = 4
+    elif query_overlap >= 0.2:
+        relevance_score = 3
+    elif answer_tokens:
+        relevance_score = 2
+    else:
+        relevance_score = 1
+
+    return {
+        "faithfulness": {
+            "score": faith_score,
+            "notes": f"Heuristic support ratio voi context = {support_ratio:.2f}.",
+        },
+        "relevance": {
+            "score": relevance_score,
+            "notes": f"Heuristic overlap voi query = {query_overlap:.2f}.",
+        },
+        "completeness": {
+            "score": completeness_score,
+            "notes": f"Heuristic overlap voi expected answer = {expected_overlap:.2f}.",
+        },
+    }
+
+
+def _parse_judge_json(raw_text: str) -> Dict[str, Any]:
+    text = (raw_text or "").strip()
+    if not text:
+        raise ValueError("Empty judge response")
+
+    candidates = [text]
+    fenced = re.findall(r"\{.*\}", text, flags=re.DOTALL)
+    candidates.extend(fenced)
+
+    for candidate in candidates:
+        try:
+            return json.loads(candidate)
+        except json.JSONDecodeError:
+            continue
+    raise ValueError(f"Judge response khong phai JSON hop le: {text[:200]}")
+
+
+def _call_llm_judge(
+    query: str,
+    answer: str,
+    expected_answer: str,
+    chunks_used: List[Dict[str, Any]],
+) -> Dict[str, Dict[str, Any]]:
+    from openai import OpenAI
+
+    client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+    judge_payload = {
+        "query": query,
+        "answer": answer,
+        "expected_answer": expected_answer,
+        "retrieved_chunks": _serialize_chunks_for_judge(chunks_used),
+    }
+    system_prompt = (
+        "You are a strict RAG evaluator. Score only based on the user query, the expected answer, "
+        "the retrieved chunks, and the model answer. Penalize unsupported facts heavily. "
+        "If the answer correctly abstains because the evidence is insufficient, reward faithfulness and relevance. "
+        "Return ONLY valid JSON with this exact shape: "
+        "{\"faithfulness\":{\"score\":1-5,\"notes\":\"...\"},"
+        "\"relevance\":{\"score\":1-5,\"notes\":\"...\"},"
+        "\"completeness\":{\"score\":1-5,\"notes\":\"...\"}}."
+    )
+    user_prompt = (
+        "Rubric:\n"
+        "- Faithfulness: is the answer supported by retrieved chunks?\n"
+        "- Relevance: does the answer directly address the question?\n"
+        "- Completeness: does the answer cover the important points in expected_answer?\n"
+        "- Score each metric from 1 to 5.\n"
+        "- Keep notes concise and evidence-based.\n\n"
+        f"Evaluation payload:\n{json.dumps(judge_payload, ensure_ascii=False, indent=2)}"
+    )
+    response = client.chat.completions.create(
+        model=JUDGE_MODEL,
+        messages=[
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt},
+        ],
+        temperature=0,
+        response_format={"type": "json_object"},
+    )
+    content = response.choices[0].message.content
+    parsed = _parse_judge_json(content)
+
+    judged = {}
+    for metric in ("faithfulness", "relevance", "completeness"):
+        metric_data = parsed.get(metric, {}) if isinstance(parsed, dict) else {}
+        judged[metric] = {
+            "score": _clamp_score(metric_data.get("score")),
+            "notes": _safe_note(metric_data.get("notes"), f"LLM judge khong tra ve notes cho {metric}."),
+        }
+    return judged
+
+
+def _get_judge_result(
+    query: str,
+    answer: str,
+    expected_answer: str,
+    chunks_used: List[Dict[str, Any]],
+) -> Dict[str, Dict[str, Any]]:
+    cache_key = json.dumps(
+        {
+            "query": query,
+            "answer": answer,
+            "expected_answer": expected_answer,
+            "chunks": _serialize_chunks_for_judge(chunks_used),
+            "model": JUDGE_MODEL,
+            "use_llm": JUDGE_USE_LLM,
+        },
+        ensure_ascii=False,
+        sort_keys=True,
+    )
+    if cache_key in _JUDGE_CACHE:
+        return _JUDGE_CACHE[cache_key]
+
+    use_llm = JUDGE_USE_LLM and bool(os.getenv("OPENAI_API_KEY"))
+    if use_llm:
+        try:
+            judged = _call_llm_judge(query, answer, expected_answer, chunks_used)
+            for metric in judged.values():
+                metric["notes"] = f"{metric['notes']} [AI-as-Judge:{JUDGE_MODEL}]"
+            _JUDGE_CACHE[cache_key] = judged
+            return judged
+        except Exception as exc:
+            print(f"[Judge] LLM judge loi, fallback heuristic: {exc}")
+
+    judged = _heuristic_judge(query, answer, expected_answer, chunks_used)
+    for metric in judged.values():
+        metric["notes"] = f"{metric['notes']} [heuristic]"
+    _JUDGE_CACHE[cache_key] = judged
+    return judged
+
 
 # =============================================================================
 # SCORING FUNCTIONS
@@ -58,7 +349,9 @@ VARIANT_CONFIG = {
 # =============================================================================
 
 def score_faithfulness(
+    query: str,
     answer: str,
+    expected_answer: str,
     chunks_used: List[Dict[str, Any]],
 ) -> Dict[str, Any]:
     """
@@ -89,17 +382,15 @@ def score_faithfulness(
 
     Trả về dict với: score (1-5) và notes (lý do)
     """
-    # TODO Sprint 4: Implement scoring
-    # Tạm thời trả về None (yêu cầu chấm thủ công)
-    return {
-        "score": None,
-        "notes": "TODO: Chấm thủ công hoặc implement LLM-as-Judge",
-    }
+    judged = _get_judge_result(query, answer, expected_answer, chunks_used)
+    return judged["faithfulness"]
 
 
 def score_answer_relevance(
     query: str,
     answer: str,
+    expected_answer: str,
+    chunks_used: Optional[List[Dict[str, Any]]] = None,
 ) -> Dict[str, Any]:
     """
     Answer Relevance: Answer có trả lời đúng câu hỏi người dùng hỏi không?
@@ -114,10 +405,8 @@ def score_answer_relevance(
 
     TODO Sprint 4: Implement tương tự score_faithfulness
     """
-    return {
-        "score": None,
-        "notes": "TODO: Implement score_answer_relevance",
-    }
+    judged = _get_judge_result(query, answer, expected_answer, chunks_used or [])
+    return judged["relevance"]
 
 
 def score_context_recall(
@@ -180,6 +469,7 @@ def score_completeness(
     query: str,
     answer: str,
     expected_answer: str,
+    chunks_used: Optional[List[Dict[str, Any]]] = None,
 ) -> Dict[str, Any]:
     """
     Completeness: Answer có thiếu điều kiện ngoại lệ hoặc bước quan trọng không?
@@ -199,10 +489,8 @@ def score_completeness(
          Rate completeness 1-5. Are all key points covered?
          Output: {'score': int, 'missing_points': [str]}"
     """
-    return {
-        "score": None,
-        "notes": "TODO: Implement score_completeness (so sánh với expected_answer)",
-    }
+    judged = _get_judge_result(query, answer, expected_answer, chunks_used or [])
+    return judged["completeness"]
 
 
 # =============================================================================
@@ -277,10 +565,10 @@ def run_scorecard(
             chunks_used = []
 
         # --- Chấm điểm ---
-        faith = score_faithfulness(answer, chunks_used)
-        relevance = score_answer_relevance(query, answer)
+        faith = score_faithfulness(query, answer, expected_answer, chunks_used)
+        relevance = score_answer_relevance(query, answer, expected_answer, chunks_used)
         recall = score_context_recall(chunks_used, expected_sources)
-        complete = score_completeness(query, answer, expected_answer)
+        complete = score_completeness(query, answer, expected_answer, chunks_used)
 
         row = {
             "id": question_id,
