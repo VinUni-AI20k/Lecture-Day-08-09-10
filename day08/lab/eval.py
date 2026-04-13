@@ -56,6 +56,10 @@ VARIANT_CONFIG = {
     "label": "variant_dense_rerank",
 }
 
+# SCORING.md yêu cầu grading_questions chạy bằng cấu hình tốt nhất của nhóm.
+# Hiện tại baseline dense là config ổn định nhất, nên dùng nó làm grading config.
+GRADING_CONFIG = BASELINE_CONFIG
+
 
 # =============================================================================
 # SCORING FUNCTIONS
@@ -710,7 +714,7 @@ def generate_grading_run_log(
       2) Nếu có data/grading_questions.json -> dùng file này.
       3) Fallback về data/test_questions.json.
     """
-    cfg = config or BASELINE_CONFIG
+    cfg = config or GRADING_CONFIG
 
     if questions_path is not None:
         selected_questions_path = questions_path
@@ -754,6 +758,7 @@ def generate_grading_run_log(
                 "sources": sources,
                 "chunks_retrieved": chunks_retrieved,
                 "retrieval_mode": retrieval_mode,
+                "use_rerank": cfg.get("use_rerank", False),
                 "timestamp": datetime.now().isoformat(timespec="seconds"),
             }
         )
@@ -836,7 +841,7 @@ if __name__ == "__main__":
 
     # --- Grading run log ---
     print("\n--- Tạo grading log ---")
-    generate_grading_run_log(config=BASELINE_CONFIG)
+    generate_grading_run_log(config=GRADING_CONFIG)
 
     print("\n\nViệc cần làm Sprint 4:")
     print("  1. Hoàn thành Sprint 2 + 3 trước")
