@@ -42,44 +42,36 @@ LLM_MODEL = os.getenv("LLM_MODEL", "gpt-4o-mini")
 # =============================================================================
 
 def retrieve_dense(query: str, top_k: int = TOP_K_SEARCH) -> List[Dict[str, Any]]:
-    """
-    Dense retrieval: tìm kiếm theo embedding similarity trong ChromaDB.
+    import chromadb
+    from index import get_embedding, CHROMA_DB_DIR
 
-    Args:
-        query: Câu hỏi của người dùng
-        top_k: Số chunk tối đa trả về
+    client = chromadb.PersistentClient(path=str(CHROMA_DB_DIR))
+    collection = client.get_collection("rag_lab")
 
-    Returns:
-        List các dict, mỗi dict là một chunk với:
-          - "text": nội dung chunk
-          - "metadata": metadata (source, section, effective_date, ...)
-          - "score": cosine similarity score
+    query_embedding = get_embedding(query)
 
-    TODO Sprint 2:
-    1. Embed query bằng cùng model đã dùng khi index (xem index.py)
-    2. Query ChromaDB với embedding đó
-    3. Trả về kết quả kèm score
-
-    Gợi ý:
-        import chromadb
-        from index import get_embedding, CHROMA_DB_DIR
-
-        client = chromadb.PersistentClient(path=str(CHROMA_DB_DIR))
-        collection = client.get_collection("rag_lab")
-
-        query_embedding = get_embedding(query)
-        results = collection.query(
-            query_embeddings=[query_embedding],
-            n_results=top_k,
-            include=["documents", "metadatas", "distances"]
-        )
-        # Lưu ý: distances trong ChromaDB cosine = 1 - similarity
-        # Score = 1 - distance
-    """
-    raise NotImplementedError(
-        "TODO Sprint 2: Implement retrieve_dense().\n"
-        "Tham khảo comment trong hàm để biết cách query ChromaDB."
+    results = collection.query(
+        query_embeddings=[query_embedding],
+        n_results=top_k,
+        include=["documents", "metadatas", "distances"]
     )
+
+    retrieved = []
+    docs = results["documents"][0]
+    metas = results["metadatas"][0]
+    distances = results["distances"][0]
+
+    for doc, meta, dist in zip(docs, metas, distances):
+        score = 1 - dist  # cosine similarity
+
+        retrieved.append({
+            "text": doc,
+            "metadata": meta,
+            "score": score
+        })
+
+    return retrieved
+
 
 
 # =============================================================================
@@ -290,37 +282,33 @@ Answer:"""
 
 
 def call_llm(prompt: str) -> str:
-    """
-    Gọi LLM để sinh câu trả lời.
+    import google.generativeai as genai
+    import os
 
-    TODO Sprint 2:
-    Chọn một trong hai:
+    genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
+    model = genai.GenerativeModel("gemini-2.5-flash")
 
-    Option A — OpenAI (cần OPENAI_API_KEY):
-        from openai import OpenAI
-        client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-        response = client.chat.completions.create(
-            model=LLM_MODEL,
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0,     # temperature=0 để output ổn định, dễ đánh giá
-            max_tokens=512,
-        )
-        return response.choices[0].message.content
+    for attempt in range(3):
+        try:
+            response = model.generate_content(
+                prompt,
+                generation_config={
+                    "temperature": 0,
+                    "max_output_tokens": 512,
+                }
+            )
+            return response.text if response.text else "Không đủ dữ liệu"
 
-    Option B — Google Gemini (cần GOOGLE_API_KEY):
-        import google.generativeai as genai
-        genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
-        model = genai.GenerativeModel("gemini-1.5-flash")
-        response = model.generate_content(prompt)
-        return response.text
+        except Exception as e:
+            if "429" in str(e):
+                wait = 30
+                print(f"[Retry] Rate limit hit, waiting {wait}s...")
+                time.sleep(wait)
+            else:
+                print("LLM error:", e)
+                return "Không đủ dữ liệu"
 
-    Lưu ý: Dùng temperature=0 hoặc thấp để output ổn định cho evaluation.
-    """
-    raise NotImplementedError(
-        "TODO Sprint 2: Implement call_llm().\n"
-        "Chọn Option A (OpenAI) hoặc Option B (Gemini) trong TODO comment."
-    )
-
+    return "Không đủ dữ liệu"
 
 def rag_answer(
     query: str,
@@ -405,10 +393,11 @@ def rag_answer(
     answer = call_llm(prompt)
 
     # --- Bước 5: Extract sources ---
-    sources = list({
-        c["metadata"].get("source", "unknown")
-        for c in candidates
-    })
+    sources = []
+    for c in candidates:
+        src = c["metadata"].get("source", "unknown")
+        if src not in sources:
+            sources.append(src)
 
     return {
         "query": query,
