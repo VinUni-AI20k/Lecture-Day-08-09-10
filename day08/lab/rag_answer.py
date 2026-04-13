@@ -148,10 +148,39 @@ def retrieve_hybrid(
     - Corpus có cả câu tự nhiên VÀ tên riêng, mã lỗi, điều khoản
     - Query như "Approval Matrix" khi doc đổi tên thành "Access Control SOP"
     """
-    # TODO Sprint 3: Implement hybrid RRF
-    # Tạm thời fallback về dense
-    print("[retrieve_hybrid] Chưa implement RRF — fallback về dense")
-    return retrieve_dense(query, top_k)
+    dense_results = retrieve_dense(query, top_k=top_k)
+    sparse_results = retrieve_sparse(query, top_k=top_k)
+    doc_map={}
+    # Lưu tất cả doc
+    for doc in dense_results + sparse_results:
+        key = doc["text"]
+        if key not in doc_map:
+            doc_map[key] = doc 
+
+    rrf_scores = {}
+    # Dense contribution
+    for rank, doc in enumerate(dense_results):
+        key = doc["text"]
+        score = dense_weight * (1 / (60 + rank))
+        rrf_scores[key] = rrf_scores.get(key, 0) + score
+
+    # Sparse contribution
+    for rank, doc in enumerate(sparse_results):
+        key = doc["text"]
+        score = sparse_weight * (1 / (60 + rank))
+        rrf_scores[key] = rrf_scores.get(key, 0) + score
+    
+    final_results = []
+    for key, doc in doc_map.items():
+        doc_copy = doc.copy()
+        doc_copy["score"] = rrf_scores.get(key, 0)
+        final_results.append(doc_copy)
+    
+    # Sort theo score giảm dần
+    final_results = sorted(final_results, key=lambda x: x["score"], reverse=True)
+
+
+    return final_results[:top_k]
 
 
 # =============================================================================
@@ -191,9 +220,46 @@ def rerank(
     """
     # TODO Sprint 3: Implement rerank
     # Tạm thời trả về top_k đầu tiên (không rerank)
-    return candidates[:top_k]
+    # from sentence_transformers import CrossEncoder
+    # model = CrossEncoder("cross-encoder/ms-marco-MiniLM-L-6-v2")
+    # pairs = [[query, chunk["text"]] for chunk in candidates]
+    # scores = model.predict(pairs)
+    # ranked = sorted(zip(candidates, scores), key=lambda x: x[1], reverse=True)
+    
+    # return [chunk for chunk, _ in ranked[:top_k]]
+    chunk_texts=[]
+    for i, c in enumerate(candidates):
+        chunk_texts.append(f"[{i}] {c['text']}")
+    chunks_str = "\n\n".join(chunk_texts)
+    prompt = f"""
+        You are a ranking assistant.
+
+        Given a query and a list of document chunks, select the {top_k} most relevant chunks.
+
+        Return ONLY a JSON array of indices (e.g., [0, 2, 5])
+        Query: {query}
+
+        Chunks:
+        {chunks_str}
+    """
+    response = call_llm(prompt)
+    import json
+    try:
+        indices = json.loads(response)
+    except:
+        print("⚠️ LLM output lỗi, fallback")
+        return candidates[:top_k]
+
+    # lấy chunk tương ứng
+    selected = []
+    for i in indices:
+        if 0 <= i < len(candidates):
+            selected.append(candidates[i])
+
+    return selected[:top_k]
 
 
+    
 # =============================================================================
 # QUERY TRANSFORMATION (Sprint 3 alternative)
 # =============================================================================
@@ -225,8 +291,14 @@ def transform_query(query: str, strategy: str = "expansion") -> List[str]:
     - HyDE: query mơ hồ, search theo nghĩa không hiệu quả
     """
     # TODO Sprint 3: Implement query transformation
-    # Tạm thời trả về query gốc
-    return [query]
+    
+    Strategies="""
+    "Given the query: '{query}'
+         Generate 2-3 alternative phrasings or related terms in Vietnamese.
+         Output as JSON array of strings."
+    """
+    return List(call_llm(Strategies.format(query=query)))
+    
 
 
 # =============================================================================
