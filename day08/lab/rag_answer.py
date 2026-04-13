@@ -22,6 +22,7 @@ Definition of Done Sprint 3:
 """
 
 import os
+import re
 from typing import List, Dict, Any, Optional, Tuple
 from dotenv import load_dotenv
 
@@ -76,10 +77,34 @@ def retrieve_dense(query: str, top_k: int = TOP_K_SEARCH) -> List[Dict[str, Any]
         # Lưu ý: distances trong ChromaDB cosine = 1 - similarity
         # Score = 1 - distance
     """
-    raise NotImplementedError(
-        "TODO Sprint 2: Implement retrieve_dense().\n"
-        "Tham khảo comment trong hàm để biết cách query ChromaDB."
+    import chromadb
+    from index import get_embedding, CHROMA_DB_DIR
+
+    client = chromadb.PersistentClient(path=str(CHROMA_DB_DIR))
+    collection = client.get_collection("rag_lab")
+
+    query_embedding = get_embedding(query)
+    results = collection.query(
+        query_embeddings=[query_embedding],
+        n_results=top_k,
+        include=["documents", "metadatas", "distances"],
     )
+
+    documents = results.get("documents", [[]])[0]
+    metadatas = results.get("metadatas", [[]])[0]
+    distances = results.get("distances", [[]])[0]
+
+    dense_results = []
+    for doc, meta, distance in zip(documents, metadatas, distances):
+        dense_results.append(
+            {
+                "text": doc,
+                "metadata": meta or {},
+                "score": 1 - float(distance),
+            }
+        )
+
+    return dense_results
 
 
 # =============================================================================
@@ -110,9 +135,54 @@ def retrieve_sparse(query: str, top_k: int = TOP_K_SEARCH) -> List[Dict[str, Any
         top_indices = sorted(range(len(scores)), key=lambda i: scores[i], reverse=True)[:top_k]
     """
     # TODO Sprint 3: Implement BM25 search
-    # Tạm thời return empty list
-    print("[retrieve_sparse] Chưa implement — Sprint 3")
-    return []
+    from rank_bm25 import BM25Okapi
+    import chromadb
+    from index import CHROMA_DB_DIR
+
+    cache = getattr(retrieve_sparse, "_cache", None)
+    if cache is None:
+        client = chromadb.PersistentClient(path=str(CHROMA_DB_DIR))
+        collection = client.get_collection("rag_lab")
+        results = collection.get(include=["documents", "metadatas"])
+
+        all_chunks = [
+            {
+                "text": doc,
+                "metadata": meta or {},
+            }
+            for doc, meta in zip(results.get("documents", []), results.get("metadatas", []))
+        ]
+        tokenized_corpus = [
+            re.findall(r"[a-z0-9-]+", chunk["text"].lower())
+            for chunk in all_chunks
+        ]
+        bm25 = BM25Okapi(tokenized_corpus)
+        cache = {
+            "all_chunks": all_chunks,
+            "bm25": bm25,
+        }
+        retrieve_sparse._cache = cache
+
+    tokenized_query = re.findall(r"[a-z0-9-]+", query.lower())
+    scores = cache["bm25"].get_scores(tokenized_query)
+    top_indices = sorted(
+        range(len(scores)),
+        key=lambda i: scores[i],
+        reverse=True,
+    )[:top_k]
+
+    sparse_results = []
+    for idx in top_indices:
+        chunk = cache["all_chunks"][idx]
+        sparse_results.append(
+            {
+                "text": chunk["text"],
+                "metadata": chunk["metadata"],
+                "score": float(scores[idx]),
+            }
+        )
+
+    return sparse_results
 
 
 # =============================================================================
@@ -150,8 +220,59 @@ def retrieve_hybrid(
     """
     # TODO Sprint 3: Implement hybrid RRF
     # Tạm thời fallback về dense
-    print("[retrieve_hybrid] Chưa implement RRF — fallback về dense")
-    return retrieve_dense(query, top_k)
+    # print("[retrieve_hybrid] Chưa implement RRF — fallback về dense")
+    # return retrieve_dense(query, top_k)
+    dense_results = retrieve_dense(query, top_k=top_k)
+    sparse_results = retrieve_sparse(query, top_k=top_k)
+
+    rrf_k = 60
+    merged: Dict[Tuple[str, str, str], Dict[str, Any]] = {}
+
+    for rank, result in enumerate(dense_results, 1):
+        meta = result.get("metadata", {})
+        key = (
+            meta.get("source", ""),
+            meta.get("section", ""),
+            result.get("text", ""),
+        )
+        item = merged.setdefault(
+            key,
+            {
+                "text": result.get("text", ""),
+                "metadata": meta,
+                "score": 0.0,
+                "dense_rank": None,
+                "sparse_rank": None,
+            },
+        )
+        item["score"] += dense_weight * (1 / (rrf_k + rank))
+        item["dense_rank"] = rank
+
+    for rank, result in enumerate(sparse_results, 1):
+        meta = result.get("metadata", {})
+        key = (
+            meta.get("source", ""),
+            meta.get("section", ""),
+            result.get("text", ""),
+        )
+        item = merged.setdefault(
+            key,
+            {
+                "text": result.get("text", ""),
+                "metadata": meta,
+                "score": 0.0,
+                "dense_rank": None,
+                "sparse_rank": None,
+            },
+        )
+        item["score"] += sparse_weight * (1 / (rrf_k + rank))
+        item["sparse_rank"] = rank
+
+    return sorted(
+        merged.values(),
+        key=lambda item: item["score"],
+        reverse=True,
+    )[:top_k]
 
 
 # =============================================================================
@@ -316,10 +437,33 @@ def call_llm(prompt: str) -> str:
 
     Lưu ý: Dùng temperature=0 hoặc thấp để output ổn định cho evaluation.
     """
-    raise NotImplementedError(
-        "TODO Sprint 2: Implement call_llm().\n"
-        "Chọn Option A (OpenAI) hoặc Option B (Gemini) trong TODO comment."
-    )
+    provider = os.getenv("LLM_PROVIDER", "openai").strip().lower()
+
+    if provider == "openai":
+        from openai import OpenAI
+
+        client = getattr(call_llm, "_openai_client", None)
+        if client is None:
+            client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+            call_llm._openai_client = client
+
+        response = client.chat.completions.create(
+            model=LLM_MODEL,
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0,
+            max_tokens=512,
+        )
+        return (response.choices[0].message.content or "").strip()
+
+    if provider == "gemini":
+        import google.generativeai as genai
+
+        genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
+        model = genai.GenerativeModel(os.getenv("GEMINI_MODEL", "gemini-1.5-flash"))
+        response = model.generate_content(prompt)
+        return (response.text or "").strip()
+
+    raise ValueError(f"LLM_PROVIDER không hợp lệ: {provider}")
 
 
 def rag_answer(
@@ -379,6 +523,35 @@ def rag_answer(
     else:
         raise ValueError(f"retrieval_mode không hợp lệ: {retrieval_mode}")
 
+    query_lower = query.lower()
+    query_terms = [
+        term
+        for term in query_lower.replace("?", " ").replace(":", " ").replace(",", " ").split()
+        if len(term) >= 3 or any(char.isdigit() for char in term) or "-" in term
+    ]
+
+    def _candidate_match_stats(candidate: Dict[str, Any]) -> Tuple[int, int]:
+        meta = candidate.get("metadata", {})
+        combined_text = " ".join(
+            [
+                candidate.get("text", "").lower(),
+                str(meta.get("section", "")).lower(),
+            ]
+        )
+        token_set = set(re.findall(r"[a-z0-9-]+", combined_text))
+        match_count = sum(term in token_set for term in query_terms)
+        return int(match_count == len(query_terms)), match_count
+
+    candidates = sorted(
+        candidates,
+        key=lambda c: (
+            _candidate_match_stats(c)[0],
+            _candidate_match_stats(c)[1],
+            c.get("score", 0.0),
+        ),
+        reverse=True,
+    )
+
     if verbose:
         print(f"\n[RAG] Query: {query}")
         print(f"[RAG] Retrieved {len(candidates)} candidates (mode={retrieval_mode})")
@@ -393,6 +566,32 @@ def rag_answer(
 
     if verbose:
         print(f"[RAG] After select: {len(candidates)} chunks")
+
+    # --- Bước 2.5: Abstain sớm nếu retrieval quá yếu / không khớp ---
+    best_score = max((c.get("score", 0.0) for c in candidates), default=0.0)
+    score_threshold = float(os.getenv("RAG_ABSTAIN_SCORE_THRESHOLD", "0.20"))
+    has_anchor_match = any(
+        _candidate_match_stats(c)[1] > 0
+        for c in candidates
+    ) if query_terms else True
+
+    if not candidates or (best_score < score_threshold and not has_anchor_match):
+        return {
+            "query": query,
+            "answer": "Không đủ dữ liệu trong tài liệu hiện có để trả lời câu hỏi này.",
+            "sources": [],
+            "chunks_used": candidates,
+            "config": {**config, "abstained": True, "best_score": best_score},
+        }
+
+    if any(char.isdigit() for char in query) and "-" in query and not has_anchor_match:
+        return {
+            "query": query,
+            "answer": "Không đủ dữ liệu trong tài liệu hiện có để trả lời câu hỏi này.",
+            "sources": [],
+            "chunks_used": candidates,
+            "config": {**config, "abstained": True, "best_score": best_score},
+        }
 
     # --- Bước 3: Build context và prompt ---
     context_block = build_context_block(candidates)
