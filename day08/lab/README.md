@@ -67,7 +67,8 @@ lab/
 Chạy nhanh trên Windows PowerShell:
 
 ```powershell
-cd "e:\AI thuc chien\DAY8\Lab08-Lab9-Lab10_C401_E3\day08\lab"
+# Đứng tại thư mục gốc repo, rồi vào lab:
+cd ".\day08\lab"
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 pip install -r requirements.txt

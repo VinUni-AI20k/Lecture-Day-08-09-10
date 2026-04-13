@@ -73,11 +73,11 @@
 **Lý do chọn variant này:**
 > Hybrid RRF giúp vừa bắt từ khóa (P1, ERR-403, Flash Sale) vừa giữ ngữ nghĩa (alias như “Approval Matrix” → Access Control SOP). Rerank cross-encoder chọn top-3 chunk sát câu hỏi nhất sau khi search rộng.
 
-### Giai thich ngan gon: vi sao tuning tot hon baseline
-- Baseline chi dung dense retrieval nen de bo sot cac cau co tu khoa dac thu (vi du ma loi hoac ten chinh sach viet tat).
-- Variant hybrid + rerank tim rong hon (dense + BM25), sau do loc lai top chunk sat cau hoi nhat truoc khi gui vao LLM.
-- Ket qua thuc te: cau tra loi on dinh hon, giam boi canh nhieu, va citation de kiem chung hon.
-- Ket luan de bao cao: tuning khong "lam model thong minh hon", ma giup dua dung ngu canh vao model nen chat luong cau tra loi tang len.
+### Giải thích ngắn gọn: vì sao tuning tốt hơn baseline
+- Baseline chỉ dùng dense retrieval nên dễ bỏ sót các câu có từ khóa đặc thù (ví dụ mã lỗi hoặc tên chính sách viết tắt).
+- Variant hybrid + rerank tìm rộng hơn (dense + BM25), sau đó lọc lại các đoạn sát câu hỏi nhất trước khi đưa vào LLM.
+- Kết quả thực tế: câu trả lời ổn định hơn, giảm bối cảnh nhiễu và citation rõ hơn để kiểm chứng.
+- Kết luận báo cáo: tuning không làm model “thông minh hơn”, mà giúp đưa đúng ngữ cảnh vào model nên chất lượng câu trả lời tăng lên.
 
 ---
 
