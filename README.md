@@ -20,6 +20,7 @@ Day 08 ─ RAG grounded          →   Day 09 ─ Supervisor-Workers      →   
 
 | Phần | Vị trí |
 |------|--------|
+| **Frontend (Next.js, Bun)** — UI trợ lý, mock SSE, trace/RAG demo | **[`frontend/`](frontend/)** — chi tiết cài đặt và mô tả dự án: **[`frontend/README.md`](frontend/README.md)** |
 | Lab Day 08 (code) | [`src/`](src/) — `index.py`, `rag_answer.py`, `eval.py` |
 | Dữ liệu & câu hỏi test | [`data/`](data/) — `docs/`, `test_questions.json` |
 | Tài liệu thiết kế / tuning | [`docs/`](docs/) |
@@ -205,6 +206,10 @@ python src/index.py
 python src/rag_answer.py
 python src/eval.py
 ```
+
+### Frontend (Next.js — thư mục `frontend/`)
+
+Giao diện trợ lý nội bộ (chat, SSE mock, pipeline, HIL email…) dùng **Bun**. Hướng dẫn đầy đủ: **[`frontend/README.md`](frontend/README.md)** (`cp` env, `bun install`, `bun run build`, chạy dev/prod và cổng).
 
 ---
 
