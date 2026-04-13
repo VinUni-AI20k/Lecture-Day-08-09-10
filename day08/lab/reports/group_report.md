@@ -10,6 +10,7 @@ Hệ thống hoạt động theo pipeline: Đọc dữ liệu văn bản thô ->
 - **Semantic chunking vs character split (Khánh/Khải)**: Chọn Semantic split theo các heading để tránh phá vỡ ngữ cảnh riêng biệt của một điều khoản pháp lý hoặc tài liệu hướng dẫn.
 - **Hybrid Search vs Dense only (Khải)**: (Đang chờ kết quả A/B Test ở Sprint 3).
 - **Threshold abstain = 0.35 (Nhật)**: Đảm bảo khi tìm kiếm không ra context mong đợi (Ví dụ mã lỗi không xuất hiện), ứng dụng sẽ tự động nói "Không biết" thay vì tuỳ ý "Hallucinate" ra thông tin sai.
+- **Trực quan hóa thuật toán với FastAPI/HTML UI (Sơn)**: Để chuẩn bị cho buổi bảo vệ dự án, nhóm đã dựng một giao diện Web app cho phép hiển thị **Trace Panel** (Chứa điểm RRF Score, CrossEncoder Score và Chunk cụ thể). Giúp giảng viên thấy rõ luồng xử lý bên dưới.
 
 ## 3. Kết quả RAGAS (Baseline Dense)
 Trong phiên chạy Baseline bằng Dense Search, hệ thống cho các điểm số trung bình như sau:

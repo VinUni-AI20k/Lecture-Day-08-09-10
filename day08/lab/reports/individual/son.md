@@ -6,6 +6,7 @@ Trong suốt quá trình triển khai RAG Pipeline cho khối hỗ trợ (CS & I
 - **Xây dựng tài liệu Kiến trúc (`architecture.md`)**: Thống nhất với Tech Lead về sơ đồ kiến trúc hệ thống (Pipeline diagram bằng dạng Mermaid). Cập nhật các quyết định của nhóm về việc sử dụng `semantic split` để giữ lại chất lượng nội dung tốt nhất thay vì chia string cắt ngang ngữ nghĩa văn bản.
 - **Duy trì nhật ký thử nghiệm (`tuning-log.md`)**: Theo sát các quyết định thay đổi config quan trọng trong Sprint 1 & 2 như thiết lập điểm số Threshold `0.35` (chống hallucination), sử dụng model `gpt-4o-mini`. 
 - **Tổng hợp báo cáo (`group_report.md`)**: Chủ động khởi tạo báo cáo tổng cho cả nhóm, tạo sẵn các luận điểm chính nhằm giúp mọi người chỉ cần điền kết quả A/B Test vào mà không bị lúng túng trong phút chót.
+- **Dựng Prototype Web UI (Thuyết trình)**: Chủ động khởi tạo một backend FastAPI nhỏ phục vụ tĩnh nội dung Giao diện HTML (The Digital Architect) có sẵn của nhóm. Gắn kết logic DOM với API ảo nhằm mục đích minh họa "Trace Panel", giúp người theo dõi dễ dàng hiểu được luồng đi của Hybrid Search và Reranker điểm số.
 
 ## 2. Phân tích một câu hỏi Grading
 *(Phần này sẽ được bổ sung sau phiên Grading lúc 17:00, dự kiến chọn phân tích câu hỏi có tính chất lấy dữ liệu từ đa văn bản hoặc yêu cầu so sánh mốc thời gian temporal scoping).*

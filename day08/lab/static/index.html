@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="vi"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Lucid Intelligence - IT Helpdesk RAG Tech Demo</title>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=Manrope:wght@600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "primary-fixed": "#b6ebff",
+                        "outline": "#8b90a0",
+                        "on-secondary": "#002e69",
+                        "tertiary": "#3cddc7",
+                        "on-tertiary-fixed-variant": "#005047",
+                        "tertiary-fixed-dim": "#3cddc7",
+                        "inverse-primary": "#00677f",
+                        "secondary-container": "#4b8eff",
+                        "inverse-on-surface": "#283044",
+                        "secondary": "#adc6ff",
+                        "on-tertiary": "#003731",
+                        "on-error-container": "#ffdad6",
+                        "error-container": "#93000a",
+                        "inverse-surface": "#dae2fd",
+                        "tertiary-fixed": "#62fae3",
+                        "secondary-fixed-dim": "#adc6ff",
+                        "on-secondary-fixed": "#001a41",
+                        "surface-dim": "#0b1326",
+                        "surface-tint": "#47d6ff",
+                        "surface-container-high": "#222a3d",
+                        "surface-container-lowest": "#060e20",
+                        "primary-container": "#009ec0",
+                        "surface-variant": "#2d3449",
+                        "on-secondary-container": "#00285c",
+                        "outline-variant": "#414755",
+                        "on-primary": "#003543",
+                        "surface": "#0b1326",
+                        "on-tertiary-fixed": "#00201c",
+                        "surface-container": "#171f33",
+                        "surface-container-low": "#131b2e",
+                        "on-background": "#dae2fd",
+                        "on-surface-variant": "#c1c6d7",
+                        "surface-bright": "#31394d",
+                        "error": "#ffb4ab",
+                        "on-secondary-fixed-variant": "#004493",
+                        "on-primary-fixed": "#001f28",
+                        "surface-container-highest": "#2d3449",
+                        "on-primary-fixed-variant": "#004e60",
+                        "background": "#0b1326",
+                        "tertiary-container": "#00a392",
+                        "primary-fixed-dim": "#47d6ff",
+                        "on-error": "#690005",
+                        "secondary-fixed": "#d8e2ff",
+                        "on-primary-container": "#002e3a",
+                        "primary": "#47d6ff",
+                        "on-surface": "#dae2fd",
+                        "on-tertiary-container": "#00302a"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "fontFamily": {
+                        "headline": ["Manrope"],
+                        "body": ["Inter"],
+                        "label": ["Inter"]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .glass-panel {
+            background: rgba(34, 42, 61, 0.7);
+            backdrop-filter: blur(24px);
+        }
+        .electric-flow {
+            background: linear-gradient(45deg, #47d6ff, #3cddc7);
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0b1326;
+        }
+        h1, h2, h3 {
+            font-family: 'Manrope', sans-serif;
+        }
+    </style>
+</head>
+<body class="bg-surface text-on-surface selection:bg-primary/30 min-h-screen flex flex-col">
+<!-- TopNavBar -->
+<header class="w-full top-0 sticky z-50 bg-[#0b1326] shadow-[0_0_40px_rgba(71,214,255,0.06)] flex justify-between items-center h-16 px-6 font-['Manrope'] tracking-wide antialiased">
+<div class="flex items-center gap-3">
+<span class="text-xl font-bold tracking-tighter text-[#dae2fd]">Lucid Intelligence</span>
+<span class="text-xs px-2 py-0.5 rounded bg-surface-container-highest text-tertiary border border-outline-variant/20 uppercase tracking-widest font-bold">Tech Demo</span>
+</div>
+<div class="hidden md:flex items-center gap-8 text-[#c1c6d7]">
+<a class="text-[#47d6ff] font-semibold hover:text-[#3cddc7] transition-colors duration-200 cursor-pointer">Knowledge Base</a>
+<a class="hover:text-[#3cddc7] transition-colors duration-200 cursor-pointer">Data Sources</a>
+<a class="hover:text-[#3cddc7] transition-colors duration-200 cursor-pointer">Retrieval Config</a>
+</div>
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-[#c1c6d7] cursor-pointer hover:text-[#3cddc7] transition-colors active:scale-95">settings</span>
+<span class="material-symbols-outlined text-[#c1c6d7] cursor-pointer hover:text-[#3cddc7] transition-colors active:scale-95">help</span>
+<span class="material-symbols-outlined text-[#c1c6d7] cursor-pointer hover:text-[#3cddc7] transition-colors active:scale-95">account_circle</span>
+</div>
+</header>
+<div class="flex flex-1 overflow-hidden">
+<!-- SideNavBar / Sidebar Section -->
+<aside class="h-full w-64 bg-[#131b2e] flex flex-col p-4 gap-6 font-['Inter'] text-sm font-medium border-r border-outline-variant/10">
+<div class="space-y-1">
+<div class="flex items-center gap-3 px-2 mb-4">
+<div class="w-8 h-8 rounded-lg bg-surface-container-highest flex items-center justify-center">
+<span class="material-symbols-outlined text-primary text-lg" style="font-variation-settings: 'FILL' 1;">terminal</span>
+</div>
+<div>
+<div class="text-[#dae2fd] font-bold">System Architect</div>
+<div class="text-[10px] text-tertiary">RAG V2.4 Active</div>
+</div>
+</div>
+<div class="space-y-4 pt-4 border-t border-outline-variant/10">
+<h3 class="text-xs font-bold text-on-surface-variant uppercase tracking-widest px-2">⚙️ Cấu hình truy xuất (Retrieval)</h3>
+<div class="space-y-3 px-2">
+<label class="block text-xs text-on-surface-variant mb-2">Mode Selection</label>
+<div class="space-y-2">
+<label class="flex items-center gap-2 cursor-pointer group">
+<input class="w-4 h-4 text-primary bg-surface-container-high border-outline-variant focus:ring-primary focus:ring-offset-surface" name="retrieval_mode" type="radio"/>
+<span class="text-on-surface group-hover:text-primary transition-colors">Dense</span>
+</label>
+<label class="flex items-center gap-2 cursor-pointer group">
+<input class="w-4 h-4 text-primary bg-surface-container-high border-outline-variant focus:ring-primary focus:ring-offset-surface" name="retrieval_mode" type="radio"/>
+<span class="text-on-surface group-hover:text-primary transition-colors">Sparse</span>
+</label>
+<label class="flex items-center gap-2 cursor-pointer group">
+<input checked="" class="w-4 h-4 text-primary bg-surface-container-high border-outline-variant focus:ring-primary focus:ring-offset-surface" name="retrieval_mode" type="radio"/>
+<span class="text-primary font-semibold">Hybrid</span>
+</label>
+</div>
+</div>
+<div class="space-y-3 px-2 pt-2">
+<div class="flex justify-between items-center">
+<label class="text-xs text-on-surface-variant">Ngưỡng tin cậy Abstain</label>
+<span class="text-[10px] bg-primary/10 text-primary px-1.5 py-0.5 rounded">0.35</span>
+</div>
+<input id="threshold-slider" class="w-full h-1 bg-surface-container-highest rounded-lg appearance-none cursor-pointer accent-primary" max="1" min="0" step="0.05" type="range" value="0.35"/>
+</div>
+<div class="px-2 pt-2">
+<label class="flex items-center gap-2 cursor-pointer group">
+<input id="use-hyde-checkbox" class="w-4 h-4 rounded text-tertiary bg-surface-container-high border-outline-variant focus:ring-tertiary focus:ring-offset-surface" type="checkbox"/>
+<span class="text-xs text-on-surface group-hover:text-tertiary transition-colors">Kích hoạt xử lý lại truy vấn (HyDE)</span>
+</label>
+</div>
+<div class="p-3 bg-surface-container-lowest rounded-lg border border-outline-variant/10 mt-6">
+<p class="text-[11px] leading-relaxed text-on-surface-variant italic">
+                            Bảng cấu hình này dùng để tinh chỉnh hệ thống lúc chạy Demo.
+                        </p>
+</div>
+</div>
+</div>
+<div class="mt-auto space-y-1">
+<button class="w-full flex items-center gap-3 px-3 py-2 text-[#c1c6d7] hover:bg-[#222a3d] hover:text-[#dae2fd] rounded-lg transition-all duration-200">
+<span class="material-symbols-outlined text-sm">headset_mic</span>
+<span>Support</span>
+</button>
+<button class="w-full flex items-center gap-3 px-3 py-2 text-[#c1c6d7] hover:bg-[#222a3d] hover:text-[#dae2fd] rounded-lg transition-all duration-200">
+<span class="material-symbols-outlined text-sm">description</span>
+<span>API Docs</span>
+</button>
+</div>
+</aside>
+<!-- Main Area -->
+<main class="flex-1 flex flex-col relative bg-surface">
+<!-- Header Section -->
+<div class="px-8 py-6 border-b border-outline-variant/5">
+<h1 class="text-2xl font-extrabold text-on-surface tracking-tight">Trợ lý Ảo CS &amp; IT <span class="text-transparent bg-clip-text electric-flow">(RAG Powered)</span></h1>
+<p class="text-sm text-on-surface-variant mt-1">Hệ thống hỗ trợ truy vấn thông tin nội bộ thông minh</p>
+</div>
+<!-- Chat Area -->
+<div id="chat-history" class="flex-1 overflow-y-auto px-8 py-6 space-y-8 max-w-5xl mx-auto w-full">
+<!-- Assistant Message -->
+<div class="flex items-start gap-4">
+<div class="w-10 h-10 rounded-xl bg-surface-container-low border border-primary/15 flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-primary" style="font-variation-settings: 'FILL' 1;">smart_toy</span>
+</div>
+<div class="space-y-4 flex-1">
+<div class="bg-surface-container-low p-4 rounded-xl rounded-tl-none border border-primary/10 text-on-surface shadow-sm max-w-2xl">
+<p class="leading-relaxed">Xin chào, tôi là trợ lý nội bộ. Bạn muốn hỏi về SLA hay chính sách hoàn tiền nào?</p>
+</div>
+<!-- Trace Panel Section -->
+<div class="max-w-3xl">
+<details class="group border border-outline-variant/20 rounded-xl bg-surface-container-lowest overflow-hidden transition-all duration-300">
+<summary class="flex items-center justify-between p-3 cursor-pointer hover:bg-surface-container-low transition-colors list-none">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-tertiary text-lg">query_stats</span>
+<span class="text-sm font-semibold text-on-surface tracking-wide">🔍 Xem thông tin chi tiết (Trace Panel)</span>
+</div>
+<span class="material-symbols-outlined text-on-surface-variant transition-transform group-open:rotate-180">expand_more</span>
+</summary>
+<div class="p-4 space-y-6 border-t border-outline-variant/10">
+<div class="flex items-center gap-3">
+<div class="px-2 py-1 rounded bg-surface-container-high border border-outline-variant/20 flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-tertiary"></span>
+<span class="text-[11px] font-mono text-on-surface-variant">Thời gian phản hồi: 1.2s</span>
+</div>
+<div class="px-2 py-1 rounded bg-surface-container-high border border-outline-variant/20 flex items-center gap-2">
+<span class="text-[11px] font-mono text-tertiary">Success: 200 OK</span>
+</div>
+</div>
+<div class="space-y-4">
+<!-- Chunk 1 -->
+<div class="p-4 bg-surface-container rounded-lg border-l-2 border-primary/50 relative">
+<div class="flex justify-between items-start mb-2">
+<div class="flex gap-3">
+<span class="text-[10px] font-bold text-primary bg-primary/10 px-1.5 py-0.5 rounded">CHUNK 1</span>
+<span class="text-[11px] text-on-surface-variant font-medium">Source: policy_sla.pdf | Section: Section 1.2</span>
+</div>
+<span class="text-[11px] font-bold text-tertiary">Score: 0.89</span>
+</div>
+<p class="text-sm text-on-surface/80 italic leading-relaxed">
+                                                "Thời gian phản hồi cho mức độ Ưu tiên 1 là 2 giờ làm việc. Đối với các yêu cầu không khẩn cấp, SLA chuẩn là 24 giờ..."
+                                            </p>
+</div>
+<!-- Chunk 2 -->
+<div class="p-4 bg-surface-container rounded-lg border-l-2 border-secondary/50 relative">
+<div class="flex justify-between items-start mb-2">
+<div class="flex gap-3">
+<span class="text-[10px] font-bold text-secondary bg-secondary/10 px-1.5 py-0.5 rounded">CHUNK 2</span>
+<span class="text-[11px] text-on-surface-variant font-medium">Source: refund_guide.docx | Section: Intro</span>
+</div>
+<span class="text-[11px] font-bold text-tertiary">Score: 0.72</span>
+</div>
+<p class="text-sm text-on-surface/80 italic leading-relaxed">
+                                                "Chính sách hoàn tiền áp dụng cho tất cả các gói dịch vụ cao cấp trong vòng 30 ngày kể từ ngày kích hoạt..."
+                                            </p>
+</div>
+</div>
+</div>
+</details>
+</div>
+</div>
+</div>
+</div>
+<!-- Input Area -->
+<div class="p-6 mt-auto">
+<div class="max-w-4xl mx-auto relative group">
+<div class="absolute -inset-1 bg-gradient-to-r from-primary/20 to-tertiary/20 rounded-full blur opacity-40 group-focus-within:opacity-100 transition-opacity"></div>
+<div class="relative glass-panel rounded-full flex items-center p-2 border border-outline-variant/30 group-focus-within:border-primary/50 transition-all">
+<span class="material-symbols-outlined ml-4 text-on-surface-variant">attach_file</span>
+<input id="chat-input" class="flex-1 bg-transparent border-none focus:ring-0 text-on-surface px-4 py-3 placeholder:text-on-surface-variant/50" placeholder="Nhập câu hỏi của bạn tại đây..." type="text"/>
+<button id="send-btn" class="w-10 h-10 rounded-full electric-flow flex items-center justify-center text-on-primary shadow-lg active:scale-95 transition-transform">
+<span class="material-symbols-outlined text-xl" style="font-variation-settings: 'FILL' 1;">send</span>
+</button>
+</div>
+</div>
+<div class="text-center mt-3">
+<p class="text-[10px] text-on-surface-variant/40 tracking-widest uppercase">Powered by Lucid Retrieval Engine • v2.4.0-stable</p>
+</div>
+</div>
+</main>
+</div>
+
+<script>
+    const chatHistory = document.getElementById('chat-history');
+    const chatInput = document.getElementById('chat-input');
+    const sendBtn = document.getElementById('send-btn');
+    
+    // Config elements
+    const thresholdSlider = document.getElementById('threshold-slider');
+    const useHydeCheckbox = document.getElementById('use-hyde-checkbox');
+    const radioModes = document.querySelectorAll('input[name="retrieval_mode"]');
+    
+    function getRetrievalMode() {
+        let selectedMode = 'hybrid';
+        radioModes.forEach((radio) => {
+            if (radio.checked) {
+                selectedMode = radio.nextElementSibling.innerText.trim().toLowerCase();
+            }
+        });
+        return selectedMode;
+    }
+
+    function addUserMessage(msg) {
+        const div = document.createElement('div');
+        div.className = "flex items-start gap-4 justify-end";
+        div.innerHTML = `
+            <div class="space-y-4 max-w-2xl flex-1 flex justify-end">
+                <div class="bg-primary/20 p-4 rounded-xl rounded-tr-none border border-primary/30 text-on-surface shadow-sm">
+                    <p class="leading-relaxed">${msg}</p>
+                </div>
+            </div>
+            <div class="w-10 h-10 rounded-xl bg-surface-container-high border border-outline-variant/30 flex items-center justify-center shrink-0">
+                <span class="material-symbols-outlined text-on-surface-variant" style="font-variation-settings: 'FILL' 1;">person</span>
+            </div>
+        `;
+        chatHistory.appendChild(div);
+        chatHistory.scrollTop = chatHistory.scrollHeight;
+    }
+
+    function addThinkingMessage() {
+        const idx = "think-" + Date.now();
+        const div = document.createElement('div');
+        div.id = idx;
+        div.className = "flex items-start gap-4";
+        div.innerHTML = `
+            <div class="w-10 h-10 rounded-xl bg-surface-container-low border border-primary/15 flex items-center justify-center shrink-0">
+                <span class="material-symbols-outlined text-primary animate-pulse" style="font-variation-settings: 'FILL' 1;">smart_toy</span>
+            </div>
+            <div class="space-y-4 flex-1">
+                <div class="bg-surface-container-low p-4 rounded-xl rounded-tl-none border border-primary/10 text-on-surface/50 shadow-sm max-w-2xl">
+                    <p class="leading-relaxed animate-pulse">Đang truy xuất thông tin...</p>
+                </div>
+            </div>
+        `;
+        chatHistory.appendChild(div);
+        chatHistory.scrollTop = chatHistory.scrollHeight;
+        return div;
+    }
+
+    function renderTracePanel(chunks, latency) {
+        if (!chunks || chunks.length === 0) return '';
+        
+        let chunksHtml = '';
+        chunks.forEach((chunk, index) => {
+            let colorClass = index === 0 ? 'primary' : 'secondary';
+            chunksHtml += `
+            <div class="p-4 bg-surface-container rounded-lg border-l-2 border-${colorClass}/50 relative">
+                <div class="flex justify-between items-start mb-2">
+                    <div class="flex gap-3">
+                        <span class="text-[10px] font-bold text-${colorClass} bg-${colorClass}/10 px-1.5 py-0.5 rounded">${chunk.id}</span>
+                        <span class="text-[11px] text-on-surface-variant font-medium">Source: ${chunk.source} | Section: ${chunk.section}</span>
+                    </div>
+                    <span class="text-[11px] font-bold text-tertiary">Score: ${chunk.score}</span>
+                </div>
+                <p class="text-sm text-on-surface/80 italic leading-relaxed">"${chunk.text}"</p>
+            </div>`;
+        });
+
+        return `
+        <div class="max-w-3xl mt-4">
+            <details class="group border border-outline-variant/20 rounded-xl bg-surface-container-lowest overflow-hidden transition-all duration-300">
+                <summary class="flex items-center justify-between p-3 cursor-pointer hover:bg-surface-container-low transition-colors list-none">
+                    <div class="flex items-center gap-2">
+                        <span class="material-symbols-outlined text-tertiary text-lg">query_stats</span>
+                        <span class="text-sm font-semibold text-on-surface tracking-wide">🔍 Xem thông tin chi tiết (Trace Panel)</span>
+                    </div>
+                    <span class="material-symbols-outlined text-on-surface-variant transition-transform group-open:rotate-180">expand_more</span>
+                </summary>
+                <div class="p-4 space-y-6 border-t border-outline-variant/10">
+                    <div class="flex items-center gap-3">
+                        <div class="px-2 py-1 rounded bg-surface-container-high border border-outline-variant/20 flex items-center gap-2">
+                            <span class="w-2 h-2 rounded-full bg-tertiary"></span>
+                            <span class="text-[11px] font-mono text-on-surface-variant">Thời gian phản hồi: ${latency}ms</span>
+                        </div>
+                        <div class="px-2 py-1 rounded bg-surface-container-high border border-outline-variant/20 flex items-center gap-2">
+                            <span class="text-[11px] font-mono text-tertiary">Success: 200 OK</span>
+                        </div>
+                    </div>
+                    <div class="space-y-4">
+                        ${chunksHtml}
+                    </div>
+                </div>
+            </details>
+        </div>
+        `;
+    }
+
+    function replaceThinkingWithResponse(thinkDiv, data) {
+        thinkDiv.innerHTML = `
+            <div class="w-10 h-10 rounded-xl bg-surface-container-low border border-primary/15 flex items-center justify-center shrink-0">
+                <span class="material-symbols-outlined text-primary" style="font-variation-settings: 'FILL' 1;">smart_toy</span>
+            </div>
+            <div class="space-y-4 flex-1">
+                <div class="bg-surface-container-low p-4 rounded-xl rounded-tl-none border border-primary/10 text-on-surface shadow-sm max-w-2xl">
+                    <p class="leading-relaxed">${data.answer}</p>
+                </div>
+                ${renderTracePanel(data.chunks_used, data.latency_ms)}
+            </div>
+        `;
+        chatHistory.scrollTop = chatHistory.scrollHeight;
+    }
+
+    async function handleSend() {
+        const query = chatInput.value.trim();
+        if (!query) return;
+
+        // Extract settings
+        const retrievalMode = getRetrievalMode();
+        const threshold = parseFloat(thresholdSlider.value);
+        const useHyde = useHydeCheckbox.checked;
+
+        chatInput.value = "";
+        addUserMessage(query);
+        const thinkDiv = addThinkingMessage();
+
+        try {
+            const response = await fetch('/api/chat', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    query: query,
+                    retrieval_mode: retrievalMode,
+                    threshold: threshold,
+                    use_hyde: useHyde
+                })
+            });
+            const data = await response.json();
+            replaceThinkingWithResponse(thinkDiv, data);
+        } catch (error) {
+            replaceThinkingWithResponse(thinkDiv, {
+                answer: "Đã xảy ra lỗi kết nối.",
+                chunks_used: [], latency_ms: 0
+            });
+        }
+    }
+
+    sendBtn.addEventListener('click', handleSend);
+    chatInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') handleSend();
+    });
+
+</script>
+</body></html>
