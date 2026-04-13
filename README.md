@@ -7,18 +7,32 @@
 
 ## Overview
 
-Ba ngày học này tạo thành một mạch kiến thức liên tục: cùng một artifact (trợ lý nội bộ cho khối CS + IT Helpdesk) được nâng cấp qua từng ngày — từ RAG có kiểm soát, sang điều phối đa agent, đến tầng data pipeline và observability đảm bảo hệ chạy bền.
+Repo này hiện là **workspace lab Day 08** (mã nguồn RAG ở root: `src/`, `data/`, `docs/`). **Slide HTML** của cả ba ngày được lưu trong [`archived/`](archived/) để mở trực tiếp trên browser khi học hoặc dạy.
+
+Ba ngày trên lớp tạo thành một **chuỗi bài học** liên tục: cùng một artifact (trợ lý nội bộ cho khối CS + IT Helpdesk) được nâng cấp qua từng ngày — từ RAG có kiểm soát, sang điều phối đa agent, đến tầng data pipeline và observability. Trong repo này, **chỉ có lab Day 08** được đưa ra để làm việc; Day 09 và Day 10 (ở đây) là **slide tham chiếu**, không kèm mã lab trong layout hiện tại.
 
 ```
 Day 08 ─ RAG grounded          →   Day 09 ─ Supervisor-Workers      →   Day 10 ─ Data + Observe
    Retrieve đúng đoạn               Route + trace + MCP                  Freshness · quality · alert
 ```
 
+### Cấu trúc repo (tóm tắt)
+
+| Phần | Vị trí |
+|------|--------|
+| Lab Day 08 (code) | [`src/`](src/) — `index.py`, `rag_answer.py`, `eval.py` |
+| Dữ liệu & câu hỏi test | [`data/`](data/) — `docs/`, `test_questions.json` |
+| Tài liệu thiết kế / tuning | [`docs/`](docs/) |
+| Báo cáo cá nhân (template) | [`reports/individual/`](reports/individual/) |
+| Slide Day 08 · 09 · 10 | [`archived/day08/`](archived/day08/), [`archived/day09/`](archived/day09/), [`archived/day10/`](archived/day10/) |
+
 ---
 
 ## Day 08 — RAG Pipeline
 
-**File:** [`day08/lecture-08.html`](day08/lecture-08.html)
+**Slide:** [`archived/day08/lecture-08.html`](archived/day08/lecture-08.html)
+
+**Chi tiết sprint, setup và Definition of Done:** [`archived/day08/README.md`](archived/day08/README.md)
 
 ### Vấn đề mở bài
 Vector store đã có, nhưng agent vẫn trả lời sai — tại sao?
@@ -38,16 +52,21 @@ Vector store đã có, nhưng agent vẫn trả lời sai — tại sao?
 3. **Retrieval decision map** — chọn chiến lược phù hợp với use case
 4. **Prompt Surgery** — sửa grounded prompt thực tế
 
-### Deliverables
-- `rag_pipeline.py` — indexing + retrieval end-to-end
-- `eval_scorecard.csv` — kết quả đo retrieval và answer quality
-- `rag_architecture.md` — tài liệu thiết kế
+### Deliverables (lab trong repo này)
+
+- [`src/index.py`](src/index.py) — indexing (preprocess → chunk → embed → store)
+- [`src/rag_answer.py`](src/rag_answer.py) — retrieval + grounded answer (+ tuning variant)
+- [`src/eval.py`](src/eval.py) — scorecard và so sánh A/B; kết quả markdown (ví dụ `scorecard_baseline.md`) trong `src/results/` khi chạy eval
+- [`docs/architecture.md`](docs/architecture.md), [`docs/tuning-log.md`](docs/tuning-log.md)
+- [`reports/individual/`](reports/individual/) — báo cáo cá nhân theo template
 
 ---
 
 ## Day 09 — Multi-Agent & Kết Nối Hệ Thống
 
-**File:** [`day09/lecture-09.html`](day09/lecture-09.html)
+**Slide:** [`archived/day09/lecture-09.html`](archived/day09/lecture-09.html)
+
+> **Ghi chú:** Trong repo này chỉ có file slide trong `archived/`. Mã lab multi-agent (nếu có) không nằm trong layout hiện tại.
 
 ### Vấn đề mở bài
 Một agent giỏi vẫn quá tải khi bài toán phức tạp — khi nào nên tách hệ?
@@ -70,7 +89,8 @@ Một agent giỏi vẫn quá tải khi bài toán phức tạp — khi nào nê
 3. **Tách artifact Day 08** — chia RAG agent thành supervisor + workers
 4. **Phân biệt MCP với A2A** — hands-on classification
 
-### Deliverables
+### Deliverables (mục tiêu trên lớp — không có trong repo này)
+
 - `supervisor_agent.py` — router với route logic rõ ràng
 - `worker_*.py` — retrieval, policy, synthesis workers
 - `trace_log.jsonl` — trace ghi đủ bước cho mỗi run
@@ -80,7 +100,9 @@ Một agent giỏi vẫn quá tải khi bài toán phức tạp — khi nào nê
 
 ## Day 10 — Data Pipeline & Data Observability
 
-**File:** [`day10/lecture-10.html`](day10/lecture-10.html)
+**Slide:** [`archived/day10/lecture-10.html`](archived/day10/lecture-10.html)
+
+> **Ghi chú:** Trong repo này chỉ có file slide trong `archived/`. Mã lab pipeline (nếu có) không nằm trong layout hiện tại.
 
 ### Vấn đề mở bài
 Data từ database công ty đột nhiên sai — agent hallucinate. Hệ của bạn có biết không?
@@ -106,7 +128,8 @@ Data từ database công ty đột nhiên sai — agent hallucinate. Hệ của 
 3. **Dirty data repair** — sửa dataset có missing, duplicate, wrong format
 4. **Incident triage** — xử lý freshness breach theo runbook
 
-### Deliverables
+### Deliverables (mục tiêu trên lớp — không có trong repo này)
+
 - `etl_pipeline.py` — ingest → clean → validate → embed end-to-end
 - `quality/expectations.py` — expectation suite kiểm tra data quality
 - `monitoring/freshness_check.py` — freshness + volume monitor
@@ -129,10 +152,11 @@ Data từ database công ty đột nhiên sai — agent hallucinate. Hệ của 
                                      A2A                 sớm
 ```
 
-Mỗi ngày xây trên artifact của ngày trước:
-- **Day 08** cung cấp `rag_pipeline` làm nền retrieval
-- **Day 09** bọc nó vào `retrieval_worker`, thêm `policy_worker`, `synthesis_worker` và supervisor route
-- **Day 10** đảm bảo dữ liệu feeding vào toàn bộ hệ không bị stale, dirty hay missing
+Theo chuỗi bài học, mỗi ngày xây trên artifact của ngày trước:
+
+- **Day 08** cung cấp pipeline RAG (trong repo này: code trong [`src/`](src/) + dữ liệu [`data/`](data/)) làm nền retrieval
+- **Day 09** (trên lớp) bọc nó vào `retrieval_worker`, thêm `policy_worker`, `synthesis_worker` và supervisor route
+- **Day 10** (trên lớp) đảm bảo dữ liệu feeding vào toàn bộ hệ không bị stale, dirty hay missing
 
 ---
 
@@ -153,19 +177,34 @@ Mỗi ngày xây trên artifact của ngày trước:
 
 ## How to Use
 
-Mỗi slide deck là một file HTML độc lập, chạy thẳng trên browser — không cần cài thêm server:
+### Slide (HTML)
+
+Mỗi slide deck là một file HTML độc lập — mở trực tiếp trong browser, không cần server:
 
 ```bash
-# Mở trực tiếp trong browser
-open day08/lecture-08.html
-open day09/lecture-09.html
-open day10/lecture-10.html
+# Linux — ví dụ mở bằng trình duyệt mặc định
+xdg-open archived/day08/lecture-08.html
+xdg-open archived/day09/lecture-09.html
+xdg-open archived/day10/lecture-10.html
 ```
 
+(trên macOS có thể dùng `open archived/day08/lecture-08.html` tương tự.)
+
 **Điều hướng:**
+
 - `←` / `→` hoặc `Space` — chuyển slide
 - `N` — toggle speaker notes
 - `Home` / `End` — về đầu / cuối
+
+### Lab Day 08 (Python)
+
+```bash
+cp .env.example .env   # điền API key trong .env
+pip install -r requirements.txt
+python src/index.py
+python src/rag_answer.py
+python src/eval.py
+```
 
 ---
 
