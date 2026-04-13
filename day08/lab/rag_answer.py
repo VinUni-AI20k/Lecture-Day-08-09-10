@@ -79,7 +79,6 @@ def retrieve_dense(query: str, top_k: int = TOP_K_SEARCH) -> List[Dict[str, Any]
     """
     import chromadb
     from index import get_embedding, CHROMA_DB_DIR
-<<<<<<< HEAD
     client = chromadb.PersistentClient(path=str(CHROMA_DB_DIR))
     collection = client.get_collection("rag_lab")
 
@@ -87,28 +86,11 @@ def retrieve_dense(query: str, top_k: int = TOP_K_SEARCH) -> List[Dict[str, Any]
     query_embedding = get_embedding(query)
 
     # Query ChromaDB với embedding đó
-=======
-
-    try:
-        client = chromadb.PersistentClient(path=str(CHROMA_DB_DIR))
-        collection = client.get_collection("rag_lab")
-    except Exception as e:
-        print(f"[retrieve_dense] Error loading ChromaDB: {e}. Please ensure index.py was run.")
-        return []
-
-    try:
-        query_embedding = get_embedding(query)
-    except NotImplementedError:
-        print("[retrieve_dense] get_embedding() is not implemented in index.py yet!")
-        return []
-        
->>>>>>> 64497ddb5a924cb54c7ab445dce705013d4a1a86
     results = collection.query(
         query_embeddings=[query_embedding],
         n_results=top_k,
         include=["documents", "metadatas", "distances"]
     )
-<<<<<<< HEAD
     # Trả về kết quả kèm score
     chunks = []
     for i, doc in enumerate(results["documents"][0]):
@@ -124,29 +106,6 @@ def retrieve_dense(query: str, top_k: int = TOP_K_SEARCH) -> List[Dict[str, Any]
     #     "TODO Sprint 2: Implement retrieve_dense().\n"
     #     "Tham khảo comment trong hàm để biết cách query ChromaDB."
     # )
-=======
-    
-    chunks = []
-    
-    # ChromaDB returns a list of lists since we can query multiple vectors at once.
-    # We passed exactly 1 query, so we access index [0].
-    if not results["documents"] or not results["documents"][0]:
-        return []
-        
-    docs = results["documents"][0]
-    metas = results["metadatas"][0]
-    dists = results["distances"][0]
-    
-    for doc, meta, dist in zip(docs, metas, dists):
-        score = 1.0 - dist if dist is not None else 0.0
-        chunks.append({
-            "text": doc,
-            "metadata": meta,
-            "score": float(score)
-        })
-        
-    return chunks
->>>>>>> 64497ddb5a924cb54c7ab445dce705013d4a1a86
 
 
 # =============================================================================
@@ -176,7 +135,6 @@ def retrieve_sparse(query: str, top_k: int = TOP_K_SEARCH) -> List[Dict[str, Any
         scores = bm25.get_scores(tokenized_query)
         top_indices = sorted(range(len(scores)), key=lambda i: scores[i], reverse=True)[:top_k]
     """
-<<<<<<< HEAD
     # Cài rank_bm25
     from rank_bm25 import BM25Okapi
     from index import CHROMA_DB_DIR
@@ -211,50 +169,6 @@ def retrieve_sparse(query: str, top_k: int = TOP_K_SEARCH) -> List[Dict[str, Any
     # Tạm thời return empty list
     # print("[retrieve_sparse] Chưa implement — Sprint 3")
     # return []
-=======
-    import chromadb
-    from rank_bm25 import BM25Okapi
-    from index import CHROMA_DB_DIR
-    
-    try:
-        client = chromadb.PersistentClient(path=str(CHROMA_DB_DIR))
-        collection = client.get_collection("rag_lab")
-        all_data = collection.get(include=["documents", "metadatas"])
-    except Exception as e:
-        print(f"[retrieve_sparse] Lỗi khi load ChromaDB: {e}. Vui lòng đảm bảo index.py đã chạy thành công.")
-        return []
-
-    if not all_data or not all_data.get("documents"):
-        return []
-
-    docs = all_data["documents"]
-    metas = all_data["metadatas"]
-
-    # Tokenize corpus (tách từ cơ bản)
-    tokenized_corpus = [doc.lower().split() for doc in docs]
-    
-    # Khởi tạo mô hình BM25
-    bm25 = BM25Okapi(tokenized_corpus)
-    
-    # Tokenize query và tính điểm
-    tokenized_query = query.lower().split()
-    scores = bm25.get_scores(tokenized_query)
-
-    # Lấy ra các index đã được sort theo score (giảm dần)
-    top_indices = sorted(range(len(scores)), key=lambda i: scores[i], reverse=True)[:top_k]
-
-    chunks = []
-    for idx in top_indices:
-        score = scores[idx]
-        if score > 0:  # Chỉ lấy các chunk trúng từ khóa
-            chunks.append({
-                "text": docs[idx],
-                "metadata": metas[idx],
-                "score": float(score)
-            })
-
-    return chunks
->>>>>>> 64497ddb5a924cb54c7ab445dce705013d4a1a86
 
 
 # =============================================================================
@@ -290,7 +204,6 @@ def retrieve_hybrid(
     - Corpus có cả câu tự nhiên VÀ tên riêng, mã lỗi, điều khoản
     - Query như "Approval Matrix" khi doc đổi tên thành "Access Control SOP"
     """
-<<<<<<< HEAD
     # Chạy retrieve_dense() → dense_results
     retrieve_dense_results = retrieve_dense(query, top_k)
 
@@ -324,41 +237,6 @@ def retrieve_hybrid(
     # Tạm thời fallback về dense
     # print("[retrieve_hybrid] Chưa implement RRF — fallback về dense")
     # return retrieve_dense(query, top_k)
-=======
-    # 1. & 2. Lấy kết quả từ Dense và Sparse (nên lấy đủ lớn để giao thoa RRF hiệu quả)
-    pool_size = max(60, top_k * 2)
-    dense_results = retrieve_dense(query, top_k=pool_size)
-    sparse_results = retrieve_sparse(query, top_k=pool_size)
-
-    rrf_map = {}
-
-    # 3. Tính điểm RRF từ Dense
-    for rank, chunk in enumerate(dense_results):
-        text = chunk["text"]
-        if text not in rrf_map:
-            rrf_map[text] = {"chunk": chunk.copy(), "score": 0.0}
-        # Lưu ý: rank bắt đầu từ 0, nên vị trí (rank thực tế) = rank + 1
-        rrf_map[text]["score"] += dense_weight * (1.0 / (60 + rank + 1))
-
-    # Tính điểm RRF từ Sparse
-    for rank, chunk in enumerate(sparse_results):
-        text = chunk["text"]
-        if text not in rrf_map:
-            rrf_map[text] = {"chunk": chunk.copy(), "score": 0.0}
-        rrf_map[text]["score"] += sparse_weight * (1.0 / (60 + rank + 1))
-
-    # 4. Sort theo RRF score giảm dần
-    ranked_items = sorted(rrf_map.values(), key=lambda x: x["score"], reverse=True)
-
-    # Format output: trả về top_k và ghi đè score cũ bằng score RRF
-    final_chunks = []
-    for item in ranked_items[:top_k]:
-        c = item["chunk"]
-        c["score"] = item["score"]
-        final_chunks.append(c)
-
-    return final_chunks
->>>>>>> 64497ddb5a924cb54c7ab445dce705013d4a1a86
 
 
 # =============================================================================
@@ -481,16 +359,38 @@ def build_grounded_prompt(query: str, context_block: str) -> str:
     - Thêm ngôn ngữ phản hồi (tiếng Việt vs tiếng Anh)
     - Điều chỉnh tone phù hợp với use case (CS helpdesk, IT support)
     """
-    prompt = f"""Answer only from the retrieved context below.
-If the context is insufficient to answer the question, say you do not know and do not make up information.
-Cite the source field (in brackets like [1]) when possible.
-Keep your answer short, clear, and factual.
-Respond in the same language as the question.
+#     prompt = f"""Answer only from the retrieved context below.
+# If the context is insufficient to answer the question, say you do not know and do not make up information.
+# Cite the source field (in brackets like [1]) when possible.
+# Keep your answer short, clear, and factual.
+# If a query mentions an old document name or term that has been updated or renamed in the context, clearly explain the change to the user.
+# Respond in Vietnamese.
 
-Question: {query}
+# Question: {query}
+
+# Context:
+# {context_block}
+
+# Answer:"""
+    prompt = """
+    Xây dựng prompt với các ràng buộc nghiêm ngặt:
+    - Evidence-only: Chỉ dùng thông tin từ context.
+    - Abstain: Không có mã lỗi/quy trình cụ thể trong context -> Từ chối.
+    - Citations: Luôn gắn [ID] vào cuối câu.
+    """
+    prompt = f"""You are a precise technical support assistant. Answer the user's question using ONLY the provided context.
+
+STRICT RULES:
+1. EVIDENCE-ONLY: Only use information from the retrieved context. Do not use external knowledge or invent facts.
+2. ABSTAIN: If the context is insufficient, especially if specific error codes (like {query}) or procedures are missing, state: "Không tìm thấy thông tin về '{query}' trong tài liệu hiện có."
+3. CITATION: Every factual claim must be followed by its source ID in brackets, e.g., [1].
+4. STYLE: Be factual, short, and clear.
+5. LANGUAGE: Respond in the same language as the question (Vietnamese).
 
 Context:
 {context_block}
+
+Question: {query}
 
 Answer:"""
     return prompt
@@ -523,10 +423,25 @@ def call_llm(prompt: str) -> str:
 
     Lưu ý: Dùng temperature=0 hoặc thấp để output ổn định cho evaluation.
     """
-    raise NotImplementedError(
-        "TODO Sprint 2: Implement call_llm().\n"
-        "Chọn Option A (OpenAI) hoặc Option B (Gemini) trong TODO comment."
-    )
+    "TODO Sprint 2: Implement call_llm().\n"
+    # Option A — OpenAI
+    from openai import OpenAI
+    try:
+        client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+        response = client.chat.completions.create(
+            model=LLM_MODEL,
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0,     # temperature=0 để output ổn định, dễ đánh giá
+            max_tokens=512,
+        )
+        return response.choices[0].message.content
+    except Exception as e:
+        return f"Lỗi gọi LLM: {str(e)}"
+
+    # raise NotImplementedError(
+    #     "TODO Sprint 2: Implement call_llm().\n"
+    #     "Chọn Option A (OpenAI) hoặc Option B (Gemini) trong TODO comment."
+    # )
 
 
 def rag_answer(
