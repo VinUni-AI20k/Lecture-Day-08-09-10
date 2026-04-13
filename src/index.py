@@ -216,12 +216,20 @@ def _split_by_size(
 # Embed các chunk và lưu vào ChromaDB
 # =============================================================================
 
+def _embedding_api_base_url() -> str:
+    """
+    Base URL cho OpenAI-compatible /v1/embeddings (độc lập với CHAT_BASE_URL).
+    Để trống = https://api.openai.com/v1.
+    """
+    return (os.getenv("EMBEDDING_BASE_URL") or "").strip()
+
+
 def _openai_embedding_client():
-    """OpenAI SDK: API chính thức hoặc endpoint tương thích (Ollama, ngrok → Ollama)."""
+    """OpenAI SDK cho embeddings — chỉ EMBEDDING_BASE_URL (không dùng URL của chat)."""
     from openai import OpenAI
 
     api_key = os.getenv("OPENAI_API_KEY") or "ollama"
-    base_url = (os.getenv("OPENAI_BASE_URL") or "").strip()
+    base_url = _embedding_api_base_url()
     default_headers = None
     if base_url and "ngrok" in base_url.lower():
         # Tránh trang cảnh báo của tunnel ngrok (free tier) khi gọi API
@@ -238,8 +246,10 @@ def get_embedding(text: str, task: str = "retrieval.passage") -> List[float]:
     """
     Tạo embedding vector cho một đoạn text.
 
+    Model: EMBEDDING_MODEL (không dùng CHAT_MODEL).
+
     EMBEDDING_PROVIDER:
-      - openai (mặc định): OpenAI API hoặc tương thích (đặt OPENAI_BASE_URL cho Ollama/ngrok).
+      - openai (mặc định): OpenAI API hoặc tương thích; base URL: chỉ EMBEDDING_BASE_URL.
       - jina: Jina AI API (cần AUTHORIZATION_JINA).
     """
     provider = (os.getenv("EMBEDDING_PROVIDER") or "openai").strip().lower()

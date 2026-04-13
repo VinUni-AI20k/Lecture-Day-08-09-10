@@ -34,18 +34,25 @@ load_dotenv()
 TOP_K_SEARCH = 10    # Số chunk lấy từ vector store trước rerank (search rộng)
 TOP_K_SELECT = 3     # Số chunk gửi vào prompt sau rerank/select (top-3 sweet spot)
 
-LLM_MODEL = os.getenv("LLM_MODEL", "gpt-4o-mini")
+
+def _chat_model() -> str:
+    """
+    Model chat completions (CHAT_MODEL). Mặc định gpt-4o-mini nếu không đặt.
+    Không đọc EMBEDDING_MODEL.
+    """
+    return (os.getenv("CHAT_MODEL") or "").strip() or "gpt-4o-mini"
 
 
 def _make_openai_client():
     """
-    Client OpenAI SDK. Không đặt OPENAI_BASE_URL (hoặc để trống) → dùng API mặc định của OpenAI.
-    Đặt OPENAI_BASE_URL (vd. http://127.0.0.1:11434/v1/) cho Ollama hoặc proxy tương thích OpenAI.
+    Client OpenAI SDK cho chat completions.
+
+    CHAT_BASE_URL: để trống → https://api.openai.com/v1. Không dùng EMBEDDING_BASE_URL.
     """
     from openai import OpenAI
 
     api_key = os.getenv("OPENAI_API_KEY")
-    base_url = (os.getenv("OPENAI_BASE_URL") or "").strip()
+    base_url = (os.getenv("CHAT_BASE_URL") or "").strip()
     default_headers = None
     if base_url and "ngrok" in base_url.lower():
         default_headers = {"ngrok-skip-browser-warning": "true"}
@@ -307,7 +314,7 @@ def transform_query(query: str, strategy: str = "expansion") -> List[str]:
         return [query]
 
     response = client.chat.completions.create(
-        model=LLM_MODEL,
+        model=_chat_model(),
         messages=[{"role": "user", "content": prompt}],
         temperature=0,
         max_tokens=256,
@@ -390,11 +397,11 @@ Answer:"""
 
 def call_llm(prompt: str) -> str:
     """
-    Gọi LLM qua OpenAI SDK (endpoint mặc định OpenAI, hoặc OPENAI_BASE_URL nếu có).
+    Gọi LLM chat qua OpenAI SDK (_chat_model() = CHAT_MODEL).
     Lưu ý: Dùng temperature=0 hoặc thấp để output ổn định cho evaluation.
     """
     api_key = os.getenv("OPENAI_API_KEY")
-    llm_model = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
+    llm_model = _chat_model()
     if not api_key:
         return "Lỗi: Không tìm thấy OPENAI_API_KEY trong .env. Vui lòng cấu hình."
         
