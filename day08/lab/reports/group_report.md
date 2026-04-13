@@ -127,14 +127,14 @@ Variant hybrid **tốt hơn nhẹ** so với baseline, nổi bật ở **Answer 
 
 **Phân công thực tế:**
 
-| Thành viên        | Phần đã làm                                                                                         | Sprint    |
-| ----------------- | --------------------------------------------------------------------------------------------------- | --------- |
-| Nguyễn Việt Trung | Tích hợp pipeline + query transformation (expansion/stepback/decomposition/HyDE), fix bug retrieval | 2–3       |
-| Trần Ngô Hồng Hà  | Implement dense/sparse/hybrid retrieval + tích hợp vào `rag_answer.py`                              | 2–3       |
-| Hà Việt Khánh     | _Pending (bổ sung từ báo cáo cá nhân)_                                                              | _Pending_ |
-| Nguyễn Tuấn Kiệt  | LLM-as-Judge evaluation (`llm_eval.py`), scorecard + A/B artifacts                                  | 4         |
-| Mã Khoa Học       | Manual evaluation (`manual_eval.py`), tổng hợp nhận xét theo metrics                                | 4         |
-| Nguyễn Hữu Nam    | _Pending (bổ sung từ báo cáo cá nhân)_                                                              | _Pending_ |
+| Thành viên        | Phần đã làm                                                                                                                                                                                                                                       | Sprint |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ |
+| Nguyễn Việt Trung | Tích hợp pipeline + query transformation (expansion/stepback/decomposition/HyDE), fix bug retrieval                                                                                                                                               | 2–3    |
+| Trần Ngô Hồng Hà  | Implement dense/sparse/hybrid retrieval + tích hợp vào `rag_answer.py`                                                                                                                                                                            | 2–3    |
+| Hà Việt Khánh     | Indexing + metadata trong `index.py`: chunking theo từng loại tài liệu (FAQ theo Q/A, SLA theo mức ưu tiên), chuẩn hóa metadata (doc_id/chunk_id/section_title/department/effective_date/prev-next/aliases/char_count), lưu vào ChromaDB (cosine) | 1      |
+| Nguyễn Tuấn Kiệt  | LLM-as-Judge evaluation (`llm_eval.py`), scorecard + A/B artifacts                                                                                                                                                                                | 4      |
+| Mã Khoa Học       | Manual evaluation (`manual_eval.py`), tổng hợp nhận xét theo metrics                                                                                                                                                                              | 4      |
+| Nguyễn Hữu Nam    | Viết tài liệu nhóm: `docs/architecture.md` và `docs/tuning-log.md`, tổng hợp quyết định kỹ thuật + kết quả test để hỗ trợ debug/eval                                                                                                              | 4      |
 
 **Điều nhóm làm tốt:**
 
