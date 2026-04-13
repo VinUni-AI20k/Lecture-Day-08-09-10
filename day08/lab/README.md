@@ -79,6 +79,21 @@ cp .env.example .env
 python index.py    # Xem preview preprocess + chunking (không cần API key)
 ```
 
+### 4. Build / Rebuild index
+```bash
+python index.py build
+```
+
+Cần rebuild khi:
+- Thêm hoặc sửa file trong `data/docs/`
+- Thay đổi `CHUNK_SIZE`, `CHUNK_OVERLAP`, hoặc logic chunking trong `index.py`
+- Đổi `EMBEDDING_PROVIDER` hoặc model embedding
+
+Để xoá index cũ trước khi build lại:
+```bash
+rm -rf chroma_db/ && python index.py build
+```
+
 ---
 
 ## 4 Sprints
