@@ -205,19 +205,36 @@ def retrieve_hybrid(
             for rank, r in enumerate(results, start=1)
         }
 
-    dense_scores = rrf_scores(dense_results, dense_weight)
-    sparse_scores = rrf_scores(sparse_results, sparse_weight)
+    dense_rrf_scores = rrf_scores(dense_results, dense_weight)
+    sparse_rrf_scores = rrf_scores(sparse_results, sparse_weight)
 
-    # Merge all unique chunks
-    all_texts = {r["text"]: r for r in dense_results + sparse_results}
+    dense_by_text = {r["text"]: r for r in dense_results}
+    sparse_by_text = {r["text"]: r for r in sparse_results}
 
-    # Compute combined RRF score
-    ranked = sorted(
-        all_texts.values(),
-        key=lambda r: dense_scores.get(r["text"], 0) + sparse_scores.get(r["text"], 0),
-        reverse=True,
-    )
+    # Merge all unique chunks and expose the fused RRF score as `score`
+    # so downstream logging/debugging reflects the actual hybrid ranking.
+    ranked: List[Dict[str, Any]] = []
+    for text in {r["text"] for r in dense_results + sparse_results}:
+        dense_result = dense_by_text.get(text)
+        sparse_result = sparse_by_text.get(text)
 
+        base_result = dict(dense_result or sparse_result or {})
+        dense_rrf = dense_rrf_scores.get(text, 0.0)
+        sparse_rrf = sparse_rrf_scores.get(text, 0.0)
+
+        base_result["dense_score"] = (
+            dense_result.get("score") if dense_result is not None else None
+        )
+        base_result["sparse_score"] = (
+            sparse_result.get("score") if sparse_result is not None else None
+        )
+        base_result["dense_rrf_score"] = dense_rrf
+        base_result["sparse_rrf_score"] = sparse_rrf
+        base_result["score"] = dense_rrf + sparse_rrf
+
+        ranked.append(base_result)
+
+    ranked.sort(key=lambda r: r["score"], reverse=True)
     return ranked[:top_k]
 
 
