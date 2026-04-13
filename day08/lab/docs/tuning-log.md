@@ -201,17 +201,6 @@ Trong lần thử nghiệm này, Variant (Hybrid + Rerank) không tốt hơn Bas
 ## Tóm tắt học được
 
 1. **Lỗi phổ biến nhất trong pipeline này là gì?**
-<<<<<<< HEAD
-   > **False abstain** — LLM trả "Không đủ dữ liệu" khi thực ra context ĐÃ được retrieve đúng (context recall = 5/5). Hai trường hợp điển hình: q07 (alias query "Approval Matrix" → LLM không nhận ra đây là tên cũ của Access Control SOP dù chunk nói rõ) và q10 (query hỏi quy trình VIP → LLM abstain thay vì trả lời "không có quy trình đặc biệt, áp dụng quy trình tiêu chuẩn"). Nguyên nhân gốc: prompt grounding quá nghiêm khắc ("Do NOT guess, infer") khiến LLM sợ suy luận dù thông tin logic có trong context.
-
-2. **Biến nào có tác động lớn nhất tới chất lượng?**
-   > **Prompt engineering** (cụ thể: mức độ "nghiêm khắc" của grounding instruction). Retrieval đã hoạt động rất tốt (Context Recall trung bình 5.00/5) nhưng generation vẫn có vấn đề (Completeness chỉ 3.40/5). Điểm bottleneck không nằm ở retrieval mà ở cách LLM diễn giải context. Ngoài ra, **dependency management** cũng critical — thiếu 1 package `rank-bm25` đã làm crash toàn bộ variant.
-
-3. **Nếu có thêm 1 giờ, nhóm sẽ thử gì tiếp theo?**
-   > 1. **Cài `rank-bm25` và chạy lại hybrid** để có kết quả A/B thực tế.
-   > 2. **Điều chỉnh prompt**: Thay "Do NOT guess, infer" thành "You may make reasonable inferences from the context, but state when doing so." Kỳ vọng: giảm false abstain ở q07 và q10.
-   > 3. **Implement rerank thực sự** bằng cross-encoder `ms-marco-MiniLM-L-6-v2` thay vì hàm pass-through hiện tại.
-=======
 Lỗi "Abstain" sai (False Negative). Pipeline báo không có dữ liệu cho các câu hỏi phức tạp (gq03, gq05) dù tài liệu có đề cập. Điều này do khâu Retrieval không lấy đủ ngữ cảnh cần thiết khi query quá dài hoặc chứa nhiều điều kiện kết hợp.
 
 2. **Biến nào có tác động lớn nhất tới chất lượng?**
@@ -219,4 +208,3 @@ use_rerank và top_k_select. Việc giới hạn chỉ 3 chunk đưa vào prompt
 
 3. **Nếu có thêm 1 giờ, nhóm sẽ thử gì tiếp theo?**
 Tăng top_k_select lên 5 và thử nghiệm lại trọng số Hybrid (tăng phần Dense lên 0.7) vì có vẻ phần Keyword (Sparse) đang làm nhiễu kết quả khi gặp các từ ngữ chuyên ngành được viết dưới dạng mô tả tự nhiên.
->>>>>>> 2a4875a (feat: finish tuning log and grading)
