@@ -2,7 +2,7 @@
 
 import { useCallback, useId, useRef, useState } from "react";
 import Link from "next/link";
-import { Settings2, PanelRight, AlertCircle, X, Zap, Database, Filter } from "lucide-react";
+import { Settings2, PanelRight, AlertCircle, X, Zap, Database, Filter, Lightbulb, ChevronDown, ChevronUp } from "lucide-react";
 import { Group as PanelGroup, Panel, Separator as PanelResizeHandle } from "react-resizable-panels";
 import { streamRag, type RagResponse, type PipelineStep, type StreamRagHandle } from "@/lib/rag-client";
 import { MessageList } from "@/components/Chat/MessageList";
@@ -63,6 +63,7 @@ export default function ChatPage() {
   const [streamingSteps, setStreamingSteps] = useState<PipelineStep[]>([]);
   const [inspectorOpen, setInspectorOpen] = useState(true);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [showSuggestions, setShowSuggestions] = useState(false);
 
   const [settings, setSettings] = useState<Settings>({
     mode: "dense",
@@ -275,6 +276,36 @@ export default function ChatPage() {
           <PanelGroup orientation="horizontal" className="h-full">
             {/* ── Chat panel ────────────────────────────────────────── */}
             <Panel defaultSize="65%" minSize="35%" className="flex flex-col min-h-0">
+              {/* Suggestion strip (always available, user can toggle) */}
+              <div className="shrink-0 border-b border-primary/15 bg-white/70 px-4 py-2">
+                <div className="mx-auto max-w-3xl">
+                  <button
+                    type="button"
+                    onClick={() => setShowSuggestions((v) => !v)}
+                    className="inline-flex items-center gap-1.5 rounded-full border border-primary/25 bg-primary/5 px-3 py-1 text-[11px] font-semibold text-primary hover:bg-primary/10 transition-colors"
+                  >
+                    <Lightbulb className="h-3.5 w-3.5" />
+                    Câu hỏi gợi ý từ bộ test
+                    {showSuggestions ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+                  </button>
+                  {showSuggestions && (
+                    <div className="mt-2 flex gap-1.5 overflow-x-auto pb-1">
+                      {TEST_QUESTIONS.map((q, idx) => (
+                        <button
+                          key={`${idx}-${q}`}
+                          type="button"
+                          onClick={() => setQuery(q)}
+                          className="shrink-0 rounded-full border border-primary/25 bg-white px-3 py-1 text-[11px] font-medium text-foreground hover:border-primary/50 hover:bg-primary/10 hover:text-primary transition-colors"
+                          title={q}
+                        >
+                          {q.length > 54 ? `${q.slice(0, 54)}...` : q}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+
               {/* Messages area */}
               <div className="flex-1 min-h-0 overflow-y-auto">
                 {isEmpty ? (
@@ -299,24 +330,6 @@ export default function ChatPage() {
                   <p className="mt-1.5 text-center text-[10px] text-muted-foreground">
                     Enter để gửi · Shift+Enter xuống dòng
                   </p>
-                  <div className="mt-2.5 rounded-lg border border-primary/20 bg-primary/5 px-2.5 py-2">
-                    <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-primary/70">
-                      Gợi ý từ bộ câu hỏi test
-                    </p>
-                    <div className="flex gap-1.5 overflow-x-auto pb-1">
-                      {TEST_QUESTIONS.map((q, idx) => (
-                        <button
-                          key={`${idx}-${q}`}
-                          type="button"
-                          onClick={() => setQuery(q)}
-                          className="shrink-0 rounded-full border border-primary/25 bg-white px-3 py-1 text-[11px] font-medium text-foreground hover:border-primary/50 hover:bg-primary/10 hover:text-primary transition-colors"
-                          title={q}
-                        >
-                          {q.length > 54 ? `${q.slice(0, 54)}...` : q}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
                 </div>
               </div>
             </Panel>

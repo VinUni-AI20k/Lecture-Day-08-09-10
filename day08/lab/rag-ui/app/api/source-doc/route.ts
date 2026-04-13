@@ -14,6 +14,25 @@ function guessContentType(filePath: string): string {
   return "application/octet-stream";
 }
 
+function toDocCandidates(src: string): string[] {
+  const cleaned = src.replace(/^[/\\]+/, "");
+  const ext = path.extname(cleaned).toLowerCase();
+  const noExt = ext ? cleaned.slice(0, -ext.length) : cleaned;
+  const normalized = noExt.replace(/[\\/]+/g, "_").replace(/-/g, "_").toLowerCase();
+
+  // Ưu tiên đúng path trước, sau đó fallback theo tên chuẩn hóa trong data/docs.
+  const candidates = [
+    cleaned,
+    `${noExt}.txt`,
+    `${noExt}.md`,
+    `${noExt}.pdf`,
+    `${normalized}.txt`,
+    `${normalized}.md`,
+    `${normalized}.pdf`,
+  ];
+  return Array.from(new Set(candidates));
+}
+
 export async function GET(req: NextRequest) {
   try {
     const src = req.nextUrl.searchParams.get("src")?.trim();
@@ -26,10 +45,29 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ detail: "Đường dẫn không hợp lệ" }, { status: 400 });
     }
 
-    const normalized = path.normalize(src).replace(/^([/\\])+/, "");
-    const fullPath = path.resolve(DOCS_BASE, normalized);
-    if (!fullPath.startsWith(DOCS_BASE)) {
-      return NextResponse.json({ detail: "Không được truy cập ngoài thư mục tài liệu" }, { status: 403 });
+    const docCandidates = toDocCandidates(src);
+    let fullPath: string | null = null;
+
+    for (const candidate of docCandidates) {
+      const normalized = path.normalize(candidate).replace(/^([/\\])+/, "");
+      const resolved = path.resolve(DOCS_BASE, normalized);
+      if (!resolved.startsWith(DOCS_BASE)) continue;
+      try {
+        const st = await fs.stat(resolved);
+        if (st.isFile()) {
+          fullPath = resolved;
+          break;
+        }
+      } catch {
+        // try next candidate
+      }
+    }
+
+    if (!fullPath) {
+      return NextResponse.json(
+        { detail: "Không tìm thấy tài liệu", requested: src },
+        { status: 404 },
+      );
     }
 
     const fileBuffer = await fs.readFile(fullPath);
