@@ -22,8 +22,10 @@ Definition of Done Sprint 3:
 """
 
 import os
+import json
 from typing import List, Dict, Any, Optional, Tuple
 from dotenv import load_dotenv
+from openai import OpenAI
 
 load_dotenv()
 
@@ -324,7 +326,41 @@ def transform_query(query: str, strategy: str = "expansion") -> List[str]:
     - HyDE: query mơ hồ, search theo nghĩa không hiệu quả
     """
     # TODO Sprint 3: Implement query transformation
-    # Tạm thời trả về query gốc
+    """
+    Biến đổi query bằng LLM để tăng hiệu quả tìm kiếm.
+    """
+    if strategy == "expansion":
+        prompt = f"""Bạn là một AI hỗ trợ tra cứu tài liệu nội bộ. 
+        Hãy tạo ra 2 biến thể khác của câu hỏi sau để tăng khả năng tìm kiếm chính xác (giữ nguyên nghĩa, thay đổi từ ngữ/thuật ngữ tương đương):
+        Câu hỏi: '{query}'
+        Trả về kết quả dưới dạng JSON array của các chuỗi (strings), ví dụ: ["biến thể 1", "biến thể 2"]
+        """
+    elif strategy == "decomposition":
+        prompt = f"""Hãy tách câu hỏi phức tạp sau đây thành 2-3 câu hỏi đơn giản hơn để thực hiện tra cứu riêng biệt:
+        Câu hỏi: '{query}'
+        Trả về kết quả dưới dạng JSON array của các chuỗi (strings), ví dụ: ["câu hỏi 1", "câu hỏi 2"]
+        """
+    elif strategy == "hyde":
+        prompt = f"Hãy viết một câu trả lời ngắn gọn, mang tính tài liệu kỹ thuật cho câu hỏi: '{query}'"
+    else:
+        return [query]
+    try:
+        # Gọi LLM (đảm bảo call_llm đã được bạn implement)
+        response_text = call_llm(prompt)
+        
+        if strategy in ["expansion", "decomposition"]:
+            # Parse JSON từ response của LLM
+            # Lưu ý: Có thể cần thêm bước xử lý chuỗi nếu LLM trả về markdown block
+            clean_json = response_text.replace("```json", "").replace("```", "").strip()
+            queries = json.loads(clean_json)
+            return [query] + queries if strategy == "expansion" else queries
+        elif strategy == "hyde":
+            # HyDE thường dùng câu trả lời giả định để search thay cho câu hỏi
+            return [response_text]
+            
+    except Exception as e:
+        print(f"[transform_query] Lỗi: {e}. Fallback về query gốc.")
+        return [query]
     return [query]
 
 
@@ -346,16 +382,17 @@ def build_context_block(chunks: List[Dict[str, Any]]) -> str:
         section = meta.get("section", "")
         score = chunk.get("score", 0)
         text = chunk.get("text", "")
+        date = meta.get("effective_date", "N/A")
+        dept = meta.get("department", "N/A")
 
-        # TODO: Tùy chỉnh format nếu muốn (thêm effective_date, department, ...)
-        header = f"[{i}] {source}"
-        if section:
-            header += f" | {section}"
-        if score > 0:
-            header += f" | score={score:.2f}"
-
-        context_parts.append(f"{header}\n{text}")
-
+        # Xây dựng Header chi tiết: giúp LLM biết chunk này đến từ đâu và khi nào
+        header = f"--- [TÀI LIỆU {i}] ---"
+        meta_info = f"Nguồn: {source} | Mục: {section} | Phòng ban: {dept} | Ngày hiệu lực: {date}"
+        
+        # Kết hợp Header, Metadata và Nội dung
+        chunk_entry = f"{header}\n{meta_info}\nNội dung: {text}"
+        context_parts.append(chunk_entry)
+    # Nối các chunk lại bằng 2 dấu xuống dòng để LLM dễ đọc
     return "\n\n".join(context_parts)
 
 
@@ -373,18 +410,18 @@ def build_grounded_prompt(query: str, context_block: str) -> str:
     - Thêm ngôn ngữ phản hồi (tiếng Việt vs tiếng Anh)
     - Điều chỉnh tone phù hợp với use case (CS helpdesk, IT support)
     """
-    prompt = f"""Answer only from the retrieved context below.
-If the context is insufficient to answer the question, say you do not know and do not make up information.
-Cite the source field (in brackets like [1]) when possible.
-Keep your answer short, clear, and factual.
-Respond in the same language as the question.
-
-Question: {query}
-
-Context:
-{context_block}
-
-Answer:"""
+    prompt = f"""Bạn là một trợ lý AI hỗ trợ giải đáp thắc mắc về chính sách CS/IT cho nhân viên.
+        Hãy trả lời câu hỏi dựa TRỰC TIẾP và DUY NHẤT vào các tài liệu được cung cấp dưới đây.
+        CÁC QUY TẮC BẮT BUỘC:
+        1. EVIDENCE-ONLY: Chỉ sử dụng thông tin có trong phần 'Context'. Không sử dụng kiến thức bên ngoài.
+        2. ABSTAIN: Nếu thông tin trong Context không đủ để trả lời câu hỏi, hãy trả lời chính xác là: "Tôi xin lỗi, hiện tại tài liệu không có thông tin về vấn đề này."
+        3. CITATION: Kết thúc mỗi ý trả lời, hãy trích dẫn nguồn bằng cách ghi số hiệu tài liệu trong ngoặc vuông, ví dụ [1], [2].
+        4. FRESHNESS: Ưu tiên thông tin từ tài liệu có 'Ngày hiệu lực' (Effective Date) mới nhất nếu có sự mâu thuẫn.
+        5. DEPT: Lưu ý thông tin 'Phòng ban' (Dept) để trả lời đúng đối tượng nếu câu hỏi có đề cập.
+        CONTEXT (Dữ liệu tài liệu):
+        {context_block}
+        CÂU HỎI NGƯỜI DÙNG: {query}
+        CÂU TRẢ LỜI CỦA BẠN (vui lòng trả lời bằng ngôn ngữ của câu hỏi):"""
     return prompt
 
 
@@ -415,15 +452,25 @@ def call_llm(prompt: str) -> str:
 
     Lưu ý: Dùng temperature=0 hoặc thấp để output ổn định cho evaluation.
     """
-    raise NotImplementedError(
-        "TODO Sprint 2: Implement call_llm().\n"
-        "Chọn Option A (OpenAI) hoặc Option B (Gemini) trong TODO comment."
-    )
+    
+    api_key = os.getenv("OPENAI_API_KEY")
+    client = OpenAI(api_key=api_key)
+    try:
+        response = client.chat.completions.create(
+            model=LLM_MODEL,
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0,     # temperature=0 để output ổn định cho evaluation
+            max_tokens=600,
+        )
+        return response.choices[0].message.content
+    except Exception as e:
+        return f"Lỗi gọi LLM: {e}"
 
 
 def rag_answer(
     query: str,
     retrieval_mode: str = "dense",
+    query_strategy: str = None,   # Thêm tham số này để chọn expansion/decomposition/hyde
     top_k_search: int = TOP_K_SEARCH,
     top_k_select: int = TOP_K_SELECT,
     use_rerank: bool = False,
@@ -468,47 +515,44 @@ def rag_answer(
         "use_rerank": use_rerank,
     }
 
-    # --- Bước 1: Retrieve ---
-    if retrieval_mode == "dense":
-        candidates = retrieve_dense(query, top_k=top_k_search)
-    elif retrieval_mode == "sparse":
-        candidates = retrieve_sparse(query, top_k=top_k_search)
-    elif retrieval_mode == "hybrid":
-        candidates = retrieve_hybrid(query, top_k=top_k_search)
-    else:
-        raise ValueError(f"retrieval_mode không hợp lệ: {retrieval_mode}")
-
-    if verbose:
-        print(f"\n[RAG] Query: {query}")
-        print(f"[RAG] Retrieved {len(candidates)} candidates (mode={retrieval_mode})")
-        for i, c in enumerate(candidates[:3]):
-            print(f"  [{i+1}] score={c.get('score', 0):.3f} | {c['metadata'].get('source', '?')}")
-
-    # --- Bước 2: Rerank (optional) ---
+    # --- Bước 1: Chọn retrieval function dựa theo retrieval_mode ---
+    # (Sprint 3: Hỗ trợ nhiều câu hỏi nếu có biến đổi query)
+    all_queries = [query]
+    if query_strategy:
+        all_queries = transform_query(query, strategy=query_strategy)
+        
+    all_candidates = []
+    for q in all_queries:
+        if retrieval_mode == "dense":
+            chunks = retrieve_dense(q, top_k=top_k_search)
+        elif retrieval_mode == "sparse":
+            chunks = retrieve_sparse(q, top_k=top_k_search)
+        elif retrieval_mode == "hybrid":
+            chunks = retrieve_hybrid(q, top_k=top_k_search)
+        all_candidates.extend(chunks)
+    # Lọc trùng (Deduplicate) do kết quả trả về từ nhiều query có thể giống nhau
+    seen_text = set()
+    unique_candidates = []
+    for c in all_candidates:
+        if c["text"] not in seen_text:
+            unique_candidates.append(c)
+            seen_text.add(c["text"])
+    # --- Bước 2: Gọi rerank() nếu use_rerank=True ---
     if use_rerank:
-        candidates = rerank(query, candidates, top_k=top_k_select)
+        candidates = rerank(query, unique_candidates, top_k=top_k_select)
     else:
-        candidates = candidates[:top_k_select]
-
-    if verbose:
-        print(f"[RAG] After select: {len(candidates)} chunks")
-
-    # --- Bước 3: Build context và prompt ---
+        # --- Bước 3: Truncate về top_k_select chunks ---
+        # Sắp xếp theo score trước khi cắt để lấy được các chunk tốt nhất
+        candidates = sorted(unique_candidates, key=lambda x: x.get("score", 0), reverse=True)[:top_k_select]
+    # --- Bước 4: Build context block và grounded prompt ---
     context_block = build_context_block(candidates)
     prompt = build_grounded_prompt(query, context_block)
-
     if verbose:
-        print(f"\n[RAG] Prompt:\n{prompt[:500]}...\n")
-
-    # --- Bước 4: Generate ---
+        print(f"\n[RAG] Prompt preview:\n{prompt[:300]}...\n")
+    # --- Bước 5: Gọi call_llm() để sinh câu trả lời ---
     answer = call_llm(prompt)
-
-    # --- Bước 5: Extract sources ---
-    sources = list({
-        c["metadata"].get("source", "unknown")
-        for c in candidates
-    })
-
+    # --- Bước 6: Trả về kết quả kèm metadata ---
+    sources = list({c["metadata"].get("source", "unknown") for c in candidates})
     return {
         "query": query,
         "answer": answer,
