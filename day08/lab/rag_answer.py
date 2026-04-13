@@ -35,14 +35,14 @@ load_dotenv(Path(__file__).with_name(".env"))
 # CẤU HÌNH
 # =============================================================================
 
-TOP_K_SEARCH = 6    # Số chunk lấy từ vector store trước rerank (search rộng)
-TOP_K_SELECT = 3     # Số chunk gửi vào prompt sau rerank/select (top-3 sweet spot)
+TOP_K_SEARCH = 6  # Số chunk lấy từ vector store trước rerank (search rộng)
+TOP_K_SELECT = 3  # Số chunk gửi vào prompt sau rerank/select (top-3 sweet spot)
 
 # HYBRID-specific: Giảm số chunk vì hybrid gọi cả dense + sparse (tốn token/quota)
-TOP_K_HYBRID = 4    # Giảm xuống vì hybrid đã có kết hợp, đỡ cần tìm rộng
+TOP_K_HYBRID = 4  # Giảm xuống vì hybrid đã có kết hợp, đỡ cần tìm rộng
 
 # LLM_MODEL = os.getenv("LLM_MODEL", "gpt-4o-mini")
-LLM_MODEL = os.getenv("LLM_MODEL", "gemini-2.5-flash")
+LLM_MODEL = os.getenv("LLM_MODEL", "gemini-3-flash-preview")
 
 # Retry config
 MAX_LLM_RETRIES = 3
@@ -85,9 +85,11 @@ def _load_sparse_corpus() -> List[Dict[str, Any]]:
 
     return corpus
 
+
 # =============================================================================
 # RETRIEVAL — DENSE (Vector Search)
 # =============================================================================
+
 
 def retrieve_dense(query: str, top_k: int = TOP_K_SEARCH) -> List[Dict[str, Any]]:
     """
@@ -167,6 +169,7 @@ def retrieve_dense(query: str, top_k: int = TOP_K_SEARCH) -> List[Dict[str, Any]
 # Dùng cho Sprint 3 Variant hoặc kết hợp Hybrid
 # =============================================================================
 
+
 def retrieve_sparse(query: str, top_k: int = TOP_K_SEARCH) -> List[Dict[str, Any]]:
     """
     Sparse retrieval: tìm kiếm theo keyword (BM25).
@@ -213,7 +216,9 @@ def retrieve_sparse(query: str, top_k: int = TOP_K_SEARCH) -> List[Dict[str, Any
         return []
 
     scores = bm25.get_scores(tokenized_query)
-    ranked_indices = sorted(range(len(scores)), key=lambda i: scores[i], reverse=True)[:top_k]
+    ranked_indices = sorted(range(len(scores)), key=lambda i: scores[i], reverse=True)[
+        :top_k
+    ]
 
     results: List[Dict[str, Any]] = []
     for idx in ranked_indices:
@@ -235,6 +240,7 @@ def retrieve_sparse(query: str, top_k: int = TOP_K_SEARCH) -> List[Dict[str, Any
 # =============================================================================
 # RETRIEVAL — HYBRID (Dense + Sparse với Reciprocal Rank Fusion)
 # =============================================================================
+
 
 def retrieve_hybrid(
     query: str,
@@ -278,8 +284,12 @@ def retrieve_hybrid(
         text = chunk.get("text", "")
         return f"{source}||{section}||{text}"
 
-    dense_rank_map = {chunk_key(chunk): rank for rank, chunk in enumerate(dense_results, start=1)}
-    sparse_rank_map = {chunk_key(chunk): rank for rank, chunk in enumerate(sparse_results, start=1)}
+    dense_rank_map = {
+        chunk_key(chunk): rank for rank, chunk in enumerate(dense_results, start=1)
+    }
+    sparse_rank_map = {
+        chunk_key(chunk): rank for rank, chunk in enumerate(sparse_results, start=1)
+    }
 
     merged: Dict[str, Dict[str, Any]] = {}
     all_chunks = dense_results + sparse_results
@@ -296,8 +306,16 @@ def retrieve_hybrid(
         dense_rank = dense_rank_map.get(key)
         sparse_rank = sparse_rank_map.get(key)
 
-        dense_score = dense_weight * (1.0 / (60.0 + dense_rank)) if dense_rank is not None else 0.0
-        sparse_score = sparse_weight * (1.0 / (60.0 + sparse_rank)) if sparse_rank is not None else 0.0
+        dense_score = (
+            dense_weight * (1.0 / (60.0 + dense_rank))
+            if dense_rank is not None
+            else 0.0
+        )
+        sparse_score = (
+            sparse_weight * (1.0 / (60.0 + sparse_rank))
+            if sparse_rank is not None
+            else 0.0
+        )
         merged[key]["score"] += dense_score + sparse_score
 
         if dense_rank is not None and "dense_rank" not in merged[key]:
@@ -318,6 +336,7 @@ def retrieve_hybrid(
 # RERANK (Sprint 3 alternative)
 # Cross-encoder để chấm lại relevance sau search rộng
 # =============================================================================
+
 
 def rerank(
     query: str,
@@ -352,6 +371,7 @@ def rerank(
     # TODO Sprint 3: Implement rerank
     # Tạm thời trả về top_k đầu tiên (không rerank)
     from sentence_transformers import CrossEncoder
+
     model = CrossEncoder("cross-encoder/ms-marco-MiniLM-L-6-v2")
     pairs = [[query, chunk["text"]] for chunk in candidates]
     scores = model.predict(pairs)
@@ -362,6 +382,7 @@ def rerank(
 # =============================================================================
 # QUERY TRANSFORMATION (Sprint 3 alternative)
 # =============================================================================
+
 
 def transform_query(query: str, strategy: str = "expansion") -> List[str]:
     """
@@ -397,6 +418,7 @@ def transform_query(query: str, strategy: str = "expansion") -> List[str]:
 # =============================================================================
 # GENERATION — GROUNDED ANSWER FUNCTION
 # =============================================================================
+
 
 def build_context_block(chunks: List[Dict[str, Any]]) -> str:
     """
@@ -460,7 +482,11 @@ Answer:
     return prompt
 
 
-def call_llm(prompt: str, max_retries: int = MAX_LLM_RETRIES, initial_wait: float = INITIAL_RETRY_WAIT) -> str:
+def call_llm(
+    prompt: str,
+    max_retries: int = MAX_LLM_RETRIES,
+    initial_wait: float = INITIAL_RETRY_WAIT,
+) -> str:
     """
     Gọi LLM để sinh câu trả lời với retry logic cho 503 errors.
 
@@ -536,7 +562,9 @@ def call_llm(prompt: str, max_retries: int = MAX_LLM_RETRIES, initial_wait: floa
             # Check nếu là 503 UNAVAILABLE error
             if "503" in error_str or "UNAVAILABLE" in error_str:
                 if retry_count < max_retries:
-                    print(f"[LLM] ⚠ 503 Error (attempt {retry_count + 1}/{max_retries}), chờ {wait_time}s...")
+                    print(
+                        f"[LLM] ⚠ 503 Error (attempt {retry_count + 1}/{max_retries}), chờ {wait_time}s..."
+                    )
                     time.sleep(wait_time)
                     retry_count += 1
                     wait_time *= 2  # Exponential backoff
@@ -608,7 +636,9 @@ def rag_answer(
     if retrieval_mode == "hybrid":
         effective_top_k = TOP_K_HYBRID
         if verbose:
-            print(f"[RAG] Dùng TOP_K_HYBRID={TOP_K_HYBRID} (thay vì TOP_K_SEARCH={top_k_search}) để tối ưu hóa")
+            print(
+                f"[RAG] Dùng TOP_K_HYBRID={TOP_K_HYBRID} (thay vì TOP_K_SEARCH={top_k_search}) để tối ưu hóa"
+            )
 
     if retrieval_mode == "dense":
         candidates = retrieve_dense(query, top_k=effective_top_k)
@@ -623,7 +653,9 @@ def rag_answer(
         print(f"\n[RAG] Query: {query}")
         print(f"[RAG] Retrieved {len(candidates)} candidates (mode={retrieval_mode})")
         for i, c in enumerate(candidates[:3]):
-            print(f"  [{i+1}] score={c.get('score', 0):.3f} | {c['metadata'].get('source', '?')}")
+            print(
+                f"  [{i+1}] score={c.get('score', 0):.3f} | {c['metadata'].get('source', '?')}"
+            )
 
     # --- Bước 2: Rerank (optional) ---
     if use_rerank:
@@ -645,10 +677,7 @@ def rag_answer(
     answer = call_llm(prompt)
 
     # --- Bước 5: Extract sources ---
-    sources = list({
-        c["metadata"].get("source", "unknown")
-        for c in candidates
-    })
+    sources = list({c["metadata"].get("source", "unknown") for c in candidates})
 
     return {
         "query": query,
@@ -663,6 +692,7 @@ def rag_answer(
 # SPRINT 3: SO SÁNH BASELINE VS VARIANT
 # =============================================================================
 
+
 def compare_retrieval_strategies(query: str) -> None:
     """
     So sánh các retrieval strategies với cùng một query.
@@ -675,7 +705,7 @@ def compare_retrieval_strategies(query: str) -> None:
     """
     print(f"\n{'='*60}")
     print(f"Query: {query}")
-    print('='*60)
+    print("=" * 60)
 
     strategies = ["dense", "hybrid"]  # Thêm "sparse" sau khi implement
 
@@ -722,10 +752,14 @@ if __name__ == "__main__":
     # Uncomment sau khi Sprint 3 hoàn thành:
     print("\n--- Sprint 3: So sánh strategies (với optimization) ---")
     print(f"\n[INFO] OPTIMIZATION:")
-    print(f"  • call_llm() có retry logic với exponential backoff (max_retries={MAX_LLM_RETRIES})")
-    print(f"  • Hybrid retrieval dùng TOP_K_HYBRID={TOP_K_HYBRID} (not {TOP_K_SEARCH}) để giảm token cost")
+    print(
+        f"  • call_llm() có retry logic với exponential backoff (max_retries={MAX_LLM_RETRIES})"
+    )
+    print(
+        f"  • Hybrid retrieval dùng TOP_K_HYBRID={TOP_K_HYBRID} (not {TOP_K_SEARCH}) để giảm token cost"
+    )
     print(f"  • Dense/Sparse dùng TOP_K_SEARCH={TOP_K_SEARCH}")
-    
+
     compare_retrieval_strategies("Ai phải phê duyệt để cấp quyền Level 3?")
     # print("\n\nViệc cần làm Sprint 2:")
     # print("  1. Implement retrieve_dense() — query ChromaDB")
