@@ -23,6 +23,10 @@ Definition of Done Sprint 3:
 
 import os
 from typing import List, Dict, Any, Optional, Tuple
+import chromadb
+from openai import OpenAI
+
+from index import CHROMA_DB_DIR, get_embedding
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -76,10 +80,32 @@ def retrieve_dense(query: str, top_k: int = TOP_K_SEARCH) -> List[Dict[str, Any]
         # Lưu ý: distances trong ChromaDB cosine = 1 - similarity
         # Score = 1 - distance
     """
+    
+    client = chromadb.PersistentClient(path=str(CHROMA_DB_DIR))
+    collection = client.get_collection("rag_lab")
+
+    query_embedding = get_embedding(query)
+    results = collection.query(
+        query_embeddings=[query_embedding],
+        n_results=top_k,
+        include=["documents", "metadatas", "distances"]
+    )
+
+    chunks = []
+    if results["documents"] and len(results["documents"]) > 0:
+        # ChromaDB trả về mảng 2 chiều, ta lấy index [0]
+        for document , metadata, distance in zip(results["documents"][0], results["metadatas"][0], results["distances"][0]):
+            chunks.append({
+                "text": document,
+                "metadata": metadata,
+                "score": 1 - distance  # Chuyển distance thành similarity score
+            })
+    return chunks
+    """
     raise NotImplementedError(
         "TODO Sprint 2: Implement retrieve_dense().\n"
         "Tham khảo comment trong hàm để biết cách query ChromaDB."
-    )
+    )"""
 
 
 # =============================================================================
@@ -249,12 +275,13 @@ def build_context_block(chunks: List[Dict[str, Any]]) -> str:
         text = chunk.get("text", "")
 
         # TODO: Tùy chỉnh format nếu muốn (thêm effective_date, department, ...)
-        header = f"[{i}] {source}"
-        if section:
-            header += f" | {section}"
-        if score > 0:
-            header += f" | score={score:.2f}"
+        # header = f"[{i}] {source}"
+        # if section:
+        #     header += f" | {section}"
+        # if score > 0:
+        #     header += f" | score={score:.2f}"
 
+        header = f"[{i}] {source} | {section} | score={score:.2f}"
         context_parts.append(f"{header}\n{text}")
 
     return "\n\n".join(context_parts)
@@ -274,20 +301,33 @@ def build_grounded_prompt(query: str, context_block: str) -> str:
     - Thêm ngôn ngữ phản hồi (tiếng Việt vs tiếng Anh)
     - Điều chỉnh tone phù hợp với use case (CS helpdesk, IT support)
     """
-    prompt = f"""Answer only from the retrieved context below.
-If the context is insufficient to answer the question, say you do not know and do not make up information.
-Cite the source field (in brackets like [1]) when possible.
-Keep your answer short, clear, and factual.
-Respond in the same language as the question.
+#     prompt = f"""Answer only from the retrieved context below.
+# If the context is insufficient to answer the question, say you do not know and do not make up information.
+# Cite the source field (in brackets like [1]) when possible.
+# Keep your answer short, clear, and factual.
+# Respond in the same language as the question.
 
-Question: {query}
+# Question: {query}
 
-Context:
+# Context:
+# {context_block}
+
+# Answer:"""
+    prompt = f"""Bạn là một trợ lý IT và HR nội bộ. 
+Dưới đây là các tài liệu tham khảo (Context).
+
+YÊU CẦU BẮT BUỘC:
+1. CHỈ sử dụng thông tin từ Context để trả lời. TUYỆT ĐỐI KHÔNG dùng kiến thức bên ngoài.
+2. Nếu Context không có câu trả lời, hãy nói chính xác: "Tôi không có đủ dữ liệu để trả lời câu hỏi này."
+3. Ở cuối mỗi thông tin cung cấp, BẮT BUỘC phải thêm số thứ tự nguồn trong ngoặc vuông (ví dụ: [1], [2]).
+
+[CONTEXT]
 {context_block}
+[END CONTEXT]
 
-Answer:"""
+Câu hỏi: {query}
+Câu trả lời:"""
     return prompt
-
 
 def call_llm(prompt: str) -> str:
     """
@@ -316,10 +356,31 @@ def call_llm(prompt: str) -> str:
 
     Lưu ý: Dùng temperature=0 hoặc thấp để output ổn định cho evaluation.
     """
+    try:
+        client = OpenAI(
+            api_key=os.getenv("DASHSCOPE_API_KEY"),
+            base_url="https://dashscope-intl.aliyuncs.com/compatible-mode/v1",
+        )
+        completion = client.chat.completions.create(
+            model="qwen3.6-plus-2026-04-02",
+            messages=[
+                { 'role': 'system', 'content': 'You are a helpful IT and HR support assistant. Answer strictly based on the provided context. If the context does not contain the answer, say you do not know.'},
+                { 'role': 'user', 'content': prompt }
+            ],
+            temperature=0.0,  # = 0 tránh tự suy diễn (hallucination)
+            max_tokens=512
+        )
+        return completion.choices[0].message.content.strip()
+        
+    except Exception as e:
+        print(f"Error message: {e}")
+        print("See: https://www.alibabacloud.com/help/model-studio/developer-reference/error-code")
+        return "Error appeared while calling LLM."
+    """
     raise NotImplementedError(
         "TODO Sprint 2: Implement call_llm().\n"
         "Chọn Option A (OpenAI) hoặc Option B (Gemini) trong TODO comment."
-    )
+    )"""
 
 
 def rag_answer(
@@ -386,6 +447,7 @@ def rag_answer(
             print(f"  [{i+1}] score={c.get('score', 0):.3f} | {c['metadata'].get('source', '?')}")
 
     # --- Bước 2: Rerank (optional) ---
+    """
     if use_rerank:
         candidates = rerank(query, candidates, top_k=top_k_select)
     else:
@@ -393,6 +455,7 @@ def rag_answer(
 
     if verbose:
         print(f"[RAG] After select: {len(candidates)} chunks")
+    """
 
     # --- Bước 3: Build context và prompt ---
     context_block = build_context_block(candidates)
