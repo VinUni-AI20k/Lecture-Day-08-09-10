@@ -226,8 +226,8 @@ def build_all(docs_dir=DOCS_DIR):
     # Build Chroma
     vectorstore = build_vector_index(all_chunks)
     
-    # Build BM25S (Để Khải làm hoặc implement nếu cần)
-    # build_bm25_index(all_chunks)
+    # Build BM25S (Cần cho Sprint 3 Hybrid Search)
+    build_bm25_index(all_chunks)
     
     # Verify
     list_chunks(vectorstore)
