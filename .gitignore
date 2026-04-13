@@ -6,4 +6,8 @@
 day08/lab/data/grading_questions.json
 day08/lab/.env
 
+.venv/
+.env
+chroma_db/
+__pycache__/
 day08/lab/.venv/

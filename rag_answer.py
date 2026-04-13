@@ -32,7 +32,7 @@ load_dotenv()
 # =============================================================================
 
 TOP_K_SEARCH = 10    # Số chunk lấy từ vector store trước rerank (search rộng)
-TOP_K_SELECT = 3     # Số chunk gửi vào prompt sau rerank/select (top-3 sweet spot)
+TOP_K_SELECT = 5     # Số chunk gửi vào prompt sau rerank/select (top-5 cho multi-doc coverage)
 
 LLM_MODEL = os.getenv("LLM_MODEL", "gpt-4o-mini")
 LLM_PROVIDER = os.getenv("LLM_PROVIDER", "openai")
@@ -132,8 +132,9 @@ def _build_bm25_index():
             "metadata": meta,
         })
 
+    import re as _re
     corpus = [chunk["text"] for chunk in _bm25_chunks]
-    tokenized_corpus = [doc.lower().split() for doc in corpus]
+    tokenized_corpus = [_re.findall(r'\\w+', doc.lower()) for doc in corpus]
     _bm25_index = BM25Okapi(tokenized_corpus)
 
     return _bm25_index, _bm25_chunks
@@ -164,7 +165,8 @@ def retrieve_sparse(query: str, top_k: int = TOP_K_SEARCH) -> List[Dict[str, Any
     # Tạm thời return empty list
     bm25, chunks = _build_bm25_index()
 
-    tokenized_query = query.lower().split()
+    import re as _re
+    tokenized_query = _re.findall(r'\\w+', query.lower())
     scores = bm25.get_scores(tokenized_query)
 
     # Get top-k by score
@@ -227,14 +229,14 @@ def retrieve_hybrid(
     k = 60
 
     for rank, chunk in enumerate(dense_results):
-        key = chunk["text"][:200]  # Use first 200 chars as key
+        key = hash(chunk["text"])  # Use hash for reliable dedup
         rrf_score = dense_weight * (1.0 / (k + rank + 1))
         if key not in rrf_scores:
             rrf_scores[key] = {"chunk": chunk, "rrf_score": 0.0}
         rrf_scores[key]["rrf_score"] += rrf_score
 
     for rank, chunk in enumerate(sparse_results):
-        key = chunk["text"][:200]
+        key = hash(chunk["text"])
         rrf_score = sparse_weight * (1.0 / (k + rank + 1))
         if key not in rrf_scores:
             rrf_scores[key] = {"chunk": chunk, "rrf_score": 0.0}
