@@ -449,6 +449,29 @@ def _trace_chunk_rows(chunks: List[Dict[str, Any]], text_snippet: int = 200) -> 
     return rows
 
 
+def _retrieval_mode_note(retrieval_mode: str) -> str:
+    notes = {
+        "dense": "**Dense:** embed query (cùng model lúc index) → cosine search trong Chroma.",
+        "sparse": "**Sparse (BM25):** tokenize query, chấm điểm keyword trên toàn corpus trong Chroma.",
+        "hybrid": "**Hybrid:** dense + BM25, hợp nhất thứ hạng bằng **RRF** (Reciprocal Rank Fusion).",
+    }
+    return notes.get(
+        retrieval_mode,
+        "**Unknown mode:** kiểm tra lại retrieval_mode để trace đúng pipeline.",
+    )
+
+
+def _get_retriever(retrieval_mode: str):
+    retrievers = {
+        "dense": retrieve_dense,
+        "sparse": retrieve_sparse,
+        "hybrid": retrieve_hybrid,
+    }
+    if retrieval_mode not in retrievers:
+        raise ValueError(f"retrieval_mode không hợp lệ: {retrieval_mode}")
+    return retrievers[retrieval_mode]
+
+
 def rag_answer_impl(
     query: str,
     retrieval_mode: str = "dense",
@@ -501,29 +524,17 @@ def rag_answer_impl(
 
     steps: List[Dict[str, Any]] = []
     if trace:
-        if retrieval_mode == "sparse":
-            retrieve_note = "**Sparse (BM25):** tokenize query, chấm điểm keyword trên toàn corpus trong Chroma."
-        elif retrieval_mode == "dense":
-            retrieve_note = "**Dense:** embed query (cùng model lúc index) → cosine search trong Chroma."
-        else:
-            retrieve_note = "**Hybrid:** dense + BM25, hợp nhất thứ hạng bằng **RRF** (Reciprocal Rank Fusion)."
         steps.append({
             "step": 1,
             "name": "Câu hỏi",
             "emoji": "1️⃣",
-            "detail": retrieve_note,
+            "detail": _retrieval_mode_note(retrieval_mode),
             "query": query,
         })
 
     # --- Bước 1: Retrieve ---
-    if retrieval_mode == "dense":
-        candidates = retrieve_dense(query, top_k=top_k_search)
-    elif retrieval_mode == "sparse":
-        candidates = retrieve_sparse(query, top_k=top_k_search)
-    elif retrieval_mode == "hybrid":
-        candidates = retrieve_hybrid(query, top_k=top_k_search)
-    else:
-        raise ValueError(f"retrieval_mode không hợp lệ: {retrieval_mode}")
+    retriever = _get_retriever(retrieval_mode)
+    candidates = retriever(query, top_k=top_k_search)
 
     if not candidates:
         out: Dict[str, Any] = {
