@@ -51,7 +51,10 @@ def _setup_access_file_logging() -> None:
 
 _setup_access_file_logging()
 
-_DEFAULT_CORS = "http://localhost:3000,http://127.0.0.1:3000"
+_DEFAULT_CORS = (
+    "http://localhost:3000,http://127.0.0.1:3000,"
+    "http://localhost:3001,http://127.0.0.1:3001"
+)
 _origins = [
     o.strip()
     for o in os.getenv("RAG_CORS_ORIGINS", _DEFAULT_CORS).split(",")
