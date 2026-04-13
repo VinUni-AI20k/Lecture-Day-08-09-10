@@ -43,11 +43,11 @@ BASELINE_CONFIG = {
 # Cấu hình variant (Sprint 3 — điều chỉnh theo lựa chọn của nhóm)
 # TODO Sprint 4: Cập nhật VARIANT_CONFIG theo variant nhóm đã implement
 VARIANT_CONFIG = {
-    "retrieval_mode": "hybrid",   # Hoặc "dense" nếu chỉ đổi rerank
+    "retrieval_mode": "hybrid",
     "top_k_search": 10,
     "top_k_select": 3,
-    "use_rerank": True,           # Hoặc False nếu variant là hybrid không rerank
-    "label": "variant_hybrid_rerank",
+    "use_rerank": False,  # Thay đổi ĐÚNG 1 BIẾN so với baseline
+    "label": "variant_hybrid",
 }
 
 
@@ -62,37 +62,37 @@ def score_faithfulness(
 ) -> Dict[str, Any]:
     """
     Faithfulness: Câu trả lời có bám đúng chứng cứ đã retrieve không?
-    Câu hỏi: Model có tự bịa thêm thông tin ngoài retrieved context không?
-
-    Thang điểm 1-5:
-      5: Mọi thông tin trong answer đều có trong retrieved chunks
-      4: Gần như hoàn toàn grounded, 1 chi tiết nhỏ chưa chắc chắn
-      3: Phần lớn grounded, một số thông tin có thể từ model knowledge
-      2: Nhiều thông tin không có trong retrieved chunks
-      1: Câu trả lời không grounded, phần lớn là model bịa
-
-    TODO Sprint 4 — Có 2 cách chấm:
-
-    Cách 1 — Chấm thủ công (Manual, đơn giản):
-        Đọc answer và chunks_used, chấm điểm theo thang trên.
-        Ghi lý do ngắn gọn vào "notes".
-
-    Cách 2 — LLM-as-Judge (Tự động, nâng cao):
-        Gửi prompt cho LLM:
-            "Given these retrieved chunks: {chunks}
-             And this answer: {answer}
-             Rate the faithfulness on a scale of 1-5.
-             5 = completely grounded in the provided context.
-             1 = answer contains information not in the context.
-             Output JSON: {'score': <int>, 'reason': '<string>'}"
-
-    Trả về dict với: score (1-5) và notes (lý do)
+    Sử dụng LLM-as-Judge để tự động chấm điểm.
     """
-    # TODO Sprint 4: Implement scoring
-    # Tạm thời trả về None (yêu cầu chấm thủ công)
+    if "ERROR" in answer or "PIPELINE" in answer or not chunks_used:
+        # Nếu model abstain ("Không tìm thấy thông tin..."), không tính score ở đây (tùy format nhóm),
+        # nhưng để công bằng coi như không hallucinate nếu đúng là abstain.
+        if "không tìm thấy" in answer.lower():
+            return {"score": 5, "notes": "Abstained"}
+        return {"score": None, "notes": "No valid answer to judge"}
+
+    context_text = "\n\n".join([c.get("text", "") for c in chunks_used])
+    prompt = f"""You are an impartial judge evaluating the faithfulness of an AI assistant's answer based on the provided context retrieved from a knowledge base.
+Rate the faithfulness on a scale of 1 to 5, where:
+5 = Mọi thông tin trong answer đều có trong retrieved chunks.
+4 = Gần như hoàn toàn grounded, 1 chi tiết nhỏ chưa chắc chắn.
+3 = Phần lớn grounded, một số thông tin có thể từ model knowledge.
+2 = Nhiều thông tin không có trong retrieved chunks.
+1 = Câu trả lời không grounded, không có thông tin liên quan
+
+Context:
+{context_text}
+
+Answer:
+{answer}
+
+Output MUST be strictly valid JSON: {{"score": <integer 1-5>, "notes": "<short reason in Vietnamese>"}}
+"""
+    response = call_llm(prompt)
+    parsed = parse_llm_json(response)
     return {
-        "score": None,
-        "notes": "TODO: Chấm thủ công hoặc implement LLM-as-Judge",
+        "score": parsed.get("score"),
+        "notes": parsed.get("notes", "No notes"),
     }
 
 
@@ -102,20 +102,28 @@ def score_answer_relevance(
 ) -> Dict[str, Any]:
     """
     Answer Relevance: Answer có trả lời đúng câu hỏi người dùng hỏi không?
-    Câu hỏi: Model có bị lạc đề hay trả lời đúng vấn đề cốt lõi không?
-
-    Thang điểm 1-5:
-      5: Answer trả lời trực tiếp và đầy đủ câu hỏi
-      4: Trả lời đúng nhưng thiếu vài chi tiết phụ
-      3: Trả lời có liên quan nhưng chưa đúng trọng tâm
-      2: Trả lời lạc đề một phần
-      1: Không trả lời câu hỏi
-
-    TODO Sprint 4: Implement tương tự score_faithfulness
+    Sử dụng LLM-as-Judge.
     """
+    prompt = f"""You are an impartial judge evaluating the relevance of an AI assistant's answer to a user's question.
+Rate the relevance on a scale of 1 to 5, where:
+5 = Trả lời trực tiếp và đầy đủ câu hỏi.
+4 = Trả lời đúng nhưng thiếu vài chi tiết phụ hoặc hơi vòng vo.
+3 = Trả lời có liên quan nhưng chưa đúng trọng tâm.
+2 = Trả lời lạc đề một phần.
+1 = Không trả lời câu hỏi, lạc đề hoàn toàn.
+
+Lưu ý: Nếu answer là từ chối trả lời vì thiếu dữ liệu (abstain) hợp lý cho những câu không thể trả lời, hãy cho điểm cao (5) vì đã trả lời đúng bản chất tình huống.
+
+Question: {query}
+Answer: {answer}
+
+Output MUST be strictly valid JSON: {{"score": <integer 1-5>, "notes": "<short reason in Vietnamese>"}}
+"""
+    response = call_llm(prompt)
+    parsed = parse_llm_json(response)
     return {
-        "score": None,
-        "notes": "TODO: Implement score_answer_relevance",
+        "score": parsed.get("score"),
+        "notes": parsed.get("notes", "No notes"),
     }
 
 
@@ -181,26 +189,31 @@ def score_completeness(
     expected_answer: str,
 ) -> Dict[str, Any]:
     """
-    Completeness: Answer có thiếu điều kiện ngoại lệ hoặc bước quan trọng không?
-    Câu hỏi: Answer có bao phủ đủ thông tin so với expected_answer không?
-
-    Thang điểm 1-5:
-      5: Answer bao gồm đủ tất cả điểm quan trọng trong expected_answer
-      4: Thiếu 1 chi tiết nhỏ
-      3: Thiếu một số thông tin quan trọng
-      2: Thiếu nhiều thông tin quan trọng
-      1: Thiếu phần lớn nội dung cốt lõi
-
-    TODO Sprint 4:
-    Option 1 — Chấm thủ công: So sánh answer vs expected_answer và chấm.
-    Option 2 — LLM-as-Judge:
-        "Compare the model answer with the expected answer.
-         Rate completeness 1-5. Are all key points covered?
-         Output: {'score': int, 'missing_points': [str]}"
+    Completeness: Answer có bao phủ được đủ thông tin của expected_answer không?
+    Sử dụng LLM-as-Judge.
     """
+    if not expected_answer:
+        return {"score": None, "notes": "No expected answer provided"}
+
+    prompt = f"""You are an impartial judge comparing an AI assistant's answer with an expected reference answer for completeness.
+Rate completeness on a scale of 1 to 5, where:
+5 = Answer bao gồm đủ tất cả điểm quan trọng trong expected_answer.
+4 = Thiếu 1 chi tiết nhỏ.
+3 = Thiếu một số thông tin quan trọng.
+2 = Thiếu nhiều thông tin quan trọng.
+1 = Thiếu phần lớn nội dung cốt lõi, hoặc sai lệch hẳn.
+
+Question: {query}
+Expected Answer: {expected_answer}
+Actual Answer: {answer}
+
+Output MUST be strictly valid JSON: {{"score": <integer 1-5>, "notes": "<short reason in Vietnamese about what is missing if any>"}}
+"""
+    response = call_llm(prompt)
+    parsed = parse_llm_json(response)
     return {
-        "score": None,
-        "notes": "TODO: Implement score_completeness (so sánh với expected_answer)",
+        "score": parsed.get("score"),
+        "notes": parsed.get("notes", "No notes"),
     }
 
 
@@ -311,7 +324,6 @@ def run_scorecard(
         print(f"\nAverage {metric}: {avg:.2f}" if avg else f"\nAverage {metric}: N/A (chưa chấm)")
 
     return results
-
 
 # =============================================================================
 # A/B COMPARISON
