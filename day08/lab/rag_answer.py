@@ -39,7 +39,7 @@ TOP_K_SEARCH = 10  # Số chunk lấy từ vector store trước rerank (search 
 TOP_K_SELECT = 3  # Số chunk gửi vào prompt sau rerank/select (top-3 sweet spot)
 
 LLM_MODEL = os.getenv("LLM_MODEL", "openai-gpt-4o")
-RERANK_MODEL = os.getenv("RERANK_MODEL", "openai-gpt-4o")
+RERANK_MODEL = os.getenv("RERANK_MODEL", os.getenv("LLM_MODEL", "gpt-4o-mini"))
 
 
 # --- OpenAI client singleton (dùng chung cho call_llm, transform_query, rerank) ---
@@ -110,11 +110,10 @@ def retrieve_dense(query: str, top_k: int = TOP_K_SEARCH) -> List[Dict[str, Any]
     )
 
     chunks = []
-    for doc, meta, dist in zip(
-        results["documents"][0],
-        results["metadatas"][0],
-        results["distances"][0],
-    ):
+    documents = (results.get("documents") or [[]])[0] or []
+    metadatas = (results.get("metadatas") or [[]])[0] or []
+    distances = (results.get("distances") or [[]])[0] or []
+    for doc, meta, dist in zip(documents, metadatas, distances):
         chunks.append(
             {
                 "text": doc,
@@ -162,8 +161,8 @@ def retrieve_sparse(query: str, top_k: int = TOP_K_SEARCH) -> List[Dict[str, Any
     collection = client.get_collection("rag_lab")
     all_data = collection.get(include=["documents", "metadatas"])
 
-    all_docs = all_data["documents"]
-    all_metas = all_data["metadatas"]
+    all_docs = all_data.get("documents") or []
+    all_metas = all_data.get("metadatas") or []
 
     if not all_docs:
         return []
@@ -320,13 +319,18 @@ Chỉ trả về JSON array chứa index theo thứ tự relevance giảm dần.
 Ví dụ: [2, 1, 4]
 Không trả lời thêm chữ nào."""
 
-    response = client.chat.completions.create(
-        model=RERANK_MODEL,
-        messages=[{"role": "user", "content": prompt}],
-        temperature=0,
-        max_tokens=128,
-    )
-    raw = (response.choices[0].message.content or "").strip()
+    try:
+        response = client.chat.completions.create(
+            model=RERANK_MODEL,
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0,
+            max_tokens=128,
+        )
+        raw_content = response.choices[0].message.content or ""
+        raw = raw_content.strip()
+    except Exception as exc:
+        print(f"[rerank] Falling back to original ranking: {exc}")
+        return candidates[:top_k]
 
     selected_indices: List[int] = []
     try:
@@ -465,7 +469,8 @@ Output mẫu:
         max_tokens=256,
     )
 
-    raw = response.choices[0].message.content.strip()
+    raw_content = response.choices[0].message.content or ""
+    raw = raw_content.strip()
 
     # Parse JSON array
     if strategy in {"expansion", "decomposition"}:
@@ -600,7 +605,7 @@ def call_llm(prompt: str) -> str:
             temperature=0,     # temperature=0 để output ổn định, dễ đánh giá
             max_tokens=512,
         )
-        return response.choices[0].message.content
+        return response.choices[0].message.content or "I do not know."
 
     Option B — Google Gemini (cần GOOGLE_API_KEY):
         import google.generativeai as genai
@@ -618,7 +623,7 @@ def call_llm(prompt: str) -> str:
         temperature=0,
         max_tokens=512,
     )
-    return response.choices[0].message.content
+    return response.choices[0].message.content or "I do not know."
 
 
 def rag_answer(

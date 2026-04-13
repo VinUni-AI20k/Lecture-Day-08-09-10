@@ -19,6 +19,10 @@ A/B Rule (từ slide):
 
 import json
 import csv
+import importlib
+import os
+import re
+import unicodedata
 from pathlib import Path
 from typing import List, Dict, Any, Optional
 from datetime import datetime
@@ -43,11 +47,11 @@ BASELINE_CONFIG = {
 # Cấu hình variant (Sprint 3 — điều chỉnh theo lựa chọn của nhóm)
 # TODO Sprint 4: Cập nhật VARIANT_CONFIG theo variant nhóm đã implement
 VARIANT_CONFIG = {
-    "retrieval_mode": "hybrid",   # Hoặc "dense" nếu chỉ đổi rerank
+    "retrieval_mode": "dense",
     "top_k_search": 10,
     "top_k_select": 3,
-    "use_rerank": True,           # Hoặc False nếu variant là hybrid không rerank
-    "label": "variant_hybrid_rerank",
+    "use_rerank": True,
+    "label": "variant_dense_rerank",
 }
 
 
@@ -55,6 +59,161 @@ VARIANT_CONFIG = {
 # SCORING FUNCTIONS
 # 4 metrics từ slide: Faithfulness, Answer Relevance, Context Recall, Completeness
 # =============================================================================
+
+def _normalize_text(text: str) -> str:
+    text = unicodedata.normalize("NFKD", text)
+    text = text.encode("ascii", "ignore").decode("ascii")
+    text = text.lower()
+    text = re.sub(r"[^0-9a-zA-Z]+", " ", text)
+    return re.sub(r"\s+", " ", text).strip()
+
+
+def _tokenize_text(text: str) -> List[str]:
+    normalized = _normalize_text(text)
+    if not normalized:
+        return []
+    stopwords = {
+        "la", "là", "va", "và", "cho", "cua", "của", "the", "this", "that", "and",
+        "or", "to", "trong", "voi", "với", "co", "có", "khong", "không", "mot", "một",
+        "cac", "các", "ve", "về", "nhung", "nhưng", "de", "để", "voi", "when", "what",
+    }
+    tokens = [token for token in normalized.split() if len(token) > 2 and token not in stopwords]
+    return tokens
+
+
+def _safe_extract_json(text: str) -> Dict[str, Any]:
+    if not text:
+        return {}
+
+    candidates = [text.strip()]
+    match = re.search(r"\{.*\}", text, flags=re.DOTALL)
+    if match:
+        candidates.insert(0, match.group(0))
+
+    for candidate in candidates:
+        try:
+            parsed = json.loads(candidate)
+            if isinstance(parsed, dict):
+                return parsed
+        except Exception:
+            continue
+
+    return {}
+
+
+def _score_from_similarity(primary_text: str, reference_texts: List[str]) -> int:
+    primary_tokens = set(_tokenize_text(primary_text))
+    reference_tokens = set()
+    for text in reference_texts:
+        reference_tokens.update(_tokenize_text(text))
+
+    if not primary_tokens:
+        return 1
+    if not reference_tokens:
+        return 3
+
+    overlap = len(primary_tokens & reference_tokens)
+    coverage = overlap / max(len(primary_tokens), 1)
+
+    if coverage >= 0.85:
+        return 5
+    if coverage >= 0.65:
+        return 4
+    if coverage >= 0.45:
+        return 3
+    if coverage >= 0.25:
+        return 2
+    return 1
+
+
+def _judge_with_llm(metric_name: str, prompt: str) -> Optional[Dict[str, Any]]:
+    raw_response = None
+
+    try:
+        openai_key = os.getenv("OPENAI_API_KEY")
+        if openai_key:
+            from openai import OpenAI
+
+            client = OpenAI(api_key=openai_key)
+            response = client.chat.completions.create(
+                model=os.getenv("LLM_MODEL", "gpt-4o-mini"),
+                messages=[
+                    {"role": "system", "content": "You are a strict evaluation judge for a RAG pipeline. Return only JSON."},
+                    {"role": "user", "content": prompt},
+                ],
+                temperature=0,
+                max_tokens=300,
+            )
+            raw_response = response.choices[0].message.content
+        else:
+            google_key = os.getenv("GOOGLE_API_KEY")
+            if google_key:
+                genai = importlib.import_module("google.generativeai")
+                getattr(genai, "configure")(api_key=google_key)
+                model_cls = getattr(genai, "GenerativeModel")
+                model = model_cls(os.getenv("GEMINI_MODEL", "gemini-1.5-flash"))
+                response = model.generate_content(prompt)
+                raw_response = getattr(response, "text", None)
+    except Exception as exc:
+        return {
+            "score": None,
+            "notes": f"LLM judge unavailable for {metric_name}: {exc}",
+        }
+
+    parsed = _safe_extract_json(raw_response or "")
+    if not parsed:
+        return None
+
+    score_value = parsed.get("score", None)
+    notes_value = parsed.get("notes", parsed.get("reason", ""))
+    try:
+        score_int = int(round(float(score_value))) if score_value is not None else None
+    except Exception:
+        score_int = None
+
+    if score_int is not None:
+        score_int = max(1, min(5, score_int))
+
+    return {
+        "score": score_int,
+        "notes": str(notes_value).strip() if notes_value is not None else "",
+    }
+
+
+def _judge_or_fallback(metric_name: str, prompt: str, fallback_score: int, fallback_notes: str) -> Dict[str, Any]:
+    judged = _judge_with_llm(metric_name, prompt)
+    if judged is not None:
+        score = judged.get("score")
+        notes = judged.get("notes", "")
+        if score is not None:
+            return {"score": score, "notes": notes or fallback_notes}
+
+    return {"score": fallback_score, "notes": fallback_notes}
+
+
+def _source_basename(source: str) -> str:
+    source = (source or "").replace("\\", "/")
+    filename = source.rsplit("/", 1)[-1].lower()
+    for extension in (".pdf", ".md", ".txt", ".docx"):
+        if filename.endswith(extension):
+            filename = filename[: -len(extension)]
+    return filename
+
+
+def _is_abstain_answer(answer: str) -> bool:
+    normalized = _normalize_text(answer)
+    return any(
+        phrase in normalized
+        for phrase in [
+            "khong du du lieu",
+            "khong tim thay thong tin",
+            "khong co thong tin",
+            "khong biet",
+            "do not know",
+            "insufficient context",
+            "khong du thong tin",
+        ]
+    )
 
 def score_faithfulness(
     answer: str,
@@ -88,12 +247,42 @@ def score_faithfulness(
 
     Trả về dict với: score (1-5) và notes (lý do)
     """
-    # TODO Sprint 4: Implement scoring
-    # Tạm thời trả về None (yêu cầu chấm thủ công)
-    return {
-        "score": None,
-        "notes": "TODO: Chấm thủ công hoặc implement LLM-as-Judge",
-    }
+    context_texts = [chunk.get("text", "") for chunk in chunks_used]
+    context_block = "\n\n".join(context_texts)
+
+    prompt = f"""Rate the faithfulness of the answer to the provided context.
+Return JSON with keys: score (integer 1-5) and notes (short explanation).
+
+Rubric:
+5 = every claim is supported by the context
+4 = mostly supported, only one tiny detail is uncertain
+3 = mixed support, some unsupported detail may appear
+2 = many unsupported details
+1 = largely hallucinated
+
+Answer:
+{answer}
+
+Context:
+{context_block}
+"""
+
+    if not answer or not chunks_used:
+        fallback_score = 1 if answer and not _is_abstain_answer(answer) else 3
+        return {
+            "score": fallback_score,
+            "notes": "No retrieved context available" if not chunks_used else "Answer is empty or cannot be judged confidently",
+        }
+
+    if _is_abstain_answer(answer):
+        return {
+            "score": 4,
+            "notes": "Answer abstains instead of hallucinating",
+        }
+
+    fallback_score = _score_from_similarity(answer, context_texts)
+    fallback_notes = f"Heuristic overlap with retrieved context suggests score {fallback_score}"
+    return _judge_or_fallback("faithfulness", prompt, fallback_score, fallback_notes)
 
 
 def score_answer_relevance(
@@ -113,10 +302,39 @@ def score_answer_relevance(
 
     TODO Sprint 4: Implement tương tự score_faithfulness
     """
-    return {
-        "score": None,
-        "notes": "TODO: Implement score_answer_relevance",
-    }
+    prompt = f"""Rate whether the answer addresses the user's question.
+Return JSON with keys: score (integer 1-5) and notes (short explanation).
+
+Rubric:
+5 = directly answers the question clearly and completely
+4 = answers the question correctly but misses a minor detail
+3 = related but incomplete or partially on topic
+2 = partially off topic
+1 = does not answer the question
+
+Question:
+{query}
+
+Answer:
+{answer}
+"""
+
+    if not answer:
+        return {
+            "score": 1,
+            "notes": "Empty answer",
+        }
+
+    if _is_abstain_answer(answer):
+        fallback_score = 5 if any(marker in _normalize_text(query) for marker in ["err", "khong co", "không có"]) else 3
+        return {
+            "score": fallback_score,
+            "notes": "Answer abstains; relevance depends on whether the query is out of scope",
+        }
+
+    fallback_score = _score_from_similarity(answer, [query])
+    fallback_notes = f"Heuristic overlap with query suggests score {fallback_score}"
+    return _judge_or_fallback("answer_relevance", prompt, fallback_score, fallback_notes)
 
 
 def score_context_recall(
@@ -151,13 +369,11 @@ def score_context_recall(
         for c in chunks_used
     }
 
-    # TODO: Kiểm tra matching theo partial path (vì source paths có thể khác format)
     found = 0
     missing = []
     for expected in expected_sources:
-        # Kiểm tra partial match (tên file)
-        expected_name = expected.split("/")[-1].replace(".pdf", "").replace(".md", "")
-        matched = any(expected_name.lower() in r.lower() for r in retrieved_sources)
+        expected_name = _source_basename(expected)
+        matched = any(expected_name and expected_name in _source_basename(retrieved) for retrieved in retrieved_sources)
         if matched:
             found += 1
         else:
@@ -198,10 +414,48 @@ def score_completeness(
          Rate completeness 1-5. Are all key points covered?
          Output: {'score': int, 'missing_points': [str]}"
     """
-    return {
-        "score": None,
-        "notes": "TODO: Implement score_completeness (so sánh với expected_answer)",
-    }
+    prompt = f"""Compare the answer with the expected answer and rate completeness.
+Return JSON with keys: score (integer 1-5) and notes (short explanation).
+
+Rubric:
+5 = answer covers all key points in the expected answer
+4 = misses one small detail
+3 = misses some important information
+2 = misses much important information
+1 = misses most of the core content
+
+Question:
+{query}
+
+Expected answer:
+{expected_answer}
+
+Model answer:
+{answer}
+"""
+
+    if not expected_answer:
+        return {
+            "score": None,
+            "notes": "No expected answer available",
+        }
+
+    if not answer:
+        return {
+            "score": 1,
+            "notes": "Empty answer",
+        }
+
+    if _is_abstain_answer(answer):
+        fallback_score = 5 if not expected_answer else 2
+        return {
+            "score": fallback_score,
+            "notes": "Answer abstains; completeness depends on whether abstention matches the expected answer",
+        }
+
+    fallback_score = _score_from_similarity(answer, [expected_answer])
+    fallback_notes = f"Heuristic overlap with expected answer suggests score {fallback_score}"
+    return _judge_or_fallback("completeness", prompt, fallback_score, fallback_notes)
 
 
 # =============================================================================
@@ -236,6 +490,7 @@ def run_scorecard(
     if test_questions is None:
         with open(TEST_QUESTIONS_PATH, "r", encoding="utf-8") as f:
             test_questions = json.load(f)
+    test_questions = test_questions or []
 
     results = []
     label = config.get("label", "unnamed")
@@ -354,11 +609,11 @@ def compare_ab(
 
         b_avg = sum(b_scores) / len(b_scores) if b_scores else None
         v_avg = sum(v_scores) / len(v_scores) if v_scores else None
-        delta = (v_avg - b_avg) if (b_avg and v_avg) else None
+        delta = (v_avg - b_avg) if (b_avg is not None and v_avg is not None) else None
 
-        b_str = f"{b_avg:.2f}" if b_avg else "N/A"
-        v_str = f"{v_avg:.2f}" if v_avg else "N/A"
-        d_str = f"{delta:+.2f}" if delta else "N/A"
+        b_str = f"{b_avg:.2f}" if b_avg is not None else "N/A"
+        v_str = f"{v_avg:.2f}" if v_avg is not None else "N/A"
+        d_str = f"{delta:+.2f}" if delta is not None else "N/A"
 
         print(f"{metric:<20} {b_str:>10} {v_str:>10} {d_str:>8}")
 
@@ -425,7 +680,7 @@ Generated: {timestamp}
 |--------|--------------|
 """
     for metric, avg in averages.items():
-        avg_str = f"{avg:.2f}/5" if avg else "N/A"
+        avg_str = f"{avg:.2f}/5" if avg is not None else "N/A"
         md += f"| {metric.replace('_', ' ').title()} | {avg_str} |\n"
 
     md += "\n## Per-Question Results\n\n"
@@ -488,23 +743,23 @@ if __name__ == "__main__":
 
     # --- Chạy Variant (sau khi Sprint 3 hoàn thành) ---
     # TODO Sprint 4: Uncomment sau khi implement variant trong rag_answer.py
-    # print("\n--- Chạy Variant ---")
-    # variant_results = run_scorecard(
-    #     config=VARIANT_CONFIG,
-    #     test_questions=test_questions,
-    #     verbose=True,
-    # )
-    # variant_md = generate_scorecard_summary(variant_results, VARIANT_CONFIG["label"])
-    # (RESULTS_DIR / "scorecard_variant.md").write_text(variant_md, encoding="utf-8")
+    print("\n--- Chạy Variant ---")
+    variant_results = run_scorecard(
+        config=VARIANT_CONFIG,
+        test_questions=test_questions,
+        verbose=True,
+    )
+    variant_md = generate_scorecard_summary(variant_results, VARIANT_CONFIG["label"])
+    (RESULTS_DIR / "scorecard_variant.md").write_text(variant_md, encoding="utf-8")
 
     # --- A/B Comparison ---
     # TODO Sprint 4: Uncomment sau khi có cả baseline và variant
-    # if baseline_results and variant_results:
-    #     compare_ab(
-    #         baseline_results,
-    #         variant_results,
-    #         output_csv="ab_comparison.csv"
-    #     )
+    if baseline_results and variant_results:
+        compare_ab(
+            baseline_results,
+            variant_results,
+            output_csv="ab_comparison.csv"
+        )
 
     print("\n\nViệc cần làm Sprint 4:")
     print("  1. Hoàn thành Sprint 2 + 3 trước")
