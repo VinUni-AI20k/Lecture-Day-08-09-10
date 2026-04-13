@@ -14,3 +14,8 @@ day08/lab/.env
 day08/lab/chroma_db/
 
 # Grading questions — theo SCORING, cần track khi nộp
+
+# Grading questions — không public trước 17:00
+day08/lab/data/grading_questions.json
+day09/lab/data/grading_questions.json
+day10/lab/data/grading_questions.json

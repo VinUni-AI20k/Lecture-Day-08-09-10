@@ -1,0 +1,162 @@
+[
+  {
+    "id": "q01",
+    "question": "SLA xử lý ticket P1 là bao lâu?",
+    "expected_answer": "Ticket P1 có SLA phản hồi ban đầu 15 phút và thời gian xử lý (resolution) là 4 giờ.",
+    "expected_sources": ["sla_p1_2026.txt"],
+    "expected_route": "retrieval_worker",
+    "difficulty": "easy",
+    "category": "SLA",
+    "test_type": "single_worker",
+    "note": "Câu retrieval đơn giản — test retrieval_worker + synthesis_worker"
+  },
+  {
+    "id": "q02",
+    "question": "Khách hàng có thể yêu cầu hoàn tiền trong bao nhiêu ngày?",
+    "expected_answer": "Khách hàng có thể yêu cầu hoàn tiền trong vòng 7 ngày làm việc kể từ thời điểm xác nhận đơn hàng.",
+    "expected_sources": ["policy_refund_v4.txt"],
+    "expected_route": "retrieval_worker",
+    "difficulty": "easy",
+    "category": "Refund",
+    "test_type": "single_worker"
+  },
+  {
+    "id": "q03",
+    "question": "Ai phải phê duyệt để cấp quyền Level 3?",
+    "expected_answer": "Level 3 (Elevated Access) cần phê duyệt từ Line Manager, IT Admin, và IT Security — ba người phê duyệt.",
+    "expected_sources": ["access_control_sop.txt"],
+    "expected_route": "policy_tool_worker",
+    "difficulty": "easy",
+    "category": "Access Control",
+    "test_type": "single_worker"
+  },
+  {
+    "id": "q04",
+    "question": "Tài khoản bị khóa sau bao nhiêu lần đăng nhập sai?",
+    "expected_answer": "Tài khoản bị khóa sau 5 lần đăng nhập sai liên tiếp.",
+    "expected_sources": ["it_helpdesk_faq.txt"],
+    "expected_route": "retrieval_worker",
+    "difficulty": "easy",
+    "category": "IT Helpdesk",
+    "test_type": "single_worker"
+  },
+  {
+    "id": "q05",
+    "question": "Nhân viên được làm remote tối đa mấy ngày mỗi tuần?",
+    "expected_answer": "Nhân viên sau probation period có thể làm remote tối đa 2 ngày/tuần với điều kiện được Team Lead phê duyệt.",
+    "expected_sources": ["hr_leave_policy.txt"],
+    "expected_route": "retrieval_worker",
+    "difficulty": "easy",
+    "category": "HR Policy",
+    "test_type": "single_worker"
+  },
+  {
+    "id": "q06",
+    "question": "Ticket P1 không được phản hồi sau 10 phút. Hệ thống tự động làm gì?",
+    "expected_answer": "Ticket P1 tự động escalate lên Senior Engineer nếu không có phản hồi trong 10 phút. Đồng thời gửi thông báo tới Slack #incident-p1 và PagerDuty.",
+    "expected_sources": ["sla_p1_2026.txt"],
+    "expected_route": "retrieval_worker",
+    "difficulty": "medium",
+    "category": "SLA",
+    "test_type": "single_worker",
+    "note": "Test SLA escalation rule"
+  },
+  {
+    "id": "q07",
+    "question": "Sản phẩm kỹ thuật số (license key) có được hoàn tiền không?",
+    "expected_answer": "Không. Theo chính sách hoàn tiền v4 (Điều 3), sản phẩm kỹ thuật số (license key, subscription) thuộc danh mục ngoại lệ không được hoàn tiền.",
+    "expected_sources": ["policy_refund_v4.txt"],
+    "expected_route": "policy_tool_worker",
+    "difficulty": "medium",
+    "category": "Refund",
+    "test_type": "single_worker",
+    "note": "Test policy exception detection — digital product"
+  },
+  {
+    "id": "q08",
+    "question": "Quy trình xử lý sự cố P1 gồm mấy bước và bước đầu tiên là gì?",
+    "expected_answer": "Quy trình P1 gồm 5 bước: (1) Tiếp nhận — on-call engineer xác nhận severity trong 5 phút, (2) Thông báo tới Slack và email, (3) Triage và phân công trong 10 phút, (4) Xử lý với update mỗi 30 phút, (5) Resolution và incident report trong 24 giờ.",
+    "expected_sources": ["sla_p1_2026.txt"],
+    "expected_route": "retrieval_worker",
+    "difficulty": "medium",
+    "category": "SLA",
+    "test_type": "single_worker"
+  },
+  {
+    "id": "q09",
+    "question": "ERR-403-AUTH là lỗi gì và cách xử lý?",
+    "expected_answer": "Không tìm thấy thông tin về mã lỗi ERR-403-AUTH trong tài liệu nội bộ hiện có. Hãy liên hệ IT Helpdesk để được hỗ trợ trực tiếp.",
+    "expected_sources": [],
+    "expected_route": "retrieval_worker",
+    "difficulty": "hard",
+    "category": "Insufficient Context",
+    "test_type": "abstain",
+    "note": "Câu hỏi không có answer trong docs — kiểm tra khả năng abstain"
+  },
+  {
+    "id": "q10",
+    "question": "Store credit khi hoàn tiền có giá trị bao nhiêu so với tiền gốc?",
+    "expected_answer": "Khách hàng có thể chọn nhận store credit thay thế với giá trị 110% so với số tiền hoàn (tức là thêm 10% so với hoàn tiền gốc).",
+    "expected_sources": ["policy_refund_v4.txt"],
+    "expected_route": "policy_tool_worker",
+    "difficulty": "medium",
+    "category": "Refund",
+    "test_type": "single_worker",
+    "note": "Test specific numeric fact extraction"
+  },
+  {
+    "id": "q11",
+    "question": "Ticket P1 được tạo lúc 22:47. Ai sẽ nhận thông báo đầu tiên và qua kênh nào? Escalation xảy ra lúc mấy giờ?",
+    "expected_answer": "Ngay khi P1 ticket được tạo: (1) Thông báo gửi tới Slack #incident-p1 và email incident@company.internal, (2) PagerDuty tự động nhắn on-call engineer. Nếu không có phản hồi trong 10 phút (tức 22:57), ticket tự động escalate lên Senior Engineer.",
+    "expected_sources": ["sla_p1_2026.txt"],
+    "expected_route": "retrieval_worker",
+    "difficulty": "medium",
+    "category": "SLA",
+    "test_type": "multi_detail",
+    "note": "Test multi-detail extraction từ một tài liệu"
+  },
+  {
+    "id": "q12",
+    "question": "Khách hàng đặt đơn ngày 31/01/2026 và yêu cầu hoàn tiền ngày 07/02/2026. Sản phẩm lỗi nhà sản xuất, chưa kích hoạt, không phải Flash Sale. Được hoàn tiền không?",
+    "expected_answer": "Đây là trường hợp phức tạp về temporal scoping: Đơn đặt ngày 31/01/2026 (trước ngày 01/02/2026) nên áp dụng chính sách hoàn tiền phiên bản 3, không phải v4. Tài liệu hiện tại chỉ có chính sách v4. Cần xác nhận với CS Team về nội dung chính sách v3.",
+    "expected_sources": ["policy_refund_v4.txt"],
+    "expected_route": "policy_tool_worker",
+    "difficulty": "hard",
+    "category": "Refund",
+    "test_type": "temporal_scoping",
+    "note": "Test temporal policy scoping — đơn trước effective date của v4"
+  },
+  {
+    "id": "q13",
+    "question": "Contractor cần Admin Access (Level 3) để khắc phục sự cố P1 đang active. Quy trình cấp quyền tạm thời như thế nào?",
+    "expected_answer": "Level 3 (Admin Access) KHÔNG có emergency bypass theo SOP. Dù đang có P1, vẫn phải có approval từ đủ 3 bên: Line Manager, IT Admin, và IT Security. Không thể cấp tạm thời.",
+    "expected_sources": ["access_control_sop.txt", "sla_p1_2026.txt"],
+    "expected_route": "policy_tool_worker",
+    "difficulty": "hard",
+    "category": "Access Control",
+    "test_type": "multi_worker",
+    "note": "Multi-hop: access_control + SLA context. Test khả năng cross-document reasoning"
+  },
+  {
+    "id": "q14",
+    "question": "Nhân viên vừa vào thử việc (trong probation period) muốn làm remote vì lý do cá nhân. Điều kiện là gì?",
+    "expected_answer": "Nhân viên trong probation period KHÔNG được phép làm remote. Chỉ nhân viên đã qua probation period mới được phép làm remote tối đa 2 ngày/tuần với điều kiện được Team Lead phê duyệt.",
+    "expected_sources": ["hr_leave_policy.txt"],
+    "expected_route": "retrieval_worker",
+    "difficulty": "medium",
+    "category": "HR Policy",
+    "test_type": "single_worker",
+    "note": "Test negative condition (not eligible)"
+  },
+  {
+    "id": "q15",
+    "question": "Ticket P1 lúc 2am. Cần cấp Level 2 access tạm thời cho contractor để thực hiện emergency fix. Đồng thời cần notify stakeholders theo SLA. Nêu đủ cả hai quy trình.",
+    "expected_answer": "Hai quy trình song song: (1) SLA P1 notifications: Ngay lập tức gửi Slack #incident-p1, email incident@company.internal, PagerDuty on-call. Escalate lên Senior Engineer nếu không phản hồi trong 10 phút. (2) Level 2 access emergency: Level 2 CÓ emergency bypass — có thể cấp với approval đồng thời của Line Manager và IT Admin on-call. Không cần IT Security cho Level 2 emergency.",
+    "expected_sources": ["sla_p1_2026.txt", "access_control_sop.txt"],
+    "expected_route": "policy_tool_worker",
+    "difficulty": "hard",
+    "category": "Multi-hop",
+    "test_type": "multi_worker_multi_doc",
+    "note": "Câu khó nhất — test cross-doc multi-hop: SLA + access_control, 2 workers cần được gọi"
+  }
+]
