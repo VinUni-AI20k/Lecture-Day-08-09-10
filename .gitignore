@@ -9,3 +9,10 @@ day08/lab/data/grading_questions.json
 .vscode
 __pycache__/
 *.py[cod]
+
+# Kết quả chạy local — không push
+day08/lab/results/ab_comparison*.csv
+day08/lab/data/bm25_index/
+day08/lab/data/chroma_db/
+day08/lab/data/test_questions_extended.json
+day08/lab/test_retrieval.py
