@@ -1,0 +1,24 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(while read f)",
+      "Bash(do echo \"$f\")",
+      "Bash(done)",
+      "Bash(tree:*)",
+      "Bash(npm install:*)",
+      "Bash(node -e:*)",
+      "Bash(python3:*)",
+      "Bash(dir:*)",
+      "Bash(npm ls:*)",
+      "Bash(npx next lint)",
+      "Bash(cmd /c \"cd /d \"\"F:\\\\VinUni\\\\Lecture-Day-08-09-10\\\\day08\\\\lab\\\\rag-ui\"\" && npm run lint 2>&1\")",
+      "Bash(powershell -Command:*)",
+      "Bash(powershell -command:*)",
+      "Bash(npm run build:*)",
+      "Bash(npm run lint)",
+      "Bash(npm run dev:*)",
+      "Bash(git fetch:*)",
+      "Bash(git log:*)"
+    ]
+  }
+}

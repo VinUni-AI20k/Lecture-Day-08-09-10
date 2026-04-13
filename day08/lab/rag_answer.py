@@ -429,6 +429,72 @@ def call_llm(prompt: str) -> str:
     return (response.choices[0].message.content or "").strip()
 
 
+def call_llm_stream(prompt: str):
+    """
+    Generator variant of call_llm. Yields str tokens one at a time.
+    Falls back to single-chunk yield for Gemini (no SSE SDK support in basic genai).
+    """
+    if LLM_PROVIDER == "gemini":
+        import google.generativeai as genai
+        from types import SimpleNamespace
+
+        key = os.getenv("GOOGLE_API_KEY")
+        if not key:
+            raise RuntimeError("GOOGLE_API_KEY required when LLM_PROVIDER=gemini")
+        genai.configure(api_key=key)
+        model = genai.GenerativeModel(GEMINI_MODEL)
+        full_text = ""
+        response = model.generate_content(
+            prompt,
+            generation_config={"temperature": 0, "max_output_tokens": 512},
+            stream=True,
+        )
+        for chunk in response:
+            delta = getattr(chunk, "text", "") or ""
+            if delta:
+                full_text += delta
+                yield delta
+        # Record usage after stream ends
+        from run_telemetry import get_telemetry
+        t = get_telemetry()
+        if t is not None:
+            # Gemini streaming doesn't reliably expose usage per-chunk; estimate
+            t.add_chat_usage(SimpleNamespace(prompt_tokens=0, completion_tokens=len(full_text) // 4))
+        return
+
+    from openai import OpenAI
+    from run_telemetry import get_telemetry
+
+    key = os.getenv("OPENAI_API_KEY")
+    if not key:
+        raise RuntimeError("OPENAI_API_KEY required when LLM_PROVIDER=openai")
+    if not hasattr(call_llm, "_client"):
+        setattr(call_llm, "_client", OpenAI(api_key=key))
+    client = getattr(call_llm, "_client")
+    stream = client.chat.completions.create(
+        model=LLM_MODEL,
+        messages=[{"role": "user", "content": prompt}],
+        temperature=0,
+        max_tokens=512,
+        stream=True,
+    )
+    prompt_tokens = 0
+    completion_tokens = 0
+    for chunk in stream:
+        delta = chunk.choices[0].delta.content if chunk.choices else None
+        if delta:
+            completion_tokens += 1
+            yield delta
+        # Capture usage from final chunk (OpenAI sends it on the last chunk)
+        if hasattr(chunk, "usage") and chunk.usage is not None:
+            prompt_tokens = getattr(chunk.usage, "prompt_tokens", 0) or 0
+            completion_tokens = getattr(chunk.usage, "completion_tokens", completion_tokens)
+    tel = get_telemetry()
+    if tel is not None:
+        from types import SimpleNamespace
+        tel.add_chat_usage(SimpleNamespace(prompt_tokens=prompt_tokens, completion_tokens=completion_tokens))
+
+
 def _trace_chunk_rows(chunks: List[Dict[str, Any]], text_snippet: int = 200) -> List[Dict[str, Any]]:
     """Bảng gọn cho UI (Streamlit): rank, nguồn, score, preview."""
     rows: List[Dict[str, Any]] = []
@@ -638,6 +704,193 @@ def rag_answer_impl(
     if trace:
         out["pipeline_steps"] = steps
     return out
+
+
+def rag_answer_stream(
+    query: str,
+    retrieval_mode: str = "dense",
+    top_k_search: int = TOP_K_SEARCH,
+    top_k_select: int = TOP_K_SELECT,
+    use_rerank: bool = False,
+    request_id: Optional[str] = None,
+    abort_event=None,
+):
+    """
+    Generator variant of rag_answer_impl for Server-Sent Events streaming.
+
+    Yields dicts:
+      {"event": "step",  "data": <pipeline_step_dict>}   -- after each pre-LLM step
+      {"event": "token", "data": "<text_delta>"}          -- per LLM token
+      {"event": "done",  "data": {answer, sources, chunks_used, config, telemetry, request_id}}
+      {"event": "error", "data": "<message>"}             -- on failure
+
+    abort_event: optional threading.Event; generator stops between yields when set.
+    """
+    import threading
+    from run_telemetry import RunTelemetry, telemetry_ctx
+    import uuid as _uuid
+    import time as _time
+
+    if abort_event is None:
+        abort_event = threading.Event()
+
+    rid = request_id or str(_uuid.uuid4())
+    tel = RunTelemetry("rag_stream", label=retrieval_mode)
+    tok = telemetry_ctx.set(tel)
+
+    def _aborted():
+        return abort_event.is_set()
+
+    try:
+        config = {
+            "retrieval_mode": retrieval_mode,
+            "top_k_search": top_k_search,
+            "top_k_select": top_k_select,
+            "use_rerank": use_rerank,
+        }
+
+        # ── Step 1: Query ────────────────────────────────────────────
+        if retrieval_mode == "sparse":
+            retrieve_note = "**Sparse (BM25):** tokenize query, chấm điểm keyword trên toàn corpus trong Chroma."
+        elif retrieval_mode == "dense":
+            retrieve_note = "**Dense:** embed query → cosine search trong Chroma."
+        else:
+            retrieve_note = "**Hybrid:** dense + BM25, hợp nhất thứ hạng bằng **RRF**."
+        step1 = {"step": 1, "name": "Câu hỏi", "emoji": "1️⃣", "detail": retrieve_note, "query": query}
+        yield {"event": "step", "data": step1}
+        if _aborted():
+            return
+
+        # ── Step 2: Retrieve ─────────────────────────────────────────
+        if retrieval_mode == "dense":
+            candidates = retrieve_dense(query, top_k=top_k_search)
+        elif retrieval_mode == "sparse":
+            candidates = retrieve_sparse(query, top_k=top_k_search)
+        else:
+            candidates = retrieve_hybrid(query, top_k=top_k_search)
+
+        if not candidates:
+            step2 = {
+                "step": 2, "name": "Retrieve", "emoji": "2️⃣",
+                "detail": f"**{retrieval_mode}** → **0** chunk. Kiểm tra đã index và EMBEDDING_PROVIDER khớp.",
+                "table": [],
+            }
+            yield {"event": "step", "data": step2}
+            done_data = {
+                "answer": "Không đủ dữ liệu trong tài liệu để trả lời.",
+                "sources": [], "chunks_used": [], "query": query, "config": config,
+                "pipeline_steps": [step1, step2],
+                "telemetry": _finish_tel(tel, tok, rid, config, query, ok=True),
+                "request_id": rid,
+            }
+            yield {"event": "done", "data": done_data}
+            return
+
+        step2 = {
+            "step": 2, "name": "Retrieve", "emoji": "2️⃣",
+            "detail": f"**{retrieval_mode}** · lấy **{len(candidates)}** ứng viên (`top_k_search={top_k_search}`).",
+            "table": _trace_chunk_rows(candidates),
+        }
+        yield {"event": "step", "data": step2}
+        if _aborted():
+            return
+
+        # ── Step 3: Rerank / top-k select ────────────────────────────
+        after_retrieve = list(candidates)
+        if use_rerank:
+            candidates = rerank(query, candidates, top_k=top_k_select)
+            select_detail = (
+                f"**Cross-encoder** đánh giá cặp (query, chunk), giữ **{len(candidates)}** chunk tốt nhất "
+                f"(target `top_k_select={top_k_select}`)."
+            )
+            select_title, select_emoji = "Rerank", "3️⃣"
+        else:
+            candidates = candidates[:top_k_select]
+            select_detail = f"Không rerank — lấy **{len(candidates)}** chunk đầu theo thứ tự điểm retrieve."
+            select_title, select_emoji = "Chọn top-k", "3️⃣"
+
+        step3 = {
+            "step": 3, "name": select_title, "emoji": select_emoji,
+            "detail": select_detail + f" (từ **{len(after_retrieve)}** ứng viên).",
+            "table": _trace_chunk_rows(candidates),
+        }
+        yield {"event": "step", "data": step3}
+        if _aborted():
+            return
+
+        # ── Step 4: Context + prompt ──────────────────────────────────
+        context_block = build_context_block(candidates)
+        prompt = build_grounded_prompt(query, context_block)
+        step4 = {
+            "step": 4, "name": "Context + prompt", "emoji": "4️⃣",
+            "detail": (
+                f"Đánh số **[1],[2],…** → **{len(context_block)}** ký tự context. "
+                f"Prompt tổng **{len(prompt)}** ký tự."
+            ),
+            "context_preview": context_block[:1800] + ("…" if len(context_block) > 1800 else ""),
+            "prompt_preview": prompt[:1400] + ("…" if len(prompt) > 1400 else ""),
+        }
+        yield {"event": "step", "data": step4}
+        if _aborted():
+            return
+
+        # ── Step 5: Stream LLM tokens ─────────────────────────────────
+        answer_parts: List[str] = []
+        for delta in call_llm_stream(prompt):
+            if _aborted():
+                break
+            answer_parts.append(delta)
+            yield {"event": "token", "data": delta}
+
+        answer = "".join(answer_parts).strip()
+
+        step5 = {
+            "step": 5, "name": "LLM", "emoji": "5️⃣",
+            "detail": f"**{LLM_MODEL}** · temperature=0 · trả lời bám context.",
+            "answer_chars": len(answer),
+        }
+
+        sources = list({c["metadata"].get("source", "unknown") for c in candidates})
+        pipeline_steps = [step1, step2, step3, step4, step5]
+
+        done_data = {
+            "answer": answer,
+            "sources": sources,
+            "chunks_used": candidates,
+            "query": query,
+            "config": config,
+            "pipeline_steps": pipeline_steps,
+            "telemetry": _finish_tel(tel, tok, rid, config, query, ok=True),
+            "request_id": rid,
+        }
+        yield {"event": "done", "data": done_data}
+
+    except Exception as exc:
+        try:
+            _finish_tel(tel, tok, rid, {}, query, ok=False, error=str(exc))
+        except Exception:
+            pass
+        yield {"event": "error", "data": str(exc)}
+
+
+def _finish_tel(tel, tok, rid: str, config: Dict[str, Any], query: str, ok: bool, error: str = "") -> Dict[str, Any]:
+    """Helper: finish telemetry and reset context var; return telemetry dict."""
+    from run_telemetry import telemetry_ctx
+    entry = tel.finish({
+        "request_id": rid,
+        "client": "fastapi_stream",
+        "query_preview": (query[:200] + "…") if len(query) > 200 else query,
+        "retrieval_mode": config.get("retrieval_mode", ""),
+        "ok": ok,
+        "error": error or None,
+    })
+    telemetry_ctx.reset(tok)
+    return {
+        "run_id": entry["run_id"],
+        "duration_ms": entry["duration_ms"],
+        "cost_usd": entry["cost_usd"],
+        "usage": entry["usage"],
+    }
 
 
 def rag_answer(
