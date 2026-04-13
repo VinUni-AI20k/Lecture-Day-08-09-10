@@ -484,35 +484,6 @@ def rag_answer(
     else:
         raise ValueError(f"retrieval_mode không hợp lệ: {retrieval_mode}")
 
-    query_lower = query.lower()
-    query_terms = [
-        term
-        for term in query_lower.replace("?", " ").replace(":", " ").replace(",", " ").split()
-        if len(term) >= 3 or any(char.isdigit() for char in term) or "-" in term
-    ]
-
-    def _candidate_match_stats(candidate: Dict[str, Any]) -> Tuple[int, int]:
-        meta = candidate.get("metadata", {})
-        combined_text = " ".join(
-            [
-                candidate.get("text", "").lower(),
-                str(meta.get("section", "")).lower(),
-            ]
-        )
-        token_set = set(re.findall(r"[a-z0-9-]+", combined_text))
-        match_count = sum(term in token_set for term in query_terms)
-        return int(match_count == len(query_terms)), match_count
-
-    candidates = sorted(
-        candidates,
-        key=lambda c: (
-            _candidate_match_stats(c)[0],
-            _candidate_match_stats(c)[1],
-            c.get("score", 0.0),
-        ),
-        reverse=True,
-    )
-
     if verbose:
         print(f"\n[RAG] Query: {query}")
         print(f"[RAG] Retrieved {len(candidates)} candidates (mode={retrieval_mode})")
