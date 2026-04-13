@@ -23,6 +23,15 @@ from pathlib import Path
 from typing import List, Dict, Any, Optional
 from datetime import datetime
 from rag_answer import rag_answer
+# ADDED: Judge prompt templates — chỉnh sửa prompt tại prompt/llm-judge-prompt.py
+from prompt.llm_judge_prompt import (
+    build_faithfulness_prompt,
+    build_answer_relevance_prompt,
+    build_context_recall_prompt,
+    build_completeness_prompt,
+)
+import os
+from openai import OpenAI
 
 # =============================================================================
 # CẤU HÌNH
@@ -88,12 +97,38 @@ def score_faithfulness(
 
     Trả về dict với: score (1-5) và notes (lý do)
     """
-    # TODO Sprint 4: Implement scoring
-    # Tạm thời trả về None (yêu cầu chấm thủ công)
-    return {
-        "score": None,
-        "notes": "TODO: Chấm thủ công hoặc implement LLM-as-Judge",
-    }
+    # ADDED: LLM-as-Judge implementation
+    # Build context string từ các chunks đã retrieve
+    context_parts = []
+    for i, chunk in enumerate(chunks_used, 1):
+        source = chunk.get("metadata", {}).get("source", "unknown")
+        text = chunk.get("text", "")
+        context_parts.append(f"[{i}] {source}\n{text}")
+    context_str = "\n\n".join(context_parts)
+
+    # ADDED: Pull prompt from prompt/llm_judge_prompt.py
+    judge_prompt = build_faithfulness_prompt(answer, context_str)
+
+    try:
+        client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+        response = client.chat.completions.create(
+            model=os.getenv("LLM_MODEL", "gpt-4o-mini"),
+            messages=[{"role": "user", "content": judge_prompt}],
+            temperature=0,
+            max_tokens=150,
+        )
+        import json as _json
+        raw = response.choices[0].message.content.strip()
+        parsed = _json.loads(raw)
+        return {
+            "score": int(parsed["score"]),
+            "notes": parsed.get("reason", ""),
+        }
+    except Exception as e:
+        return {
+            "score": None,
+            "notes": f"LLM-as-Judge error: {e}",
+        }
 
 
 def score_answer_relevance(
@@ -113,10 +148,32 @@ def score_answer_relevance(
 
     TODO Sprint 4: Implement tương tự score_faithfulness
     """
-    return {
-        "score": None,
-        "notes": "TODO: Implement score_answer_relevance",
-    }
+    # ADDED: LLM-as-Judge implementation
+    import os
+    from openai import OpenAI
+    import json as _json
+
+    judge_prompt = build_answer_relevance_prompt(query, answer)
+
+    try:
+        client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+        response = client.chat.completions.create(
+            model=os.getenv("LLM_MODEL", "gpt-4o-mini"),
+            messages=[{"role": "user", "content": judge_prompt}],
+            temperature=0,
+            max_tokens=150,
+        )
+        raw = response.choices[0].message.content.strip()
+        parsed = _json.loads(raw)
+        return {
+            "score": int(parsed["score"]),
+            "notes": parsed.get("reason", ""),
+        }
+    except Exception as e:
+        return {
+            "score": None,
+            "notes": f"LLM-as-Judge error: {e}",
+        }
 
 
 def score_context_recall(
@@ -165,13 +222,42 @@ def score_context_recall(
 
     recall = found / len(expected_sources) if expected_sources else 0
 
+    # ADDED: LLM-as-Judge để bổ sung đánh giá chất lượng nội dung context
+    import os
+    from openai import OpenAI
+    import json as _json
+
+    context_parts = []
+    for i, chunk in enumerate(chunks_used, 1):
+        source = chunk.get("metadata", {}).get("source", "unknown")
+        text = chunk.get("text", "")
+        context_parts.append(f"[{i}] {source}\n{text}")
+    context_str = "\n\n".join(context_parts)
+
+    judge_prompt = build_context_recall_prompt("", context_str, expected_sources)
+
+    try:
+        client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+        response = client.chat.completions.create(
+            model=os.getenv("LLM_MODEL", "gpt-4o-mini"),
+            messages=[{"role": "user", "content": judge_prompt}],
+            temperature=0,
+            max_tokens=150,
+        )
+        raw = response.choices[0].message.content.strip()
+        parsed = _json.loads(raw)
+        llm_score = int(parsed["score"])
+        llm_notes = parsed.get("reason", "")
+    except Exception as e:
+        llm_score = round(recall * 5)  # fallback to deterministic score
+        llm_notes = f"LLM-as-Judge error (fallback to source match): {e}"
+
     return {
-        "score": round(recall * 5),  # Convert to 1-5 scale
+        "score": llm_score,
         "recall": recall,
         "found": found,
         "missing": missing,
-        "notes": f"Retrieved: {found}/{len(expected_sources)} expected sources" +
-                 (f". Missing: {missing}" if missing else ""),
+        "notes": f"Retrieved: {found}/{len(expected_sources)} expected sources. {llm_notes}",
     }
 
 
@@ -198,10 +284,39 @@ def score_completeness(
          Rate completeness 1-5. Are all key points covered?
          Output: {'score': int, 'missing_points': [str]}"
     """
-    return {
-        "score": None,
-        "notes": "TODO: Implement score_completeness (so sánh với expected_answer)",
-    }
+    # ADDED: LLM-as-Judge implementation
+    import os
+    from openai import OpenAI
+    import json as _json
+
+    if not expected_answer:
+        return {"score": None, "notes": "No expected answer provided"}
+
+    judge_prompt = build_completeness_prompt(query, answer, expected_answer)
+
+    try:
+        client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+        response = client.chat.completions.create(
+            model=os.getenv("LLM_MODEL", "gpt-4o-mini"),
+            messages=[{"role": "user", "content": judge_prompt}],
+            temperature=0,
+            max_tokens=200,
+        )
+        raw = response.choices[0].message.content.strip()
+        parsed = _json.loads(raw)
+        missing_points = parsed.get("missing_points", [])
+        notes = parsed.get("reason", "")
+        if missing_points:
+            notes += f" Missing: {missing_points}"
+        return {
+            "score": int(parsed["score"]),
+            "notes": notes,
+        }
+    except Exception as e:
+        return {
+            "score": None,
+            "notes": f"LLM-as-Judge error: {e}",
+        }
 
 
 # =============================================================================
@@ -488,23 +603,23 @@ if __name__ == "__main__":
 
     # --- Chạy Variant (sau khi Sprint 3 hoàn thành) ---
     # TODO Sprint 4: Uncomment sau khi implement variant trong rag_answer.py
-    # print("\n--- Chạy Variant ---")
-    # variant_results = run_scorecard(
-    #     config=VARIANT_CONFIG,
-    #     test_questions=test_questions,
-    #     verbose=True,
-    # )
-    # variant_md = generate_scorecard_summary(variant_results, VARIANT_CONFIG["label"])
-    # (RESULTS_DIR / "scorecard_variant.md").write_text(variant_md, encoding="utf-8")
+    print("\n--- Chạy Variant ---")
+    variant_results = run_scorecard(
+        config=VARIANT_CONFIG,
+        test_questions=test_questions,
+        verbose=True,
+    )
+    variant_md = generate_scorecard_summary(variant_results, VARIANT_CONFIG["label"])
+    (RESULTS_DIR / "scorecard_variant.md").write_text(variant_md, encoding="utf-8")
 
     # --- A/B Comparison ---
     # TODO Sprint 4: Uncomment sau khi có cả baseline và variant
-    # if baseline_results and variant_results:
-    #     compare_ab(
-    #         baseline_results,
-    #         variant_results,
-    #         output_csv="ab_comparison.csv"
-    #     )
+    if baseline_results and variant_results:
+        compare_ab(
+            baseline_results,
+            variant_results,
+            output_csv="ab_comparison.csv"
+        )
 
     print("\n\nViệc cần làm Sprint 4:")
     print("  1. Hoàn thành Sprint 2 + 3 trước")
