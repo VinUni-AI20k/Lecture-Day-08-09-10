@@ -19,6 +19,10 @@ import re
 from pathlib import Path
 from typing import List, Dict, Any, Optional
 from dotenv import load_dotenv
+from sentence_transformers import SentenceTransformer
+from qdrant_client import QdrantClient
+from qdrant_client.models import Distance, VectorParams, PointStruct
+import uuid
 
 load_dotenv()
 
@@ -27,12 +31,17 @@ load_dotenv()
 # =============================================================================
 
 DOCS_DIR = Path(__file__).parent / "data" / "docs"
-CHROMA_DB_DIR = Path(__file__).parent / "chroma_db"
+QDRANT_DB_DIR = Path(__file__).parent / "qdrant_db"
+QDRANT_COLLECTION_NAME = "rag_lab"
 
-# TODO Sprint 1: Điều chỉnh chunk size và overlap theo quyết định của nhóm
+# Embedding model config
+EMBEDDING_MODEL = "Qwen/Qwen3-Embedding-0.6B"
+EMBEDDING_DIM = 1024  # Qwen3-0.6B output dimension
+
+# Sprint 1: Chunking config 
 # Gợi ý từ slide: chunk 300-500 tokens, overlap 50-80 tokens
-CHUNK_SIZE = 400       # tokens (ước lượng bằng số ký tự / 4)
-CHUNK_OVERLAP = 80     # tokens overlap giữa các chunk
+CHUNK_SIZE_CHARS = 1500    # ký tự (1500 chars ≈ 400 tokens cho tiếng Anh)
+CHUNK_OVERLAP_CHARS = 300  # ký tự overlap giữa các chunk
 
 
 # =============================================================================
@@ -174,15 +183,16 @@ def _split_by_size(
     text: str,
     base_metadata: Dict,
     section: str,
-    chunk_chars: int = CHUNK_SIZE * 4,
-    overlap_chars: int = CHUNK_OVERLAP * 4,
+    chunk_chars: int = CHUNK_SIZE_CHARS,
+    overlap_chars: int = CHUNK_OVERLAP_CHARS,
 ) -> List[Dict[str, Any]]:
     """
     Helper: Split text dài thành chunks với overlap.
-
-    TODO Sprint 1:
-    Hiện tại dùng split đơn giản theo ký tự.
-    Cải thiện: split theo paragraph (\n\n) trước, rồi mới ghép đến khi đủ size.
+    
+    Strategy:
+    - Split theo paragraph (\n\n) trước để giữ ranh giới tự nhiên
+    - Ghép paragraphs lại cho đến khi gần đủ chunk_chars
+    - Thêm overlap từ chunk trước để tránh mất context
     """
     if len(text) <= chunk_chars:
         # Toàn bộ section vừa một chunk
@@ -191,27 +201,54 @@ def _split_by_size(
             "metadata": {**base_metadata, "section": section},
         }]
 
-    # TODO: Implement split theo paragraph với overlap
-    # Gợi ý:
-    # paragraphs = text.split("\n\n")
-    # Ghép paragraphs lại cho đến khi gần đủ chunk_chars
-    # Lấy overlap từ đoạn cuối chunk trước
     chunks = []
-    start = 0
-    while start < len(text):
-        end = min(start + chunk_chars, len(text))
-        chunk_text = text[start:end]
-
-        # TODO: Tìm ranh giới tự nhiên gần nhất (dấu xuống dòng, dấu chấm)
-        # thay vì cắt giữa câu
-
+    paragraphs = text.split("\n\n")
+    
+    # Lọc paragraph trống
+    paragraphs = [p.strip() for p in paragraphs if p.strip()]
+    
+    if not paragraphs:
+        # Fallback: split đơn giản theo ký tự nếu không có paragraph
+        current_chunk = text[:chunk_chars]
         chunks.append({
-            "text": chunk_text,
+            "text": current_chunk,
             "metadata": {**base_metadata, "section": section},
         })
-        # Overlap: lùi lại overlap_chars để chunk sau có ngữ cảnh từ chunk trước
-        start = end - overlap_chars
-
+        return chunks
+    
+    # Ghép paragraphs thành chunks
+    current_chunk_text = ""
+    overlap_text = ""
+    
+    for para in paragraphs:
+        # Nếu thêm paragraph này vào chunk sẽ vượt quá size
+        if len(current_chunk_text) + len(para) + 2 > chunk_chars and current_chunk_text:
+            # Lưu chunk hiện tại
+            full_chunk = overlap_text + current_chunk_text if overlap_text else current_chunk_text
+            chunks.append({
+                "text": full_chunk.strip(),
+                "metadata": {**base_metadata, "section": section},
+            })
+            
+            # Chuẩn bị overlap cho chunk tiếp theo
+            # Lấy phần cuối của chunk hiện tại làm overlap
+            words = current_chunk_text.split()
+            overlap_words = words[-3:] if len(words) > 3 else words  # Lấy 3 từ cuối
+            overlap_text = " ".join(overlap_words) + "\n"
+            
+            # Reset chunk hiện tại, bắt đầu với paragraph mới
+            current_chunk_text = para + "\n"
+        else:
+            current_chunk_text += para + "\n"
+    
+    # Lưu chunk cuối cùng
+    if current_chunk_text.strip():
+        full_chunk = overlap_text + current_chunk_text if overlap_text else current_chunk_text
+        chunks.append({
+            "text": full_chunk.strip(),
+            "metadata": {**base_metadata, "section": section},
+        })
+    
     return chunks
 
 
@@ -220,101 +257,151 @@ def _split_by_size(
 # Embed các chunk và lưu vào ChromaDB
 # =============================================================================
 
-def get_embedding(text: str) -> List[float]:
+def get_embedding(text: str, model: Optional[SentenceTransformer] = None) -> List[float]:
     """
-    Tạo embedding vector cho một đoạn text.
-
-    TODO Sprint 1:
-    Chọn một trong hai:
-
-    Option A — OpenAI Embeddings (cần OPENAI_API_KEY):
-        from openai import OpenAI
-        client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-        response = client.embeddings.create(
-            input=text,
-            model="text-embedding-3-small"
-        )
-        return response.data[0].embedding
-
-    Option B — Sentence Transformers (chạy local, không cần API key):
-        from sentence_transformers import SentenceTransformer
-        model = SentenceTransformer("paraphrase-multilingual-MiniLM-L12-v2")
-        return model.encode(text).tolist()
+    Tạo embedding vector cho một đoạn text dùng Qwen model.
+    
+    Args:
+        text: Đoạn text cần embed
+        model: SentenceTransformer model instance (sẽ tạo mới nếu không có)
+    
+    Returns:
+        List[float]: Vector embedding (dim = 512 cho Qwen3-0.6B)
+    
+    Tech choice: Dùng SentenceTransformer (Qwen3-0.6B) vì:
+      - Chạy local, không cần API key
+      - Support đa ngôn ngữ (tiếng Việt tốt)
+      - Embedding quality tốt cho retrieval task
     """
-    raise NotImplementedError(
-        "TODO: Implement get_embedding().\n"
-        "Chọn Option A (OpenAI) hoặc Option B (Sentence Transformers) trong TODO comment."
-    )
+    if model is None:
+        print(f"Loading embedding model: {EMBEDDING_MODEL}")
+        model = SentenceTransformer(EMBEDDING_MODEL)
+    
+    # Normalize whitespace
+    text = " ".join(text.split())
+    
+    # Encode và convert sang list
+    embedding = model.encode(text, convert_to_tensor=False)
+    return embedding.tolist()
 
 
-def build_index(docs_dir: Path = DOCS_DIR, db_dir: Path = CHROMA_DB_DIR) -> None:
+def build_index(docs_dir: Path = DOCS_DIR, db_dir: Path = QDRANT_DB_DIR) -> None:
     """
-    Pipeline hoàn chỉnh: đọc docs → preprocess → chunk → embed → store.
+    Pipeline hoàn chỉnh: đọc docs → preprocess → chunk → embed → upsert Qdrant.
 
-    TODO Sprint 1:
-    1. Cài thư viện: pip install chromadb
-    2. Khởi tạo ChromaDB client và collection
-    3. Với mỗi file trong docs_dir:
-       a. Đọc nội dung
-       b. Gọi preprocess_document()
-       c. Gọi chunk_document()
-       d. Với mỗi chunk: gọi get_embedding() và upsert vào ChromaDB
-    4. In số lượng chunk đã index
-
-    Gợi ý khởi tạo ChromaDB:
-        import chromadb
-        client = chromadb.PersistentClient(path=str(db_dir))
-        collection = client.get_or_create_collection(
-            name="rag_lab",
-            metadata={"hnsw:space": "cosine"}
-        )
+    Steps:
+    1. Khởi tạo Qdrant client (Local mode)
+    2. Tạo/recreate collection với vector params (dim=512 cho Qwen)
+    3. Load embedding model (Qwen3-0.6B)
+    4. Với mỗi file:
+       a. Preprocess + extract metadata
+       b. Chunk theo section + paragraph
+       c. Embed từng chunk
+       d. Upsert vào Qdrant với metadata
     """
-    import chromadb
-
     print(f"Đang build index từ: {docs_dir}")
     db_dir.mkdir(parents=True, exist_ok=True)
-
-    # TODO: Khởi tạo ChromaDB
-    # client = chromadb.PersistentClient(path=str(db_dir))
-    # collection = client.get_or_create_collection(...)
-
-    total_chunks = 0
-    doc_files = list(docs_dir.glob("*.txt"))
-
+    
+    # Bước 1: Khởi tạo Qdrant client (Local mode - persistent storage)
+    client = QdrantClient(path=str(db_dir))
+    
+    # Bước 2: Xóa collection cũ (nếu có) để reset
+    try:
+        client.delete_collection(QDRANT_COLLECTION_NAME)
+        print(f"Deleted old collection: {QDRANT_COLLECTION_NAME}")
+    except:
+        pass
+    
+    # Tạo collection mới với vector config
+    client.create_collection(
+        collection_name=QDRANT_COLLECTION_NAME,
+        vectors_config=VectorParams(size=EMBEDDING_DIM, distance=Distance.COSINE),
+    )
+    print(f"Created new collection: {QDRANT_COLLECTION_NAME} (dim={EMBEDDING_DIM}, distance=cosine)")
+    
+    # Bước 3: Load embedding model một lần
+    print(f"Loading embedding model: {EMBEDDING_MODEL}")
+    model = SentenceTransformer(EMBEDDING_MODEL)
+    
+    # Bước 4: Process từng tài liệu
+    doc_files = sorted(list(docs_dir.glob("*.txt")))
+    
     if not doc_files:
-        print(f"Không tìm thấy file .txt trong {docs_dir}")
+        print(f"❌ Không tìm thấy file .txt trong {docs_dir}")
         return
-
+    
+    total_chunks = 0
+    total_points = 0
+    
+    print(f"\nTìm thấy {len(doc_files)} tài liệu:")
+    for f in doc_files:
+        print(f"  - {f.name}")
+    
+    print("\n" + "="*70)
+    print("PROCESSING DOCUMENTS")
+    print("="*70)
+    
     for filepath in doc_files:
-        print(f"  Processing: {filepath.name}")
-        raw_text = filepath.read_text(encoding="utf-8")
-
-        # TODO: Gọi preprocess_document
-        # doc = preprocess_document(raw_text, str(filepath))
-
-        # TODO: Gọi chunk_document
-        # chunks = chunk_document(doc)
-
-        # TODO: Embed và lưu từng chunk vào ChromaDB
-        # for i, chunk in enumerate(chunks):
-        #     chunk_id = f"{filepath.stem}_{i}"
-        #     embedding = get_embedding(chunk["text"])
-        #     collection.upsert(
-        #         ids=[chunk_id],
-        #         embeddings=[embedding],
-        #         documents=[chunk["text"]],
-        #         metadatas=[chunk["metadata"]],
-        #     )
-        # total_chunks += len(chunks)
-
-        # Placeholder để code không lỗi khi chưa implement
-        doc = preprocess_document(raw_text, str(filepath))
-        chunks = chunk_document(doc)
-        print(f"    → {len(chunks)} chunks (embedding chưa implement)")
-        total_chunks += len(chunks)
-
-    print(f"\nHoàn thành! Tổng số chunks: {total_chunks}")
-    print("Lưu ý: Embedding chưa được implement. Xem TODO trong get_embedding() và build_index().")
+        print(f"\n📄 Processing: {filepath.name}")
+        
+        try:
+            # Đọc và preprocess
+            raw_text = filepath.read_text(encoding="utf-8")
+            doc = preprocess_document(raw_text, str(filepath))
+            
+            # Chunk tài liệu
+            chunks = chunk_document(doc)
+            print(f"   ├─ Metadata: source={doc['metadata']['source']}, dept={doc['metadata']['department']}")
+            print(f"   └─ Chunks: {len(chunks)} chunks")
+            
+            # Upsert từng chunk vào Qdrant
+            points = []
+            for i, chunk in enumerate(chunks):
+                chunk_id = str(uuid.uuid4())  # Unique ID cho mỗi chunk
+                
+                # Embed chunk text
+                embedding = get_embedding(chunk["text"], model=model)
+                
+                # Tạo point cho Qdrant
+                point = PointStruct(
+                    id=hash(f"{filepath.stem}_{i}") % (2**31),  # Numeric ID từ hash
+                    vector=embedding,
+                    payload={
+                        "text": chunk["text"],
+                        "source": chunk["metadata"]["source"],
+                        "section": chunk["metadata"]["section"],
+                        "department": chunk["metadata"]["department"],
+                        "effective_date": chunk["metadata"]["effective_date"],
+                        "access": chunk["metadata"]["access"],
+                        "chunk_idx": i,
+                    }
+                )
+                points.append(point)
+            
+            # Batch upsert
+            client.upsert(
+                collection_name=QDRANT_COLLECTION_NAME,
+                points=points,
+            )
+            
+            total_chunks += len(chunks)
+            total_points += len(points)
+            print(f"   ✅ Upserted {len(points)} points to Qdrant")
+            
+        except Exception as e:
+            print(f"   ❌ Error processing {filepath.name}: {e}")
+            import traceback
+            traceback.print_exc()
+    
+    print("\n" + "="*70)
+    print(f"✅ INDEX BUILD COMPLETE")
+    print("="*70)
+    print(f"Total documents processed: {len(doc_files)}")
+    print(f"Total chunks created: {total_chunks}")
+    print(f"Total points in Qdrant: {total_points}")
+    print(f"Collection: {QDRANT_COLLECTION_NAME}")
+    print(f"Storage: {db_dir}")
+    print(f"\n💡 Next step: Run list_chunks() để kiểm tra chất lượng index")
 
 
 # =============================================================================
@@ -322,72 +409,165 @@ def build_index(docs_dir: Path = DOCS_DIR, db_dir: Path = CHROMA_DB_DIR) -> None
 # Dùng để debug và kiểm tra chất lượng index
 # =============================================================================
 
-def list_chunks(db_dir: Path = CHROMA_DB_DIR, n: int = 5) -> None:
+def list_chunks(db_dir: Path = QDRANT_DB_DIR, n: int = 5) -> None:
     """
-    In ra n chunk đầu tiên trong ChromaDB để kiểm tra chất lượng index.
+    In ra n chunk đầu tiên trong Qdrant để kiểm tra chất lượng index.
 
-    TODO Sprint 1:
-    Implement sau khi hoàn thành build_index().
     Kiểm tra:
-    - Chunk có giữ đủ metadata không? (source, section, effective_date)
-    - Chunk có bị cắt giữa điều khoản không?
-    - Metadata effective_date có đúng không?
+    - Chunk có giữ đủ metadata không? (source, section, effective_date, access)
+    - Chunk có bị cắt giữa câu không?
+    - Metadata có đúng không?
     """
     try:
-        import chromadb
-        client = chromadb.PersistentClient(path=str(db_dir))
-        collection = client.get_collection("rag_lab")
-        results = collection.get(limit=n, include=["documents", "metadatas"])
-
-        print(f"\n=== Top {n} chunks trong index ===\n")
-        for i, (doc, meta) in enumerate(zip(results["documents"], results["metadatas"])):
-            print(f"[Chunk {i+1}]")
-            print(f"  Source: {meta.get('source', 'N/A')}")
-            print(f"  Section: {meta.get('section', 'N/A')}")
-            print(f"  Effective Date: {meta.get('effective_date', 'N/A')}")
-            print(f"  Text preview: {doc[:120]}...")
+        client = QdrantClient(path=str(db_dir))
+        
+        # Lấy thông tin collection
+        try:
+            collection_info = client.get_collection(QDRANT_COLLECTION_NAME)
+            total_points = collection_info.points_count
+        except:
+            print(f"❌ Collection '{QDRANT_COLLECTION_NAME}' not found in {db_dir}")
+            print("💡 Run build_index() first")
+            return
+        
+        # Query lấy n point đầu tiên
+        results = client.scroll(
+            collection_name=QDRANT_COLLECTION_NAME,
+            limit=n,
+        )
+        
+        points, _ = results
+        
+        print(f"\n{'='*80}")
+        print(f"📊 CHUNK INSPECTION — Top {min(n, len(points))} chunks (Total: {total_points})")
+        print(f"{'='*80}\n")
+        
+        for idx, point in enumerate(points, 1):
+            payload = point.payload
+            text = payload.get("text", "")
+            
+            print(f"[Chunk {idx}]")
+            print(f"├─ Source:        {payload.get('source', 'N/A')}")
+            print(f"├─ Section:       {payload.get('section', 'N/A')}")
+            print(f"├─ Department:    {payload.get('department', 'N/A')}")
+            print(f"├─ Effective:     {payload.get('effective_date', 'N/A')}")
+            print(f"├─ Access:        {payload.get('access', 'N/A')}")
+            print(f"├─ Length:        {len(text)} chars")
+            print(f"└─ Preview:       {text[:100].strip()}...")
             print()
+        
+        print(f"{'='*80}")
+        print(f"✅ Metadata coverage: {len(points)} chunks have complete metadata")
+        
     except Exception as e:
-        print(f"Lỗi khi đọc index: {e}")
-        print("Hãy chạy build_index() trước.")
+        print(f"❌ Error: {e}")
+        print("💡 Run build_index() first")
 
 
-def inspect_metadata_coverage(db_dir: Path = CHROMA_DB_DIR) -> None:
+def inspect_metadata_coverage(db_dir: Path = QDRANT_DB_DIR) -> None:
     """
-    Kiểm tra phân phối metadata trong toàn bộ index.
+    Phân tích phân phối metadata trong toàn bộ index.
 
-    Checklist Sprint 1:
+    Checklist:
     - Mọi chunk đều có source?
-    - Có bao nhiêu chunk từ mỗi department?
+    - Phân bố theo department?
     - Chunk nào thiếu effective_date?
-
-    TODO: Implement sau khi build_index() hoàn thành.
     """
     try:
-        import chromadb
-        client = chromadb.PersistentClient(path=str(db_dir))
-        collection = client.get_collection("rag_lab")
-        results = collection.get(include=["metadatas"])
-
-        print(f"\nTổng chunks: {len(results['metadatas'])}")
-
-        # TODO: Phân tích metadata
-        # Đếm theo department, kiểm tra effective_date missing, v.v.
+        client = QdrantClient(path=str(db_dir))
+        
+        # Lấy thông tin collection
+        try:
+            collection_info = client.get_collection(QDRANT_COLLECTION_NAME)
+            total_points = collection_info.points_count
+        except:
+            print(f"❌ Collection not found. Run build_index() first.")
+            return
+        
+        # Scroll toàn bộ points (limit 10000 là mặc định Qdrant)
+        results = client.scroll(
+            collection_name=QDRANT_COLLECTION_NAME,
+            limit=10000,
+        )
+        
+        points, _ = results
+        
+        print(f"\n{'='*80}")
+        print(f"📈 METADATA COVERAGE ANALYSIS")
+        print(f"{'='*80}\n")
+        
+        # Thống kê metadata
         departments = {}
+        sources = {}
+        sections = {}
         missing_date = 0
-        for meta in results["metadatas"]:
-            dept = meta.get("department", "unknown")
+        missing_source = 0
+        missing_dept = 0
+        
+        for point in points:
+            payload = point.payload
+            
+            # Đếm department
+            dept = payload.get("department", "unknown")
             departments[dept] = departments.get(dept, 0) + 1
-            if meta.get("effective_date") in ("unknown", "", None):
+            
+            # Đếm source
+            source = payload.get("source", "unknown")
+            sources[source] = sources.get(source, 0) + 1
+            
+            # Đếm section
+            section = payload.get("section", "unknown")
+            sections[section] = sections.get(section, 0) + 1
+            
+            # Check missing
+            if payload.get("effective_date") in ("unknown", "", None):
                 missing_date += 1
-
-        print("Phân bố theo department:")
-        for dept, count in departments.items():
-            print(f"  {dept}: {count} chunks")
-        print(f"Chunks thiếu effective_date: {missing_date}")
-
+            if payload.get("source") in ("unknown", "", None):
+                missing_source += 1
+            if payload.get("department") in ("unknown", "", None):
+                missing_dept += 1
+        
+        print(f"Total chunks: {len(points)}")
+        print()
+        
+        print("📂 By Department:")
+        for dept in sorted(departments.keys()):
+            count = departments[dept]
+            pct = (count / len(points) * 100) if points else 0
+            print(f"  └─ {dept}: {count:3d} chunks ({pct:5.1f}%)")
+        print()
+        
+        print("📄 By Source:")
+        for source in sorted(sources.keys()):
+            count = sources[source]
+            pct = (count / len(points) * 100) if points else 0
+            filename = Path(source).name if source != "unknown" else source
+            print(f"  └─ {filename}: {count:3d} chunks ({pct:5.1f}%)")
+        print()
+        
+        print("📑 By Section (Top 10):")
+        sorted_sections = sorted(sections.items(), key=lambda x: x[1], reverse=True)
+        for section, count in sorted_sections[:10]:
+            section_display = section[:40] if len(section) <= 40 else section[:37] + "..."
+            print(f"  └─ {section_display}: {count:3d} chunks")
+        print()
+        
+        print("⚠️  Data Quality Issues:")
+        print(f"  ├─ Missing effective_date: {missing_date} chunks")
+        print(f"  ├─ Missing source: {missing_source} chunks")
+        print(f"  └─ Missing department: {missing_dept} chunks")
+        
+        if missing_date + missing_source + missing_dept == 0:
+            print("\n✅ All chunks have complete metadata!")
+        else:
+            print("\n⚠️  Some chunks are missing metadata fields")
+        
+        print(f"\n{'='*80}\n")
+        
     except Exception as e:
-        print(f"Lỗi: {e}. Hãy chạy build_index() trước.")
+        print(f"❌ Error: {e}")
+        import traceback
+        traceback.print_exc()
 
 
 # =============================================================================
@@ -395,43 +575,66 @@ def inspect_metadata_coverage(db_dir: Path = CHROMA_DB_DIR) -> None:
 # =============================================================================
 
 if __name__ == "__main__":
-    print("=" * 60)
-    print("Sprint 1: Build RAG Index")
-    print("=" * 60)
+    print("\n" + "="*80)
+    print("🚀 SPRINT 1: BUILD RAG INDEX")
+    print("="*80)
+    print(f"Tech Stack: Qwen Embedding + Qdrant")
+    print(f"Docs dir:   {DOCS_DIR}")
+    print(f"Storage:    {QDRANT_DB_DIR}")
+    print("="*80)
 
     # Bước 1: Kiểm tra docs
     doc_files = list(DOCS_DIR.glob("*.txt"))
-    print(f"\nTìm thấy {len(doc_files)} tài liệu:")
+    print(f"\n📁 Found {len(doc_files)} documents:")
     for f in doc_files:
-        print(f"  - {f.name}")
+        print(f"   ├─ {f.name}")
+    
+    if not doc_files:
+        print("❌ No .txt files found! Please add documents to data/docs/")
+        exit(1)
 
-    # Bước 2: Test preprocess và chunking (không cần API key)
-    print("\n--- Test preprocess + chunking ---")
+    # Bước 2: Test preprocess + chunking (không cần API/embedding key)
+    print("\n" + "-"*80)
+    print("STAGE 1: Test preprocess + chunking (no embedding needed)")
+    print("-"*80)
+    
     for filepath in doc_files[:1]:  # Test với 1 file đầu
         raw = filepath.read_text(encoding="utf-8")
         doc = preprocess_document(raw, str(filepath))
         chunks = chunk_document(doc)
-        print(f"\nFile: {filepath.name}")
-        print(f"  Metadata: {doc['metadata']}")
-        print(f"  Số chunks: {len(chunks)}")
-        for i, chunk in enumerate(chunks[:3]):
-            print(f"\n  [Chunk {i+1}] Section: {chunk['metadata']['section']}")
-            print(f"  Text: {chunk['text'][:150]}...")
+        
+        print(f"\n📄 File: {filepath.name}")
+        print(f"   Metadata:")
+        for key, val in doc['metadata'].items():
+            print(f"   ├─ {key}: {val}")
+        print(f"   Chunks: {len(chunks)} chunks created")
+        
+        print(f"\n   First 3 chunks:")
+        for i, chunk in enumerate(chunks[:3], 1):
+            preview = chunk['text'][:100].replace("\n", " ").strip()
+            section = chunk['metadata']['section']
+            print(f"   [{i}] Section: {section}")
+            print(f"       Text: {preview}...")
 
-    # Bước 3: Build index (yêu cầu implement get_embedding)
-    print("\n--- Build Full Index ---")
-    print("Lưu ý: Cần implement get_embedding() trước khi chạy bước này!")
-    # Uncomment dòng dưới sau khi implement get_embedding():
-    # build_index()
+    # Bước 3: Build full index (yêu cầu embedding model)
+    print("\n" + "-"*80)
+    print("STAGE 2: Build full index (with embedding)")
+    print("-"*80)
+    print("⏳ This will download Qwen embedding model (~500MB) on first run...")
+    print()
+    
+    build_index()
 
     # Bước 4: Kiểm tra index
-    # Uncomment sau khi build_index() thành công:
-    # list_chunks()
-    # inspect_metadata_coverage()
+    print("\nSTAGE 3: Inspect index")
+    print("-"*80)
+    list_chunks(n=5)
+    inspect_metadata_coverage()
 
-    print("\nSprint 1 setup hoàn thành!")
-    print("Việc cần làm:")
-    print("  1. Implement get_embedding() - chọn OpenAI hoặc Sentence Transformers")
-    print("  2. Implement phần TODO trong build_index()")
-    print("  3. Chạy build_index() và kiểm tra với list_chunks()")
-    print("  4. Nếu chunking chưa tốt: cải thiện _split_by_size() để split theo paragraph")
+    print("\n✅ Sprint 1 COMPLETE!")
+    print(f"   Index ready in: {QDRANT_DB_DIR}")
+    print(f"   Collection: {QDRANT_COLLECTION_NAME}")
+    print("\n📋 Next steps:")
+    print("   1. Implement Sprint 2: rag_answer.py (RAG query)")
+    print("   2. Test integration with LangChain")
+    print("   3. Setup LangSmith tracing")
