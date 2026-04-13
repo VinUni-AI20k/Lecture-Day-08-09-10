@@ -1,9 +1,12 @@
+import os
+import time
 from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
-import asyncio
-import os
+
+# Import the actual retrieval/generation logic
+from rag_answer import rag_answer, transform_query
 
 app = FastAPI(title="Lucid RAG Demo")
 
@@ -17,7 +20,7 @@ app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 class ChatRequest(BaseModel):
     query: str
     retrieval_mode: str = "hybrid"
-    threshold: float = 0.35
+    threshold: float = 0.35  # UI still sends this, we can ignore or use it
     use_hyde: bool = False
 
 @app.get("/")
@@ -28,41 +31,53 @@ async def get_index():
 
 @app.post("/api/chat")
 async def chat_api(req: ChatRequest):
-    # Giả lập delay của LLM và retrieval (1.5 giây)
-    await asyncio.sleep(1.5)
+    start_time = time.time()
     
-    # Logic giả lập (Dummy Data)
-    # Giả lập trường hợp bị Abstain do Threshold quá cao hoặc query ảo
-    if req.threshold > 0.8 or "lỗi abc" in req.query.lower():
+    try:
+        # 1. Transform query bằng HyDE nếu User tick chọn
+        processed_query = req.query
+        if req.use_hyde:
+            transformed = transform_query(req.query, strategy="hyde")
+            processed_query = transformed[0] if transformed else req.query
+            
+        # 2. Gọi hàm thực thi RAG Pipeline (từ rag_answer.py thực tế)
+        # Sử dụng tham số mode lấy từ thanh Sidebar bên UI (req.retrieval_mode)
+        res = rag_answer(
+            query=processed_query, 
+            retrieval_mode=req.retrieval_mode,
+            verbose=False
+        )
+        
+        # 3. Format lại "chunks_used" cho khớp với Trace Panel của UI Demo
+        formatted_chunks = []
+        for idx, chunk in enumerate(res.get("chunks_used", [])):
+            meta = chunk.get("metadata", {})
+            formatted_chunks.append({
+                "id": f"CHUNK {idx + 1}",
+                "source": meta.get("source", "unknown"),
+                "section": meta.get("section", "N/A"),
+                "score": round(chunk.get("score", 0), 4),
+                # Cắt bớt content nếu quá dài để hiển thị mượt trên UI
+                "text": chunk.get("text", "")[:400] + ("..." if len(chunk.get("text", "")) > 400 else "")
+            })
+            
+        latency_ms = int((time.time() - start_time) * 1000)
+        
         return {
-            "answer": "Không tìm thấy thông tin phù hợp trong hệ thống với ngưỡng tin cậy hiện tại. Vui lòng thử lại với các từ khóa khác.",
+            "answer": res["answer"],
+            "sources": res["sources"],
+            "chunks_used": formatted_chunks,
+            "latency_ms": latency_ms
+        }
+        
+    except Exception as e:
+        latency_ms = int((time.time() - start_time) * 1000)
+        return {
+            "answer": f"Đã có lỗi hệ thống xảy ra trong quá trình chạy Pipeline: {str(e)}.\n\nVui lòng kiểm tra lại thiết lập biến môi trường (Ví dụ OPENAI_API_KEY).",
             "sources": [],
             "chunks_used": [],
-            "latency_ms": 1520
+            "latency_ms": latency_ms
         }
-
-    # Giả lập trả lời thành công
-    return {
-        "answer": f"[DEV MODE - {req.retrieval_mode.upper()} SEARCH] Dựa trên các tài liệu chính sách, câu trả lời cho yêu cầu của bạn là: Thời gian phân loại ticket và xử lý SLA tiêu chuẩn là 24 giờ. Đối với các vấn đề khẩn cấp đánh dấu P1, yêu cầu sẽ được xử lý trong vòng 2 giờ.",
-        "sources": ["policy_sla.pdf", "refund_guide.docx"],
-        "chunks_used": [
-            {
-                "id": "CHUNK 1",
-                "source": "policy_sla.pdf",
-                "section": "Section 1.2",
-                "score": 0.89,
-                "text": "Thời gian phản hồi cho mức độ Ưu tiên 1 là 2 giờ làm việc. Đối với các yêu cầu không khẩn cấp, SLA chuẩn là 24 giờ..."
-            },
-            {
-                "id": "CHUNK 2",
-                "source": "refund_guide.docx",
-                "section": "Intro",
-                "score": 0.72,
-                "text": "Chính sách hoàn tiền áp dụng cho tất cả các gói dịch vụ cao cấp trong vòng 30 ngày kể từ ngày kích hoạt..."
-            }
-        ],
-        "latency_ms": 1520
-    }
 
 if __name__ == "__main__":
     import uvicorn

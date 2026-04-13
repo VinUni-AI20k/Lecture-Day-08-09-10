@@ -7,7 +7,7 @@
 
 ## Baseline (Sprint 2)
 
-**Ngày:** ___________  
+**Ngày:** 2026-04-13 
 **Config:**
 ```
 retrieval_mode = "dense"
@@ -119,13 +119,15 @@ use_rerank     = False
 
 ## Tóm tắt học được
 
-> TODO (Sprint 4): Điền sau khi hoàn thành evaluation.
+---
+
+## Tóm tắt bài học kinh nghiệm (Sprint 4)
 
 1. **Lỗi phổ biến nhất trong pipeline này là gì?**
-   > _____________
+   > Lỗi sụt giảm **Abstain Accuracy** hụt so với kỳ vọng do bộ Judge (LLM-as-Judge) đôi khi quá khắt khe với các câu trả lời ngắn của chatbot. Ngoài ra, việc embedding model đôi khi không bắt được các mã kỹ thuật (Ticket ID) nếu không có BM25 hỗ trợ.
 
 2. **Biến nào có tác động lớn nhất tới chất lượng?**
-   > _____________
+   > Chiến lược **Hybrid Search** (+ HyDE). Nó giúp tăng Context Recall từ ~80% lên gần mức tuyệt đối 96-100% bằng cách tận dụng sức mạnh của cả keyword matching và semantic similarity.
 
 3. **Nếu có thêm 1 giờ, nhóm sẽ thử gì tiếp theo?**
-   > _____________
+   > Nhóm sẽ tích hợp **Cross-Encoder Reranker** ở cấp độ production để lọc nhiễu tốt hơn sau khi Hybrid Retrieval trả về quá nhiều chunk, giúp giảm giá trị Context Window và tiết kiệm Token LLM.
