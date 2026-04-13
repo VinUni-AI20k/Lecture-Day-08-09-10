@@ -34,7 +34,34 @@ load_dotenv()
 TOP_K_SEARCH = 10    # Số chunk lấy từ vector store trước rerank (search rộng)
 TOP_K_SELECT = 3     # Số chunk gửi vào prompt sau rerank/select (top-3 sweet spot)
 
-LLM_MODEL = os.getenv("LLM_MODEL", "gpt-4o-mini")
+LLM_MODEL          = os.getenv("LLM_MODEL", "gpt-4o-mini")
+CHROMA_PERSIST_DIR = os.getenv("CHROMA_PERSIST_DIR", "./data/chroma_db")
+EMBEDDING_MODEL    = os.getenv("OPENAI_EMBEDDING_MODEL", "text-embedding-3-small")
+
+# =============================================================================
+# SYSTEM PROMPT — Grounding Rules (Sprint 2)
+# =============================================================================
+
+SYSTEM_PROMPT = """
+# ROLE
+Bạn là AI chuyên gia hỗ trợ nội bộ cho khối CS và IT Helpdesk.
+
+# CONTEXT GUIDELINES
+Dưới đây là các đoạn thông tin được trích xuất từ tài liệu chính thức.
+---
+{context_block}
+---
+
+# CONSTRAINTS (BẮT BUỘC)
+1. **Grounding**: Chỉ trả lời dựa trên thông tin có trong Context ở trên.
+2. **Abstain**: Nếu Context không chứa đáp án, phải trả lời: "Tôi không tìm thấy thông tin này trong tài liệu".
+3. **Citations**: Trích dẫn nguồn theo định dạng `[1]`, `[2]` ngay sau thông tin được lấy ra.
+4. **No Hallucination**: Tuyệt đối không sử dụng kiến thức bên ngoài để bổ sung.
+
+# OUTPUT FORMAT
+- Ngôn ngữ: Tiếng Việt.
+- Văn phong: Chuyên nghiệp, ngắn gọn.
+"""
 
 
 # =============================================================================
@@ -44,42 +71,50 @@ LLM_MODEL = os.getenv("LLM_MODEL", "gpt-4o-mini")
 def retrieve_dense(query: str, top_k: int = TOP_K_SEARCH) -> List[Dict[str, Any]]:
     """
     Dense retrieval: tìm kiếm theo embedding similarity trong ChromaDB.
-
-    Args:
-        query: Câu hỏi của người dùng
-        top_k: Số chunk tối đa trả về
-
-    Returns:
-        List các dict, mỗi dict là một chunk với:
-          - "text": nội dung chunk
-          - "metadata": metadata (source, section, effective_date, ...)
-          - "score": cosine similarity score
-
-    TODO Sprint 2:
-    1. Embed query bằng cùng model đã dùng khi index (xem index.py)
-    2. Query ChromaDB với embedding đó
-    3. Trả về kết quả kèm score
-
-    Gợi ý:
-        import chromadb
-        from index import get_embedding, CHROMA_DB_DIR
-
-        client = chromadb.PersistentClient(path=str(CHROMA_DB_DIR))
-        collection = client.get_collection("rag_lab")
-
-        query_embedding = get_embedding(query)
-        results = collection.query(
-            query_embeddings=[query_embedding],
-            n_results=top_k,
-            include=["documents", "metadatas", "distances"]
-        )
-        # Lưu ý: distances trong ChromaDB cosine = 1 - similarity
-        # Score = 1 - distance
+    Dùng LangChain Chroma — cùng cách index.py build index → tránh lỗi collection name mismatch.
     """
-    raise NotImplementedError(
-        "TODO Sprint 2: Implement retrieve_dense().\n"
-        "Tham khảo comment trong hàm để biết cách query ChromaDB."
+    from index import get_embeddings_fn, CHROMA_PERSIST_DIR
+    from langchain_community.vectorstores import Chroma
+
+    embedding_fn = get_embeddings_fn()
+    vectorstore = Chroma(
+        persist_directory=CHROMA_PERSIST_DIR,
+        embedding_function=embedding_fn,
     )
+    
+    # Search
+    results = vectorstore.similarity_search_with_score(query, k=top_k)
+    
+    # Convert to expected format
+    formatted_results = []
+    for doc, distance in results:
+        # Distance to score (similarity)
+        # Similarity approx = 1 - distance
+        score = 1.0 - distance
+        
+        formatted_results.append({
+            "text": doc.page_content,
+            "metadata": doc.metadata,
+            "score": score
+        })
+        
+    return formatted_results
+
+    # similarity_search_with_score trả về List[(Document, score)]
+    # score ở đây là cosine distance (nhỏ hơn = gần hơn) với Chroma mặc định
+    results = vectorstore.similarity_search_with_score(query, k=top_k)
+
+    chunks = []
+    for doc, distance in results:
+        # Chroma trả về L2 distance mặc định; chuyển thành similarity score 0-1
+        score = max(0.0, 1.0 - distance)
+        chunks.append({
+            "text":     doc.page_content,
+            "metadata": doc.metadata,
+            "score":    score,
+        })
+
+    return chunks
 
 
 # =============================================================================
@@ -109,10 +144,27 @@ def retrieve_sparse(query: str, top_k: int = TOP_K_SEARCH) -> List[Dict[str, Any
         scores = bm25.get_scores(tokenized_query)
         top_indices = sorted(range(len(scores)), key=lambda i: scores[i], reverse=True)[:top_k]
     """
-    # TODO Sprint 3: Implement BM25 search
-    # Tạm thời return empty list
-    print("[retrieve_sparse] Chưa implement — Sprint 3")
-    return []
+    # [Khai] retrieve_sparse — load BM25S index đã build từ index.py
+    import pickle
+    import bm25s
+
+    bm25_dir = os.getenv("BM25_INDEX_DIR", "./data/bm25_index")
+    with open(f"{bm25_dir}/bm25.pkl", "rb") as f:
+        retriever = pickle.load(f)
+    with open(f"{bm25_dir}/docs.pkl", "rb") as f:
+        bm25_docs = pickle.load(f)
+
+    tokens = bm25s.tokenize([query], stopwords=None)
+    results, scores = retriever.retrieve(tokens, corpus=bm25_docs, k=min(top_k, len(bm25_docs)))
+
+    chunks = []
+    for doc, score in zip(results[0], scores[0]):
+        chunks.append({
+            "text": doc.page_content,
+            "metadata": doc.metadata,
+            "score": float(score),
+        })
+    return chunks
 
 
 # =============================================================================
@@ -148,10 +200,38 @@ def retrieve_hybrid(
     - Corpus có cả câu tự nhiên VÀ tên riêng, mã lỗi, điều khoản
     - Query như "Approval Matrix" khi doc đổi tên thành "Access Control SOP"
     """
-    # TODO Sprint 3: Implement hybrid RRF
-    # Tạm thời fallback về dense
-    print("[retrieve_hybrid] Chưa implement RRF — fallback về dense")
-    return retrieve_dense(query, top_k)
+    # [Khai] retrieve_hybrid — Dense + Sparse → RRF merge
+    # Lý do chọn hybrid: corpus có cả ngôn ngữ tự nhiên (policy) lẫn
+    # tên kỹ thuật/alias (ERR-403, Approval Matrix, ticket P1)
+    # Dense bắt ngữ nghĩa, BM25 bắt keyword chính xác → RRF lấy điểm tốt nhất cả hai
+
+    dense_results = retrieve_dense(query, top_k=top_k)
+    sparse_results = retrieve_sparse(query, top_k=top_k)
+
+    # RRF merge: score(doc) = Σ weight * 1/(k + rank), k=60 là hằng số RRF chuẩn
+    RRF_K = 60
+    score_map: Dict[str, Any] = {}
+
+    for rank, chunk in enumerate(dense_results):
+        cid = chunk["metadata"].get("chunk_id") or chunk["metadata"].get("source", "") + chunk["metadata"].get("section", "")
+        if cid not in score_map:
+            score_map[cid] = {"chunk": chunk, "rrf_score": 0.0}
+        score_map[cid]["rrf_score"] += dense_weight * (1.0 / (RRF_K + rank))
+
+    for rank, chunk in enumerate(sparse_results):
+        cid = chunk["metadata"].get("chunk_id") or chunk["metadata"].get("source", "") + chunk["metadata"].get("section", "")
+        if cid not in score_map:
+            score_map[cid] = {"chunk": chunk, "rrf_score": 0.0}
+        score_map[cid]["rrf_score"] += sparse_weight * (1.0 / (RRF_K + rank))
+
+    merged = sorted(score_map.values(), key=lambda x: x["rrf_score"], reverse=True)
+
+    results = []
+    for item in merged[:top_k]:
+        chunk = item["chunk"].copy()
+        chunk["score"] = item["rrf_score"]
+        results.append(chunk)
+    return results
 
 
 # =============================================================================
@@ -224,9 +304,32 @@ def transform_query(query: str, strategy: str = "expansion") -> List[str]:
     - Decomposition: query hỏi nhiều thứ một lúc
     - HyDE: query mơ hồ, search theo nghĩa không hiệu quả
     """
-    # TODO Sprint 3: Implement query transformation
-    # Tạm thời trả về query gốc
-    return [query]
+    # [Khai] transform_query — HyDE implementation
+    if strategy != "hyde":
+        return [query]
+
+    # HyDE: dùng LLM generate đoạn văn giả định trả lời câu hỏi
+    # Embed đoạn đó thay vì embed câu hỏi gốc → tăng recall với câu hỏi ngắn/mơ hồ
+    # Fallback về query gốc nếu LLM fail (tránh crash pipeline)
+    hyde_prompt = (
+        f"Viết đoạn văn khoảng 80 từ trả lời câu hỏi sau, "
+        f"dựa trên kiến thức về chính sách IT/HR nội bộ công ty.\n"
+        f"Câu hỏi: {query}\nTrả lời:"
+    )
+    try:
+        from openai import OpenAI
+        client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+        response = client.chat.completions.create(
+            model=LLM_MODEL,
+            messages=[{"role": "user", "content": hyde_prompt}],
+            temperature=0.3,
+            max_tokens=150,
+        )
+        hypothetical_doc = response.choices[0].message.content.strip()
+        # Kết hợp query gốc + hypothetical doc để embed
+        return [f"{query}\n\n{hypothetical_doc}"]
+    except Exception:
+        return [query]
 
 
 # =============================================================================
@@ -236,90 +339,164 @@ def transform_query(query: str, strategy: str = "expansion") -> List[str]:
 def build_context_block(chunks: List[Dict[str, Any]]) -> str:
     """
     Đóng gói danh sách chunks thành context block để đưa vào prompt.
-
-    Format: structured snippets với source, section, score (từ slide).
-    Mỗi chunk có số thứ tự [1], [2], ... để model dễ trích dẫn.
     """
     context_parts = []
     for i, chunk in enumerate(chunks, 1):
         meta = chunk.get("metadata", {})
         source = meta.get("source", "unknown")
         section = meta.get("section", "")
-        score = chunk.get("score", 0)
         text = chunk.get("text", "")
 
-        # TODO: Tùy chỉnh format nếu muốn (thêm effective_date, department, ...)
-        header = f"[{i}] {source}"
+        header = f"[{i}] Nguồn: {source}"
         if section:
-            header += f" | {section}"
-        if score > 0:
-            header += f" | score={score:.2f}"
+            header += f" | Section: {section}"
 
         context_parts.append(f"{header}\n{text}")
 
     return "\n\n".join(context_parts)
 
+def format_citations(sources: List[str]) -> str:
+    """
+    Tạo citation list ở cuối câu trả lời (Dành riêng cho Sprint 2 requirements).
+    """
+    if not sources:
+        return ""
+    lines = ["\n\n**Nguồn tham khảo:**"]
+    for i, src in enumerate(sources, 1):
+        lines.append(f"[{i}] {src}")
+    return "\n".join(lines)
+
 
 def build_grounded_prompt(query: str, context_block: str) -> str:
     """
-    Xây dựng grounded prompt theo 4 quy tắc từ slide:
-    1. Evidence-only: Chỉ trả lời từ retrieved context
-    2. Abstain: Thiếu context thì nói không đủ dữ liệu
-    3. Citation: Gắn source/section khi có thể
-    4. Short, clear, stable: Output ngắn, rõ, nhất quán
-
-    TODO Sprint 2:
-    Đây là prompt baseline. Trong Sprint 3, bạn có thể:
-    - Thêm hướng dẫn về format output (JSON, bullet points)
-    - Thêm ngôn ngữ phản hồi (tiếng Việt vs tiếng Anh)
-    - Điều chỉnh tone phù hợp với use case (CS helpdesk, IT support)
+    Xây dựng grounded prompt.
+    Sử dụng SYSTEM_PROMPT được định nghĩa ở trên làm template.
     """
-    prompt = f"""Answer only from the retrieved context below.
-If the context is insufficient to answer the question, say you do not know and do not make up information.
-Cite the source field (in brackets like [1]) when possible.
-Keep your answer short, clear, and factual.
-Respond in the same language as the question.
-
-Question: {query}
-
-Context:
-{context_block}
-
-Answer:"""
-    return prompt
+    system_part = SYSTEM_PROMPT.format(context_block=context_block)
+    
+    prompt = f"{system_part}\n\nCâu hỏi: {query}\n\nTrả lời (trích dẫn [số] sau mỗi ý):"
+    return prompt.strip()
 
 
-def call_llm(prompt: str) -> str:
+def generate_answer(
+    query: str,
+    reranked_docs: List[Dict[str, Any]],
+    has_context: bool,
+    llm=None,
+) -> Dict[str, Any]:
     """
-    Gọi LLM để sinh câu trả lời.
+    Core generation function cho Sprint 2.
 
-    TODO Sprint 2:
-    Chọn một trong hai:
+    Args:
+        query: Câu hỏi của người dùng
+        reranked_docs: List các chunk đã qua rerank/select, mỗi phần tử là dict
+                       với keys "text", "metadata", "score".
+                       Hỗ trợ cả tuple (doc, score) để tương thích với ROLE_INDIVIDUALS spec.
+        has_context: True nếu có chunk liên quan, False nếu retrieval không tìm thấy gì
+        llm: Tuỳ chọn — LLM client bên ngoài (nếu None thì dùng call_llm() nội bộ)
 
-    Option A — OpenAI (cần OPENAI_API_KEY):
+    Returns:
+        Dict với:
+          - "answer": câu trả lời grounded có citation
+          - "sources": list tên file nguồn
+          - "citations": list số thứ tự trích dẫn
+
+    Grounding rules (theo SYSTEM_PROMPT):
+    - Nếu không có context → trả về câu "Không tìm thấy thông tin"
+    - Nếu có context → build citation-marked context block rồi gọi LLM
+    """
+    # --- Trường hợp 1: Không có context ---
+    if not has_context or not reranked_docs:
+        return {
+            "answer": "Không tìm thấy thông tin về câu hỏi này trong tài liệu hiện có.",
+            "sources": [],
+            "citations": [],
+        }
+
+    # --- Bước 1: Build context với citation markers [1], [2]... ---
+    context_parts = []
+    sources = []
+    citation_indices = []
+
+    for i, item in enumerate(reranked_docs, 1):
+        # Hỗ trợ cả tuple (doc, score) lẫn dict thuần
+        if isinstance(item, tuple):
+            doc, score = item
+            # doc có thể là LangChain Document (có .page_content / .metadata)
+            # hoặc dict thông thường
+            if hasattr(doc, "page_content"):
+                text = doc.page_content
+                meta = doc.metadata
+            else:
+                text = doc.get("text", "")
+                meta = doc.get("metadata", {})
+        else:
+            # dict thuần (format nội bộ của rag_answer.py)
+            text = item.get("text", "")
+            meta = item.get("metadata", {})
+            score = item.get("score", 0)
+
+        src = meta.get("source", "unknown")
+        section = meta.get("section", "")
+
+        header = f"[{i}] Nguồn: {src}"
+        if section:
+            header += f" | {section}"
+
+        context_parts.append(f"{header}\n{text}")
+        sources.append(src)
+        citation_indices.append(i)
+
+    context_block = "\n\n---\n\n".join(context_parts)
+
+    # --- Bước 2: Build prompt ---
+    prompt = build_grounded_prompt(query, context_block)
+
+    # --- Bước 3: Gọi LLM ---
+    if llm is not None:
+        # Nếu caller truyền LLM client (ví dụ LangChain ChatOpenAI)
+        from langchain_core.messages import HumanMessage
+        response = llm.invoke([
+            HumanMessage(content=prompt),
+        ])
+        answer_text = response.content
+    else:
+        # Dùng OpenAI client nội bộ
         from openai import OpenAI
         client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
         response = client.chat.completions.create(
             model=LLM_MODEL,
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0,     # temperature=0 để output ổn định, dễ đánh giá
+            messages=[
+                {"role": "user", "content": prompt},
+            ],
+            temperature=0,
             max_tokens=512,
         )
-        return response.choices[0].message.content
+        answer_text = response.choices[0].message.content
 
-    Option B — Google Gemini (cần GOOGLE_API_KEY):
-        import google.generativeai as genai
-        genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
-        model = genai.GenerativeModel("gemini-1.5-flash")
-        response = model.generate_content(prompt)
-        return response.text
+    return {
+        "answer": answer_text,
+        "sources": list(dict.fromkeys(sources)),   # deduplicated, order preserved
+        "citations": citation_indices,
+    }
 
-    Lưu ý: Dùng temperature=0 hoặc thấp để output ổn định cho evaluation.
+
+def call_llm(prompt: str) -> str:
     """
-    raise NotImplementedError(
-        "TODO Sprint 2: Implement call_llm().\n"
-        "Chọn Option A (OpenAI) hoặc Option B (Gemini) trong TODO comment."
+    Gọi LLM để sinh câu trả lời sử dụng OpenAI.
+    """
+    from openai import OpenAI
+    client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+    
+    model_name = os.getenv("LLM_MODEL", "gpt-4o-mini")
+    
+    response = client.chat.completions.create(
+        model=model_name,
+        messages=[{"role": "user", "content": prompt}],
+        temperature=0,
+        max_tokens=1024,
     )
+    return response.choices[0].message.content
 
 
 def rag_answer(
@@ -394,26 +571,17 @@ def rag_answer(
     if verbose:
         print(f"[RAG] After select: {len(candidates)} chunks")
 
-    # --- Bước 3: Build context và prompt ---
-    context_block = build_context_block(candidates)
-    prompt = build_grounded_prompt(query, context_block)
-
     if verbose:
-        print(f"\n[RAG] Prompt:\n{prompt[:500]}...\n")
+        print(f"\n[RAG] Sending {len(candidates)} chunks to generate_answer()")
 
-    # --- Bước 4: Generate ---
-    answer = call_llm(prompt)
-
-    # --- Bước 5: Extract sources ---
-    sources = list({
-        c["metadata"].get("source", "unknown")
-        for c in candidates
-    })
+    # --- Bước 3: Generate (dùng generate_answer để có abstain + citation logic) ---
+    has_context = len(candidates) > 0
+    result = generate_answer(query, candidates, has_context=has_context)
 
     return {
         "query": query,
-        "answer": answer,
-        "sources": sources,
+        "answer": result["answer"],
+        "sources": result["sources"],
         "chunks_used": candidates,
         "config": config,
     }

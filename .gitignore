@@ -6,4 +6,6 @@
 day08/lab/data/grading_questions.json
 
 .env
-.env
+.vscode
+__pycache__/
+*.py[cod]
