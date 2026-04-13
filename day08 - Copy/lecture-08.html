@@ -1,0 +1,1679 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Day 08 — RAG Pipeline</title>
+<style>
+  :root {
+    --vin-blue: #2e548a;
+    --vin-blue-dark: #1a3355;
+    --vin-red: #c83538;
+    --light-blue: #dce6f5;
+    --mid-gray: #8c8c8c;
+    --apple-dark: #1d1d1f;
+    --apple-gray: #86868b;
+    --apple-light: #f5f5f7;
+    --apple-mid: #d6d6db;
+    --teal: #0d7377;
+    --teal-light: #e6f4f5;
+    --gold: #e2ad32;
+    --gold-light: #fff5db;
+    --success: #0c7d5b;
+    --success-light: #e8f6f1;
+    --slide-w: 1280px;
+    --slide-h: 720px;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #111;
+    font-family: 'Be Vietnam Pro', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
+    overflow: hidden;
+    display: flex; align-items: center; justify-content: center; height: 100vh;
+  }
+  .presentation { width: var(--slide-w); height: var(--slide-h); position: relative; transform-origin: center center; }
+  .slide {
+    width: var(--slide-w); height: var(--slide-h);
+    position: absolute; inset: 0;
+    opacity: 0; visibility: hidden; pointer-events: none;
+    transition: opacity 0.4s ease, visibility 0.4s ease;
+    display: flex; flex-direction: column;
+    z-index: 0;
+  }
+  .slide.active { opacity: 1; visibility: visible; pointer-events: auto; z-index: 1; }
+  .slide.content-slide { background: white; padding: 0 50px; }
+  .frame-header { padding-top: 28px; }
+  .frame-header .frame-title { font-size: 32px; font-weight: 700; color: var(--apple-dark); line-height: 1.2; }
+  .frame-header .frame-sub { font-size: 18px; color: var(--apple-gray); margin-top: 6px; }
+  .frame-header .thin-rule { height: 1px; background: rgba(0,0,0,0.08); margin-top: 12px; }
+  .slide-body { flex: 1; padding: 16px 0; color: var(--apple-dark); font-size: 19px; line-height: 1.55; overflow: hidden; min-height: 0; }
+  .slide-body ul { list-style: none; padding-left: 0; }
+  .slide-body ul li { padding: 4px 0 4px 20px; position: relative; }
+  .slide-body ul li::before { content: '\2014'; color: rgba(134,134,139,0.5); position: absolute; left: 0; }
+  .slide-body ol { padding-left: 22px; }
+  .slide-body ol li { padding: 4px 0; }
+  .credit-footer {
+    display: flex; align-items: center; padding: 0 50px 14px 50px;
+    font-size: 13px; color: var(--apple-gray); opacity: 0.85; flex-shrink: 0;
+    margin-top: auto;
+  }
+  .credit-footer .f-left { flex: 1; }
+  .credit-footer .f-center { flex: 1; text-align: center; }
+  .credit-footer .f-right { flex: 1; text-align: right; }
+  .section-slide .credit-footer, .dark-statement .credit-footer { color: rgba(255,255,255,0.42); position: absolute; bottom: 0; left: 0; right: 0; padding: 0 60px 14px 60px; margin-top: 0; }
+
+  .slide.section-slide {
+    background: linear-gradient(135deg, #254879 0%, #20406c 30%, #173055 100%);
+    padding: 0 60px; padding-bottom: 45px; justify-content: center; overflow: hidden;
+  }
+  .slide.section-slide::after { content:''; position:absolute; bottom:0; left:0; right:0; height:4px; background:var(--vin-red); }
+  .slide.section-slide::before {
+    content:''; position:absolute; inset:0;
+    background:
+      radial-gradient(circle at 15% 18%, rgba(255,255,255,0.16) 0, rgba(255,255,255,0.00) 30%),
+      radial-gradient(circle at 82% 28%, rgba(255,255,255,0.10) 0, rgba(255,255,255,0.00) 26%),
+      linear-gradient(120deg, rgba(255,255,255,0.05), transparent 38%);
+    pointer-events:none;
+  }
+  .section-slide .section-num { position:absolute; right:46px; top:50%; transform:translateY(-50%); font-size:220px; font-weight:900; color:white; opacity:0.06; letter-spacing: -8px; }
+  .section-slide .section-title { font-size:50px; font-weight:700; color:white; line-height:1.12; max-width: 58%; position: relative; z-index: 2; }
+  .section-slide .section-redline { width:70px; height:4px; background:var(--vin-red); margin:16px 0; position: relative; z-index: 2; }
+  .section-slide .section-desc { font-size:22px; color:rgba(255,255,255,0.72); max-width:50%; line-height:1.5; position: relative; z-index: 2; }
+  .section-slide .eyebrow { font-size:16px; color: rgba(255,255,255,0.45); font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase; position: relative; z-index: 2; }
+
+  .slide.dark-statement { background:var(--apple-dark); align-items:center; justify-content:center; text-align:center; padding:70px; padding-bottom:80px; }
+  .dark-statement .statement-text { font-size:34px; font-weight:700; color:white; line-height:1.45; max-width:88%; }
+
+  .slide-badge { position:fixed; top:12px; left:12px; background:rgba(0,0,0,0.75); color:white; padding:6px 14px; border-radius:20px; font-size:11px; font-weight:600; z-index:100; }
+  .slide-counter { position:fixed; top:12px; right:12px; background:rgba(0,0,0,0.75); color:white; padding:6px 14px; border-radius:20px; font-size:11px; font-weight:600; z-index:100; font-variant-numeric:tabular-nums; }
+  .nav-hint { position:fixed; bottom:12px; left:50%; transform:translateX(-50%); color:rgba(255,255,255,0.35); font-size:11px; z-index:100; }
+  .notes { display:none; }
+
+  .muted { color: var(--apple-gray); }
+  .small { font-size: 15px; }
+  .tiny { font-size: 13px; }
+  .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; }
+  .kicker { display:inline-flex; align-items:center; gap:8px; padding:7px 12px; border-radius:999px; background: rgba(46,84,138,0.08); color: var(--vin-blue); font-size: 13px; font-weight: 700; letter-spacing: 0.3px; text-transform: uppercase; }
+  .chip-row, .pill-row { display:flex; flex-wrap:wrap; gap:8px; }
+  .pill { display:inline-flex; align-items:center; gap:8px; padding:8px 12px; border-radius:999px; font-size: 14px; font-weight: 700; }
+  .pill.blue { background: rgba(46,84,138,0.10); color: var(--vin-blue); }
+  .pill.red { background: rgba(200,53,56,0.09); color: var(--vin-red); }
+  .pill.teal { background: rgba(13,115,119,0.09); color: var(--teal); }
+  .pill.gray { background: rgba(140,140,140,0.12); color: #5d5d64; }
+  .pill.gold { background: var(--gold-light); color: #8a6312; }
+  .split-2 { display:grid; grid-template-columns: 1fr 1fr; gap: 24px; height:100%; }
+  .split-3 { display:grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  .soft-card { background: white; border: 1.5px solid rgba(0,0,0,0.08); border-radius: 16px; padding: 18px; box-shadow: 0 10px 30px rgba(17,17,17,0.05); }
+  .soft-card.light-blue { background: rgba(46,84,138,0.04); border-color: rgba(46,84,138,0.12); }
+  .soft-card.light-red { background: rgba(200,53,56,0.05); border-color: rgba(200,53,56,0.10); }
+  .soft-card.light-teal { background: rgba(13,115,119,0.05); border-color: rgba(13,115,119,0.12); }
+  .soft-card.gray { background: var(--apple-light); }
+  .panel-title { font-size: 17px; font-weight: 800; color: var(--apple-dark); margin-bottom: 10px; }
+  .panel-title .sub { display:block; font-size: 13px; font-weight: 700; letter-spacing: 0.3px; text-transform: uppercase; color: var(--apple-gray); margin-top: 4px; }
+  .tag { display:inline-flex; align-items:center; gap:6px; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; padding: 6px 10px; border-radius: 8px; }
+  .tag.red { background: rgba(200,53,56,0.10); color: var(--vin-red); }
+  .tag.blue { background: rgba(46,84,138,0.10); color: var(--vin-blue); }
+  .tag.teal { background: rgba(13,115,119,0.10); color: var(--teal); }
+  .tag.gray { background: rgba(140,140,140,0.12); color: #666; }
+  .stat-strip { display:flex; gap:12px; }
+  .stat-box { flex:1; background: var(--apple-light); border-radius: 14px; padding: 14px; }
+  .stat-box .label { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; color: var(--apple-gray); }
+  .stat-box .value { font-size: 20px; font-weight: 800; color: var(--apple-dark); margin-top: 5px; line-height: 1.25; }
+  .stat-box.blue { background: rgba(46,84,138,0.06); }
+  .stat-box.red { background: rgba(200,53,56,0.05); }
+  .stat-box.teal { background: rgba(13,115,119,0.05); }
+
+  .icon-circle { width: 38px; height: 38px; border-radius: 50%; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+  .icon-circle.blue { background: rgba(46,84,138,0.10); color: var(--vin-blue); }
+  .icon-circle.red { background: rgba(200,53,56,0.10); color: var(--vin-red); }
+  .icon-circle.teal { background: rgba(13,115,119,0.10); color: var(--teal); }
+  .icon-circle.gold { background: rgba(226,173,50,0.16); color: #8a6312; }
+  .svg-icon { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-width: 1.8; }
+  .svg-icon.fill { fill: currentColor; stroke: none; }
+
+  .hero-wrap { display:grid; grid-template-columns: 1.05fr 0.95fr; gap: 18px; align-items:center; position: relative; z-index: 2; }
+  .hero-copy { padding-top: 20px; }
+  .hero-copy .hero-title { font-size: 60px; font-weight: 800; color: white; line-height: 1.06; letter-spacing: -0.8px; }
+  .hero-copy .hero-sub { font-size: 22px; color: rgba(255,255,255,0.72); line-height: 1.45; max-width: 88%; margin-top: 14px; }
+  .hero-copy .mini-pipeline { display:flex; gap: 12px; align-items:center; margin-top: 26px; }
+  .hero-copy .mini-node { padding: 10px 14px; border-radius: 12px; background: rgba(255,255,255,0.10); color: white; font-size: 14px; font-weight: 700; }
+  .hero-copy .mini-arrow { color: rgba(255,255,255,0.45); font-size: 18px; }
+  .hero-visual { position: relative; height: 420px; }
+  .hero-ring { position:absolute; right:38px; top:32px; width: 286px; height: 286px; border-radius: 50%; border: 1px solid rgba(255,255,255,0.14); }
+  .hero-ring::after { content:''; position:absolute; inset: 22px; border-radius:50%; border: 1px dashed rgba(255,255,255,0.16); }
+  .hero-doc { position:absolute; background: rgba(255,255,255,0.12); border:1px solid rgba(255,255,255,0.18); box-shadow: 0 14px 36px rgba(0,0,0,0.18); border-radius: 18px; overflow:hidden; backdrop-filter: blur(4px); }
+  .hero-doc .bar { height: 12px; background: rgba(255,255,255,0.16); }
+  .hero-doc .body { padding: 15px; }
+  .hero-doc .line { height: 8px; border-radius: 6px; background: rgba(255,255,255,0.22); margin-bottom: 8px; }
+  .hero-doc .line.short { width: 52%; }
+  .hero-doc.primary { width: 275px; right: 52px; top: 92px; transform: rotate(-5deg); }
+  .hero-doc.secondary { width: 215px; left: 24px; top: 170px; transform: rotate(6deg); }
+  .hero-search { position:absolute; left: 118px; top: 58px; width: 240px; padding: 13px 16px; border-radius: 16px; background: rgba(255,255,255,0.12); border:1px solid rgba(255,255,255,0.18); display:flex; align-items:center; gap: 10px; color: white; box-shadow: 0 18px 44px rgba(0,0,0,0.16); }
+  .hero-answer { position:absolute; right: 8px; bottom: 36px; width: 285px; padding: 16px; background: rgba(255,255,255,0.12); border:1px solid rgba(255,255,255,0.18); border-radius: 18px; color: white; box-shadow: 0 18px 44px rgba(0,0,0,0.18); }
+  .hero-answer .answer-line { height: 8px; border-radius: 6px; background: rgba(255,255,255,0.22); margin-bottom: 8px; }
+  .hero-grid { position:absolute; inset:0; background-image: linear-gradient(rgba(255,255,255,0.06) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.06) 1px, transparent 1px); background-size: 44px 44px; mask-image: linear-gradient(180deg, rgba(0,0,0,0.8), transparent 82%); opacity: .35; }
+
+  .instructor-grid { display:flex; gap:40px; align-items:center; height:100%; }
+  .instructor-avatar { width:240px; height:240px; border-radius:50%; overflow:hidden; flex-shrink:0; border: 2px solid rgba(46,84,138,0.12); }
+  .instructor-name { font-size: 30px; font-weight: 800; color: var(--apple-dark); margin-bottom: 6px; }
+  .instructor-role { font-size: 18px; color: var(--apple-gray); margin-bottom: 16px; }
+  .focus-box { margin-top: 16px; padding: 14px 16px; background: rgba(46,84,138,0.05); border-left: 4px solid var(--vin-blue); border-radius: 0 12px 12px 0; }
+
+  .speech-card { background: linear-gradient(145deg, rgba(200,53,56,0.06), rgba(200,53,56,0.12)); border: 1.5px solid rgba(200,53,56,0.16); border-radius: 22px; padding: 24px; position: relative; box-shadow: 0 12px 24px rgba(200,53,56,0.08); }
+  .speech-card::after { content:''; position:absolute; left:36px; bottom:-18px; width: 34px; height: 34px; background: linear-gradient(145deg, rgba(200,53,56,0.06), rgba(200,53,56,0.12)); border-right: 1.5px solid rgba(200,53,56,0.16); border-bottom: 1.5px solid rgba(200,53,56,0.16); transform: rotate(45deg); }
+  .big-question { font-size: 34px; font-weight: 800; line-height: 1.22; color: var(--apple-dark); }
+  .quote-answer { margin-top: 18px; background: white; border-radius: 16px; padding: 16px; border: 1px solid rgba(0,0,0,0.07); }
+  .quote-answer .wrong { font-size: 17px; line-height: 1.55; color: #303038; }
+  .snippet-stack { display:flex; flex-direction:column; gap: 12px; margin-top: 20px; }
+  .snippet { background: var(--apple-light); border-radius: 12px; padding: 12px 14px; border:1px solid rgba(0,0,0,0.06); }
+  .snippet .snippet-title { font-size: 13px; font-weight: 800; color: var(--vin-blue); text-transform: uppercase; letter-spacing: .35px; margin-bottom: 6px; }
+  .reason-grid { display:flex; flex-direction:column; gap: 14px; }
+  .reason-card { display:flex; gap: 12px; padding: 16px; background: white; border-radius: 16px; border: 1.5px solid rgba(0,0,0,0.07); box-shadow: 0 10px 24px rgba(17,17,17,0.04); }
+  .reason-card .r-title { font-size: 16px; font-weight: 800; color: var(--apple-dark); }
+  .reason-card .r-text { font-size: 16px; color: #4b4b52; line-height: 1.45; margin-top: 4px; }
+
+  .agenda-grid { display:grid; grid-template-columns: 1fr 1fr; gap: 20px; height: 100%; }
+  .timeline-bar { display:flex; align-items:center; gap: 10px; margin-top: 16px; }
+  .timeline-seg { flex:1; height: 18px; border-radius: 999px; background: rgba(46,84,138,0.10); position:relative; overflow:hidden; }
+  .timeline-seg.practice { background: rgba(13,115,119,0.10); }
+  .timeline-seg::after { content:''; position:absolute; inset: 0; background: linear-gradient(90deg, rgba(46,84,138,.7), rgba(46,84,138,.95)); }
+  .timeline-seg.practice::after { background: linear-gradient(90deg, rgba(13,115,119,.7), rgba(13,115,119,.95)); }
+  .timeline-label { font-size: 14px; font-weight: 700; color: var(--apple-gray); min-width: 132px; }
+
+  .worksheet { display:grid; grid-template-columns: 1fr 1.15fr; gap: 24px; height:100%; }
+  .activity-panel { background: var(--apple-light); border-radius: 18px; padding: 18px; border: 1.5px solid rgba(0,0,0,0.05); }
+  .case-box { background: white; border-radius: 16px; padding: 18px; border: 1px solid rgba(0,0,0,0.08); box-shadow: 0 10px 24px rgba(17,17,17,0.04); }
+  .timer-badge { display:inline-flex; align-items:center; gap:8px; padding: 8px 12px; border-radius: 999px; background: rgba(226,173,50,0.18); color: #7c5c12; font-size: 13px; font-weight: 800; text-transform: uppercase; letter-spacing: .3px; }
+  .board { background: linear-gradient(180deg, #f9fbfe, #f6f8fb); border-radius: 18px; padding: 16px; border: 1.5px solid rgba(46,84,138,0.10); box-shadow: inset 0 0 0 1px rgba(255,255,255,0.5); }
+  .board-grid { display:grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-top: 12px; }
+  .lane { background: white; border-radius: 16px; padding: 12px; border: 1px dashed rgba(46,84,138,0.22); min-height: 260px; display:flex; flex-direction:column; }
+  .lane h4 { font-size: 16px; font-weight: 800; color: var(--vin-blue-dark); margin-bottom: 10px; }
+  .sticky { background: #fff9d7; border-radius: 12px; padding: 10px; box-shadow: 0 3px 10px rgba(0,0,0,0.05); font-size: 15px; line-height: 1.35; margin-bottom: 10px; border: 1px solid rgba(226,173,50,0.18); }
+  .sticky.pink { background: #ffe4e8; border-color: rgba(200,53,56,0.14); }
+  .sticky.blue { background: #e8f0ff; border-color: rgba(46,84,138,0.16); }
+
+  .pipeline-stage-row { display:grid; grid-template-columns: repeat(3, 1fr); gap: 18px; align-items: stretch; }
+  .stage-card { background: white; border-radius: 20px; padding: 18px; border: 1.5px solid rgba(0,0,0,0.07); box-shadow: 0 12px 30px rgba(17,17,17,0.05); position:relative; }
+  .stage-card::after { content:''; position:absolute; right: -16px; top: 50%; width: 32px; height: 2px; background: linear-gradient(90deg, rgba(46,84,138,0.36), rgba(46,84,138,0.00)); }
+  .stage-card:last-child::after { display:none; }
+  .stage-card.blue { background: rgba(46,84,138,0.05); border-color: rgba(46,84,138,0.12); }
+  .stage-card.red { background: rgba(200,53,56,0.05); border-color: rgba(200,53,56,0.12); }
+  .stage-card.teal { background: rgba(13,115,119,0.05); border-color: rgba(13,115,119,0.12); }
+  .stage-header { display:flex; align-items:center; gap: 10px; margin-bottom: 12px; }
+  .stage-title { font-size: 20px; font-weight: 800; }
+  .substeps { display:flex; flex-direction:column; gap: 10px; margin-top: 10px; }
+  .substep { padding: 10px 12px; border-radius: 12px; background: rgba(255,255,255,0.8); font-size: 16px; border: 1px solid rgba(0,0,0,0.06); }
+  .mini-evidence { margin-top: 18px; display:grid; grid-template-columns: 0.8fr 1fr 0.95fr; gap: 12px; align-items:center; }
+  .doc-thumb, .answer-thumb { background: var(--apple-light); border-radius: 14px; padding: 14px; border: 1px solid rgba(0,0,0,0.06); }
+  .answer-thumb { background: rgba(13,115,119,0.06); border-color: rgba(13,115,119,0.12); }
+
+  .index-layout { display:grid; grid-template-columns: 1.35fr 0.95fr; gap: 20px; height:100%; }
+  .process-flow { display:flex; align-items:center; gap: 8px; margin-top: 10px; flex-wrap:nowrap; }
+  .flow-node { width: 118px; min-height: 112px; border-radius: 18px; background: white; border: 1.5px solid rgba(0,0,0,0.07); box-shadow: 0 10px 26px rgba(17,17,17,0.05); padding: 14px; display:flex; flex-direction:column; justify-content:space-between; }
+  .flow-node .n-title { font-size: 15px; font-weight: 800; color: var(--apple-dark); }
+  .flow-node .n-text { font-size: 13px; color: #595960; line-height: 1.35; margin-top: 6px; }
+  .flow-arrow { font-size: 20px; color: rgba(46,84,138,0.35); font-weight: 700; }
+  .meta-panel { display:flex; flex-direction:column; gap: 14px; }
+  .json-box { background: var(--apple-dark); color: #eff2f8; border-radius: 16px; padding: 16px; font-size: 14px; line-height: 1.65; box-shadow: 0 14px 28px rgba(0,0,0,0.14); }
+  .meta-pill { display:inline-flex; align-items:center; padding: 6px 10px; border-radius: 999px; background: rgba(46,84,138,0.08); color: var(--vin-blue); font-size: 13px; font-weight: 700; margin: 0 6px 6px 0; }
+  .freshness-grid { display:grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .fresh-card { border-radius: 14px; padding: 14px; border: 1px solid rgba(0,0,0,0.06); background: white; }
+  .fresh-card h4 { font-size: 15px; font-weight: 800; }
+  .fresh-card ul li { font-size: 15px; line-height: 1.35; }
+
+  .chunk-compare { display:grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-bottom: 16px; }
+  .chunk-box { border-radius: 18px; padding: 18px; border: 1.5px solid rgba(0,0,0,0.07); background: white; box-shadow: 0 10px 24px rgba(17,17,17,0.04); }
+  .chunk-box.bad { background: rgba(200,53,56,0.05); border-color: rgba(200,53,56,0.12); }
+  .chunk-box.good { background: rgba(46,84,138,0.05); border-color: rgba(46,84,138,0.12); }
+  .doc-preview { background: white; border-radius: 14px; padding: 14px; margin-top: 10px; border: 1px solid rgba(0,0,0,0.07); }
+  .decision-table { width:100%; border-collapse:collapse; font-size: 16px; }
+  .decision-table th { background: var(--vin-blue); color: white; text-align:left; padding: 10px 12px; font-size: 15px; }
+  .decision-table td { border-bottom: 1px solid rgba(0,0,0,0.06); padding: 10px 12px; vertical-align: top; }
+  .decision-table tr:nth-child(even) td { background: var(--apple-light); }
+
+  .query-card { background: white; border-radius: 16px; padding: 14px 16px; border: 1px solid rgba(0,0,0,0.06); box-shadow: 0 10px 24px rgba(17,17,17,0.04); }
+  .query-card.top { margin-bottom: 14px; background: linear-gradient(145deg, rgba(46,84,138,0.07), rgba(46,84,138,0.03)); }
+  .compare-col { background: white; border: 1.5px solid rgba(0,0,0,0.06); border-radius: 18px; overflow:hidden; box-shadow: 0 10px 24px rgba(17,17,17,0.04); }
+  .compare-col .head { padding: 14px 16px; color: white; font-size: 17px; font-weight: 800; }
+  .compare-col.blue .head { background: var(--vin-blue); }
+  .compare-col.gray .head { background: #666; }
+  .compare-col.teal .head { background: var(--teal); }
+  .compare-col .body { padding: 16px; font-size: 16px; line-height: 1.45; }
+  .signal-bar { height: 10px; border-radius: 999px; background: var(--apple-mid); margin-top: 8px; overflow:hidden; }
+  .signal-bar > span { display:block; height:100%; border-radius:999px; }
+  .signal-bar.semantic > span { width: 76%; background: var(--vin-blue); }
+  .signal-bar.keyword > span { width: 70%; background: #666; }
+  .signal-bar.merged > span { width: 88%; background: var(--teal); }
+  .when-to-use { margin-top: 12px; padding: 10px 12px; border-radius: 12px; background: var(--apple-light); font-size: 14px; }
+
+  .choice-chips { display:flex; gap:8px; margin-top:12px; flex-wrap:wrap; }
+  .choice-chip { padding: 8px 12px; border-radius: 999px; background: rgba(46,84,138,0.08); color: var(--vin-blue); font-size: 13px; font-weight: 700; border: 1px solid rgba(46,84,138,0.12); }
+
+  .funnel-layout { display:grid; grid-template-columns: 1fr 1.2fr 0.8fr; gap: 18px; align-items: center; height:100%; }
+  .transform-stack { display:flex; flex-direction:column; gap: 12px; }
+  .transform-card { padding: 14px 16px; border-radius: 16px; background: white; border: 1.5px solid rgba(0,0,0,0.06); box-shadow: 0 10px 24px rgba(17,17,17,0.04); }
+  .funnel { position: relative; height: 360px; display:flex; align-items:center; justify-content:center; }
+  .funnel-stage { position:absolute; left:50%; transform:translateX(-50%); border-radius: 20px; text-align:center; padding: 18px 20px; color: white; box-shadow: 0 12px 26px rgba(17,17,17,0.12); }
+  .funnel-stage.search { top: 16px; width: 360px; background: var(--vin-blue); }
+  .funnel-stage.rerank { top: 126px; width: 270px; background: var(--teal); }
+  .funnel-stage.select { top: 236px; width: 190px; background: var(--vin-red); }
+  .funnel-stage .f-title { font-size: 18px; font-weight: 800; }
+  .funnel-stage .f-sub { font-size: 14px; color: rgba(255,255,255,0.75); margin-top: 4px; }
+  .result-chip { display:inline-flex; align-items:center; gap:6px; padding: 6px 10px; border-radius: 999px; font-size: 12px; font-weight: 800; background: rgba(255,255,255,0.18); margin: 10px 4px 0 4px; }
+  .sweet-spot { background: linear-gradient(180deg, rgba(46,84,138,0.04), rgba(13,115,119,0.05)); border: 1.5px solid rgba(46,84,138,0.10); border-radius: 18px; padding: 18px; }
+  .sweet-band { height: 180px; margin-top: 14px; border-radius: 18px; background: linear-gradient(180deg, rgba(200,53,56,0.08) 0 31%, rgba(13,115,119,0.12) 31% 66%, rgba(200,53,56,0.08) 66% 100%); position: relative; }
+  .sweet-band .s-label { position:absolute; left: 16px; right: 16px; font-size: 14px; font-weight: 700; color: #45454d; }
+  .sweet-band .top { top: 12px; }
+  .sweet-band .mid { top: 50%; transform: translateY(-50%); }
+  .sweet-band .bot { bottom: 12px; }
+
+  .prompt-layout { display:grid; grid-template-columns: 0.95fr 1.05fr; gap: 18px; height:100%; }
+  .pattern-list { display:flex; flex-direction:column; gap: 12px; }
+  .pattern-card { display:flex; gap: 12px; background: white; border: 1.5px solid rgba(0,0,0,0.06); border-radius: 16px; padding: 14px; box-shadow: 0 10px 24px rgba(17,17,17,0.04); }
+  .pattern-card.active { background: rgba(13,115,119,0.05); border-color: rgba(13,115,119,0.12); }
+  .code-window { background: #14161c; color: #f7f9ff; border-radius: 18px; overflow:hidden; box-shadow: 0 16px 32px rgba(0,0,0,0.16); }
+  .code-window .topbar { display:flex; align-items:center; gap:7px; padding: 12px 14px; background: rgba(255,255,255,0.04); }
+  .dot { width:10px; height:10px; border-radius:50%; }
+  .dot.red { background:#ff5f57; } .dot.yellow { background:#febc2e; } .dot.green { background:#28c840; }
+  .code-window pre { margin:0; padding: 16px 18px; font-size: 14px; line-height: 1.55; white-space: pre-wrap; }
+  .token-bar { display:flex; gap: 6px; margin-top: 12px; }
+  .token-seg { flex:1; border-radius: 999px; padding: 8px 12px; font-size: 12px; font-weight: 700; text-align:center; color: white; }
+  .token-seg.instructions { background: var(--vin-blue); }
+  .token-seg.context { background: #7c8a9b; }
+  .token-seg.question { background: var(--teal); }
+  .token-seg.headroom { background: var(--vin-red); }
+  .evidence-callout { margin-top: 12px; padding: 12px 14px; border-radius: 14px; background: rgba(200,53,56,0.05); border-left: 4px solid var(--vin-red); font-size: 15px; }
+
+  .diff-layout { display:grid; grid-template-columns: 1fr 1fr 0.72fr; gap: 16px; height:100%; }
+  .diff-block { border-radius: 18px; overflow:hidden; border: 1.5px solid rgba(0,0,0,0.06); box-shadow: 0 10px 24px rgba(17,17,17,0.04); }
+  .diff-block .diff-head { padding: 12px 16px; color: white; font-size: 16px; font-weight: 800; }
+  .diff-block.bad .diff-head { background: var(--vin-red); }
+  .diff-block.good .diff-head { background: var(--teal); }
+  .diff-block pre { margin:0; padding: 16px; font-size: 14px; line-height: 1.55; min-height: 300px; background: #11151d; color: #f2f4fb; white-space: pre-wrap; }
+  .line-bad { color: #ff8f98; }
+  .line-good { color: #8cf1cb; }
+  .surgery-list { display:flex; flex-direction:column; gap: 10px; }
+  .surgery-item { background: white; border: 1px solid rgba(0,0,0,0.06); border-radius: 14px; padding: 12px; font-size: 15px; display:flex; gap:10px; align-items:flex-start; }
+
+  .eval-layout { display:grid; grid-template-columns: 0.75fr 1.25fr; gap: 18px; height:100%; }
+  .metric-stack { display:flex; flex-direction:column; gap: 12px; }
+  .metric-card { background: white; border-radius: 16px; padding: 14px 16px; border: 1.5px solid rgba(0,0,0,0.06); box-shadow: 0 10px 24px rgba(17,17,17,0.04); }
+  .metric-card .m-title { font-size: 16px; font-weight: 800; color: var(--apple-dark); }
+  .metric-card .m-text { font-size: 15px; color: #4b4b52; line-height:1.42; margin-top: 6px; }
+  .scorecard-shell { background: white; border-radius: 18px; padding: 16px; border: 1.5px solid rgba(0,0,0,0.06); box-shadow: 0 12px 28px rgba(17,17,17,0.05); }
+  .clean-table { width:100%; border-collapse:collapse; font-size:16px; }
+  .clean-table thead th { background: var(--vin-blue); color:white; padding:10px 12px; text-align:left; font-weight:800; font-size:15px; }
+  .clean-table tbody td { padding:10px 12px; border-bottom:1px solid rgba(0,0,0,0.06); vertical-align:top; }
+  .clean-table tbody tr:nth-child(even) { background: var(--apple-light); }
+  .score { display:inline-flex; align-items:center; justify-content:center; min-width: 48px; padding: 5px 10px; border-radius: 999px; font-size: 13px; font-weight: 800; }
+  .score.good { background: rgba(12,125,91,0.12); color: var(--success); }
+  .score.mid { background: rgba(226,173,50,0.16); color: #7c5c12; }
+  .score.bad { background: rgba(200,53,56,0.10); color: var(--vin-red); }
+  .ab-ladder { display:flex; gap: 10px; margin-top: 14px; align-items:center; }
+  .ab-step { flex:1; padding: 12px; border-radius: 14px; background: var(--apple-light); border: 1px solid rgba(0,0,0,0.06); font-size: 14px; }
+  .ab-step strong { display:block; font-size: 15px; color: var(--apple-dark); margin-bottom: 6px; }
+  .ab-arrow { color: rgba(46,84,138,0.4); font-size: 22px; }
+
+  .lab-layout { display:grid; grid-template-columns: 1.3fr 0.9fr; gap: 18px; height:100%; }
+  .sprint-stack { display:flex; flex-direction:column; gap: 12px; }
+  .sprint { display:grid; grid-template-columns: 100px 1fr; gap: 12px; align-items: stretch; }
+  .sprint .time { border-radius: 16px; background: var(--teal); color:white; display:flex; align-items:center; justify-content:center; flex-direction:column; font-size: 14px; font-weight: 800; }
+  .sprint .time.red { background: var(--vin-red); }
+  .sprint .time.blue { background: var(--vin-blue); }
+  .sprint .time.gray { background: #667085; }
+  .sprint .body { border-radius: 16px; background: white; border: 1.5px solid rgba(0,0,0,0.06); padding: 14px 16px; box-shadow: 0 10px 24px rgba(17,17,17,0.04); }
+  .sprint .body h4 { font-size: 17px; font-weight: 800; }
+  .sprint .body p { font-size: 15px; color: #4b4b52; margin: 6px 0 8px; line-height: 1.4; }
+  .dod-list li { font-size: 14px; line-height: 1.35; padding: 2px 0 2px 18px; }
+  .dod-list li::before { content: '\2713'; color: var(--success); left: 0; }
+  .repo-tree { background: var(--apple-dark); color: #f2f5fb; border-radius: 16px; padding: 16px; font-size: 14px; line-height: 1.6; box-shadow: 0 14px 28px rgba(0,0,0,0.14); }
+  .role-row { display:flex; flex-wrap:wrap; gap:8px; margin-top: 10px; }
+  .role-chip { padding: 7px 10px; border-radius: 999px; font-size: 12px; font-weight: 800; background: rgba(46,84,138,0.08); color: var(--vin-blue); }
+  .deliverable-check li { font-size: 15px; }
+
+  .bridge-layout { display:grid; grid-template-columns: 1fr 0.95fr; gap: 22px; height:100%; }
+  .takeaway-card { display:flex; align-items:flex-start; gap: 12px; background: white; border: 1px solid rgba(0,0,0,0.06); border-radius: 16px; padding: 14px 16px; box-shadow: 0 10px 24px rgba(17,17,17,0.04); margin-bottom: 12px; }
+  .takeaway-num { width: 34px; height: 34px; border-radius: 50%; background: var(--vin-blue); color: white; font-size: 18px; font-weight: 800; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+  .bridge-card { background: linear-gradient(180deg, rgba(46,84,138,0.04), rgba(13,115,119,0.04)); border-radius: 20px; padding: 18px; border: 1.5px solid rgba(46,84,138,0.10); }
+  .bridge-line { display:flex; align-items:center; justify-content:center; gap: 14px; margin-top: 18px; }
+  .bridge-node { border-radius: 16px; padding: 16px 18px; background: white; border: 1.5px solid rgba(0,0,0,0.06); box-shadow: 0 10px 24px rgba(17,17,17,0.04); text-align:center; min-width: 170px; }
+  .bridge-node.small { min-width: 126px; }
+  .bridge-arrow { font-size: 26px; color: rgba(46,84,138,0.42); }
+  .bridge-workers { display:flex; justify-content:center; gap: 10px; margin-top: 12px; }
+  .preview-badge { display:inline-flex; align-items:center; gap: 8px; padding: 8px 12px; border-radius: 999px; background: rgba(13,115,119,0.08); color: var(--teal); font-size: 13px; font-weight: 800; margin-top: 14px; }
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute;left:-9999px;top:-9999px;overflow:hidden" aria-hidden="true" focusable="false">
+  <symbol id="icon-doc" viewBox="0 0 24 24">
+    <path d="M7 3h7l4 4v14H7z"></path><path d="M14 3v5h5"></path><path d="M9 12h6"></path><path d="M9 16h6"></path>
+  </symbol>
+  <symbol id="icon-search" viewBox="0 0 24 24">
+    <circle cx="11" cy="11" r="6.5"></circle><path d="M16 16l5 5"></path>
+  </symbol>
+  <symbol id="icon-chat" viewBox="0 0 24 24">
+    <path d="M5 6h14v10H9l-4 3V6z"></path><path d="M9 10h6"></path><path d="M9 13h4"></path>
+  </symbol>
+  <symbol id="icon-db" viewBox="0 0 24 24">
+    <ellipse cx="12" cy="5" rx="7" ry="3"></ellipse><path d="M5 5v7c0 1.7 3.1 3 7 3s7-1.3 7-3V5"></path><path d="M5 12v7c0 1.7 3.1 3 7 3s7-1.3 7-3v-7"></path>
+  </symbol>
+  <symbol id="icon-clock" viewBox="0 0 24 24">
+    <circle cx="12" cy="12" r="8"></circle><path d="M12 8v5l3 2"></path>
+  </symbol>
+  <symbol id="icon-cite" viewBox="0 0 24 24">
+    <path d="M8 8H4v6h4l-2 4"></path><path d="M18 8h-4v6h4l-2 4"></path>
+  </symbol>
+  <symbol id="icon-metric" viewBox="0 0 24 24">
+    <path d="M5 18V9"></path><path d="M10 18V5"></path><path d="M15 18v-7"></path><path d="M20 18v-11"></path>
+  </symbol>
+  <symbol id="icon-branch" viewBox="0 0 24 24">
+    <circle cx="6" cy="6" r="2"></circle><circle cx="18" cy="6" r="2"></circle><circle cx="18" cy="18" r="2"></circle><path d="M8 6h8"></path><path d="M16 6v12"></path><path d="M8 6v12h8"></path>
+  </symbol>
+  <symbol id="icon-code" viewBox="0 0 24 24">
+    <path d="M8 8l-4 4 4 4"></path><path d="M16 8l4 4-4 4"></path><path d="M13.5 5l-3 14"></path>
+  </symbol>
+  <symbol id="icon-gear" viewBox="0 0 24 24">
+    <circle cx="12" cy="12" r="3"></circle><path d="M12 3v3"></path><path d="M12 18v3"></path><path d="M3 12h3"></path><path d="M18 12h3"></path><path d="M5.6 5.6l2.1 2.1"></path><path d="M16.3 16.3l2.1 2.1"></path><path d="M18.4 5.6l-2.1 2.1"></path><path d="M7.7 16.3l-2.1 2.1"></path>
+  </symbol>
+</svg>
+
+<div class="slide-badge">AI in Action &middot; Ngày 8</div>
+<div class="slide-counter" id="counter">1 / 16</div>
+<div class="nav-hint">&larr; &rarr; navigate</div>
+
+<div class="presentation" id="pres">
+
+  <!-- Slide 1 -->
+  <div class="slide section-slide active">
+    <div class="hero-grid"></div>
+    <div class="section-num">RAG</div>
+    <div class="hero-wrap">
+      <div class="hero-copy">
+        <div class="eyebrow">AICB-P1 &middot; Ngày 8 &middot; Production mini</div>
+        <div class="section-title hero-title" style="max-width:none">RAG Pipeline</div>
+        <div class="section-redline"></div>
+        <div class="section-desc hero-sub">Từ vector store demo đến pipeline đo được và giải thích được trong môi trường công ty.</div>
+        <div class="pill-row" style="margin-top:22px">
+          <div class="pill blue"><svg class="svg-icon"><use href="#icon-doc"></use></svg> Indexing</div>
+          <div class="pill gray"><svg class="svg-icon"><use href="#icon-search"></use></svg> Retrieval</div>
+          <div class="pill teal"><svg class="svg-icon"><use href="#icon-chat"></use></svg> Generation</div>
+        </div>
+        <div class="mini-pipeline">
+          <div class="mini-node">Policy + Helpdesk assistant</div>
+          <div class="mini-arrow">→</div>
+          <div class="mini-node">Pipeline đo được</div>
+          <div class="mini-arrow">→</div>
+          <div class="mini-node">Scorecard</div>
+        </div>
+      </div>
+      <div class="hero-visual">
+        <div class="hero-ring"></div>
+        <div class="hero-search"><svg class="svg-icon"><use href="#icon-search"></use></svg><div style="font-size:15px;font-weight:700">SLA ticket P1?</div></div>
+        <div class="hero-doc secondary">
+          <div class="bar"></div>
+          <div class="body">
+            <div class="line"></div>
+            <div class="line short"></div>
+            <div class="line"></div>
+            <div class="line short"></div>
+          </div>
+        </div>
+        <div class="hero-doc primary">
+          <div class="bar"></div>
+          <div class="body">
+            <div class="line"></div>
+            <div class="line"></div>
+            <div class="line short"></div>
+            <div class="line"></div>
+          </div>
+        </div>
+        <div class="hero-answer">
+          <div class="tag red">Grounded answer</div>
+          <div style="font-size:15px;line-height:1.45;margin-top:10px">“Theo <b>support/sla-p1-2026.pdf</b>, ticket P1 có SLA phản hồi 15 phút và xử lý trong 4 giờ.”</div>
+          <div class="answer-line" style="margin-top:12px;width:78%"></div>
+          <div class="answer-line" style="width:62%"></div>
+        </div>
+      </div>
+    </div>
+    <aside class="notes">
+      <strong>Objective:</strong> Mở chủ đề và đặt bối cảnh production mini. 
+      <br><strong>Speaker notes:</strong> Mở ngày học bằng cách nhấn mạnh đây không phải buổi nói về một trick prompt, mà là buổi nói về một pipeline sản phẩm thu nhỏ. Kéo người học vào case study trợ lý nội bộ cho khối CS và IT Helpdesk, nơi câu trả lời phải bám policy, SLA và workflow thật. Chốt ngay từ đầu rằng cuối ngày nhóm phải nộp được code chạy, scorecard và tài liệu giải thích vì sao bản tuning tốt hơn bản baseline.
+      <br><strong>Interaction:</strong> Hỏi nhanh: “Trong project hiện tại của bạn, lỗi hay nằm ở dữ liệu, retrieval hay prompt?”
+      <br><strong>Sources:</strong> YAML D8-S01; PDF page 1.
+    </aside>
+    <div class="credit-footer"><div class="f-left">Instructor: [Tên giảng viên]</div><div class="f-center">AI in Action - Day 08</div><div class="f-right slide-page-num"></div></div>
+  </div>
+
+  <!-- Slide 2 -->
+  <div class="slide content-slide">
+    <div class="frame-header"><div class="frame-title">Instructor</div><div class="thin-rule"></div></div>
+    <div class="slide-body">
+      <div class="instructor-grid">
+        <div class="instructor-avatar">
+          <svg width="240" height="240" viewBox="0 0 240 240" style="display:block">
+            <rect width="240" height="240" fill="#dce6f5"></rect>
+            <circle cx="120" cy="88" r="46" fill="#2e548a" opacity="0.32"></circle>
+            <ellipse cx="120" cy="210" rx="72" ry="56" fill="#2e548a" opacity="0.18"></ellipse>
+          </svg>
+        </div>
+        <div style="flex:1">
+          <div class="instructor-name">[Tên giảng viên]</div>
+          <div class="instructor-role">[Chức danh / vai trò]</div>
+          <div style="font-size:18px;line-height:1.9;color:var(--apple-dark)">
+            <div>■ [Kinh nghiệm 1]</div>
+            <div>■ [Kinh nghiệm 2]</div>
+            <div>■ [Kinh nghiệm 3]</div>
+            <div>■ [Kinh nghiệm 4]</div>
+          </div>
+          <div class="focus-box">
+            <div class="panel-title" style="margin-bottom:6px">Bối cảnh buổi học hôm nay</div>
+            <div style="font-size:17px;line-height:1.55">Artifact xuyên suốt là <b>trợ lý nội bộ cho khối CS + IT Helpdesk</b>: trả lời policy, workflow cấp quyền và SLA ticket bằng chứng cứ được retrieve có kiểm soát.</div>
+          </div>
+          <div class="pill-row" style="margin-top:14px">
+            <div class="pill blue">Policy docs</div>
+            <div class="pill gray">Ticket SLA</div>
+            <div class="pill teal">Grounded answers</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <aside class="notes">
+      Slide này giữ nguyên format instructor từ file mẫu HTML. Vì YAML không có profile giảng viên, để placeholder để người dùng thay trước khi dạy. Bối cảnh use case được thêm từ metadata của YAML để nối vào bài học Day 08.
+      <br><strong>Sources:</strong> HTML template instructor slide; YAML cross_day_case_study.
+    </aside>
+    <div class="credit-footer"><div class="f-left">Instructor: [Tên giảng viên]</div><div class="f-center">AI in Action - Day 08</div><div class="f-right slide-page-num"></div></div>
+  </div>
+
+  <!-- Slide 3 -->
+  <div class="slide content-slide">
+    <div class="frame-header">
+      <div class="frame-title">Có vector store rồi, vì sao agent vẫn trả lời sai?</div>
+      <div class="frame-sub">Đặt vấn đề mở bài theo đúng tinh thần source PDF</div>
+      <div class="thin-rule"></div>
+    </div>
+    <div class="slide-body">
+      <div class="split-2">
+        <div>
+          <div class="speech-card">
+            <div class="tag red">Hallucinate</div>
+            <div class="big-question" style="margin-top:14px">Câu trả lời có vẻ đúng văn phong, nhưng sai nội dung.</div>
+            <div class="quote-answer">
+              <div class="tiny muted" style="text-transform:uppercase;font-weight:800;letter-spacing:.4px">Ví dụ sai</div>
+              <div class="wrong" style="margin-top:6px">“Ticket P1 có SLA xử lý trong 8 giờ làm việc.”</div>
+            </div>
+          </div>
+          <div class="snippet-stack">
+            <div class="snippet"><div class="snippet-title">Retrieved chunk #1</div><div style="font-size:15px">support/sla-p1-2024.pdf · “P1 xử lý trong 8 giờ...”</div></div>
+            <div class="snippet"><div class="snippet-title">Retrieved chunk #2</div><div style="font-size:15px">ticket-guide-old.md · thiếu metadata effective_date</div></div>
+          </div>
+        </div>
+        <div class="reason-grid">
+          <div class="reason-card">
+            <div class="icon-circle red"><svg class="svg-icon"><use href="#icon-doc"></use></svg></div>
+            <div><div class="r-title">Indexing lỗi</div><div class="r-text">Chunk sai, metadata thiếu hoặc tài liệu cũ khiến retrieval lệch từ rất sớm.</div></div>
+          </div>
+          <div class="reason-card">
+            <div class="icon-circle blue"><svg class="svg-icon"><use href="#icon-search"></use></svg></div>
+            <div><div class="r-title">Retrieval lỗi</div><div class="r-text">Query lệch, top-k nhiễu, dense-only miss keyword, hoặc lấy trùng lặp quá nhiều.</div></div>
+          </div>
+          <div class="reason-card">
+            <div class="icon-circle teal"><svg class="svg-icon"><use href="#icon-chat"></use></svg></div>
+            <div><div class="r-title">Generation lỗi</div><div class="r-text">Prompt không grounded, context quá nhiều hoặc model tự điền khoảng trống bằng suy diễn.</div></div>
+          </div>
+          <div class="soft-card light-red" style="margin-top:2px">
+            <div class="panel-title">Thông điệp thực dụng</div>
+            <div style="font-size:16px;line-height:1.45">Đừng nhảy ngay sang đổi model. Hãy kiểm tra lần lượt <b>index</b> → <b>retrieval</b> → <b>prompt grounding</b>.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <aside class="notes">
+      <strong>Speaker notes:</strong> Nhấn mạnh thông điệp thực dụng: nhiều nhóm thấy câu trả lời sai là đổi model hoặc chỉnh prompt, nhưng thực tế lỗi thường nằm sớm hơn ở retrieval hoặc chất lượng index. Dùng ví dụ hỏi SLA ticket P1 nhưng agent trả lời theo doc cũ để minh hoạ lỗi có thể nằm ở freshness, retrieval hoặc prompt. Đây là slide mở lối cho cả ngày: hãy học cách chẩn đoán pipeline, không chỉ học cách tăng sức mạnh model.
+      <br><strong>Interaction:</strong> Vote nhanh lỗi nào họ nghi ngờ nhất nếu agent trả lời đúng văn phong nhưng sai nội dung.
+      <br><strong>Sources:</strong> YAML D8-S02; PDF pages 2, 7, 9.
+    </aside>
+    <div class="credit-footer"><div class="f-left">Instructor: [Tên giảng viên]</div><div class="f-center">AI in Action - Day 08</div><div class="f-right slide-page-num"></div></div>
+  </div>
+
+  <!-- Slide 4 -->
+  <div class="slide content-slide">
+    <div class="frame-header">
+      <div class="frame-title">Mục tiêu học tập & đầu ra cuối ngày</div>
+      <div class="frame-sub">Học gì trong 4 giờ lý thuyết và build gì trong 4 giờ thực hành</div>
+      <div class="thin-rule"></div>
+    </div>
+    <div class="slide-body">
+      <div class="agenda-grid">
+        <div class="soft-card light-blue">
+          <div class="panel-title">Learn</div>
+          <ul style="font-size:17px;line-height:1.55">
+            <li>Hiểu RAG như pipeline: indexing → retrieval → rerank/select → generation</li>
+            <li>So sánh dense / sparse / hybrid và biết khi nào cần rerank</li>
+            <li>Thiết kế prompt grounding và đánh giá bằng scorecard</li>
+          </ul>
+        </div>
+        <div class="soft-card light-teal">
+          <div class="panel-title">Build</div>
+          <ul style="font-size:17px;line-height:1.55">
+            <li>Full RAG pipeline với index, retrieval và answer function grounded</li>
+            <li>10 test questions có expected answer / expected evidence</li>
+            <li>Scorecard baseline vs tuning + docs kỹ thuật nhóm</li>
+          </ul>
+        </div>
+      </div>
+      <div class="stat-strip" style="margin-top:16px">
+        <div class="stat-box blue"><div class="label">4 giờ lý thuyết</div><div class="value">Mental model + 4 hoạt động xen kẽ</div></div>
+        <div class="stat-box teal"><div class="label">4 giờ thực hành</div><div class="value">Build end-to-end + đo được + giải thích được</div></div>
+        <div class="stat-box red"><div class="label">Deliverable</div><div class="value">Code chạy, scorecard, docs, báo cáo cá nhân</div></div>
+      </div>
+      <div class="timeline-bar">
+        <div class="timeline-label">Flow trong ngày</div>
+        <div class="timeline-seg" title="Lý thuyết"></div>
+        <div class="timeline-seg practice" title="Thực hành"></div>
+      </div>
+      <div class="pill-row" style="margin-top:10px">
+        <div class="pill blue"><svg class="svg-icon"><use href="#icon-doc"></use></svg> Pipeline</div>
+        <div class="pill gray"><svg class="svg-icon"><use href="#icon-search"></use></svg> Retrieval</div>
+        <div class="pill teal"><svg class="svg-icon"><use href="#icon-metric"></use></svg> Evaluation</div>
+      </div>
+    </div>
+    <aside class="notes">
+      <strong>Speaker notes:</strong> Đây là slide để chốt rằng bài học không dừng ở hiểu khái niệm. Học viên sẽ phải build một pipeline có thể chạy, đo được và giải thích được. Chia slide thành hai cột Learn và Build để giúp người học thấy rõ lý thuyết luôn gắn với artifact cuối ngày.
+      <br><strong>Interaction:</strong> Hỏi 1–2 học viên: “Trong 3 đầu ra code / eval / docs, phần nào nhóm bạn thường yếu nhất?”
+      <br><strong>Sources:</strong> YAML D8-S03; PDF pages 3-5.
+    </aside>
+    <div class="credit-footer"><div class="f-left">Instructor: [Tên giảng viên]</div><div class="f-center">AI in Action - Day 08</div><div class="f-right slide-page-num"></div></div>
+  </div>
+
+  <!-- Slide 5 -->
+  <div class="slide content-slide">
+    <div class="frame-header">
+      <div class="frame-title">Hoạt động 1 — Error Tree</div>
+      <div class="frame-sub">Chẩn đoán lỗi trong một case RAG trả lời sai</div>
+      <div class="thin-rule"></div>
+    </div>
+    <div class="slide-body">
+      <div class="worksheet">
+        <div class="activity-panel">
+          <div class="timer-badge"><svg class="svg-icon"><use href="#icon-clock"></use></svg> 8 phút thảo luận</div>
+          <div class="case-box" style="margin-top:14px">
+            <div class="tag red">Case</div>
+            <div style="font-size:28px;font-weight:800;line-height:1.24;margin-top:12px">“SLA xử lý ticket P1?”</div>
+            <div style="font-size:17px;line-height:1.5;margin-top:12px">Agent trả lời theo doc cũ. Nhóm hãy đưa ra <b>1 giả thuyết lỗi</b> và <b>1 cách kiểm tra nhanh</b>.</div>
+            <div class="soft-card gray" style="margin-top:14px">
+              <div class="panel-title">Output mong đợi</div>
+              <div style="font-size:16px;line-height:1.45">1 error tree ngắn: indexing / retrieval / generation + cách kiểm tra giả thuyết tương ứng.</div>
+            </div>
+          </div>
+          <div class="pill-row" style="margin-top:14px">
+            <div class="pill red">Nhóm 3–4 người</div>
+            <div class="pill gold">2 phút chia sẻ</div>
+          </div>
+        </div>
+        <div class="board">
+          <div class="panel-title">Worksheet board</div>
+          <div class="board-grid">
+            <div class="lane">
+              <h4>Indexing</h4>
+              <div class="sticky">Doc cũ hoặc thiếu <b>effective_date</b> nên lọc sai phiên bản.</div>
+              <div class="sticky blue">Kiểm tra: list metadata của top chunks.</div>
+            </div>
+            <div class="lane">
+              <h4>Retrieval</h4>
+              <div class="sticky pink">Dense-only bỏ lỡ exact term “P1” hoặc lấy top-k nhiều noise.</div>
+              <div class="sticky">Kiểm tra: compare dense vs hybrid và log top-5 chunks.</div>
+            </div>
+            <div class="lane">
+              <h4>Generation</h4>
+              <div class="sticky blue">Prompt không ép citation nên model lấp chỗ trống bằng suy đoán.</div>
+              <div class="sticky">Kiểm tra: answer only from context, if insufficient say unknown.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <aside class="notes">
+      <strong>Speaker notes:</strong> Slide này nên có cảm giác như một worksheet hơn là slide giảng một chiều. Mục tiêu không phải tìm đúng đáp án tuyệt đối, mà buộc học viên suy nghĩ theo cấu trúc. Trong môi trường công ty, khả năng debug hệ thống quan trọng không kém khả năng viết code mới. Sau 8–10 phút, gọi 2 nhóm chia sẻ một giả thuyết và cách họ kiểm tra nó.
+      <br><strong>Sources:</strong> YAML D8-S04; PDF pages 2, 7, 9.
+    </aside>
+    <div class="credit-footer"><div class="f-left">Instructor: [Tên giảng viên]</div><div class="f-center">AI in Action - Day 08</div><div class="f-right slide-page-num"></div></div>
+  </div>
+
+  <!-- Slide 6 -->
+  <div class="slide content-slide">
+    <div class="frame-header">
+      <div class="frame-title">RAG = 3 pipeline phối hợp</div>
+      <div class="frame-sub">Search engine + LLM, không phải chỉ là “gắn thêm context”</div>
+      <div class="thin-rule"></div>
+    </div>
+    <div class="slide-body">
+      <div class="pipeline-stage-row">
+        <div class="stage-card blue">
+          <div class="stage-header"><div class="icon-circle blue"><svg class="svg-icon"><use href="#icon-doc"></use></svg></div><div class="stage-title">Indexing</div></div>
+          <div class="substeps">
+            <div class="substep">Preprocess</div>
+            <div class="substep">Chunk</div>
+            <div class="substep">Embed + Store</div>
+          </div>
+        </div>
+        <div class="stage-card red">
+          <div class="stage-header"><div class="icon-circle red"><svg class="svg-icon"><use href="#icon-search"></use></svg></div><div class="stage-title">Retrieval</div></div>
+          <div class="substeps">
+            <div class="substep">Search</div>
+            <div class="substep">Rerank</div>
+            <div class="substep">Select</div>
+          </div>
+        </div>
+        <div class="stage-card teal">
+          <div class="stage-header"><div class="icon-circle teal"><svg class="svg-icon"><use href="#icon-chat"></use></svg></div><div class="stage-title">Generation</div></div>
+          <div class="substeps">
+            <div class="substep">Prompt + Context</div>
+            <div class="substep">Answer</div>
+            <div class="substep">Citation</div>
+          </div>
+        </div>
+      </div>
+      <div class="mini-evidence">
+        <div class="doc-thumb">
+          <div class="tag blue">Raw docs</div>
+          <div style="font-size:15px;line-height:1.45;margin-top:10px">refund-v4.pdf<br>access-control-sop.md<br>sla-p1-2026.pdf</div>
+        </div>
+        <div class="doc-thumb" style="background:rgba(46,84,138,0.05);border-color:rgba(46,84,138,0.12)">
+          <div class="tag blue">Retrieved evidence</div>
+          <div style="font-size:15px;line-height:1.45;margin-top:10px">top chunks có source, section, score</div>
+        </div>
+        <div class="answer-thumb">
+          <div class="tag teal">Final answer</div>
+          <div style="font-size:15px;line-height:1.45;margin-top:10px">Answer grounded + citation + biết từ chối khi thiếu chứng cứ</div>
+        </div>
+      </div>
+      <div class="soft-card light-blue" style="margin-top:16px">
+        <div class="panel-title">Mental model</div>
+        <div style="font-size:17px;line-height:1.48">Indexing chuẩn bị chứng cứ. Retrieval chọn chứng cứ. Generation diễn giải chứng cứ thành câu trả lời dùng được.</div>
+      </div>
+    </div>
+    <aside class="notes">
+      <strong>Speaker notes:</strong> Đây là slide xương sống của Day 08. Giảng viên nên nói chậm để người học có một mental model rõ ràng: indexing chuẩn bị chứng cứ, retrieval chọn chứng cứ, generation diễn giải chứng cứ. Chốt câu “RAG = search engine + LLM” và nhấn mạnh rằng mỗi đoạn đều có failure mode riêng.
+      <br><strong>Interaction:</strong> Hỏi nhanh: “Nếu phải log 1 metric cho mỗi pipeline, bạn log gì?”
+      <br><strong>Sources:</strong> YAML D8-S05; PDF pages 6-9.
+    </aside>
+    <div class="credit-footer"><div class="f-left">Instructor: [Tên giảng viên]</div><div class="f-center">AI in Action - Day 08</div><div class="f-right slide-page-num"></div></div>
+  </div>
+
+  <!-- Slide 7 -->
+  <div class="slide content-slide">
+    <div class="frame-header">
+      <div class="frame-title">Indexing pipeline chuẩn: chunk đúng, metadata rõ, freshness có kiểm soát</div>
+      <div class="frame-sub">Chất lượng retrieval bắt đầu từ lúc chuẩn bị tài liệu</div>
+      <div class="thin-rule"></div>
+    </div>
+    <div class="slide-body">
+      <div class="index-layout">
+        <div>
+          <div class="process-flow">
+            <div class="flow-node"><div><div class="icon-circle blue" style="margin-bottom:10px"><svg class="svg-icon"><use href="#icon-doc"></use></svg></div><div class="n-title">Document</div></div><div class="n-text">PDF, HTML, bảng, OCR</div></div>
+            <div class="flow-arrow">→</div>
+            <div class="flow-node"><div><div class="icon-circle red" style="margin-bottom:10px"><svg class="svg-icon"><use href="#icon-gear"></use></svg></div><div class="n-title">Preprocess</div></div><div class="n-text">Clean, extract, normalize</div></div>
+            <div class="flow-arrow">→</div>
+            <div class="flow-node"><div><div class="icon-circle gold" style="margin-bottom:10px"><svg class="svg-icon"><use href="#icon-code"></use></svg></div><div class="n-title">Chunk</div></div><div class="n-text">Heading, boundary, overlap</div></div>
+            <div class="flow-arrow">→</div>
+            <div class="flow-node"><div><div class="icon-circle teal" style="margin-bottom:10px"><svg class="svg-icon"><use href="#icon-metric"></use></svg></div><div class="n-title">Embed</div></div><div class="n-text">Vector hoá nội dung</div></div>
+            <div class="flow-arrow">→</div>
+            <div class="flow-node"><div><div class="icon-circle teal" style="margin-bottom:10px"><svg class="svg-icon"><use href="#icon-db"></use></svg></div><div class="n-title">Store</div></div><div class="n-text">Text + vector + metadata</div></div>
+          </div>
+          <div class="soft-card light-blue" style="margin-top:18px">
+            <div class="panel-title">3 quyết định quan trọng</div>
+            <ul style="font-size:16px;line-height:1.48">
+              <li>Preprocess trước khi embed: bỏ OCR lỗi, bảng vỡ, ký tự rác</li>
+              <li>Chunk theo heading / section tự nhiên, overlap vừa đủ</li>
+              <li>Metadata + effective_date + access giúp lọc đúng phạm vi</li>
+            </ul>
+          </div>
+        </div>
+        <div class="meta-panel">
+          <div class="soft-card gray">
+            <div class="panel-title">Metadata hữu ích</div>
+            <div>
+              <span class="meta-pill">source</span>
+              <span class="meta-pill">section</span>
+              <span class="meta-pill">effective_date</span>
+              <span class="meta-pill">department</span>
+              <span class="meta-pill">access</span>
+            </div>
+            <div class="json-box mono" style="margin-top:12px">metadata = {
+  source: "policy/refund-v4.pdf",
+  section: "Điều 3",
+  department: "CS",
+  effective_date: "2026-02-01",
+  access: "internal"
+}</div>
+          </div>
+          <div class="freshness-grid">
+            <div class="fresh-card">
+              <div class="tag blue">Batch update</div>
+              <ul style="margin-top:8px">
+                <li>Đơn giản, rẻ</li>
+                <li>Phù hợp policy docs</li>
+              </ul>
+            </div>
+            <div class="fresh-card">
+              <div class="tag teal">Near real-time</div>
+              <ul style="margin-top:8px">
+                <li>Giảm stale answers</li>
+                <li>Cần retry + queue</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <aside class="notes">
+      <strong>Speaker notes:</strong> Đừng để người học nghĩ indexing chỉ là gọi embedding model. Nêu rõ sai lầm phổ biến: bỏ qua OCR lỗi, giữ nguyên bảng bị vỡ, chunk quá to hoặc quá nhỏ, không gắn source/version/date. Dùng ví dụ refund policy để cho thấy chunking tệ có thể cắt giữa điều khoản, còn metadata tốt giúp lọc đúng tài liệu mới nhất trước khi search.
+      <br><strong>Interaction:</strong> “Nếu chỉ được chọn 3 metadata field bắt buộc, nhóm bạn chọn gì?”
+      <br><strong>Sources:</strong> YAML D8-S06; PDF pages 10-15.
+    </aside>
+    <div class="credit-footer"><div class="f-left">Instructor: [Tên giảng viên]</div><div class="f-center">AI in Action - Day 08</div><div class="f-right slide-page-num"></div></div>
+  </div>
+
+  <!-- Slide 8 -->
+  <div class="slide content-slide">
+    <div class="frame-header">
+      <div class="frame-title">Hoạt động 2 — Chunking clinic</div>
+      <div class="frame-sub">Từ một policy doc, đề xuất chunk size / overlap / metadata tối thiểu</div>
+      <div class="thin-rule"></div>
+    </div>
+    <div class="slide-body">
+      <div class="chunk-compare">
+        <div class="chunk-box bad">
+          <div class="tag red">Bad chunk</div>
+          <div class="doc-preview">
+            <div style="font-size:15px;line-height:1.45">Điều kiện hoàn tiền được áp dụng khi...<br><br>... khách hàng gửi yêu cầu trong vòng <b>7 ngày</b> làm việc kể từ thời điểm xác nhận...</div>
+          </div>
+          <ul style="margin-top:10px;font-size:15px;line-height:1.4">
+            <li>Cắt giữa điều khoản</li>
+            <li>Mất source / section</li>
+            <li>Dễ làm retriever hiểu thiếu ngữ cảnh</li>
+          </ul>
+        </div>
+        <div class="chunk-box good">
+          <div class="tag blue">Good chunk</div>
+          <div class="doc-preview">
+            <div style="font-size:15px;line-height:1.45"><b>Hoàn tiền — Điều kiện áp dụng</b><br>Yêu cầu được gửi trong vòng <b>7 ngày</b> kể từ thời điểm xác nhận đơn hàng.<br><span class="muted small">Source: policy/refund-v4.pdf · Điều 3 · effective_date 2026-02-01</span></div>
+          </div>
+          <ul style="margin-top:10px;font-size:15px;line-height:1.4">
+            <li>Cắt theo heading / section tự nhiên</li>
+            <li>Có overlap vừa đủ</li>
+            <li>Giữ source, section, date</li>
+          </ul>
+        </div>
+      </div>
+      <table class="decision-table">
+        <thead><tr><th>Quyết định</th><th>Nhóm đề xuất</th><th>Lý do</th></tr></thead>
+        <tbody>
+          <tr><td>Chunk size</td><td>300–500 tokens</td><td>Giữ trọn section, tránh nhét nhiều ý không liên quan</td></tr>
+          <tr><td>Overlap</td><td>50–80 tokens</td><td>Không đứt mạch ý ở ranh giới chunk</td></tr>
+          <tr><td>Metadata tối thiểu</td><td>source, section, effective_date</td><td>Phục vụ filter, freshness và citation</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <aside class="notes">
+      <strong>Speaker notes:</strong> Làm cho người học thấy chunking là design choice chứ không phải một con số mặc định. Đi từng nhóm hỏi “vì sao 300 token, không phải 800?” hoặc “vì sao source chưa đủ mà cần thêm effective_date?”. Chốt rằng chunking tốt phải phục vụ retrieval chứ không chỉ phục vụ embed nhanh.
+      <br><strong>Sources:</strong> YAML D8-S07; PDF pages 12-14.
+    </aside>
+    <div class="credit-footer"><div class="f-left">Instructor: [Tên giảng viên]</div><div class="f-center">AI in Action - Day 08</div><div class="f-right slide-page-num"></div></div>
+  </div>
+
+  <!-- Slide 9 -->
+  <div class="slide content-slide">
+    <div class="frame-header">
+      <div class="frame-title">Dense, Sparse hay Hybrid?</div>
+      <div class="frame-sub">Chọn chiến lược retrieval theo dạng dữ liệu và dạng query</div>
+      <div class="thin-rule"></div>
+    </div>
+    <div class="slide-body">
+      <div class="query-card top">
+        <div class="tag blue">Ví dụ chung</div>
+        <div style="font-size:26px;font-weight:800;margin-top:8px">Query: “refund trong 7 ngày”</div>
+      </div>
+      <div class="split-3">
+        <div class="compare-col blue">
+          <div class="head">Dense</div>
+          <div class="body">
+            <div><b>Mạnh ở:</b> nghĩa, paraphrase</div>
+            <div style="margin-top:8px"><b>Hay hụt:</b> mã lỗi, keyword hiếm</div>
+            <div class="signal-bar semantic"><span></span></div>
+            <div class="when-to-use"><b>Khi dùng:</b> corpora nhiều câu tự nhiên</div>
+          </div>
+        </div>
+        <div class="compare-col gray">
+          <div class="head">Sparse</div>
+          <div class="body">
+            <div><b>Mạnh ở:</b> exact term, tên riêng</div>
+            <div style="margin-top:8px"><b>Hay hụt:</b> câu hỏi paraphrase</div>
+            <div class="signal-bar keyword"><span></span></div>
+            <div class="when-to-use"><b>Khi dùng:</b> policy, code, mã ticket</div>
+          </div>
+        </div>
+        <div class="compare-col teal">
+          <div class="head">Hybrid</div>
+          <div class="body">
+            <div><b>Mạnh ở:</b> giữ nghĩa lẫn keyword</div>
+            <div style="margin-top:8px"><b>Đổi lại:</b> cần tuning weight ban đầu</div>
+            <div class="signal-bar merged"><span></span></div>
+            <div class="when-to-use"><b>Khi dùng:</b> enterprise docs lẫn lộn</div>
+          </div>
+        </div>
+      </div>
+      <div class="soft-card light-teal" style="margin-top:14px">
+        <div class="panel-title">Thông điệp practical</div>
+        <div style="font-size:16px;line-height:1.45">Nếu corpus có cả ngôn ngữ tự nhiên lẫn tên riêng, mã lỗi, điều khoản hoặc ký hiệu, <b>hybrid</b> là điểm bắt đầu rất đáng thử.</div>
+      </div>
+    </div>
+    <aside class="notes">
+      <strong>Speaker notes:</strong> Giải thích bằng ví dụ cùng một query “refund trong 7 ngày”. Dense sẽ bắt được “hoàn tiền”, sparse sẽ bắt được “7 ngày”, hybrid giữ được cả hai tín hiệu. Nhấn mạnh thông điệp practical từ source: khi corpus có cả ngôn ngữ tự nhiên lẫn mã ticket, tên riêng, điều khoản hoặc ký hiệu, hybrid đáng thử rất sớm.
+      <br><strong>Sources:</strong> YAML D8-S08; PDF pages 16-18.
+    </aside>
+    <div class="credit-footer"><div class="f-left">Instructor: [Tên giảng viên]</div><div class="f-center">AI in Action - Day 08</div><div class="f-right slide-page-num"></div></div>
+  </div>
+
+  <!-- Slide 10 -->
+  <div class="slide content-slide">
+    <div class="frame-header">
+      <div class="frame-title">Hoạt động 3 — Chọn chiến lược retrieval</div>
+      <div class="frame-sub">Query nào nên dùng dense, sparse hay hybrid?</div>
+      <div class="thin-rule"></div>
+    </div>
+    <div class="slide-body">
+      <div class="split-3" style="height:100%">
+        <div class="query-card" style="display:flex;flex-direction:column;justify-content:space-between">
+          <div>
+            <div class="tag blue">Query A</div>
+            <div style="font-size:21px;font-weight:800;line-height:1.3;margin-top:12px">“Khách hàng có thể hoàn tiền nếu đổi lịch giao hàng sau khi đã xác nhận không?”</div>
+            <div class="muted" style="font-size:15px;margin-top:12px">Câu tự nhiên dài, paraphrase nhiều ý.</div>
+          </div>
+          <div class="choice-chips"><span class="choice-chip">Dense</span><span class="choice-chip">Sparse</span><span class="choice-chip">Hybrid</span></div>
+        </div>
+        <div class="query-card" style="display:flex;flex-direction:column;justify-content:space-between">
+          <div>
+            <div class="tag gray">Query B</div>
+            <div style="font-size:21px;font-weight:800;line-height:1.3;margin-top:12px">“ERR-403-AUTH” hoặc “P1”</div>
+            <div class="muted" style="font-size:15px;margin-top:12px">Chứa exact term, mã lỗi, ticket code.</div>
+          </div>
+          <div class="choice-chips"><span class="choice-chip">Dense</span><span class="choice-chip">Sparse</span><span class="choice-chip">Hybrid</span></div>
+        </div>
+        <div class="query-card" style="display:flex;flex-direction:column;justify-content:space-between">
+          <div>
+            <div class="tag teal">Query C</div>
+            <div style="font-size:21px;font-weight:800;line-height:1.3;margin-top:12px">“Approval Matrix” nhưng doc mới đổi tên thành “Access Control SOP”</div>
+            <div class="muted" style="font-size:15px;margin-top:12px">Có alias hoặc tên cũ.</div>
+          </div>
+          <div class="choice-chips"><span class="choice-chip">Dense</span><span class="choice-chip">Sparse</span><span class="choice-chip">Hybrid</span></div>
+        </div>
+      </div>
+      <div class="soft-card gray" style="margin-top:14px">
+        <div class="panel-title">Output</div>
+        <div style="font-size:16px;line-height:1.45">Mỗi nhóm chọn 1 chiến lược cho từng query và <b>justify trong một câu</b>: semantic recall, keyword match hay cần kết hợp.</div>
+      </div>
+    </div>
+    <aside class="notes">
+      <strong>Speaker notes:</strong> Cho học viên ba query kiểu enterprise khác nhau và yêu cầu họ chọn retrieval strategy phù hợp nhất, rồi giải thích bằng một câu ngắn. Điều quan trọng không phải đáp án duy nhất, mà là reasoning.
+      <br><strong>Sources:</strong> YAML D8-S09; PDF pages 17-20.
+    </aside>
+    <div class="credit-footer"><div class="f-left">Instructor: [Tên giảng viên]</div><div class="f-center">AI in Action - Day 08</div><div class="f-right slide-page-num"></div></div>
+  </div>
+
+  <!-- Slide 11 -->
+  <div class="slide content-slide">
+    <div class="frame-header">
+      <div class="frame-title">Query transformation, top-k và rerank funnel</div>
+      <div class="frame-sub">Lấy rộng để không bỏ sót, chọn lại để bớt nhiễu</div>
+      <div class="thin-rule"></div>
+    </div>
+    <div class="slide-body">
+      <div class="funnel-layout">
+        <div class="transform-stack">
+          <div class="transform-card"><div class="tag blue">Expansion</div><div style="font-size:16px;line-height:1.42;margin-top:10px">Thêm từ đồng nghĩa, alias hoặc tên cũ để tăng recall.</div></div>
+          <div class="transform-card"><div class="tag blue">Decomposition</div><div style="font-size:16px;line-height:1.42;margin-top:10px">Tách query phức tạp thành 2–3 truy vấn nhỏ dễ tìm hơn.</div></div>
+          <div class="transform-card"><div class="tag blue">HyDE</div><div style="font-size:16px;line-height:1.42;margin-top:10px">Sinh câu trả lời giả định để tăng tín hiệu semantic khi search.</div></div>
+        </div>
+        <div class="funnel">
+          <div class="funnel-stage search">
+            <div class="f-title">Search rộng</div>
+            <div class="f-sub">top-20</div>
+            <div class="result-chip">A 0.91</div><div class="result-chip">B 0.74</div><div class="result-chip">C 0.72</div><div class="result-chip">K 0.69</div>
+          </div>
+          <div class="funnel-stage rerank">
+            <div class="f-title">Rerank</div>
+            <div class="f-sub">top-6</div>
+            <div class="result-chip">F 0.93</div><div class="result-chip">A 0.89</div><div class="result-chip">K 0.84</div>
+          </div>
+          <div class="funnel-stage select">
+            <div class="f-title">Select</div>
+            <div class="f-sub">top-3</div>
+            <div class="result-chip">F</div><div class="result-chip">A</div><div class="result-chip">K</div>
+          </div>
+        </div>
+        <div class="sweet-spot">
+          <div class="panel-title">Top-k sweet spot</div>
+          <div style="font-size:16px;line-height:1.42">Mục tiêu của retrieval không phải lấy nhiều, mà là lấy <b>đúng và đủ</b> cho generation.</div>
+          <div class="sweet-band">
+            <div class="s-label top">k quá thấp → recall kém</div>
+            <div class="s-label mid">k vừa đủ → top-3 đến top-5</div>
+            <div class="s-label bot">k quá cao → nhiễu, tốn token</div>
+          </div>
+          <div class="evidence-callout"><b>Cross-encoder</b> chấm lại độ liên quan. <b>MMR</b> giữ relevance nhưng giảm trùng lặp.</div>
+        </div>
+      </div>
+    </div>
+    <aside class="notes">
+      <strong>Speaker notes:</strong> Slide này nên thiên về diagram. Giải thích rằng retriever nên lấy đủ rộng để không bỏ sót, nhưng generation chỉ nên nhận tập evidence nhỏ, chất lượng cao. Cross-encoder trả lời “chunk nào đúng nhất?”, còn MMR trả lời “lấy tập nào vừa đúng vừa đa dạng?”.
+      <br><strong>Sources:</strong> YAML D8-S10; PDF pages 19-24.
+    </aside>
+    <div class="credit-footer"><div class="f-left">Instructor: [Tên giảng viên]</div><div class="f-center">AI in Action - Day 08</div><div class="f-right slide-page-num"></div></div>
+  </div>
+
+  <!-- Slide 12 -->
+  <div class="slide content-slide">
+    <div class="frame-header">
+      <div class="frame-title">Inject context đúng cách để model bớt bịa</div>
+      <div class="frame-sub">Grounded generation đến từ cách đóng gói evidence, không phải nhét thật nhiều text</div>
+      <div class="thin-rule"></div>
+    </div>
+    <div class="slide-body">
+      <div class="prompt-layout">
+        <div>
+          <div class="pattern-list">
+            <div class="pattern-card"><div class="icon-circle gray" style="background:rgba(140,140,140,0.12);color:#666"><svg class="svg-icon"><use href="#icon-doc"></use></svg></div><div><div class="panel-title" style="margin-bottom:4px">Prepend</div><div style="font-size:15px;line-height:1.42">Đặt toàn bộ context lên đầu prompt. Dễ làm nhưng khó kiểm soát.</div></div></div>
+            <div class="pattern-card active"><div class="icon-circle teal"><svg class="svg-icon"><use href="#icon-cite"></use></svg></div><div><div class="panel-title" style="margin-bottom:4px">Structured snippets</div><div style="font-size:15px;line-height:1.42">Mỗi chunk có source, section, score. Dễ đọc và dễ citation hơn.</div></div></div>
+            <div class="pattern-card active"><div class="icon-circle blue"><svg class="svg-icon"><use href="#icon-chat"></use></svg></div><div><div class="panel-title" style="margin-bottom:4px">Citation blocks</div><div style="font-size:15px;line-height:1.42">Evidence blocks riêng biệt để model trích dẫn trực tiếp.</div></div></div>
+          </div>
+          <div class="token-bar">
+            <div class="token-seg instructions">Instruction</div>
+            <div class="token-seg context">Context</div>
+            <div class="token-seg question">Question</div>
+            <div class="token-seg headroom">Headroom</div>
+          </div>
+          <div class="evidence-callout"><b>Token budget:</b> Context chiếm gần hết cửa sổ token sẽ làm tăng lost in the middle và mâu thuẫn giữa nguồn.</div>
+        </div>
+        <div>
+          <div class="code-window">
+            <div class="topbar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="muted small" style="color:#c6ccd8">grounded_prompt.txt</span></div>
+            <pre class="mono">Answer only from the retrieved context.
+If the context is insufficient, say you do not know.
+Cite the source field when possible.
+
+Question: SLA xử lý ticket P1?
+
+Context:
+[1] support/sla-p1-2026.pdf | Section 2 | score=0.93
+P1: phản hồi 15 phút, xử lý trong 4 giờ.
+
+[2] it/access-control-sop.md | Section 4 | score=0.84
+Escalation chỉ áp dụng khi cần thay đổi quyền hệ thống.</pre>
+          </div>
+          <div class="soft-card light-teal" style="margin-top:12px">
+            <div class="panel-title">Kết quả mong muốn</div>
+            <div style="font-size:16px;line-height:1.45">“Theo <b>support/sla-p1-2026.pdf</b>, P1 có SLA phản hồi 15 phút và xử lý trong 4 giờ. Nếu cần escalation, áp dụng theo SOP cấp quyền.”</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <aside class="notes">
+      <strong>Speaker notes:</strong> Cho người học thấy hai rủi ro: lost in the middle khi nhồi quá nhiều context và model suy diễn lấp chỗ trống khi prompt không buộc grounding. Minh hoạ bằng prompt window có evidence blocks gắn source/section rõ ràng. Nếu được, thêm một ví dụ câu trả lời có citation và một ví dụ “I don’t know”.
+      <br><strong>Sources:</strong> YAML D8-S11; PDF pages 25-29.
+    </aside>
+    <div class="credit-footer"><div class="f-left">Instructor: [Tên giảng viên]</div><div class="f-center">AI in Action - Day 08</div><div class="f-right slide-page-num"></div></div>
+  </div>
+
+  <!-- Slide 13 -->
+  <div class="slide content-slide">
+    <div class="frame-header">
+      <div class="frame-title">Hoạt động 4 — Prompt surgery</div>
+      <div class="frame-sub">Biến một prompt xấu thành grounded prompt</div>
+      <div class="thin-rule"></div>
+    </div>
+    <div class="slide-body">
+      <div class="diff-layout">
+        <div class="diff-block bad">
+          <div class="diff-head">Prompt xấu</div>
+          <pre class="mono"><span class="line-bad">Hãy trả lời thật tự tin.</span>
+<span class="line-bad">Dùng kiến thức của bạn để lấp chỗ trống.</span>
+
+Question: {query}
+Context: {context_block}
+
+<span class="line-bad">Không cần trích nguồn.</span></pre>
+        </div>
+        <div class="diff-block good">
+          <div class="diff-head">Grounded prompt</div>
+          <pre class="mono"><span class="line-good">Answer only from the retrieved context.</span>
+<span class="line-good">If evidence is insufficient, say you do not know.</span>
+<span class="line-good">Cite source / section when possible.</span>
+<span class="line-good">Keep output short, clear, and factual.</span>
+
+Question: {query}
+Context: {context_block}</pre>
+        </div>
+        <div class="surgery-list">
+          <div class="surgery-item"><div class="icon-circle blue"><svg class="svg-icon"><use href="#icon-doc"></use></svg></div><div><b>Evidence-only</b><br><span class="muted small">Không cho model bịa thêm</span></div></div>
+          <div class="surgery-item"><div class="icon-circle red"><svg class="svg-icon"><use href="#icon-chat"></use></svg></div><div><b>Abstain</b><br><span class="muted small">Thiếu dữ liệu thì nói rõ</span></div></div>
+          <div class="surgery-item"><div class="icon-circle teal"><svg class="svg-icon"><use href="#icon-cite"></use></svg></div><div><b>Citation</b><br><span class="muted small">Buộc output gắn nguồn</span></div></div>
+          <div class="surgery-item"><div class="icon-circle gold"><svg class="svg-icon"><use href="#icon-code"></use></svg></div><div><b>Format</b><br><span class="muted small">Ngắn, rõ, nhất quán</span></div></div>
+          <div class="soft-card gray" style="padding:14px;margin-top:6px">
+            <div class="panel-title">Task</div>
+            <div style="font-size:15px;line-height:1.42">Làm cá nhân 5 phút → chia sẻ nhóm 5 phút → ra 1 prompt template chung.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <aside class="notes">
+      <strong>Speaker notes:</strong> Prompt tốt không phải prompt hay mà là prompt ràng buộc hành vi đúng. Sau hoạt động, gọi một nhóm đọc prompt mới và hỏi cả lớp xem prompt đó đã đủ để ngăn model bịa chưa. Nếu chưa, thêm điều kiện về insufficient evidence và output format.
+      <br><strong>Sources:</strong> YAML D8-S12; PDF pages 28-29.
+    </aside>
+    <div class="credit-footer"><div class="f-left">Instructor: [Tên giảng viên]</div><div class="f-center">AI in Action - Day 08</div><div class="f-right slide-page-num"></div></div>
+  </div>
+
+  <!-- Slide 14 -->
+  <div class="slide content-slide">
+    <div class="frame-header">
+      <div class="frame-title">Đo RAG bằng scorecard, không bằng cảm giác</div>
+      <div class="frame-sub">Faithfulness, relevance, context recall/completeness và A/B tuning</div>
+      <div class="thin-rule"></div>
+    </div>
+    <div class="slide-body">
+      <div class="eval-layout">
+        <div class="metric-stack">
+          <div class="metric-card"><div class="m-title">Faithfulness</div><div class="m-text">Câu trả lời có bám đúng chứng cứ đã retrieve không?</div></div>
+          <div class="metric-card"><div class="m-title">Answer relevance</div><div class="m-text">Có trả lời đúng câu hỏi người dùng hỏi không?</div></div>
+          <div class="metric-card"><div class="m-title">Context recall</div><div class="m-text">Retriever có mang về đủ evidence cần thiết không?</div></div>
+          <div class="metric-card"><div class="m-title">Completeness</div><div class="m-text">Có thiếu điều kiện ngoại lệ hoặc bước quan trọng không?</div></div>
+          <div class="soft-card light-blue" style="padding:14px">
+            <div class="panel-title">A/B rule</div>
+            <div style="font-size:15px;line-height:1.42">Chỉ đổi <b>một biến mỗi lần</b> để biết điều gì thực sự tạo ra cải thiện.</div>
+          </div>
+        </div>
+        <div>
+          <div class="scorecard-shell">
+            <table class="clean-table">
+              <thead>
+                <tr><th>Test question</th><th>Faithful</th><th>Relevant</th><th>Complete</th><th>Ghi chú</th></tr>
+              </thead>
+              <tbody>
+                <tr><td>Chính sách hoàn tiền 7 ngày?</td><td><span class="score good">4/5</span></td><td><span class="score good">5/5</span></td><td><span class="score mid">4/5</span></td><td>Thiếu điều kiện ngoại lệ</td></tr>
+                <tr><td>Ai duyệt yêu cầu cấp quyền?</td><td><span class="score good">5/5</span></td><td><span class="score mid">4/5</span></td><td><span class="score mid">3/5</span></td><td>Đúng nguồn nhưng thiếu bước 2</td></tr>
+                <tr><td>SLA xử lý ticket P1?</td><td><span class="score bad">2/5</span></td><td><span class="score bad">3/5</span></td><td><span class="score bad">2/5</span></td><td>Retrieve nhầm doc cũ</td></tr>
+              </tbody>
+            </table>
+            <div class="ab-ladder">
+              <div class="ab-step"><strong>Baseline</strong>dense-only<br>chunk 500<br>top-k=4</div>
+              <div class="ab-arrow">→</div>
+              <div class="ab-step"><strong>Variant 1</strong>chỉ đổi chunking</div>
+              <div class="ab-arrow">→</div>
+              <div class="ab-step"><strong>Variant 2</strong>thêm hybrid</div>
+              <div class="ab-arrow">→</div>
+              <div class="ab-step"><strong>Variant 3</strong>thêm rerank</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <aside class="notes">
+      <strong>Speaker notes:</strong> Đây là phần chốt tư duy engineering của Day 08. Không có evaluation thì không biết hệ thống tốt lên hay chỉ thay đổi văn phong. Dùng bảng scorecard mẫu với refund policy, access approval và P1 SLA. Sau đó nối sang A/B tuning: baseline dense-only, rồi lần lượt đổi chunking, hybrid, rerank.
+      <br><strong>Interaction:</strong> Cho cả lớp chấm thử 1 answer mẫu theo faithfulness/relevance trong 2 phút.
+      <br><strong>Sources:</strong> YAML D8-S13; PDF pages 30-35.
+    </aside>
+    <div class="credit-footer"><div class="f-left">Instructor: [Tên giảng viên]</div><div class="f-center">AI in Action - Day 08</div><div class="f-right slide-page-num"></div></div>
+  </div>
+
+
+  <!-- Added knowledge refresher slides -->
+  <div class="slide content-slide">
+    <div class="frame-header">
+      <div class="frame-title">Nhớ nhanh trước khi code — Indexing checklist</div>
+      <div class="frame-sub">Sprint 1: build index sạch trước khi tune retrieval</div>
+      <div class="thin-rule"></div>
+    </div>
+    <div class="slide-body">
+      <div style="display:grid;grid-template-columns:1.05fr 0.95fr;gap:20px;height:100%">
+        <div style="display:flex;flex-direction:column;gap:12px">
+          <div class="soft-card light-blue" style="padding:16px">
+            <div style="display:flex;gap:12px;align-items:flex-start">
+              <div class="icon-circle blue"><svg class="svg-icon"><use href="#icon-doc"></use></svg></div>
+              <div>
+                <div class="panel-title" style="margin-bottom:6px">1. Preprocess trước khi embed</div>
+                <div style="font-size:15px;line-height:1.45">Clean, extract, normalize để text gọn và nhất quán trước khi vào index.</div>
+              </div>
+            </div>
+          </div>
+          <div class="soft-card light-red" style="padding:16px">
+            <div style="display:flex;gap:12px;align-items:flex-start">
+              <div class="icon-circle red"><svg class="svg-icon"><use href="#icon-code"></use></svg></div>
+              <div>
+                <div class="panel-title" style="margin-bottom:6px">2. Chunk theo cấu trúc tự nhiên</div>
+                <div style="font-size:15px;line-height:1.45">Ưu tiên heading, section, paragraph; overlap vừa đủ để giữ nghĩa trọn vẹn.</div>
+              </div>
+            </div>
+          </div>
+          <div class="soft-card light-teal" style="padding:16px">
+            <div style="display:flex;gap:12px;align-items:flex-start">
+              <div class="icon-circle teal"><svg class="svg-icon"><use href="#icon-search"></use></svg></div>
+              <div>
+                <div class="panel-title" style="margin-bottom:6px">3. Metadata giúp lọc đúng phạm vi</div>
+                <div style="font-size:15px;line-height:1.45">Source, section, effective_date, access level giúp search đúng tài liệu và đúng phiên bản.</div>
+              </div>
+            </div>
+          </div>
+          <div class="soft-card gray" style="padding:16px">
+            <div style="display:flex;gap:12px;align-items:flex-start">
+              <div class="icon-circle gold"><svg class="svg-icon"><use href="#icon-clock"></use></svg></div>
+              <div>
+                <div class="panel-title" style="margin-bottom:6px">4. Sprint 1 Definition of Done</div>
+                <div style="font-size:15px;line-height:1.45">Có script index chạy được và có ít nhất 3 metadata fields hữu ích cho retrieval.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:14px">
+          <div class="soft-card gray" style="padding:16px">
+            <div class="panel-title">Mẫu metadata tối thiểu</div>
+            <div class="json-box" style="margin-top:8px">metadata = {<br>&nbsp;&nbsp;source: policy/refund-v4.pdf,<br>&nbsp;&nbsp;section: Điều 3,<br>&nbsp;&nbsp;department: CS,<br>&nbsp;&nbsp;effective_date: 2026-02-01,<br>&nbsp;&nbsp;access: internal<br>}</div>
+          </div>
+          <div class="soft-card light-blue" style="padding:16px">
+            <div class="panel-title">Checklist tự kiểm trước khi qua Sprint 2</div>
+            <ul style="font-size:15px;line-height:1.45;margin-top:2px">
+              <li>Text đã sạch và không bị cắt lỗi giữa điều khoản</li>
+              <li>Chunk giữ được source và section</li>
+              <li>Index phản ánh đúng bộ docs nhóm chọn</li>
+            </ul>
+          </div>
+          <div class="soft-card light-teal" style="padding:16px">
+            <div class="panel-title">Câu nhắc cần nhớ</div>
+            <div style="font-size:16px;line-height:1.46"><b>Chất lượng retrieval bắt đầu từ lúc chuẩn bị tài liệu.</b><br><span class="muted small">Nếu index bẩn, prompt đẹp cũng chỉ bộc lộ lỗi nhanh hơn.</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <aside class="notes"><strong>Speaker notes:</strong> Dùng slide này như một memory sheet trước khi nhóm bắt đầu Sprint 1. Nhắc lại bốn điểm dễ quên nhất: preprocess, chunking, metadata và definition of done của index. Mục tiêu là để học viên không mở code ngay rồi mới nhớ ra mình chưa quyết định metadata hay boundary của chunk.<br><strong>Sources:</strong> YAML D8-S06, D8-S07; teaching_plan.practice_4h.sprint_1.</aside>
+    <div class="credit-footer"><div class="f-left">Instructor: [Tên giảng viên]</div><div class="f-center">AI in Action - Day 08</div><div class="f-right slide-page-num"></div></div>
+  </div>
+
+  <div class="slide content-slide">
+    <div class="frame-header">
+      <div class="frame-title">Nhớ nhanh trước khi code — Retrieval decision map</div>
+      <div class="frame-sub">Sprint 2–3: chọn strategy, top-k và rerank có chủ đích</div>
+      <div class="thin-rule"></div>
+    </div>
+    <div class="slide-body">
+      <div style="display:grid;grid-template-columns:1.08fr 0.92fr;gap:20px;height:100%">
+        <div class="soft-card gray" style="padding:18px">
+          <div class="panel-title">Quyết định nhanh theo loại query</div>
+          <div style="display:flex;flex-direction:column;gap:12px;margin-top:12px">
+            <div style="display:grid;grid-template-columns:190px 1fr 120px;gap:10px;align-items:center">
+              <div class="tag blue" style="justify-content:center;padding:10px 12px;font-size:13px">Paraphrase / nghĩa</div>
+              <div class="soft-card" style="padding:12px 14px;box-shadow:none">Query tự nhiên dài, cần bắt nghĩa gần.</div>
+              <div class="pill blue" style="justify-content:center">Dense</div>
+            </div>
+            <div style="display:grid;grid-template-columns:190px 1fr 120px;gap:10px;align-items:center">
+              <div class="tag gray" style="justify-content:center;padding:10px 12px;font-size:13px">Exact term / mã lỗi</div>
+              <div class="soft-card" style="padding:12px 14px;box-shadow:none">Tên riêng, mã ticket, keyword hiếm cần match chính xác.</div>
+              <div class="pill gray" style="justify-content:center">Sparse</div>
+            </div>
+            <div style="display:grid;grid-template-columns:190px 1fr 120px;gap:10px;align-items:center">
+              <div class="tag teal" style="justify-content:center;padding:10px 12px;font-size:13px">Corpus lẫn lộn</div>
+              <div class="soft-card" style="padding:12px 14px;box-shadow:none">Vừa có câu tự nhiên, vừa có alias, keyword hoặc điều khoản.</div>
+              <div class="pill teal" style="justify-content:center">Hybrid</div>
+            </div>
+            <div style="display:grid;grid-template-columns:190px 1fr 120px;gap:10px;align-items:center">
+              <div class="tag red" style="justify-content:center;padding:10px 12px;font-size:13px">Top-k nhiễu / lặp</div>
+              <div class="soft-card" style="padding:12px 14px;box-shadow:none">Search rộng rồi chọn lại tập evidence nhỏ hơn và sạch hơn.</div>
+              <div class="pill red" style="justify-content:center">Rerank</div>
+            </div>
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:14px">
+          <div class="soft-card light-blue" style="padding:16px">
+            <div class="panel-title">Top-k sweet spot</div>
+            <div class="stat-strip" style="margin-top:6px">
+              <div class="stat-box red"><div class="label">k quá thấp</div><div class="value">thiếu chứng cứ</div></div>
+              <div class="stat-box blue"><div class="label">vừa đủ</div><div class="value">top-3 → top-5</div></div>
+              <div class="stat-box teal"><div class="label">k quá cao</div><div class="value">nhiễu + lãng phí token</div></div>
+            </div>
+          </div>
+          <div class="soft-card light-teal" style="padding:16px">
+            <div class="panel-title">Rerank funnel cần nhớ</div>
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:8px">
+              <div class="tag blue" style="padding:12px 16px;font-size:13px">Search rộng<br>top-20</div>
+              <div style="font-size:22px;color:rgba(46,84,138,0.4)">→</div>
+              <div class="tag teal" style="padding:12px 16px;font-size:13px">Rerank<br>top-6</div>
+              <div style="font-size:22px;color:rgba(46,84,138,0.4)">→</div>
+              <div class="tag red" style="padding:12px 16px;font-size:13px">Select<br>top-3</div>
+            </div>
+          </div>
+          <div class="soft-card gray" style="padding:16px">
+            <div class="panel-title">Khi nào dùng gì?</div>
+            <ul style="font-size:15px;line-height:1.45;margin-top:4px">
+              <li>Cross-encoder: cần chấm lại chunk nào thực sự trả lời câu hỏi</li>
+              <li>MMR: cần giữ relevance nhưng bớt trùng lặp</li>
+              <li>Query transformation: chỉ dùng khi query mơ hồ hoặc nhiều alias</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+    <aside class="notes"><strong>Speaker notes:</strong> Slide này gom lại những quyết định retrieval mà học viên cần nhớ ngay trước lúc code baseline và variant. Đừng để các bạn nghĩ hybrid, rerank hay query transformation là các nút phải bật hết; mục tiêu là chọn đúng đòn bẩy cho đúng triệu chứng.<br><strong>Sources:</strong> YAML D8-S08, D8-S09, D8-S10.</aside>
+    <div class="credit-footer"><div class="f-left">Instructor: [Tên giảng viên]</div><div class="f-center">AI in Action - Day 08</div><div class="f-right slide-page-num"></div></div>
+  </div>
+
+  <div class="slide content-slide">
+    <div class="frame-header">
+      <div class="frame-title">Nhớ nhanh trước khi code — Grounded prompt checklist</div>
+      <div class="frame-sub">Sprint 2: answer function phải grounded trước khi demo</div>
+      <div class="thin-rule"></div>
+    </div>
+    <div class="slide-body">
+      <div style="display:grid;grid-template-columns:0.98fr 1.02fr;gap:20px;height:100%">
+        <div style="display:flex;flex-direction:column;gap:12px">
+          <div class="soft-card light-blue" style="padding:16px">
+            <div class="panel-title">4 quy tắc bắt buộc</div>
+            <div style="display:flex;flex-direction:column;gap:10px;margin-top:10px">
+              <div class="reason-card" style="box-shadow:none;padding:14px;border-radius:14px"><div class="icon-circle blue"><svg class="svg-icon"><use href="#icon-doc"></use></svg></div><div><div class="r-title">Evidence-only</div><div class="r-text">Chỉ trả lời từ retrieved context.</div></div></div>
+              <div class="reason-card" style="box-shadow:none;padding:14px;border-radius:14px"><div class="icon-circle red"><svg class="svg-icon"><use href="#icon-chat"></use></svg></div><div><div class="r-title">Abstain when insufficient</div><div class="r-text">Thiếu chứng cứ thì nói không đủ dữ liệu.</div></div></div>
+              <div class="reason-card" style="box-shadow:none;padding:14px;border-radius:14px"><div class="icon-circle teal"><svg class="svg-icon"><use href="#icon-cite"></use></svg></div><div><div class="r-title">Cite source / section</div><div class="r-text">Output nên gắn nguồn và section khi có thể.</div></div></div>
+              <div class="reason-card" style="box-shadow:none;padding:14px;border-radius:14px"><div class="icon-circle gold"><svg class="svg-icon"><use href="#icon-code"></use></svg></div><div><div class="r-title">Short, clear, stable</div><div class="r-text">Để còn đo faithfulness và relevance nhất quán.</div></div></div>
+            </div>
+          </div>
+          <div class="soft-card light-red" style="padding:16px">
+            <div class="panel-title">Token budget nhớ nhanh</div>
+            <div style="display:grid;grid-template-columns:1fr 1.8fr 1fr 0.9fr;gap:8px;margin-top:8px">
+              <div style="background:rgba(46,84,138,0.12);border-radius:12px;padding:12px;text-align:center;font-size:13px;font-weight:800;color:var(--vin-blue)">Instruction</div>
+              <div style="background:rgba(140,140,140,0.15);border-radius:12px;padding:12px;text-align:center;font-size:13px;font-weight:800;color:#5d5d64">Retrieved context</div>
+              <div style="background:rgba(13,115,119,0.12);border-radius:12px;padding:12px;text-align:center;font-size:13px;font-weight:800;color:var(--teal)">Question</div>
+              <div style="background:rgba(226,173,50,0.22);border-radius:12px;padding:12px;text-align:center;font-size:13px;font-weight:800;color:#8a6312">Headroom</div>
+            </div>
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:14px">
+          <div class="soft-card gray" style="padding:16px">
+            <div class="panel-title">Prompt skeleton nên có</div>
+            <div class="json-box" style="margin-top:6px">Answer only from the retrieved context.<br>If the context is insufficient, say you do not know.<br>Cite the source field when possible.<br><br>Question: {query}<br>Context: {context_block}</div>
+          </div>
+          <div class="soft-card light-teal" style="padding:16px">
+            <div class="panel-title">Kiểm tra nhanh output</div>
+            <ul style="font-size:15px;line-height:1.45;margin-top:4px">
+              <li>Có citation hoặc source rõ ràng chưa?</li>
+              <li>Nếu thiếu context, model có biết dừng đúng cách không?</li>
+              <li>Output có đủ ngắn để dễ chấm scorecard không?</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+    <aside class="notes"><strong>Speaker notes:</strong> Đây là slide nhớ nhanh cho phần answer function. Chỉ cần học viên nhớ bốn quy tắc và skeleton prompt là đủ để tránh rơi vào kiểu trả lời tự tin nhưng không grounded. Nhấn mạnh rằng token budget và output format ảnh hưởng trực tiếp tới evaluation ở Sprint 4.<br><strong>Sources:</strong> YAML D8-S11, D8-S12.</aside>
+    <div class="credit-footer"><div class="f-left">Instructor: [Tên giảng viên]</div><div class="f-center">AI in Action - Day 08</div><div class="f-right slide-page-num"></div></div>
+  </div>
+
+  <div class="slide content-slide">
+    <div class="frame-header">
+      <div class="frame-title">Nhớ nhanh trước khi code — Evaluation loop</div>
+      <div class="frame-sub">Sprint 4: test questions, scorecard và A/B tuning phải đi cùng nhau</div>
+      <div class="thin-rule"></div>
+    </div>
+    <div class="slide-body">
+      <div style="display:grid;grid-template-columns:0.95fr 1.05fr;gap:20px;height:100%">
+        <div style="display:flex;flex-direction:column;gap:12px">
+          <div class="stat-strip">
+            <div class="stat-box blue"><div class="label">Metric 1</div><div class="value">Faithfulness</div></div>
+            <div class="stat-box teal"><div class="label">Metric 2</div><div class="value">Relevance</div></div>
+            <div class="stat-box red"><div class="label">Metric 3</div><div class="value">Context recall / completeness</div></div>
+          </div>
+          <div class="soft-card light-blue" style="padding:16px">
+            <div class="panel-title">Evidence bắt buộc để chấm</div>
+            <ul style="font-size:15px;line-height:1.46;margin-top:4px">
+              <li>10 test questions</li>
+              <li>Expected answer hoặc expected evidence</li>
+              <li>Scorecard trước và sau tuning</li>
+            </ul>
+          </div>
+          <div class="soft-card light-red" style="padding:16px">
+            <div class="panel-title">A/B rule</div>
+            <div style="font-size:16px;line-height:1.46">Baseline → chỉ đổi <b>một biến</b> → đo lại.<br><span class="muted small">Đổi đồng thời chunking, hybrid, rerank và prompt thì không biết biến nào tạo cải thiện.</span></div>
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:14px">
+          <div class="soft-card gray" style="padding:16px">
+            <div class="panel-title">Loop tối thiểu cho Sprint 4</div>
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:10px">
+              <div class="tag blue" style="padding:12px 14px;font-size:13px">Run<br>rag_answer</div>
+              <div style="font-size:22px;color:rgba(46,84,138,0.35)">→</div>
+              <div class="tag teal" style="padding:12px 14px;font-size:13px">Chấm<br>scorecard</div>
+              <div style="font-size:22px;color:rgba(46,84,138,0.35)">→</div>
+              <div class="tag red" style="padding:12px 14px;font-size:13px">So sánh<br>baseline vs variant</div>
+            </div>
+          </div>
+          <table class="clean-table">
+            <thead>
+              <tr><th>Bước</th><th>Câu hỏi tự kiểm</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>Testset</td><td>Có đủ câu hỏi mơ hồ, alias và câu dễ sai không?</td></tr>
+              <tr><td>Scoring</td><td>Điểm faithful / relevant / complete đã có ghi chú chưa?</td></tr>
+              <tr><td>Variant</td><td>Nhóm đang đổi đúng một biến hay đang đổi quá nhiều thứ?</td></tr>
+              <tr><td>Conclusion</td><td>Variant tốt hơn baseline ở điểm nào, bằng chứng nào?</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    <aside class="notes"><strong>Speaker notes:</strong> Trước khi vào lab, học viên thường nhớ khá mơ hồ phần evaluation. Slide này gom lại đúng các artifact phải có trong Sprint 4: test questions, expected evidence, scorecard và logic A/B đổi một biến. Mục tiêu là để nhóm biết mình phải tạo ra bằng chứng gì chứ không chỉ tạo output nhìn ổn.<br><strong>Sources:</strong> YAML D8-S13; teaching_plan.practice_4h.sprint_4; deliverables.group.</aside>
+    <div class="credit-footer"><div class="f-left">Instructor: [Tên giảng viên]</div><div class="f-center">AI in Action - Day 08</div><div class="f-right slide-page-num"></div></div>
+  </div>
+
+  <!-- Slide 15 -->
+  <div class="slide content-slide">
+    <div class="frame-header">
+      <div class="frame-title">Hands-on 8 — Full RAG Pipeline</div>
+      <div class="frame-sub">4 giờ thực hành: từ index đến evaluation</div>
+      <div class="thin-rule"></div>
+    </div>
+    <div class="slide-body">
+      <div class="lab-layout">
+        <div class="sprint-stack">
+          <div class="sprint">
+            <div class="time blue"><div>Sprint 1</div><div>60'</div></div>
+            <div class="body"><h4>Build index với metadata</h4><p>10–20 docs nhỏ, chunk + metadata + embed + store.</p><ul class="dod-list"><li>Có script index chạy được</li><li>Có ít nhất 3 metadata fields hữu ích</li></ul></div>
+          </div>
+          <div class="sprint">
+            <div class="time teal"><div>Sprint 2</div><div>60'</div></div>
+            <div class="body"><h4>Baseline retrieve + answer</h4><p>Build retrieval và answer function grounded.</p><ul class="dod-list"><li>Trả lời được ít nhất 3 câu hỏi mẫu</li><li>Output có source / citation</li></ul></div>
+          </div>
+          <div class="sprint">
+            <div class="time red"><div>Sprint 3</div><div>60'</div></div>
+            <div class="body"><h4>Tuning tối thiểu</h4><p>Hybrid hoặc rerank hoặc chunking khác.</p><ul class="dod-list"><li>Có bảng baseline vs variant</li><li>Giải thích được vì sao chọn biến đó</li></ul></div>
+          </div>
+          <div class="sprint">
+            <div class="time gray"><div>Sprint 4</div><div>60'</div></div>
+            <div class="body"><h4>Evaluation + docs + report</h4><p>10 test questions, scorecard, docs kỹ thuật và báo cáo cá nhân.</p><ul class="dod-list"><li>Demo chạy end-to-end</li><li>Có scorecard, docs, report đầy đủ</li></ul></div>
+          </div>
+        </div>
+        <div>
+          <div class="soft-card light-teal">
+            <div class="panel-title">Repo tối thiểu</div>
+            <div class="repo-tree mono">index.py
+rag_answer.py
+eval.py
+data/
+  test_questions.json
+docs/
+  architecture.md
+  tuning-log.md
+reports/
+  individual/*.md</div>
+          </div>
+          <div class="soft-card gray" style="margin-top:12px">
+            <div class="panel-title">Deliverables</div>
+            <ul class="deliverable-check" style="font-size:15px;line-height:1.45">
+              <li>Script indexing + retrieval / answer function</li>
+              <li>10 test questions + expected answer/evidence</li>
+              <li>Scorecard trước và sau tuning</li>
+              <li>docs/architecture.md và docs/tuning-log.md</li>
+              <li>Báo cáo cá nhân 500–800 từ / người</li>
+            </ul>
+            <div class="role-row">
+              <span class="role-chip">Tech lead</span>
+              <span class="role-chip">Retrieval owner</span>
+              <span class="role-chip">Eval owner</span>
+              <span class="role-chip">Documentation owner</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <aside class="notes">
+      <strong>Speaker notes:</strong> Slide này phải mang cảm giác “đây là việc thật phải làm trong team”. Hiển thị rõ timeline 4 sprint, definition of done, và repo structure tối thiểu. Nhấn mạnh rằng điều quan trọng không phải xây hệ thống phức tạp mà là chứng minh được vì sao bản tuning tốt hơn baseline bằng dữ liệu và artifact.
+      <br><strong>Sources:</strong> YAML D8-S14; PDF pages 36-39.
+    </aside>
+    <div class="credit-footer"><div class="f-left">Instructor: [Tên giảng viên]</div><div class="f-center">AI in Action - Day 08</div><div class="f-right slide-page-num"></div></div>
+  </div>
+
+
+  <!-- Added detailed lab guide slides -->
+  <div class="slide content-slide">
+    <div class="frame-header">
+      <div class="frame-title">Hướng dẫn lab 4 giờ — phân vai và cadence làm việc</div>
+      <div class="frame-sub">Tránh một người code, cả nhóm đứng nhìn</div>
+      <div class="thin-rule"></div>
+    </div>
+    <div class="slide-body">
+      <div style="display:grid;grid-template-columns:0.98fr 1.02fr;gap:20px;height:100%">
+        <div style="display:flex;flex-direction:column;gap:14px">
+          <div class="soft-card light-blue" style="padding:16px">
+            <div class="panel-title">Vai trò nên giao ngay ở phút đầu</div>
+            <div class="split-2" style="gap:12px;height:auto;margin-top:6px">
+              <div class="soft-card" style="padding:14px;box-shadow:none"><div class="tag blue">Tech lead</div><div style="font-size:15px;line-height:1.42;margin-top:8px">Giữ nhịp sprint, nối code end-to-end, chốt nhánh baseline.</div></div>
+              <div class="soft-card" style="padding:14px;box-shadow:none"><div class="tag teal">Retrieval owner</div><div style="font-size:15px;line-height:1.42;margin-top:8px">Chăm Sprint 1–3: chunking, metadata, retrieval strategy, rerank.</div></div>
+              <div class="soft-card" style="padding:14px;box-shadow:none"><div class="tag red">Eval owner</div><div style="font-size:15px;line-height:1.42;margin-top:8px">Quản test questions, expected evidence, scorecard, A/B comparison.</div></div>
+              <div class="soft-card" style="padding:14px;box-shadow:none"><div class="tag gray">Documentation owner</div><div style="font-size:15px;line-height:1.42;margin-top:8px">Chốt docs/architecture, tuning log và báo cáo cá nhân cho cả nhóm.</div></div>
+            </div>
+          </div>
+          <div class="soft-card light-teal" style="padding:16px">
+            <div class="panel-title">Nhịp làm việc gợi ý</div>
+            <div style="font-size:15px;line-height:1.48">Mỗi sprint 60 phút nên kết thúc bằng một mốc quan sát được: script chạy, output có citation, scorecard trước/sau, docs cập nhật.</div>
+          </div>
+        </div>
+        <div class="soft-card gray" style="padding:16px">
+          <div class="panel-title">Sprint ownership map</div>
+          <table class="clean-table" style="margin-top:8px">
+            <thead>
+              <tr><th>Sprint</th><th>Ai lead</th><th>Kết quả phải chốt</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>1 · Index</td><td>Tech lead + Retrieval owner</td><td>Index chạy được, metadata đủ dùng</td></tr>
+              <tr><td>2 · Baseline</td><td>Tech lead</td><td>Answer function grounded + source/citation</td></tr>
+              <tr><td>3 · Tuning</td><td>Retrieval owner + Eval owner</td><td>1 variant rõ ràng + lý do chọn biến</td></tr>
+              <tr><td>4 · Eval & docs</td><td>Eval owner + Documentation owner</td><td>Scorecard, docs kỹ thuật, report cá nhân</td></tr>
+            </tbody>
+          </table>
+          <div class="soft-card light-red" style="padding:14px;margin-top:12px">
+            <div class="panel-title">Rule để đỡ tắc</div>
+            <div style="font-size:15px;line-height:1.42">Không chờ “xây xong hết rồi mới eval”. Baseline phải chạy sớm để còn so sánh với variant.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <aside class="notes"><strong>Speaker notes:</strong> Đây là slide hướng dẫn vận hành nhóm. Nói rất rõ rằng bài lab sẽ fail nếu cả nhóm không chia vai trò ngay từ đầu. Nhấn mạnh cadence: mỗi sprint phải tạo ra một kết quả nhìn thấy được, không phải chỉ là đang làm dở.<br><strong>Sources:</strong> YAML D8-S14 interaction; teaching_plan.practice_4h.sprints.</aside>
+    <div class="credit-footer"><div class="f-left">Instructor: [Tên giảng viên]</div><div class="f-center">AI in Action - Day 08</div><div class="f-right slide-page-num"></div></div>
+  </div>
+
+  <div class="slide content-slide">
+    <div class="frame-header">
+      <div class="frame-title">Hướng dẫn lab 4 giờ — file cần có & checklist nộp bài</div>
+      <div class="frame-sub">Repo structure, deliverables nhóm và báo cáo cá nhân</div>
+      <div class="thin-rule"></div>
+    </div>
+    <div class="slide-body">
+      <div style="display:grid;grid-template-columns:0.92fr 1.08fr;gap:20px;height:100%">
+        <div style="display:flex;flex-direction:column;gap:14px">
+          <div class="soft-card gray" style="padding:16px">
+            <div class="panel-title">Repo tối thiểu</div>
+            <div class="json-box" style="margin-top:8px">project/<br>&nbsp;&nbsp;index.py<br>&nbsp;&nbsp;rag_answer.py<br>&nbsp;&nbsp;eval.py<br>&nbsp;&nbsp;data/test_questions.json<br>&nbsp;&nbsp;docs/architecture.md<br>&nbsp;&nbsp;docs/tuning-log.md<br>&nbsp;&nbsp;reports/individual/*.md</div>
+          </div>
+          <div class="soft-card light-blue" style="padding:16px">
+            <div class="panel-title">Rubric chấm nhanh</div>
+            <ul style="font-size:15px;line-height:1.44;margin-top:4px">
+              <li>45% code chạy end-to-end</li>
+              <li>25% tài liệu kỹ thuật</li>
+              <li>20% bằng chứng chất lượng / scorecard</li>
+              <li>10% báo cáo cá nhân</li>
+            </ul>
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:14px">
+          <div class="soft-card light-teal" style="padding:16px">
+            <div class="panel-title">Checklist nộp bài theo nhóm</div>
+            <table class="clean-table" style="margin-top:8px">
+              <thead>
+                <tr><th>Nhóm artifact</th><th>Những gì phải có</th></tr>
+              </thead>
+              <tbody>
+                <tr><td>Code + data</td><td>Script indexing, retrieval / answer function, bộ docs đã index</td></tr>
+                <tr><td>Eval artifact</td><td>10 test questions, expected answer / evidence, scorecard trước & sau tuning</td></tr>
+                <tr><td>Documentation</td><td>Architecture.md, tuning-log.md, giải thích vì sao variant tốt hơn baseline</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="soft-card light-red" style="padding:16px">
+            <div class="panel-title">Checklist báo cáo cá nhân</div>
+            <ol style="font-size:15px;line-height:1.46;padding-left:20px;margin-top:4px">
+              <li>Tôi phụ trách phần nào trong nhóm?</li>
+              <li>Tôi đã sửa một lỗi hoặc ra một quyết định kỹ thuật gì?</li>
+              <li>Kết quả đo được hoặc bằng chứng trước / sau là gì?</li>
+              <li>Nếu có thêm 2 giờ, tôi sẽ cải thiện gì?</li>
+            </ol>
+          </div>
+        </div>
+      </div>
+    </div>
+    <aside class="notes"><strong>Speaker notes:</strong> Slide này biến yêu cầu nộp bài thành một checklist rất cụ thể. Dùng nó để chốt kỳ vọng: không chỉ nộp code, mà còn phải nộp evidence và giải thích kỹ thuật. Đây cũng là slide giúp học viên biết báo cáo cá nhân cần viết gì để không hỏi lại lúc cuối buổi.<br><strong>Sources:</strong> YAML deliverables.group; assessment_rubric; report_template.individual_report_template.</aside>
+    <div class="credit-footer"><div class="f-left">Instructor: [Tên giảng viên]</div><div class="f-center">AI in Action - Day 08</div><div class="f-right slide-page-num"></div></div>
+  </div>
+
+  <!-- Slide 16 -->
+  <div class="slide content-slide">
+    <div class="frame-header">
+      <div class="frame-title">Key takeaways & cầu nối sang Day 09</div>
+      <div class="frame-sub">Từ trả lời grounded sang hệ thống có nhiều vai trò</div>
+      <div class="thin-rule"></div>
+    </div>
+    <div class="slide-body">
+      <div class="bridge-layout">
+        <div>
+          <div class="takeaway-card"><div class="takeaway-num">1</div><div style="font-size:16px;line-height:1.42"><b>RAG tốt</b> là phối hợp đúng giữa indexing, retrieval và generation.</div></div>
+          <div class="takeaway-card"><div class="takeaway-num">2</div><div style="font-size:16px;line-height:1.42"><b>Retrieval quality</b> thường quan trọng hơn generation polish.</div></div>
+          <div class="takeaway-card"><div class="takeaway-num">3</div><div style="font-size:16px;line-height:1.42"><b>Hybrid + rerank + scorecard</b> là ba đòn bẩy practical để tuning.</div></div>
+          <div class="takeaway-card"><div class="takeaway-num">4</div><div style="font-size:16px;line-height:1.42"><b>Artifact hôm nay không bị bỏ đi</b>; nó sẽ trở thành worker hoặc capability trong hệ multi-agent ngày mai.</div></div>
+        </div>
+        <div class="bridge-card">
+          <div class="panel-title">Bridge diagram</div>
+          <div class="bridge-line">
+            <div class="bridge-node">
+              <div class="tag blue">Day 08</div>
+              <div style="font-size:20px;font-weight:800;margin-top:10px">RAG Agent</div>
+              <div class="muted small" style="margin-top:6px">retrieve + answer grounded</div>
+            </div>
+            <div class="bridge-arrow">→</div>
+            <div style="text-align:center">
+              <div class="bridge-node" style="min-width:220px">
+                <div class="tag red">Day 09</div>
+                <div style="font-size:20px;font-weight:800;margin-top:10px">Supervisor</div>
+                <div class="muted small" style="margin-top:6px">route + state + trace</div>
+              </div>
+              <div class="bridge-workers">
+                <div class="bridge-node small"><div style="font-weight:800">Retrieval</div></div>
+                <div class="bridge-node small"><div style="font-weight:800">Tool</div></div>
+                <div class="bridge-node small"><div style="font-weight:800">Synthesis</div></div>
+              </div>
+            </div>
+          </div>
+          <div class="preview-badge"><svg class="svg-icon"><use href="#icon-branch"></use></svg> Day 09 · MCP / A2A / LangGraph</div>
+          <div class="soft-card light-blue" style="margin-top:14px;padding:14px">
+            <div class="panel-title">Câu hỏi mở</div>
+            <div style="font-size:15px;line-height:1.42">Nếu tách artifact hôm nay thành 2–3 worker, bạn sẽ chia theo <b>bước xử lý</b> hay theo <b>tool / domain</b>?</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <aside class="notes">
+      <strong>Speaker notes:</strong> Kết thúc bằng bốn ý cốt lõi và làm rõ sự liên thông sang Day 09: Day 08 giúp agent biết retrieve và trả lời grounded, nhưng khi bài toán lớn hơn một vòng retrieval-generation thì một agent sẽ bắt đầu quá tải. Nhấn mạnh rằng artifact hôm nay không bị bỏ đi; nó sẽ trở thành một worker hoặc một capability trong hệ multi-agent ngày mai.
+      <br><strong>Sources:</strong> YAML D8-S15; PDF pages 40-41.
+    </aside>
+    <div class="credit-footer"><div class="f-left">Instructor: [Tên giảng viên]</div><div class="f-center">AI in Action - Day 08</div><div class="f-right slide-page-num"></div></div>
+  </div>
+
+</div>
+
+<script>
+const slides = document.querySelectorAll('.slide');
+let cur = 0;
+const total = slides.length;
+const footerTemplate = '<div class="f-left">Instructor: [Tên giảng viên]</div><div class="f-center">AI in Action - Day 08</div><div class="f-right slide-page-num"></div>';
+
+slides.forEach((s, i) => {
+  let footer = s.querySelector('.credit-footer');
+  if (!footer) {
+    footer = document.createElement('div');
+    footer.className = 'credit-footer';
+    footer.innerHTML = footerTemplate;
+    s.appendChild(footer);
+  }
+  const el = footer.querySelector('.slide-page-num');
+  if (el) el.textContent = (i + 1) + ' / ' + total;
+});
+
+const counter = document.getElementById('counter');
+
+function getSlideIndexFromUrl() {
+  const hashValue = window.location.hash.replace('#', '').trim();
+  if (/^\d+$/.test(hashValue)) {
+    const idxFromHash = Number(hashValue) - 1;
+    if (idxFromHash >= 0 && idxFromHash < total) return idxFromHash;
+  }
+  const params = new URLSearchParams(window.location.search);
+  const slideParam = params.get('slide');
+  if (slideParam && /^\d+$/.test(slideParam)) {
+    const idxFromParam = Number(slideParam) - 1;
+    if (idxFromParam >= 0 && idxFromParam < total) return idxFromParam;
+  }
+  return 0;
+}
+
+function syncUrlWithSlide(index) {
+  const targetHash = `#${index + 1}`;
+  if (window.location.hash !== targetHash) history.replaceState(null, '', targetHash);
+}
+
+function go(i, shouldSyncUrl = true) {
+  if (i < 0 || i >= total) return;
+  slides[cur].classList.remove('active');
+  cur = i;
+  slides[cur].classList.add('active');
+  counter.textContent = (cur + 1) + ' / ' + total;
+  if (shouldSyncUrl) syncUrlWithSlide(cur);
+}
+
+go(getSlideIndexFromUrl());
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); go(cur + 1); }
+  else if (e.key === 'ArrowLeft') { e.preventDefault(); go(cur - 1); }
+  else if (e.key === 'Home') go(0);
+  else if (e.key === 'End') go(total - 1);
+});
+
+function rescale() {
+  const pres = document.getElementById('pres');
+  const scaleX = window.innerWidth / 1280;
+  const scaleY = window.innerHeight / 720;
+  const s = Math.min(scaleX, scaleY);
+  pres.style.transform = `scale(${s})`;
+}
+rescale();
+window.addEventListener('resize', rescale);
+
+let touchX = 0;
+document.addEventListener('touchstart', e => { touchX = e.touches[0].clientX; });
+document.addEventListener('touchend', e => {
+  const dx = e.changedTouches[0].clientX - touchX;
+  if (dx < -50) go(cur + 1);
+  else if (dx > 50) go(cur - 1);
+});
+
+document.querySelector('.presentation').addEventListener('click', e => {
+  if (e.clientX > window.innerWidth / 2) go(cur + 1);
+  else go(cur - 1);
+});
+
+window.addEventListener('hashchange', () => { go(getSlideIndexFromUrl(), false); });
+</script>
+</body>
+</html>

@@ -140,7 +140,6 @@ python index.py    # Xem preview preprocess + chunking (không cần API key)
 3. Chạy `compare_ab()` để thấy delta
 4. Điền vào `docs/architecture.md` và `docs/tuning-log.md`
 5. Viết báo cáo cá nhân (500-800 từ/người)
-6. Nếu teacher đưa file JSON cùng schema với `data/test_questions.json`, chạy được bằng `python eval.py --questions-file <path>`; thêm `--write-grading-log` để xuất `logs/grading_run.json`
 
 **Definition of Done:**
 - [ ] Demo chạy end-to-end: `python index.py && python rag_answer.py && python eval.py`
@@ -156,7 +155,6 @@ python index.py    # Xem preview preprocess + chunking (không cần API key)
 |------|------|-------|
 | Code pipeline | `index.py`, `rag_answer.py`, `eval.py` | Tech Lead |
 | Test questions | `data/test_questions.json` (đã có mẫu) | Eval Owner |
-| Grading log | `logs/grading_run.json` | Eval Owner |
 | Scorecard | `results/scorecard_baseline.md`, `scorecard_variant.md` | Eval Owner |
 | Architecture docs | `docs/architecture.md` | Documentation Owner |
 | Tuning log | `docs/tuning-log.md` | Documentation Owner |

@@ -1,0 +1,2 @@
+from eval import compare_retrieval_scorecards
+compare_retrieval_scorecards(verbose=True)

@@ -24,10 +24,25 @@ Definition of Done Sprint 3:
 import os
 import json
 import logging
+import re
+import sys
 from typing import List, Dict, Any, Optional
 from dotenv import load_dotenv
 
 load_dotenv()
+
+
+def _configure_utf8_stdio() -> None:
+    for stream in (sys.stdout, sys.stderr):
+        reconfigure = getattr(stream, "reconfigure", None)
+        if callable(reconfigure):
+            try:
+                reconfigure(encoding="utf-8")
+            except Exception:
+                pass
+
+
+_configure_utf8_stdio()
 
 logger = logging.getLogger(__name__)
 
@@ -42,6 +57,35 @@ LLM_PROVIDER = os.getenv("LLM_PROVIDER", "groq").strip().lower()
 LLM_MODEL = os.getenv("LLM_MODEL", "llama-3.1-8b-instant").strip()
 FALLBACK_LLM_PROVIDER = os.getenv("FALLBACK_LLM_PROVIDER", "openai").strip().lower()
 FALLBACK_LLM_MODEL = os.getenv("FALLBACK_LLM_MODEL", "gpt-4o-mini").strip()
+
+# Query transform mặc định là local heuristic để giữ token cost thấp.
+# Nếu muốn thử LLM rewrite, set QUERY_TRANSFORM_USE_LLM=1 trong .env.
+QUERY_TRANSFORM_USE_LLM = os.getenv("QUERY_TRANSFORM_USE_LLM", "0").strip().lower() in {
+    "1",
+    "true",
+    "yes",
+    "on",
+}
+QUERY_TRANSFORM_MAX_VARIANTS = int(os.getenv("QUERY_TRANSFORM_MAX_VARIANTS", "3"))
+QUERY_VARIANT_WEIGHT_DECAY = float(os.getenv("QUERY_VARIANT_WEIGHT_DECAY", "0.85"))
+
+# Alias / synonym hints cho query expansion query transform.
+QUERY_ALIAS_RULES = [
+    (r"\bapproval matrix\b", ["access control sop", "system access approval", "level 3 approval"]),
+    (r"\baccess control sop\b", ["approval matrix", "system access approval", "elevated access"]),
+    (r"\bsla\b", ["service level agreement", "ticket escalation", "priority 1"]),
+    (r"\bp1\b", ["priority 1", "urgent incident", "escalation"]),
+    (r"\brefund\b", ["hoàn tiền", "return policy", "policy refund v4"]),
+    (r"hoàn tiền", ["refund", "return policy", "policy refund v4"]),
+    (r"\bremote\b", ["work from home", "remote work", "team lead approval"]),
+    (r"\bcontractor\b", ["third-party vendor", "vendor access", "admin access"]),
+    (r"\bpassword\b", ["password reset", "login issue", "helpdesk faq"]),
+    (r"\berr-403(-auth)?\b", ["authentication error", "login issue", "helpdesk faq"]),
+    (r"\blevel 3\b", ["elevated access", "admin access", "it security"]),
+    (r"\bcấp quyền\b", ["access approval", "system access", "access control sop"]),
+]
+
+_CROSS_ENCODER_MODEL = None
 
 
 # =============================================================================
@@ -76,9 +120,9 @@ def retrieve_dense(query: str, top_k: int = TOP_K_SEARCH) -> List[Dict[str, Any]
     )
 
     chunks = []
-    documents = results.get("documents", [[]])[0]
-    metadatas = results.get("metadatas", [[]])[0]
-    distances = results.get("distances", [[]])[0]
+    documents = (results.get("documents") or [[]])[0]
+    metadatas = (results.get("metadatas") or [[]])[0]
+    distances = (results.get("distances") or [[]])[0]
 
     for text, meta, dist in zip(documents, metadatas, distances):
         chunks.append({
@@ -119,8 +163,8 @@ def retrieve_sparse(query: str, top_k: int = TOP_K_SEARCH) -> List[Dict[str, Any
     collection = client.get_collection("rag_lab")
 
     all_results = collection.get(include=["documents", "metadatas"])
-    all_docs = all_results.get("documents", [])
-    all_metas = all_results.get("metadatas", [])
+    all_docs = all_results.get("documents") or []
+    all_metas = all_results.get("metadatas") or []
 
     if not all_docs:
         logger.warning("[retrieve_sparse] Không có documents trong ChromaDB")
@@ -144,7 +188,7 @@ def retrieve_sparse(query: str, top_k: int = TOP_K_SEARCH) -> List[Dict[str, Any
             continue  # BM25 = 0 nghĩa là không liên quan
         chunks.append({
             "text": all_docs[idx],
-            "metadata": all_metas[idx] or {},
+            "metadata": all_metas[idx] if all_metas[idx] is not None else {},
             # Normalize về [0, 1] để dễ so sánh với dense score
             "score": raw_score / max_score if max_score > 0 else 0.0,
         })
@@ -231,7 +275,11 @@ def rerank(
             "Cài đặt: pip install sentence-transformers"
         ) from exc
 
-    model = CrossEncoder("cross-encoder/ms-marco-MiniLM-L-6-v2")
+    global _CROSS_ENCODER_MODEL
+    if _CROSS_ENCODER_MODEL is None:
+        _CROSS_ENCODER_MODEL = CrossEncoder("cross-encoder/ms-marco-MiniLM-L-6-v2")
+
+    model = _CROSS_ENCODER_MODEL
     pairs = [[query, chunk["text"]] for chunk in candidates]
     scores = model.predict(pairs)
 
@@ -267,7 +315,87 @@ def transform_query(query: str, strategy: str = "expansion") -> List[str]:
         List[str] — gồm query gốc + các query đã biến đổi.
         Luôn giữ query gốc ở index 0 để fallback an toàn.
     """
-    STRATEGY_PROMPTS = {
+    def _dedupe_preserve_order(items: List[str]) -> List[str]:
+        seen = set()
+        result = []
+        for item in items:
+            value = item.strip()
+            if not value:
+                continue
+            key = value.lower()
+            if key in seen:
+                continue
+            seen.add(key)
+            result.append(value)
+        return result
+
+    def _replace_pattern(text: str, pattern: str, replacement: str) -> str:
+        return re.sub(pattern, replacement, text, flags=re.IGNORECASE)
+
+    def _build_local_variants() -> List[str]:
+        base_query = query.strip()
+        if not base_query:
+            return [query]
+
+        lowered = base_query.lower()
+        variants = [base_query]
+
+        if strategy == "expansion":
+            alias_terms: List[str] = []
+            replacements: List[str] = []
+            for pattern, synonyms in QUERY_ALIAS_RULES:
+                if re.search(pattern, lowered, flags=re.IGNORECASE):
+                    alias_terms.extend(synonyms)
+                    replacements.append(_replace_pattern(base_query, pattern, synonyms[0]))
+
+            alias_terms = _dedupe_preserve_order(alias_terms)
+            replacements = _dedupe_preserve_order(replacements)
+
+            if alias_terms:
+                variants.append(f"{base_query} {' '.join(alias_terms[:6])}".strip())
+            variants.extend(replacements)
+
+            if not alias_terms and not replacements:
+                generic_hints = []
+                if any(term in lowered for term in ["phê duyệt", "approval", "access", "quyền"]):
+                    generic_hints.append("access control approval")
+                if any(term in lowered for term in ["refund", "hoàn tiền", "hoan tien"]):
+                    generic_hints.append("refund return policy")
+                if any(term in lowered for term in ["sla", "p1", "ticket"]):
+                    generic_hints.append("service level agreement priority 1")
+                if generic_hints:
+                    variants.append(f"{base_query} {' '.join(generic_hints)}")
+
+        elif strategy == "decomposition":
+            parts = re.split(r"\b(?:and|or|và|hoặc)\b|[,;/+]", base_query, flags=re.IGNORECASE)
+            subqueries = [part.strip() for part in parts if len(part.strip()) >= 4]
+            if len(subqueries) >= 2:
+                variants.extend(subqueries[: max(1, QUERY_TRANSFORM_MAX_VARIANTS - 1)])
+            else:
+                variants.append(f"{base_query} key policy exception details")
+
+        elif strategy == "hyde":
+            hints: List[str] = []
+            for pattern, synonyms in QUERY_ALIAS_RULES:
+                if re.search(pattern, lowered, flags=re.IGNORECASE):
+                    hints.extend(synonyms[:2])
+            hints = _dedupe_preserve_order(hints)
+            summary = " ".join(hints[:5]) if hints else "policy details, approval steps, exceptions"
+            variants.append(
+                f"This question is about {summary}. The relevant document should explain the rule, "
+                f"approval steps, exceptions, and time limits for: {base_query}"
+            )
+
+        else:
+            logger.warning("[transform_query] Strategy '%s' không hỗ trợ, dùng query gốc", strategy)
+            return [base_query]
+
+        return _dedupe_preserve_order(variants)[:QUERY_TRANSFORM_MAX_VARIANTS]
+
+    if not QUERY_TRANSFORM_USE_LLM:
+        return _build_local_variants()
+
+    strategy_prompts = {
         "expansion": (
             f"Given the search query: '{query}'\n"
             "Generate 2 alternative phrasings or related terms that could help retrieve "
@@ -290,29 +418,160 @@ def transform_query(query: str, strategy: str = "expansion") -> List[str]:
         ),
     }
 
-    if strategy not in STRATEGY_PROMPTS:
-        logger.warning("[transform_query] Strategy '%s' không hỗ trợ, dùng query gốc", strategy)
-        return [query]
+    if strategy not in strategy_prompts:
+        return _build_local_variants()
 
     try:
-        raw = call_llm(STRATEGY_PROMPTS[strategy])
-        # Bóc markdown fence nếu có
-        import re
+        raw = call_llm(strategy_prompts[strategy])
         cleaned = re.sub(r"```(?:json)?\s*|\s*```", "", raw).strip()
         alternatives = json.loads(cleaned)
         if not isinstance(alternatives, list):
             raise ValueError("LLM không trả về list")
-        # Giữ query gốc ở đầu, dedup, loại chuỗi rỗng
         seen = {query}
         result = [query]
         for alt in alternatives:
             if isinstance(alt, str) and alt.strip() and alt not in seen:
                 result.append(alt.strip())
                 seen.add(alt)
-        return result
+        return result[:QUERY_TRANSFORM_MAX_VARIANTS]
     except Exception as exc:
-        logger.warning("[transform_query] Thất bại (%s), dùng query gốc: %s", strategy, exc)
-        return [query]
+        logger.warning("[transform_query] Thất bại (%s), dùng local fallback: %s", strategy, exc)
+        return _build_local_variants()
+
+
+def _normalize_retrieval_mode(
+    retrieval_mode: str,
+    use_rerank: bool,
+    use_query_transform: bool,
+) -> tuple[str, bool, bool]:
+    """Chuẩn hóa retrieval mode để hỗ trợ alias rerank/query_transform."""
+    mode = (retrieval_mode or "dense").strip().lower()
+
+    if mode in {"rerank", "rerank_dense"}:
+        return "dense", True, use_query_transform
+    if mode in {"query_transform", "transform", "qt"}:
+        return "dense", use_rerank, True
+    if mode in {"dense", "sparse", "hybrid"}:
+        return mode, use_rerank, use_query_transform
+
+    raise ValueError(f"retrieval_mode không hợp lệ: {retrieval_mode}")
+
+
+def _retrieve_single_query(
+    query: str,
+    retrieval_mode: str,
+    top_k: int,
+    dense_weight: float,
+    sparse_weight: float,
+) -> List[Dict[str, Any]]:
+    if retrieval_mode == "dense":
+        return retrieve_dense(query, top_k=top_k)
+    if retrieval_mode == "sparse":
+        return retrieve_sparse(query, top_k=top_k)
+    if retrieval_mode == "hybrid":
+        return retrieve_hybrid(
+            query,
+            top_k=top_k,
+            dense_weight=dense_weight,
+            sparse_weight=sparse_weight,
+        )
+    raise ValueError(f"retrieval_mode không hợp lệ: {retrieval_mode}")
+
+
+def _fuse_query_variant_results(
+    query_groups: List[Dict[str, Any]],
+    top_k: int,
+) -> List[Dict[str, Any]]:
+    """Fuse kết quả từ nhiều query variants bằng Reciprocal Rank Fusion."""
+    rrf_scores: Dict[str, float] = {}
+    chunk_by_text: Dict[str, Dict[str, Any]] = {}
+
+    for group in query_groups:
+        query_weight = float(group.get("weight", 1.0))
+        query_text = group.get("query", "")
+        results = group.get("results", []) or []
+
+        for rank, chunk in enumerate(results):
+            key = chunk["text"]
+            contribution = query_weight * (1.0 / (60 + rank))
+            rrf_scores[key] = rrf_scores.get(key, 0.0) + contribution
+
+            stored = chunk_by_text.get(key)
+            if stored is None or contribution > stored.get("_fuse_contribution", -1.0):
+                clone = dict(chunk)
+                clone["_fuse_contribution"] = contribution
+                clone["_query_variant"] = query_text
+                chunk_by_text[key] = clone
+
+    sorted_keys = sorted(rrf_scores, key=lambda k: rrf_scores[k], reverse=True)[:top_k]
+
+    merged: List[Dict[str, Any]] = []
+    for key in sorted_keys:
+        chunk = dict(chunk_by_text[key])
+        chunk["score"] = rrf_scores[key]
+        merged.append(chunk)
+
+    return merged
+
+
+def retrieve_candidates(
+    query: str,
+    retrieval_mode: str = "dense",
+    top_k_search: int = TOP_K_SEARCH,
+    top_k_select: int = TOP_K_SELECT,
+    use_rerank: bool = False,
+    use_query_transform: bool = False,
+    query_transform_strategy: str = "expansion",
+    dense_weight: float = 0.6,
+    sparse_weight: float = 0.4,
+) -> Dict[str, Any]:
+    """Retrieve candidates cho một query, hỗ trợ hybrid/rerank/query-transform kết hợp."""
+    base_mode, effective_rerank, effective_transform = _normalize_retrieval_mode(
+        retrieval_mode=retrieval_mode,
+        use_rerank=use_rerank,
+        use_query_transform=use_query_transform,
+    )
+
+    query_variants = transform_query(query, strategy=query_transform_strategy) if effective_transform else [query.strip()]
+    query_variants = [variant.strip() for variant in query_variants if variant and variant.strip()]
+    query_variants = list(dict.fromkeys(query_variants)) or [query.strip()]
+
+    query_groups = []
+    for idx, query_variant in enumerate(query_variants):
+        query_weight = max(0.5, QUERY_VARIANT_WEIGHT_DECAY ** idx)
+        results = _retrieve_single_query(
+            query=query_variant,
+            retrieval_mode=base_mode,
+            top_k=top_k_search,
+            dense_weight=dense_weight,
+            sparse_weight=sparse_weight,
+        )
+        query_groups.append({
+            "query": query_variant,
+            "weight": query_weight,
+            "results": results,
+        })
+
+    candidate_pool = _fuse_query_variant_results(query_groups, top_k=top_k_search)
+
+    if effective_rerank:
+        selected_candidates = rerank(query, candidate_pool, top_k=top_k_select)
+    else:
+        selected_candidates = candidate_pool[:top_k_select]
+
+    return {
+        "query": query,
+        "query_variants": query_variants,
+        "base_mode": base_mode,
+        "retrieval_mode": retrieval_mode,
+        "use_rerank": effective_rerank,
+        "use_query_transform": effective_transform,
+        "query_transform_strategy": query_transform_strategy if effective_transform else "",
+        "top_k_search": top_k_search,
+        "top_k_select": top_k_select,
+        "candidate_pool": candidate_pool,
+        "selected_candidates": selected_candidates,
+    }
 
 
 # =============================================================================
@@ -396,7 +655,7 @@ def call_llm(prompt: str) -> str:
         return response.choices[0].message.content or ""
 
     def _call_gemini(model_name: str) -> str:
-        import google.generativeai as genai
+        import google.generativeai as genai  # type: ignore[reportMissingImports]
 
         genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
         model = genai.GenerativeModel(model_name)
@@ -447,6 +706,10 @@ def rag_answer(
     top_k_search: int = TOP_K_SEARCH,
     top_k_select: int = TOP_K_SELECT,
     use_rerank: bool = False,
+    use_query_transform: bool = False,
+    query_transform_strategy: str = "expansion",
+    dense_weight: float = 0.6,
+    sparse_weight: float = 0.4,
     verbose: bool = False,
 ) -> Dict[str, Any]:
     """
@@ -454,10 +717,15 @@ def rag_answer(
 
     Args:
         query: Câu hỏi
-        retrieval_mode: "dense" | "sparse" | "hybrid"
+        retrieval_mode: "dense" | "sparse" | "hybrid" | "rerank" | "query_transform"
+        retrieval_mode: "dense" | "sparse" | "hybrid" | "rerank" | "query_transform"
         top_k_search: Số chunk lấy từ vector store (search rộng)
         top_k_select: Số chunk đưa vào prompt (sau rerank/select)
         use_rerank: Có dùng cross-encoder rerank không
+        use_query_transform: Có rewrite query trước khi retrieve không
+        query_transform_strategy: expansion | decomposition | hyde
+        dense_weight: Trọng số dense trong hybrid retrieval
+        sparse_weight: Trọng số sparse trong hybrid retrieval
         verbose: In thêm thông tin debug
 
     Returns:
@@ -473,29 +741,37 @@ def rag_answer(
         "top_k_search": top_k_search,
         "top_k_select": top_k_select,
         "use_rerank": use_rerank,
+        "use_query_transform": use_query_transform,
+        "query_transform_strategy": query_transform_strategy,
+        "dense_weight": dense_weight,
+        "sparse_weight": sparse_weight,
     }
 
-    # --- Bước 1: Retrieve ---
-    if retrieval_mode == "dense":
-        candidates = retrieve_dense(query, top_k=top_k_search)
-    elif retrieval_mode == "sparse":
-        candidates = retrieve_sparse(query, top_k=top_k_search)
-    elif retrieval_mode == "hybrid":
-        candidates = retrieve_hybrid(query, top_k=top_k_search)
-    else:
-        raise ValueError(f"retrieval_mode không hợp lệ: {retrieval_mode}")
+    retrieval_bundle = retrieve_candidates(
+        query=query,
+        retrieval_mode=retrieval_mode,
+        top_k_search=top_k_search,
+        top_k_select=top_k_select,
+        use_rerank=use_rerank,
+        use_query_transform=use_query_transform,
+        query_transform_strategy=query_transform_strategy,
+        dense_weight=dense_weight,
+        sparse_weight=sparse_weight,
+    )
+    candidates = retrieval_bundle["selected_candidates"]
+    retrieval_mode_effective = retrieval_bundle["base_mode"]
+    query_variants = retrieval_bundle.get("query_variants", [query])
 
     if verbose:
         print(f"\n[RAG] Query: {query}")
-        print(f"[RAG] Retrieved {len(candidates)} candidates (mode={retrieval_mode})")
-        for i, c in enumerate(candidates[:3]):
+        if len(query_variants) > 1:
+            print(f"[RAG] Query variants: {query_variants}")
+        print(
+            f"[RAG] Retrieved {len(retrieval_bundle.get('candidate_pool', []))} candidates "
+            f"(mode={retrieval_mode} -> base={retrieval_mode_effective})"
+        )
+        for i, c in enumerate(retrieval_bundle.get("candidate_pool", [])[:3]):
             print(f"  [{i+1}] score={c.get('score', 0):.3f} | {c['metadata'].get('source', '?')}")
-
-    # --- Bước 2: Rerank (optional) ---
-    if use_rerank:
-        candidates = rerank(query, candidates, top_k=top_k_select)
-    else:
-        candidates = candidates[:top_k_select]
 
     if verbose:
         print(f"[RAG] After select: {len(candidates)} chunks")
@@ -521,6 +797,7 @@ def rag_answer(
         "answer": answer,
         "sources": sources,
         "chunks_used": candidates,
+        "retrieval_bundle": retrieval_bundle,
         "config": config,
     }
 
@@ -533,7 +810,8 @@ def compare_retrieval_strategies(query: str) -> None:
     """
     So sánh các retrieval strategies với cùng một query.
 
-    Chạy hàm này để thấy sự khác biệt giữa dense, sparse, hybrid.
+    Chạy hàm này để thấy sự khác biệt giữa dense, hybrid, rerank,
+    và query transform.
     Dùng để justify tại sao chọn variant đó cho Sprint 3.
 
     A/B Rule: Chỉ đổi MỘT biến mỗi lần.
@@ -542,14 +820,56 @@ def compare_retrieval_strategies(query: str) -> None:
     print(f"Query: {query}")
     print('='*60)
 
-    strategies = ["dense", "hybrid"]
+    strategies = [
+        (
+            "baseline_dense",
+            {
+                "retrieval_mode": "dense",
+                "use_rerank": False,
+                "use_query_transform": False,
+            },
+        ),
+        (
+            "hybrid_rrf",
+            {
+                "retrieval_mode": "hybrid",
+                "use_rerank": False,
+                "use_query_transform": False,
+                "dense_weight": 0.8,
+                "sparse_weight": 0.2,
+            },
+        ),
+        (
+            "rerank_dense",
+            {
+                "retrieval_mode": "rerank",
+                "use_rerank": True,
+                "use_query_transform": False,
+            },
+        ),
+        (
+            "query_transform_dense",
+            {
+                "retrieval_mode": "query_transform",
+                "use_rerank": False,
+                "use_query_transform": True,
+                "query_transform_strategy": "expansion",
+            },
+        ),
+    ]
 
-    for strategy in strategies:
-        print(f"\n--- Strategy: {strategy} ---")
+    for label, config in strategies:
+        print(f"\n--- Strategy: {label} ---")
         try:
-            result = rag_answer(query, retrieval_mode=strategy, verbose=False)
-            print(f"Answer: {result['answer']}")
-            print(f"Sources: {result['sources']}")
+            bundle = retrieve_candidates(query, **config)
+            selected = bundle["selected_candidates"]
+            context_block = build_context_block(selected)
+            est_tokens = max(1, len(context_block) // 4)
+            print(f"Base mode: {bundle['base_mode']} | rerank={bundle['use_rerank']} | transform={bundle['use_query_transform']}")
+            print(f"Query variants: {bundle['query_variants']}")
+            print(f"Selected sources: {[c['metadata'].get('source', '?') for c in selected]}")
+            print(f"Selected scores: {[round(float(c.get('score', 0)), 3) for c in selected]}")
+            print(f"Estimated prompt tokens: {est_tokens}")
         except NotImplementedError as e:
             print(f"Chưa implement: {e}")
         except Exception as e:

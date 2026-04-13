@@ -1,0 +1,937 @@
+{
+  "timestamp": "2026-04-13T17:29:46.437833",
+  "test_questions_count": 10,
+  "best_strategy": "hybrid_rrf",
+  "best_hybrid_weights": {
+    "dense_weight": 0.8,
+    "sparse_weight": 0.2
+  },
+  "strategies": {
+    "baseline_dense": {
+      "retrieval_mode": "dense",
+      "dense_weight": 0.6,
+      "sparse_weight": 0.4,
+      "use_rerank": false,
+      "use_query_transform": false,
+      "query_transform_strategy": "expansion",
+      "top_k_search": 10,
+      "top_k_select": 3,
+      "avg_recall": 1.0,
+      "avg_recall_score": 5.0,
+      "avg_top1_hit": 0.8888888888888888,
+      "avg_mrr": 0.9444444444444444,
+      "avg_prompt_tokens": 322.3,
+      "avg_query_variants": 1.0,
+      "hit_rate": 1.0,
+      "judged_count": 9,
+      "rows": [
+        {
+          "id": "q01",
+          "query": "SLA xử lý ticket P1 là bao lâu?",
+          "expected_sources": [
+            "support/sla-p1-2026.pdf"
+          ],
+          "retrieved_sources": [
+            "support/sla-p1-2026.pdf",
+            "support/sla-p1-2026.pdf",
+            "support/sla-p1-2026.pdf"
+          ],
+          "recall": 1.0,
+          "recall_score": 5,
+          "top1_hit": 1.0,
+          "mrr": 1.0,
+          "estimated_prompt_tokens": 374,
+          "query_variants": [
+            "SLA xử lý ticket P1 là bao lâu?"
+          ]
+        },
+        {
+          "id": "q02",
+          "query": "Khách hàng có thể yêu cầu hoàn tiền trong bao nhiêu ngày?",
+          "expected_sources": [
+            "policy/refund-v4.pdf"
+          ],
+          "retrieved_sources": [
+            "policy/refund-v4.pdf",
+            "policy/refund-v4.pdf",
+            "policy/refund-v4.pdf"
+          ],
+          "recall": 1.0,
+          "recall_score": 5,
+          "top1_hit": 1.0,
+          "mrr": 1.0,
+          "estimated_prompt_tokens": 264,
+          "query_variants": [
+            "Khách hàng có thể yêu cầu hoàn tiền trong bao nhiêu ngày?"
+          ]
+        },
+        {
+          "id": "q03",
+          "query": "Ai phải phê duyệt để cấp quyền Level 3?",
+          "expected_sources": [
+            "it/access-control-sop.md"
+          ],
+          "retrieved_sources": [
+            "it/access-control-sop.md",
+            "it/access-control-sop.md",
+            "it/access-control-sop.md"
+          ],
+          "recall": 1.0,
+          "recall_score": 5,
+          "top1_hit": 1.0,
+          "mrr": 1.0,
+          "estimated_prompt_tokens": 404,
+          "query_variants": [
+            "Ai phải phê duyệt để cấp quyền Level 3?"
+          ]
+        },
+        {
+          "id": "q04",
+          "query": "Sản phẩm kỹ thuật số có được hoàn tiền không?",
+          "expected_sources": [
+            "policy/refund-v4.pdf"
+          ],
+          "retrieved_sources": [
+            "policy/refund-v4.pdf",
+            "policy/refund-v4.pdf",
+            "policy/refund-v4.pdf"
+          ],
+          "recall": 1.0,
+          "recall_score": 5,
+          "top1_hit": 1.0,
+          "mrr": 1.0,
+          "estimated_prompt_tokens": 262,
+          "query_variants": [
+            "Sản phẩm kỹ thuật số có được hoàn tiền không?"
+          ]
+        },
+        {
+          "id": "q05",
+          "query": "Tài khoản bị khóa sau bao nhiêu lần đăng nhập sai?",
+          "expected_sources": [
+            "support/helpdesk-faq.md"
+          ],
+          "retrieved_sources": [
+            "support/helpdesk-faq.md",
+            "support/helpdesk-faq.md",
+            "it/access-control-sop.md"
+          ],
+          "recall": 1.0,
+          "recall_score": 5,
+          "top1_hit": 1.0,
+          "mrr": 1.0,
+          "estimated_prompt_tokens": 284,
+          "query_variants": [
+            "Tài khoản bị khóa sau bao nhiêu lần đăng nhập sai?"
+          ]
+        },
+        {
+          "id": "q06",
+          "query": "Escalation trong sự cố P1 diễn ra như thế nào?",
+          "expected_sources": [
+            "support/sla-p1-2026.pdf"
+          ],
+          "retrieved_sources": [
+            "it/access-control-sop.md",
+            "support/sla-p1-2026.pdf",
+            "policy/refund-v4.pdf"
+          ],
+          "recall": 1.0,
+          "recall_score": 5,
+          "top1_hit": 0.0,
+          "mrr": 0.5,
+          "estimated_prompt_tokens": 373,
+          "query_variants": [
+            "Escalation trong sự cố P1 diễn ra như thế nào?"
+          ]
+        },
+        {
+          "id": "q07",
+          "query": "Approval Matrix để cấp quyền hệ thống là tài liệu nào?",
+          "expected_sources": [
+            "it/access-control-sop.md"
+          ],
+          "retrieved_sources": [
+            "it/access-control-sop.md",
+            "it/access-control-sop.md",
+            "it/access-control-sop.md"
+          ],
+          "recall": 1.0,
+          "recall_score": 5,
+          "top1_hit": 1.0,
+          "mrr": 1.0,
+          "estimated_prompt_tokens": 221,
+          "query_variants": [
+            "Approval Matrix để cấp quyền hệ thống là tài liệu nào?"
+          ]
+        },
+        {
+          "id": "q08",
+          "query": "Nhân viên được làm remote tối đa mấy ngày mỗi tuần?",
+          "expected_sources": [
+            "hr/leave-policy-2026.pdf"
+          ],
+          "retrieved_sources": [
+            "hr/leave-policy-2026.pdf",
+            "hr/leave-policy-2026.pdf",
+            "hr/leave-policy-2026.pdf"
+          ],
+          "recall": 1.0,
+          "recall_score": 5,
+          "top1_hit": 1.0,
+          "mrr": 1.0,
+          "estimated_prompt_tokens": 411,
+          "query_variants": [
+            "Nhân viên được làm remote tối đa mấy ngày mỗi tuần?"
+          ]
+        },
+        {
+          "id": "q09",
+          "query": "ERR-403-AUTH là lỗi gì và cách xử lý?",
+          "expected_sources": [],
+          "retrieved_sources": [
+            "policy/refund-v4.pdf",
+            "it/access-control-sop.md",
+            "support/helpdesk-faq.md"
+          ],
+          "recall": null,
+          "recall_score": null,
+          "top1_hit": null,
+          "mrr": null,
+          "estimated_prompt_tokens": 368,
+          "query_variants": [
+            "ERR-403-AUTH là lỗi gì và cách xử lý?"
+          ]
+        },
+        {
+          "id": "q10",
+          "query": "Nếu cần hoàn tiền khẩn cấp cho khách hàng VIP, quy trình có khác không?",
+          "expected_sources": [
+            "policy/refund-v4.pdf"
+          ],
+          "retrieved_sources": [
+            "policy/refund-v4.pdf",
+            "it/access-control-sop.md",
+            "it/access-control-sop.md"
+          ],
+          "recall": 1.0,
+          "recall_score": 5,
+          "top1_hit": 1.0,
+          "mrr": 1.0,
+          "estimated_prompt_tokens": 262,
+          "query_variants": [
+            "Nếu cần hoàn tiền khẩn cấp cho khách hàng VIP, quy trình có khác không?"
+          ]
+        }
+      ],
+      "label": "baseline_dense"
+    },
+    "hybrid_rrf": {
+      "retrieval_mode": "hybrid",
+      "dense_weight": 0.8,
+      "sparse_weight": 0.2,
+      "use_rerank": false,
+      "use_query_transform": false,
+      "query_transform_strategy": "expansion",
+      "top_k_search": 10,
+      "top_k_select": 3,
+      "avg_recall": 1.0,
+      "avg_recall_score": 5.0,
+      "avg_top1_hit": 0.8888888888888888,
+      "avg_mrr": 0.9444444444444444,
+      "avg_prompt_tokens": 320.7,
+      "avg_query_variants": 1.0,
+      "hit_rate": 1.0,
+      "judged_count": 9,
+      "rows": [
+        {
+          "id": "q01",
+          "query": "SLA xử lý ticket P1 là bao lâu?",
+          "expected_sources": [
+            "support/sla-p1-2026.pdf"
+          ],
+          "retrieved_sources": [
+            "support/sla-p1-2026.pdf",
+            "support/sla-p1-2026.pdf",
+            "support/sla-p1-2026.pdf"
+          ],
+          "recall": 1.0,
+          "recall_score": 5,
+          "top1_hit": 1.0,
+          "mrr": 1.0,
+          "estimated_prompt_tokens": 374,
+          "query_variants": [
+            "SLA xử lý ticket P1 là bao lâu?"
+          ]
+        },
+        {
+          "id": "q02",
+          "query": "Khách hàng có thể yêu cầu hoàn tiền trong bao nhiêu ngày?",
+          "expected_sources": [
+            "policy/refund-v4.pdf"
+          ],
+          "retrieved_sources": [
+            "policy/refund-v4.pdf",
+            "policy/refund-v4.pdf",
+            "policy/refund-v4.pdf"
+          ],
+          "recall": 1.0,
+          "recall_score": 5,
+          "top1_hit": 1.0,
+          "mrr": 1.0,
+          "estimated_prompt_tokens": 264,
+          "query_variants": [
+            "Khách hàng có thể yêu cầu hoàn tiền trong bao nhiêu ngày?"
+          ]
+        },
+        {
+          "id": "q03",
+          "query": "Ai phải phê duyệt để cấp quyền Level 3?",
+          "expected_sources": [
+            "it/access-control-sop.md"
+          ],
+          "retrieved_sources": [
+            "it/access-control-sop.md",
+            "it/access-control-sop.md",
+            "it/access-control-sop.md"
+          ],
+          "recall": 1.0,
+          "recall_score": 5,
+          "top1_hit": 1.0,
+          "mrr": 1.0,
+          "estimated_prompt_tokens": 404,
+          "query_variants": [
+            "Ai phải phê duyệt để cấp quyền Level 3?"
+          ]
+        },
+        {
+          "id": "q04",
+          "query": "Sản phẩm kỹ thuật số có được hoàn tiền không?",
+          "expected_sources": [
+            "policy/refund-v4.pdf"
+          ],
+          "retrieved_sources": [
+            "policy/refund-v4.pdf",
+            "policy/refund-v4.pdf",
+            "policy/refund-v4.pdf"
+          ],
+          "recall": 1.0,
+          "recall_score": 5,
+          "top1_hit": 1.0,
+          "mrr": 1.0,
+          "estimated_prompt_tokens": 262,
+          "query_variants": [
+            "Sản phẩm kỹ thuật số có được hoàn tiền không?"
+          ]
+        },
+        {
+          "id": "q05",
+          "query": "Tài khoản bị khóa sau bao nhiêu lần đăng nhập sai?",
+          "expected_sources": [
+            "support/helpdesk-faq.md"
+          ],
+          "retrieved_sources": [
+            "support/helpdesk-faq.md",
+            "support/helpdesk-faq.md",
+            "it/access-control-sop.md"
+          ],
+          "recall": 1.0,
+          "recall_score": 5,
+          "top1_hit": 1.0,
+          "mrr": 1.0,
+          "estimated_prompt_tokens": 284,
+          "query_variants": [
+            "Tài khoản bị khóa sau bao nhiêu lần đăng nhập sai?"
+          ]
+        },
+        {
+          "id": "q06",
+          "query": "Escalation trong sự cố P1 diễn ra như thế nào?",
+          "expected_sources": [
+            "support/sla-p1-2026.pdf"
+          ],
+          "retrieved_sources": [
+            "it/access-control-sop.md",
+            "support/sla-p1-2026.pdf",
+            "support/helpdesk-faq.md"
+          ],
+          "recall": 1.0,
+          "recall_score": 5,
+          "top1_hit": 0.0,
+          "mrr": 0.5,
+          "estimated_prompt_tokens": 357,
+          "query_variants": [
+            "Escalation trong sự cố P1 diễn ra như thế nào?"
+          ]
+        },
+        {
+          "id": "q07",
+          "query": "Approval Matrix để cấp quyền hệ thống là tài liệu nào?",
+          "expected_sources": [
+            "it/access-control-sop.md"
+          ],
+          "retrieved_sources": [
+            "it/access-control-sop.md",
+            "it/access-control-sop.md",
+            "it/access-control-sop.md"
+          ],
+          "recall": 1.0,
+          "recall_score": 5,
+          "top1_hit": 1.0,
+          "mrr": 1.0,
+          "estimated_prompt_tokens": 221,
+          "query_variants": [
+            "Approval Matrix để cấp quyền hệ thống là tài liệu nào?"
+          ]
+        },
+        {
+          "id": "q08",
+          "query": "Nhân viên được làm remote tối đa mấy ngày mỗi tuần?",
+          "expected_sources": [
+            "hr/leave-policy-2026.pdf"
+          ],
+          "retrieved_sources": [
+            "hr/leave-policy-2026.pdf",
+            "hr/leave-policy-2026.pdf",
+            "hr/leave-policy-2026.pdf"
+          ],
+          "recall": 1.0,
+          "recall_score": 5,
+          "top1_hit": 1.0,
+          "mrr": 1.0,
+          "estimated_prompt_tokens": 411,
+          "query_variants": [
+            "Nhân viên được làm remote tối đa mấy ngày mỗi tuần?"
+          ]
+        },
+        {
+          "id": "q09",
+          "query": "ERR-403-AUTH là lỗi gì và cách xử lý?",
+          "expected_sources": [],
+          "retrieved_sources": [
+            "policy/refund-v4.pdf",
+            "it/access-control-sop.md",
+            "support/helpdesk-faq.md"
+          ],
+          "recall": null,
+          "recall_score": null,
+          "top1_hit": null,
+          "mrr": null,
+          "estimated_prompt_tokens": 368,
+          "query_variants": [
+            "ERR-403-AUTH là lỗi gì và cách xử lý?"
+          ]
+        },
+        {
+          "id": "q10",
+          "query": "Nếu cần hoàn tiền khẩn cấp cho khách hàng VIP, quy trình có khác không?",
+          "expected_sources": [
+            "policy/refund-v4.pdf"
+          ],
+          "retrieved_sources": [
+            "policy/refund-v4.pdf",
+            "it/access-control-sop.md",
+            "it/access-control-sop.md"
+          ],
+          "recall": 1.0,
+          "recall_score": 5,
+          "top1_hit": 1.0,
+          "mrr": 1.0,
+          "estimated_prompt_tokens": 262,
+          "query_variants": [
+            "Nếu cần hoàn tiền khẩn cấp cho khách hàng VIP, quy trình có khác không?"
+          ]
+        }
+      ],
+      "label": "hybrid_rrf"
+    },
+    "rerank_dense": {
+      "retrieval_mode": "rerank",
+      "dense_weight": 0.6,
+      "sparse_weight": 0.4,
+      "use_rerank": true,
+      "use_query_transform": false,
+      "query_transform_strategy": "expansion",
+      "top_k_search": 10,
+      "top_k_select": 3,
+      "avg_recall": 1.0,
+      "avg_recall_score": 5.0,
+      "avg_top1_hit": 0.8888888888888888,
+      "avg_mrr": 0.9444444444444444,
+      "avg_prompt_tokens": 338.8,
+      "avg_query_variants": 1.0,
+      "hit_rate": 1.0,
+      "judged_count": 9,
+      "rows": [
+        {
+          "id": "q01",
+          "query": "SLA xử lý ticket P1 là bao lâu?",
+          "expected_sources": [
+            "support/sla-p1-2026.pdf"
+          ],
+          "retrieved_sources": [
+            "support/sla-p1-2026.pdf",
+            "support/sla-p1-2026.pdf",
+            "support/helpdesk-faq.md"
+          ],
+          "recall": 1.0,
+          "recall_score": 5,
+          "top1_hit": 1.0,
+          "mrr": 1.0,
+          "estimated_prompt_tokens": 404,
+          "query_variants": [
+            "SLA xử lý ticket P1 là bao lâu?"
+          ]
+        },
+        {
+          "id": "q02",
+          "query": "Khách hàng có thể yêu cầu hoàn tiền trong bao nhiêu ngày?",
+          "expected_sources": [
+            "policy/refund-v4.pdf"
+          ],
+          "retrieved_sources": [
+            "policy/refund-v4.pdf",
+            "policy/refund-v4.pdf",
+            "policy/refund-v4.pdf"
+          ],
+          "recall": 1.0,
+          "recall_score": 5,
+          "top1_hit": 1.0,
+          "mrr": 1.0,
+          "estimated_prompt_tokens": 296,
+          "query_variants": [
+            "Khách hàng có thể yêu cầu hoàn tiền trong bao nhiêu ngày?"
+          ]
+        },
+        {
+          "id": "q03",
+          "query": "Ai phải phê duyệt để cấp quyền Level 3?",
+          "expected_sources": [
+            "it/access-control-sop.md"
+          ],
+          "retrieved_sources": [
+            "it/access-control-sop.md",
+            "it/access-control-sop.md",
+            "it/access-control-sop.md"
+          ],
+          "recall": 1.0,
+          "recall_score": 5,
+          "top1_hit": 1.0,
+          "mrr": 1.0,
+          "estimated_prompt_tokens": 404,
+          "query_variants": [
+            "Ai phải phê duyệt để cấp quyền Level 3?"
+          ]
+        },
+        {
+          "id": "q04",
+          "query": "Sản phẩm kỹ thuật số có được hoàn tiền không?",
+          "expected_sources": [
+            "policy/refund-v4.pdf"
+          ],
+          "retrieved_sources": [
+            "policy/refund-v4.pdf",
+            "policy/refund-v4.pdf",
+            "policy/refund-v4.pdf"
+          ],
+          "recall": 1.0,
+          "recall_score": 5,
+          "top1_hit": 1.0,
+          "mrr": 1.0,
+          "estimated_prompt_tokens": 262,
+          "query_variants": [
+            "Sản phẩm kỹ thuật số có được hoàn tiền không?"
+          ]
+        },
+        {
+          "id": "q05",
+          "query": "Tài khoản bị khóa sau bao nhiêu lần đăng nhập sai?",
+          "expected_sources": [
+            "support/helpdesk-faq.md"
+          ],
+          "retrieved_sources": [
+            "support/helpdesk-faq.md",
+            "policy/refund-v4.pdf",
+            "policy/refund-v4.pdf"
+          ],
+          "recall": 1.0,
+          "recall_score": 5,
+          "top1_hit": 1.0,
+          "mrr": 1.0,
+          "estimated_prompt_tokens": 331,
+          "query_variants": [
+            "Tài khoản bị khóa sau bao nhiêu lần đăng nhập sai?"
+          ]
+        },
+        {
+          "id": "q06",
+          "query": "Escalation trong sự cố P1 diễn ra như thế nào?",
+          "expected_sources": [
+            "support/sla-p1-2026.pdf"
+          ],
+          "retrieved_sources": [
+            "it/access-control-sop.md",
+            "support/sla-p1-2026.pdf",
+            "support/sla-p1-2026.pdf"
+          ],
+          "recall": 1.0,
+          "recall_score": 5,
+          "top1_hit": 0.0,
+          "mrr": 0.5,
+          "estimated_prompt_tokens": 371,
+          "query_variants": [
+            "Escalation trong sự cố P1 diễn ra như thế nào?"
+          ]
+        },
+        {
+          "id": "q07",
+          "query": "Approval Matrix để cấp quyền hệ thống là tài liệu nào?",
+          "expected_sources": [
+            "it/access-control-sop.md"
+          ],
+          "retrieved_sources": [
+            "it/access-control-sop.md",
+            "it/access-control-sop.md",
+            "it/access-control-sop.md"
+          ],
+          "recall": 1.0,
+          "recall_score": 5,
+          "top1_hit": 1.0,
+          "mrr": 1.0,
+          "estimated_prompt_tokens": 221,
+          "query_variants": [
+            "Approval Matrix để cấp quyền hệ thống là tài liệu nào?"
+          ]
+        },
+        {
+          "id": "q08",
+          "query": "Nhân viên được làm remote tối đa mấy ngày mỗi tuần?",
+          "expected_sources": [
+            "hr/leave-policy-2026.pdf"
+          ],
+          "retrieved_sources": [
+            "hr/leave-policy-2026.pdf",
+            "hr/leave-policy-2026.pdf",
+            "it/access-control-sop.md"
+          ],
+          "recall": 1.0,
+          "recall_score": 5,
+          "top1_hit": 1.0,
+          "mrr": 1.0,
+          "estimated_prompt_tokens": 390,
+          "query_variants": [
+            "Nhân viên được làm remote tối đa mấy ngày mỗi tuần?"
+          ]
+        },
+        {
+          "id": "q09",
+          "query": "ERR-403-AUTH là lỗi gì và cách xử lý?",
+          "expected_sources": [],
+          "retrieved_sources": [
+            "support/sla-p1-2026.pdf",
+            "policy/refund-v4.pdf",
+            "support/sla-p1-2026.pdf"
+          ],
+          "recall": null,
+          "recall_score": null,
+          "top1_hit": null,
+          "mrr": null,
+          "estimated_prompt_tokens": 419,
+          "query_variants": [
+            "ERR-403-AUTH là lỗi gì và cách xử lý?"
+          ]
+        },
+        {
+          "id": "q10",
+          "query": "Nếu cần hoàn tiền khẩn cấp cho khách hàng VIP, quy trình có khác không?",
+          "expected_sources": [
+            "policy/refund-v4.pdf"
+          ],
+          "retrieved_sources": [
+            "policy/refund-v4.pdf",
+            "policy/refund-v4.pdf",
+            "it/access-control-sop.md"
+          ],
+          "recall": 1.0,
+          "recall_score": 5,
+          "top1_hit": 1.0,
+          "mrr": 1.0,
+          "estimated_prompt_tokens": 290,
+          "query_variants": [
+            "Nếu cần hoàn tiền khẩn cấp cho khách hàng VIP, quy trình có khác không?"
+          ]
+        }
+      ],
+      "label": "rerank_dense"
+    },
+    "query_transform_dense": {
+      "retrieval_mode": "query_transform",
+      "dense_weight": 0.6,
+      "sparse_weight": 0.4,
+      "use_rerank": false,
+      "use_query_transform": true,
+      "query_transform_strategy": "expansion",
+      "top_k_search": 10,
+      "top_k_select": 3,
+      "avg_recall": 1.0,
+      "avg_recall_score": 5.0,
+      "avg_top1_hit": 0.7777777777777778,
+      "avg_mrr": 0.8888888888888888,
+      "avg_prompt_tokens": 334.8,
+      "avg_query_variants": 2.8,
+      "hit_rate": 1.0,
+      "judged_count": 9,
+      "rows": [
+        {
+          "id": "q01",
+          "query": "SLA xử lý ticket P1 là bao lâu?",
+          "expected_sources": [
+            "support/sla-p1-2026.pdf"
+          ],
+          "retrieved_sources": [
+            "support/sla-p1-2026.pdf",
+            "support/sla-p1-2026.pdf",
+            "support/sla-p1-2026.pdf"
+          ],
+          "recall": 1.0,
+          "recall_score": 5,
+          "top1_hit": 1.0,
+          "mrr": 1.0,
+          "estimated_prompt_tokens": 374,
+          "query_variants": [
+            "SLA xử lý ticket P1 là bao lâu?",
+            "SLA xử lý ticket P1 là bao lâu? service level agreement ticket escalation priority 1 urgent incident escalation",
+            "service level agreement xử lý ticket P1 là bao lâu?"
+          ]
+        },
+        {
+          "id": "q02",
+          "query": "Khách hàng có thể yêu cầu hoàn tiền trong bao nhiêu ngày?",
+          "expected_sources": [
+            "policy/refund-v4.pdf"
+          ],
+          "retrieved_sources": [
+            "policy/refund-v4.pdf",
+            "policy/refund-v4.pdf",
+            "policy/refund-v4.pdf"
+          ],
+          "recall": 1.0,
+          "recall_score": 5,
+          "top1_hit": 1.0,
+          "mrr": 1.0,
+          "estimated_prompt_tokens": 296,
+          "query_variants": [
+            "Khách hàng có thể yêu cầu hoàn tiền trong bao nhiêu ngày?",
+            "Khách hàng có thể yêu cầu hoàn tiền trong bao nhiêu ngày? refund return policy policy refund v4",
+            "Khách hàng có thể yêu cầu refund trong bao nhiêu ngày?"
+          ]
+        },
+        {
+          "id": "q03",
+          "query": "Ai phải phê duyệt để cấp quyền Level 3?",
+          "expected_sources": [
+            "it/access-control-sop.md"
+          ],
+          "retrieved_sources": [
+            "it/access-control-sop.md",
+            "it/access-control-sop.md",
+            "it/access-control-sop.md"
+          ],
+          "recall": 1.0,
+          "recall_score": 5,
+          "top1_hit": 1.0,
+          "mrr": 1.0,
+          "estimated_prompt_tokens": 404,
+          "query_variants": [
+            "Ai phải phê duyệt để cấp quyền Level 3?",
+            "Ai phải phê duyệt để cấp quyền Level 3? elevated access admin access it security access approval system access access control sop",
+            "Ai phải phê duyệt để cấp quyền elevated access?"
+          ]
+        },
+        {
+          "id": "q04",
+          "query": "Sản phẩm kỹ thuật số có được hoàn tiền không?",
+          "expected_sources": [
+            "policy/refund-v4.pdf"
+          ],
+          "retrieved_sources": [
+            "policy/refund-v4.pdf",
+            "policy/refund-v4.pdf",
+            "policy/refund-v4.pdf"
+          ],
+          "recall": 1.0,
+          "recall_score": 5,
+          "top1_hit": 1.0,
+          "mrr": 1.0,
+          "estimated_prompt_tokens": 262,
+          "query_variants": [
+            "Sản phẩm kỹ thuật số có được hoàn tiền không?",
+            "Sản phẩm kỹ thuật số có được hoàn tiền không? refund return policy policy refund v4",
+            "Sản phẩm kỹ thuật số có được refund không?"
+          ]
+        },
+        {
+          "id": "q05",
+          "query": "Tài khoản bị khóa sau bao nhiêu lần đăng nhập sai?",
+          "expected_sources": [
+            "support/helpdesk-faq.md"
+          ],
+          "retrieved_sources": [
+            "support/helpdesk-faq.md",
+            "support/helpdesk-faq.md",
+            "it/access-control-sop.md"
+          ],
+          "recall": 1.0,
+          "recall_score": 5,
+          "top1_hit": 1.0,
+          "mrr": 1.0,
+          "estimated_prompt_tokens": 284,
+          "query_variants": [
+            "Tài khoản bị khóa sau bao nhiêu lần đăng nhập sai?"
+          ]
+        },
+        {
+          "id": "q06",
+          "query": "Escalation trong sự cố P1 diễn ra như thế nào?",
+          "expected_sources": [
+            "support/sla-p1-2026.pdf"
+          ],
+          "retrieved_sources": [
+            "it/access-control-sop.md",
+            "support/sla-p1-2026.pdf",
+            "policy/refund-v4.pdf"
+          ],
+          "recall": 1.0,
+          "recall_score": 5,
+          "top1_hit": 0.0,
+          "mrr": 0.5,
+          "estimated_prompt_tokens": 373,
+          "query_variants": [
+            "Escalation trong sự cố P1 diễn ra như thế nào?",
+            "Escalation trong sự cố P1 diễn ra như thế nào? priority 1 urgent incident escalation",
+            "Escalation trong sự cố priority 1 diễn ra như thế nào?"
+          ]
+        },
+        {
+          "id": "q07",
+          "query": "Approval Matrix để cấp quyền hệ thống là tài liệu nào?",
+          "expected_sources": [
+            "it/access-control-sop.md"
+          ],
+          "retrieved_sources": [
+            "it/access-control-sop.md",
+            "it/access-control-sop.md",
+            "it/access-control-sop.md"
+          ],
+          "recall": 1.0,
+          "recall_score": 5,
+          "top1_hit": 1.0,
+          "mrr": 1.0,
+          "estimated_prompt_tokens": 221,
+          "query_variants": [
+            "Approval Matrix để cấp quyền hệ thống là tài liệu nào?",
+            "Approval Matrix để cấp quyền hệ thống là tài liệu nào? access control sop system access approval level 3 approval access approval system access",
+            "access control sop để cấp quyền hệ thống là tài liệu nào?"
+          ]
+        },
+        {
+          "id": "q08",
+          "query": "Nhân viên được làm remote tối đa mấy ngày mỗi tuần?",
+          "expected_sources": [
+            "hr/leave-policy-2026.pdf"
+          ],
+          "retrieved_sources": [
+            "hr/leave-policy-2026.pdf",
+            "hr/leave-policy-2026.pdf",
+            "hr/leave-policy-2026.pdf"
+          ],
+          "recall": 1.0,
+          "recall_score": 5,
+          "top1_hit": 1.0,
+          "mrr": 1.0,
+          "estimated_prompt_tokens": 411,
+          "query_variants": [
+            "Nhân viên được làm remote tối đa mấy ngày mỗi tuần?",
+            "Nhân viên được làm remote tối đa mấy ngày mỗi tuần? work from home remote work team lead approval",
+            "Nhân viên được làm work from home tối đa mấy ngày mỗi tuần?"
+          ]
+        },
+        {
+          "id": "q09",
+          "query": "ERR-403-AUTH là lỗi gì và cách xử lý?",
+          "expected_sources": [],
+          "retrieved_sources": [
+            "policy/refund-v4.pdf",
+            "support/sla-p1-2026.pdf",
+            "it/access-control-sop.md"
+          ],
+          "recall": null,
+          "recall_score": null,
+          "top1_hit": null,
+          "mrr": null,
+          "estimated_prompt_tokens": 461,
+          "query_variants": [
+            "ERR-403-AUTH là lỗi gì và cách xử lý?",
+            "ERR-403-AUTH là lỗi gì và cách xử lý? authentication error login issue helpdesk faq",
+            "authentication error là lỗi gì và cách xử lý?"
+          ]
+        },
+        {
+          "id": "q10",
+          "query": "Nếu cần hoàn tiền khẩn cấp cho khách hàng VIP, quy trình có khác không?",
+          "expected_sources": [
+            "policy/refund-v4.pdf"
+          ],
+          "retrieved_sources": [
+            "it/access-control-sop.md",
+            "policy/refund-v4.pdf",
+            "it/access-control-sop.md"
+          ],
+          "recall": 1.0,
+          "recall_score": 5,
+          "top1_hit": 0.0,
+          "mrr": 0.5,
+          "estimated_prompt_tokens": 262,
+          "query_variants": [
+            "Nếu cần hoàn tiền khẩn cấp cho khách hàng VIP, quy trình có khác không?",
+            "Nếu cần hoàn tiền khẩn cấp cho khách hàng VIP, quy trình có khác không? refund return policy policy refund v4",
+            "Nếu cần refund khẩn cấp cho khách hàng VIP, quy trình có khác không?"
+          ]
+        }
+      ],
+      "label": "query_transform_dense"
+    }
+  },
+  "error_tree": [
+    {
+      "failure_mode": "Câu trả lời sai sự thật",
+      "pipeline_stage": "Generation",
+      "root_cause": "Prompt chưa đủ grounding hoặc model tự suy diễn ngoài context",
+      "recommended_fix": "Tăng citation constraint, thêm abstain rule và giảm temperature"
+    },
+    {
+      "failure_mode": "Hallucination (trả lời không có trong context)",
+      "pipeline_stage": "Generation / Retrieval",
+      "root_cause": "Context thiếu evidence, top_k quá thấp hoặc prompt cho phép bịa",
+      "recommended_fix": "Dùng hybrid + rerank, tăng top_k_search, ép answer-only-from-context"
+    },
+    {
+      "failure_mode": "Câu trả lời thiếu chi tiết quan trọng",
+      "pipeline_stage": "Retrieval / Chunking",
+      "root_cause": "Chunk quá ngắn/quá dài, missing evidence hoặc select top-k chưa đủ",
+      "recommended_fix": "Semantic chunking, hybrid search, tăng select/rerank, kiểm tra overlap"
+    },
+    {
+      "failure_mode": "Context truy xuất không liên quan",
+      "pipeline_stage": "Retrieval",
+      "root_cause": "Dense search bỏ lỡ keyword/alias, sparse không được fuse tốt",
+      "recommended_fix": "Hybrid RRF, query transform, kiểm tra alias và weight dense/sparse"
+    },
+    {
+      "failure_mode": "Phản hồi chậm (> 5 giây)",
+      "pipeline_stage": "Retrieval / Rerank / Generation",
+      "root_cause": "Reranker nặng, query transform quá nhiều variants, model load lặp lại",
+      "recommended_fix": "Cache reranker, giới hạn số variants, ưu tiên hybrid không rerank cho baseline"
+    }
+  ]
+}

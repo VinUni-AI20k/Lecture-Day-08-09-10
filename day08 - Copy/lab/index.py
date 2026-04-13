@@ -18,25 +18,11 @@ import json
 import re
 import math
 import hashlib
-import sys
 from pathlib import Path
 from typing import List, Dict, Any, Optional
 from dotenv import load_dotenv
 
 load_dotenv()
-
-
-def _configure_utf8_stdio() -> None:
-    for stream in (sys.stdout, sys.stderr):
-        reconfigure = getattr(stream, "reconfigure", None)
-        if callable(reconfigure):
-            try:
-                reconfigure(encoding="utf-8")
-            except Exception:
-                pass
-
-
-_configure_utf8_stdio()
 
 # =============================================================================
 # CẤU HÌNH
@@ -44,7 +30,6 @@ _configure_utf8_stdio()
 
 DOCS_DIR = Path(__file__).parent / "data" / "docs"
 CHROMA_DB_DIR = Path(__file__).parent / "chroma_db"
-EMBED_MODEL_NAME = "Alibaba-NLP/gte-multilingual-base"
 
 # TODO Sprint 1: Điều chỉnh chunk size và overlap theo quyết định của nhóm
 # Gợi ý từ slide: chunk 300-500 tokens, overlap 50-80 tokens
@@ -324,33 +309,59 @@ def get_embedding(text: str) -> List[float]:
     Tạo embedding vector cho một đoạn text.
 
     TODO Sprint 1:
-    Mặc định dùng Sentence Transformers local với model:
-        Alibaba-NLP/gte-multilingual-base
+    Chọn một trong hai:
 
-    Nếu model local chưa khả dụng, dùng fallback hash embedding để Sprint 1
-    vẫn chạy được mà không cần API key.
+    Option A — OpenAI Embeddings (cần OPENAI_API_KEY):
+        from openai import OpenAI
+        client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+        response = client.embeddings.create(
+            input=text,
+            model="text-embedding-3-small"
+        )
+        return response.data[0].embedding
+
+    Option B — Sentence Transformers (chạy local, không cần API key):
+        from sentence_transformers import SentenceTransformer
+        model = SentenceTransformer("paraphrase-multilingual-MiniLM-L12-v2")
+        return model.encode(text).tolist()
     """
     text = text.strip()
     if not text:
         raise ValueError("Không thể tạo embedding cho text rỗng.")
 
-    # Sentence Transformers (local) là mặc định.
-    # Cache model để không load lại mỗi chunk.
+    # Option A: OpenAI (nếu có key thật)
+    openai_api_key = os.getenv("OPENAI_API_KEY", "").strip()
+    if openai_api_key and not openai_api_key.startswith("your_"):
+        from openai import OpenAI
+
+        client = OpenAI(api_key=openai_api_key)
+        response = client.embeddings.create(
+            input=[text],
+            model="text-embedding-3-small",
+            encoding_format="float",
+        )
+        return response.data[0].embedding
+
+    # Option B: Sentence Transformers (local)
+    # Cache model để không load lại mỗi chunk
     global _SENTENCE_TRANSFORMER_MODEL
-    if "_SENTENCE_TRANSFORMER_MODEL" not in globals():
+    try:
+        _SENTENCE_TRANSFORMER_MODEL
+    except NameError:
         _SENTENCE_TRANSFORMER_MODEL = None
 
     if _SENTENCE_TRANSFORMER_MODEL is None:
         try:
-            from sentence_transformers import SentenceTransformer  # type: ignore[reportMissingImports]
-            _SENTENCE_TRANSFORMER_MODEL = SentenceTransformer(EMBED_MODEL_NAME)
+            from sentence_transformers import SentenceTransformer
+            _SENTENCE_TRANSFORMER_MODEL = SentenceTransformer(
+                "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
+            )
         except Exception:
             # Fallback nhẹ để Sprint 1 vẫn chạy được khi chưa có model local
             return _hash_embedding(text)
 
     vector = _SENTENCE_TRANSFORMER_MODEL.encode(text, normalize_embeddings=True)
-    raw_vector = vector.tolist() if hasattr(vector, "tolist") else vector
-    return [float(value) for value in raw_vector]
+    return vector.tolist() if hasattr(vector, "tolist") else list(vector)
 
 
 def _hash_embedding(text: str, dim: int = 384) -> List[float]:
@@ -488,11 +499,9 @@ def list_chunks(db_dir: Path = CHROMA_DB_DIR, n: int = 5) -> None:
         client = chromadb.PersistentClient(path=str(db_dir))
         collection = client.get_collection("rag_lab")
         results = collection.get(limit=n, include=["documents", "metadatas"])
-        documents = results.get("documents") or []
-        metadatas = results.get("metadatas") or []
 
         print(f"\n=== Top {n} chunks trong index ===\n")
-        for i, (doc, meta) in enumerate(zip(documents, metadatas)):
+        for i, (doc, meta) in enumerate(zip(results["documents"], results["metadatas"])):
             print(f"[Chunk {i+1}]")
             print(f"  Source: {meta.get('source', 'N/A')}")
             print(f"  Section: {meta.get('section', 'N/A')}")
@@ -520,15 +529,14 @@ def inspect_metadata_coverage(db_dir: Path = CHROMA_DB_DIR) -> None:
         client = chromadb.PersistentClient(path=str(db_dir))
         collection = client.get_collection("rag_lab")
         results = collection.get(include=["metadatas"])
-        metadatas = results.get("metadatas") or []
 
-        print(f"\nTổng chunks: {len(metadatas)}")
+        print(f"\nTổng chunks: {len(results['metadatas'])}")
 
         # TODO: Phân tích metadata
         # Đếm theo department, kiểm tra effective_date missing, v.v.
         departments = {}
         missing_date = 0
-        for meta in metadatas:
+        for meta in results["metadatas"]:
             dept = meta.get("department", "unknown")
             departments[dept] = departments.get(dept, 0) + 1
             if meta.get("effective_date") in ("unknown", "", None):
