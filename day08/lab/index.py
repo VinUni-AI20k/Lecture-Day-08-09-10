@@ -61,17 +61,70 @@ def preprocess_document(raw_text: str, filepath: str) -> Dict[str, Any]:
     Gợi ý: dùng regex để parse dòng "Key: Value" ở đầu file.
     """
     lines = raw_text.strip().split("\n")
+
+    def _extract_channels(text: str) -> List[str]:
+        lowered = text.lower()
+        channels = []
+        channel_patterns = {
+            "email": r"\bemail\b|@",
+            "hotline": r"\bhotline\b|\bext\.\s*\d+\b",
+            "slack": r"\bslack\b|#\w+",
+            "jira": r"\bjira\b|\bproject\s+[A-Z]+-[A-Z]+\b",
+            "portal": r"\bportal\b|https?://",
+            "vpn": r"\bvpn\b",
+        }
+
+        for channel, pattern in channel_patterns.items():
+            if re.search(pattern, lowered, flags=re.IGNORECASE):
+                channels.append(channel)
+
+        return sorted(set(channels))
+
+    def _extract_emails(text: str) -> List[str]:
+        emails = re.findall(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}", text)
+        return sorted(set(emails))
+
+    def _extract_hotlines(text: str) -> List[str]:
+        # Captures formats like: ext. 9000, ext.9999, ext 1234
+        hotline_matches = re.findall(r"\bext\.?\s*\d+\b", text, flags=re.IGNORECASE)
+        return sorted(set(hotline_matches))
+
+    def _extract_availability_hours(text: str) -> Optional[str]:
+        # Prioritize explicit ranges with weekday hints found in these policy/faq docs.
+        match = re.search(
+            r"(Thứ\s*\d\s*-\s*Thứ\s*\d[^\n]*\d{1,2}:\d{2}\s*-\s*\d{1,2}:\d{2})",
+            text,
+            flags=re.IGNORECASE,
+        )
+        if match:
+            return match.group(1).strip()
+
+        # Fallback for common 24/7 notation.
+        if re.search(r"\b24\s*/\s*7\b", text, flags=re.IGNORECASE):
+            return "24/7"
+
+        return None
+
+    doc_title = ""
     metadata = {
+        "doc_title": "",
         "source": filepath,
         "section": "",
         "department": "unknown",
         "effective_date": "unknown",
         "access": "internal",
+        "channels": [],
+        "emails": [],
+        "hotlines": [],
+        "availability_hours": None,
     }
     content_lines = []
     header_done = False
 
-    for line in lines:
+    for idx, line in enumerate(lines):
+        if idx == 0 and line.strip():
+            doc_title = line.strip()
+
         if not header_done:
             # TODO: Parse metadata từ các dòng "Key: Value"
             # Ví dụ: "Source: policy/refund-v4.pdf" → metadata["source"] = "policy/refund-v4.pdf"
@@ -98,6 +151,13 @@ def preprocess_document(raw_text: str, filepath: str) -> Dict[str, Any]:
     # TODO: Thêm bước normalize text nếu cần
     # Gợi ý: bỏ ký tự đặc biệt thừa, chuẩn hóa dấu câu
     cleaned_text = re.sub(r"\n{3,}", "\n\n", cleaned_text)  # max 2 dòng trống liên tiếp
+
+    full_text_for_contact = "\n".join(lines)
+    metadata["doc_title"] = doc_title
+    metadata["channels"] = _extract_channels(full_text_for_contact)
+    metadata["emails"] = _extract_emails(full_text_for_contact)
+    metadata["hotlines"] = _extract_hotlines(full_text_for_contact)
+    metadata["availability_hours"] = _extract_availability_hours(full_text_for_contact)
 
     return {
         "text": cleaned_text,
@@ -135,6 +195,58 @@ def chunk_document(doc: Dict[str, Any]) -> List[Dict[str, Any]]:
     base_metadata = doc["metadata"].copy()
     chunks = []
 
+    def _split_faq_pairs(section_text: str) -> List[str]:
+        """Split FAQ section into Q/A units, preserving question with answer."""
+        lines = [ln.rstrip() for ln in section_text.splitlines()]
+        qa_blocks = []
+        current = []
+
+        for line in lines:
+            stripped = line.strip()
+            if stripped.startswith("Q:"):
+                if current:
+                    qa_blocks.append("\n".join(current).strip())
+                    current = []
+                current.append(stripped)
+            elif stripped:
+                if current:
+                    current.append(stripped)
+
+        if current:
+            qa_blocks.append("\n".join(current).strip())
+
+        return qa_blocks
+
+    def _is_contact_section(section_name: str, section_text: str) -> bool:
+        """Detect contact/communication sections that should not be chunked."""
+        name = section_name.lower()
+        content = section_text.lower()
+
+        name_signals = [
+            "liên hệ",
+            "lien he",
+            "kênh liên lạc",
+            "kenh lien lac",
+            "công cụ",
+            "cong cu",
+            "hỗ trợ",
+            "ho tro",
+        ]
+        if any(sig in name for sig in name_signals):
+            return True
+
+        # Fallback signal: contact-heavy block (metadata already captures these).
+        contact_hits = 0
+        if "@" in content or "email" in content:
+            contact_hits += 1
+        if re.search(r"\bhotline\b|\bext\.?\s*\d+\b", content):
+            contact_hits += 1
+        if "slack" in content:
+            contact_hits += 1
+        if "jira" in content or "portal" in content:
+            contact_hits += 1
+        return contact_hits >= 3
+
     # TODO: Implement chunking theo section heading
     # Bước 1: Split theo heading pattern "=== ... ==="
     sections = re.split(r"(===.*?===)", text)
@@ -146,11 +258,45 @@ def chunk_document(doc: Dict[str, Any]) -> List[Dict[str, Any]]:
         if re.match(r"===.*?===", part):
             # Lưu section trước (nếu có nội dung)
             if current_section_text.strip():
-                section_chunks = _split_by_size(
-                    current_section_text.strip(),
-                    base_metadata=base_metadata,
-                    section=current_section,
+                section_text = current_section_text.strip()
+
+                if _is_contact_section(current_section, section_text):
+                    section_chunks = []
+                    chunks.extend(section_chunks)
+                    current_section = part.strip("= ").strip()
+                    current_section_text = ""
+                    continue
+
+                # FAQ docs/sections: ưu tiên 1 chunk cho mỗi cặp Q/A.
+                is_faq_section = (
+                    "faq" in current_section.lower()
+                    or re.search(r"(?m)^\s*Q:\s*", section_text) is not None
                 )
+
+                if is_faq_section:
+                    qa_blocks = _split_faq_pairs(section_text)
+                    if qa_blocks:
+                        section_chunks = []
+                        for qa in qa_blocks:
+                            section_chunks.extend(
+                                _split_by_size(
+                                    qa,
+                                    base_metadata=base_metadata,
+                                    section=current_section,
+                                )
+                            )
+                    else:
+                        section_chunks = _split_by_size(
+                            section_text,
+                            base_metadata=base_metadata,
+                            section=current_section,
+                        )
+                else:
+                    section_chunks = _split_by_size(
+                        section_text,
+                        base_metadata=base_metadata,
+                        section=current_section,
+                    )
                 chunks.extend(section_chunks)
             # Bắt đầu section mới
             current_section = part.strip("= ").strip()
@@ -160,11 +306,39 @@ def chunk_document(doc: Dict[str, Any]) -> List[Dict[str, Any]]:
 
     # Lưu section cuối cùng
     if current_section_text.strip():
-        section_chunks = _split_by_size(
-            current_section_text.strip(),
-            base_metadata=base_metadata,
-            section=current_section,
+        section_text = current_section_text.strip()
+        if _is_contact_section(current_section, section_text):
+            return chunks
+
+        is_faq_section = (
+            "faq" in current_section.lower()
+            or re.search(r"(?m)^\s*Q:\s*", section_text) is not None
         )
+
+        if is_faq_section:
+            qa_blocks = _split_faq_pairs(section_text)
+            if qa_blocks:
+                section_chunks = []
+                for qa in qa_blocks:
+                    section_chunks.extend(
+                        _split_by_size(
+                            qa,
+                            base_metadata=base_metadata,
+                            section=current_section,
+                        )
+                    )
+            else:
+                section_chunks = _split_by_size(
+                    section_text,
+                    base_metadata=base_metadata,
+                    section=current_section,
+                )
+        else:
+            section_chunks = _split_by_size(
+                section_text,
+                base_metadata=base_metadata,
+                section=current_section,
+            )
         chunks.extend(section_chunks)
 
     return chunks
@@ -196,21 +370,97 @@ def _split_by_size(
     # paragraphs = text.split("\n\n")
     # Ghép paragraphs lại cho đến khi gần đủ chunk_chars
     # Lấy overlap từ đoạn cuối chunk trước
+    paragraphs = [p.strip() for p in text.split("\n\n") if p.strip()]
     chunks = []
-    start = 0
-    while start < len(text):
-        end = min(start + chunk_chars, len(text))
-        chunk_text = text[start:end]
 
-        # TODO: Tìm ranh giới tự nhiên gần nhất (dấu xuống dòng, dấu chấm)
-        # thay vì cắt giữa câu
+    current_parts: List[str] = []
+    current_len = 0
 
+    def _join_parts(parts: List[str]) -> str:
+        return "\n\n".join(parts).strip()
+
+    def _tail_overlap(chunk_text: str) -> str:
+        if overlap_chars <= 0:
+            return ""
+        tail = chunk_text[-overlap_chars:]
+        # Cố gắng bắt đầu overlap tại ranh giới tự nhiên gần nhất.
+        cut = max(tail.rfind("\n"), tail.rfind(". "), tail.rfind(": "), tail.rfind("; "))
+        if cut > 0:
+            tail = tail[cut + 1:]
+        return tail.strip()
+
+    for para in paragraphs:
+        para_len = len(para)
+
+        # Nếu paragraph đơn lẻ đã quá dài, cắt mềm theo sentence/newline boundaries.
+        if para_len > chunk_chars:
+            if current_parts:
+                chunk_text = _join_parts(current_parts)
+                if chunk_text:
+                    chunks.append({
+                        "text": chunk_text,
+                        "metadata": {**base_metadata, "section": section},
+                    })
+                overlap_text = _tail_overlap(chunk_text)
+                current_parts = [overlap_text] if overlap_text else []
+                current_len = len(overlap_text)
+
+            start = 0
+            while start < para_len:
+                end = min(start + chunk_chars, para_len)
+                window = para[start:end]
+
+                if end < para_len:
+                    natural_cut = max(
+                        window.rfind("\n"),
+                        window.rfind(". "),
+                        window.rfind(": "),
+                        window.rfind("; "),
+                    )
+                    if natural_cut > 100:
+                        end = start + natural_cut + 1
+                        window = para[start:end]
+
+                piece = window.strip()
+                if piece:
+                    chunks.append({
+                        "text": piece,
+                        "metadata": {**base_metadata, "section": section},
+                    })
+
+                if end >= para_len:
+                    break
+
+                next_start = max(end - overlap_chars, start + 1)
+                start = next_start
+
+            current_parts = []
+            current_len = 0
+            continue
+
+        projected = current_len + (2 if current_parts else 0) + para_len
+        if projected <= chunk_chars:
+            current_parts.append(para)
+            current_len = projected
+            continue
+
+        chunk_text = _join_parts(current_parts)
+        if chunk_text:
+            chunks.append({
+                "text": chunk_text,
+                "metadata": {**base_metadata, "section": section},
+            })
+
+        overlap_text = _tail_overlap(chunk_text)
+        current_parts = [overlap_text, para] if overlap_text else [para]
+        current_len = sum(len(p) for p in current_parts) + (2 if len(current_parts) > 1 else 0)
+
+    tail_chunk = _join_parts(current_parts)
+    if tail_chunk:
         chunks.append({
-            "text": chunk_text,
+            "text": tail_chunk,
             "metadata": {**base_metadata, "section": section},
         })
-        # Overlap: lùi lại overlap_chars để chunk sau có ngữ cảnh từ chunk trước
-        start = end - overlap_chars
 
     return chunks
 
