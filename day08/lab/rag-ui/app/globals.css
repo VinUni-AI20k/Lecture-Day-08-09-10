@@ -6,7 +6,7 @@
   --radius: 0.625rem;
 
   /* Surfaces */
-  --background: #f8faff;
+  --background: #f0f5ff;
   --foreground: #0f172a;
   --card: #ffffff;
   --card-foreground: #0f172a;
@@ -17,19 +17,19 @@
   --primary: #2563eb;
   --primary-foreground: #ffffff;
   --primary-hover: #1d4ed8;
-  --primary-subtle: #eff6ff;
+  --primary-subtle: #dbeafe;
   --primary-subtle-foreground: #1d4ed8;
 
   /* Secondary */
-  --secondary: #f1f5f9;
-  --secondary-foreground: #0f172a;
+  --secondary: #e8f0fe;
+  --secondary-foreground: #1e3a8a;
 
   /* Muted */
-  --muted: #f1f5f9;
-  --muted-foreground: #64748b;
+  --muted: #eef2ff;
+  --muted-foreground: #4b5da8;
 
   /* Accent */
-  --accent: #eff6ff;
+  --accent: #dbeafe;
   --accent-foreground: #1d4ed8;
 
   /* Destructive */
@@ -37,24 +37,25 @@
   --destructive-foreground: #ffffff;
 
   /* Borders / inputs */
-  --border: #e2e8f0;
-  --border-strong: #cbd5e1;
-  --input: #e2e8f0;
+  --border: #c7d7f8;
+  --border-strong: #93b4f5;
+  --input: #dbeafe;
   --ring: #2563eb;
 
   /* Sidebar */
-  --sidebar: #ffffff;
+  --sidebar: #f8faff;
   --sidebar-foreground: #0f172a;
   --sidebar-primary: #2563eb;
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #eff6ff;
+  --sidebar-accent: #dbeafe;
   --sidebar-accent-foreground: #1d4ed8;
-  --sidebar-border: #e8edf5;
+  --sidebar-border: #c7d7f8;
   --sidebar-ring: #2563eb;
 
   /* Gradients */
   --gradient-primary: linear-gradient(135deg, #1d4ed8 0%, #2563eb 50%, #3b82f6 100%);
-  --gradient-surface: linear-gradient(180deg, #f8faff 0%, #ffffff 100%);
+  --gradient-surface: linear-gradient(180deg, #f0f5ff 0%, #ffffff 100%);
+  --gradient-header: linear-gradient(90deg, #1e3a8a 0%, #2563eb 60%, #3b82f6 100%);
 
   /* Step colors */
   --step-1: #2563eb;

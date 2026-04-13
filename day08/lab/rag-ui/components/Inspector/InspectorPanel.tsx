@@ -20,19 +20,19 @@ export function InspectorPanel({ last, loading, streamingSteps, className }: Pro
   const steps = streamingSteps ?? last?.pipeline_steps ?? [];
 
   return (
-    <aside className={cn("flex flex-col h-full bg-sidebar", className)}>
-      {/* Header */}
-      <div className="shrink-0 px-4 py-3.5 border-b border-sidebar-border">
+    <aside className={cn("flex flex-col h-full", className)} style={{ background: "var(--sidebar)" }}>
+      {/* Header — matches main gradient header */}
+      <div
+        className="shrink-0 px-4 py-3.5"
+        style={{ background: "var(--gradient-header)" }}
+      >
         <div className="flex items-center gap-2.5">
-          <div
-            className="flex h-7 w-7 items-center justify-center rounded-lg"
-            style={{ background: "var(--gradient-primary)" }}
-          >
+          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-white/20">
             <Brain className="h-3.5 w-3.5 text-white" />
           </div>
           <div>
-            <h2 className="text-sm font-bold text-foreground tracking-tight">RAG Inspector</h2>
-            <p className="text-[10px] text-muted-foreground leading-none mt-0.5">
+            <h2 className="text-sm font-bold text-white tracking-tight">RAG Inspector</h2>
+            <p className="text-[10px] text-blue-200/80 leading-none mt-0.5">
               Live pipeline visualization
             </p>
           </div>

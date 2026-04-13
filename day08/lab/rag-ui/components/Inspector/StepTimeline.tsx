@@ -10,7 +10,7 @@ import {
   ChevronDown,
   Loader2,
 } from "lucide-react";
-import type { PipelineStep } from "@/lib/rag-client";
+import type { PipelineStep, ScoreStats } from "@/lib/rag-client";
 import { ChunkTable } from "./ChunkTable";
 import { cn } from "@/lib/utils";
 
@@ -138,6 +138,9 @@ function StepCard({
                       {step.table.length} chunks
                     </span>
                   )}
+                  {!isPending && step.stats?.score && (
+                    <ScoreBadge score={step.stats.score} color={meta.color} />
+                  )}
                   {!isPending && step.step === 5 && step.answer_chars && (
                     <span
                       className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full"
@@ -162,6 +165,11 @@ function StepCard({
                 <p className="mt-1 text-[11px] text-muted-foreground leading-relaxed line-clamp-2">
                   {step.detail.replace(/\*\*/g, "")}
                 </p>
+              )}
+
+              {/* Stats inline summary (QuachGiaDuoc enrichment) */}
+              {!isPending && step.stats && (
+                <StatsRow stats={step.stats} color={meta.color} />
               )}
 
               {/* Pending skeleton */}
@@ -199,6 +207,50 @@ function StepCard({
           )}
         </div>
       </div>
+    </div>
+  );
+}
+
+// ── Stats helpers ────────────────────────────────────────────────────────────
+
+function ScoreBadge({ score, color }: { score: ScoreStats; color: string }) {
+  const pct = Math.round(score.avg * 100);
+  return (
+    <span
+      className="text-[10px] font-bold px-1.5 py-0.5 rounded-full"
+      title={`min=${score.min.toFixed(3)} avg=${score.avg.toFixed(3)} max=${score.max.toFixed(3)}`}
+      style={{ background: `${color}18`, color }}
+    >
+      avg {pct}%
+    </span>
+  );
+}
+
+function StatsRow({
+  stats,
+  color,
+}: {
+  stats: NonNullable<PipelineStep["stats"]>;
+  color: string;
+}) {
+  const pills: { label: string; value: string | number }[] = [];
+  if (stats.non_empty_chunks != null) pills.push({ label: "non-empty", value: stats.non_empty_chunks });
+  if (stats.dropped_candidates != null) pills.push({ label: "dropped", value: stats.dropped_candidates });
+  if (stats.sources_preview) pills.push({ label: "sources", value: stats.sources_preview });
+  if (pills.length === 0) return null;
+
+  return (
+    <div className="mt-1.5 flex flex-wrap gap-1.5">
+      {pills.map((p) => (
+        <span
+          key={p.label}
+          className="inline-flex items-center gap-1 text-[10px] rounded-md px-1.5 py-0.5 border"
+          style={{ borderColor: `${color}30`, color: "var(--muted-foreground)", background: `${color}08` }}
+        >
+          <span style={{ color }} className="font-semibold">{p.label}</span>
+          {p.value}
+        </span>
+      ))}
     </div>
   );
 }

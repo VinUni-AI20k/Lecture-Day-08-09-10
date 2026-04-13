@@ -124,14 +124,16 @@ export default function ChatPage() {
             streamHandle.current = null;
           },
           onError(err) {
-            const msg = err.message || String(err);
-            setError({ msg });
+            const raw = err.message || String(err);
+            // First line of error is the human-readable summary
+            const firstLine = raw.split("\n")[0];
+            setError({ msg: firstLine });
             setMessages((prev) =>
               prev.map((m) =>
                 m.id === asstMsgId
                   ? {
                       ...m,
-                      text: "Could not connect to the API. Check that FastAPI is running.",
+                      text: `⚠️ ${firstLine}`,
                       isStreaming: false,
                     }
                   : m
@@ -154,38 +156,41 @@ export default function ChatPage() {
     <TooltipProvider>
       <div className="flex h-screen flex-col overflow-hidden">
         {/* ── Top header ──────────────────────────────────────────────── */}
-        <header className="shrink-0 flex items-center justify-between gap-2 border-b border-border bg-card/80 backdrop-blur-sm px-4 py-2.5 z-10">
+        <header
+          className="shrink-0 flex items-center justify-between gap-2 px-4 py-2.5 z-10"
+          style={{ background: "var(--gradient-header)" }}
+        >
           <div className="flex items-center gap-3">
             <Link
               href="/"
-              className="text-xs text-muted-foreground hover:text-foreground transition-colors font-medium"
+              className="text-xs text-blue-200 hover:text-white transition-colors font-medium"
             >
               ← Home
             </Link>
-            <div className="h-4 w-px bg-border" />
+            <div className="h-4 w-px bg-white/20" />
             <div className="flex items-center gap-2">
-              <div
-                className="h-5 w-5 rounded-md flex items-center justify-center"
-                style={{ background: "var(--gradient-primary)" }}
-              >
-                <span className="text-[9px] font-bold text-white">R</span>
+              <div className="h-6 w-6 rounded-lg flex items-center justify-center bg-white/20 backdrop-blur-sm">
+                <span className="text-[10px] font-bold text-white">RAG</span>
               </div>
-              <h1 className="text-sm font-bold text-foreground tracking-tight">
-                RAG Chat
+              <h1 className="text-sm font-bold text-white tracking-tight">
+                Day 08 — RAG Pipeline
               </h1>
             </div>
           </div>
 
           {/* Right controls */}
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1.5">
             {/* Mode badge */}
             <button
               type="button"
               onClick={() => setSettingsOpen(true)}
-              className="flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-semibold bg-accent text-accent-foreground hover:bg-primary/10 hover:text-primary transition-colors"
+              className="flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-semibold bg-white/15 text-white hover:bg-white/25 transition-colors"
             >
               {MODE_ICONS[settings.mode as keyof typeof MODE_ICONS]}
               {settings.mode}
+              <span className="opacity-60">·</span>
+              <span className="opacity-80">{settings.topKSearch}/{settings.topKSelect}</span>
+              {settings.useRerank && <span className="text-yellow-300 text-[10px]">✦</span>}
             </button>
 
             <Tooltip>
@@ -193,7 +198,7 @@ export default function ChatPage() {
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-8 w-8"
+                  className="h-8 w-8 text-white/70 hover:text-white hover:bg-white/15"
                   onClick={() => setSettingsOpen(true)}
                 >
                   <Settings2 className="h-4 w-4" />
@@ -207,7 +212,10 @@ export default function ChatPage() {
                 <Button
                   variant="ghost"
                   size="icon"
-                  className={cn("h-8 w-8", inspectorOpen && "bg-accent text-accent-foreground")}
+                  className={cn(
+                    "h-8 w-8 text-white/70 hover:text-white hover:bg-white/15",
+                    inspectorOpen && "bg-white/20 text-white"
+                  )}
                   onClick={() => setInspectorOpen((o) => !o)}
                 >
                   <PanelRight className="h-4 w-4" />
@@ -255,7 +263,7 @@ export default function ChatPage() {
               </div>
 
               {/* Input bar */}
-              <div className="shrink-0 border-t border-border bg-card/80 backdrop-blur-sm px-4 py-3">
+              <div className="shrink-0 border-t border-primary/20 bg-white/60 backdrop-blur-sm px-4 py-3">
                 <div className="mx-auto max-w-3xl">
                   <ChatInput
                     value={query}
@@ -320,8 +328,8 @@ function EmptyState({ onQuestion }: { onQuestion: (q: string) => void }) {
       {/* Animated logo */}
       <div className="relative mb-6">
         <div
-          className="flex h-16 w-16 items-center justify-center rounded-2xl shadow-lg"
-          style={{ background: "var(--gradient-primary)" }}
+          className="flex h-16 w-16 items-center justify-center rounded-2xl shadow-xl"
+          style={{ background: "var(--gradient-header)" }}
         >
           <svg
             width="28"
@@ -338,31 +346,36 @@ function EmptyState({ onQuestion }: { onQuestion: (q: string) => void }) {
         </div>
         {/* Glow ring */}
         <div
-          className="absolute inset-0 rounded-2xl opacity-30 blur-xl"
+          className="absolute inset-0 rounded-2xl opacity-40 blur-xl"
           style={{ background: "var(--gradient-primary)" }}
         />
       </div>
 
-      <h2 className="text-xl font-bold text-foreground tracking-tight mb-1">
+      <h2 className="text-xl font-bold tracking-tight mb-1 text-gradient">
         Ask your documents
       </h2>
       <p className="text-sm text-muted-foreground max-w-xs leading-relaxed mb-8">
-        Powered by RAG — retrieval-augmented generation. Every answer is grounded in your indexed documents with full pipeline transparency.
+        Powered by RAG — every answer is grounded in your indexed documents with full 5-step pipeline transparency.
       </p>
 
       {/* Example chips */}
       <div className="flex flex-col gap-2 w-full max-w-sm">
-        <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground mb-1">
+        <p className="text-[11px] font-bold uppercase tracking-widest text-primary/60 mb-1">
           Try asking
         </p>
-        {EXAMPLE_QUESTIONS.map((q) => (
+        {EXAMPLE_QUESTIONS.map((q, i) => (
           <button
             key={q}
             type="button"
             onClick={() => onQuestion(q)}
-            className="flex items-center gap-2 rounded-xl border border-border bg-card px-4 py-2.5 text-left text-xs font-medium text-foreground hover:border-primary/40 hover:bg-accent/60 hover:text-primary transition-all group"
+            className="flex items-center gap-3 rounded-xl border border-primary/20 bg-white px-4 py-3 text-left text-xs font-medium text-foreground hover:border-primary/50 hover:bg-primary/5 hover:text-primary transition-all group shadow-sm"
           >
-            <span className="h-1.5 w-1.5 rounded-full bg-primary/40 group-hover:bg-primary transition-colors shrink-0" />
+            <span
+              className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[9px] font-bold text-white"
+              style={{ background: "var(--gradient-primary)" }}
+            >
+              {i + 1}
+            </span>
             {q}
           </button>
         ))}
