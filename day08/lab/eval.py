@@ -34,7 +34,8 @@ from ragas.metrics import faithfulness, answer_relevancy, context_precision, con
 # CẤU HÌNH
 # =============================================================================
 
-TEST_QUESTIONS_PATH = Path(__file__).parent / "data" / "grading_questions.json"
+TEST_QUESTIONS_PATH = Path(__file__).parent / "data" / "test_questions.json"
+GRADING_QUESTIONS_PATH = Path(__file__).parent / "data" / "grading_questions.json"
 RESULTS_DIR = Path(__file__).parent / "results"
 
 # Cấu hình baseline (Sprint 2)
@@ -627,6 +628,7 @@ if __name__ == "__main__":
     print("=" * 60)
 
     # Kiểm tra test questions
+    data_source = TEST_QUESTIONS_PATH.stem
     print(f"\nLoading test questions từ: {TEST_QUESTIONS_PATH}")
     try:
         with open(TEST_QUESTIONS_PATH, "r", encoding="utf-8") as f:
@@ -655,7 +657,7 @@ if __name__ == "__main__":
         # Save scorecard
         RESULTS_DIR.mkdir(parents=True, exist_ok=True)
         baseline_md = generate_scorecard_summary(baseline_results, "baseline_dense")
-        scorecard_path = RESULTS_DIR / "scorecard_baseline.md"
+        scorecard_path = RESULTS_DIR / f"scorecard_baseline_{data_source}.md"
         scorecard_path.write_text(baseline_md, encoding="utf-8")
         print(f"\nScorecard lưu tại: {scorecard_path}")
 
@@ -680,7 +682,7 @@ if __name__ == "__main__":
         verbose=True,
     )
     variant_md = generate_scorecard_summary(variant_results, VARIANT_CONFIG["label"])
-    (RESULTS_DIR / "scorecard_variant.md").write_text(variant_md, encoding="utf-8")
+    (RESULTS_DIR / f"scorecard_variant_{data_source}.md").write_text(variant_md, encoding="utf-8")
 
     # --- A/B Comparison ---
     # TODO Sprint 4: Uncomment sau khi có cả baseline và variant
@@ -688,7 +690,7 @@ if __name__ == "__main__":
         compare_ab(
             baseline_results,
             variant_results,
-            output_csv="ab_comparison.csv"
+            output_csv=f"ab_comparison_{data_source}.csv"
         )
 
     print("\n\nViệc cần làm Sprint 4:")
