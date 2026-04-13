@@ -20,12 +20,12 @@ llm_model = _____
 ```
 
 **Scorecard Baseline:**
-| Metric | Average Score |
-|--------|--------------|
-| Faithfulness | ? /5 |
-| Answer Relevance | ? /5 |
-| Context Recall | ? /5 |
-| Completeness | ? /5 |
+| Metric           | Average Score |
+| ---------------- | ------------- |
+| Faithfulness     | ? /5          |
+| Answer Relevance | ? /5          |
+| Context Recall   | ? /5          |
+| Completeness     | ? /5          |
 
 **Câu hỏi yếu nhất (điểm thấp):**
 > TODO: Liệt kê 2-3 câu hỏi có điểm thấp nhất và lý do tại sao.
@@ -57,12 +57,12 @@ retrieval_mode = "hybrid"   # hoặc biến khác
 ```
 
 **Scorecard Variant 1:**
-| Metric | Baseline | Variant 1 | Delta |
-|--------|----------|-----------|-------|
-| Faithfulness | ?/5 | ?/5 | +/- |
-| Answer Relevance | ?/5 | ?/5 | +/- |
-| Context Recall | ?/5 | ?/5 | +/- |
-| Completeness | ?/5 | ?/5 | +/- |
+| Metric           | Baseline | Variant 1 | Delta |
+| ---------------- | -------- | --------- | ----- |
+| Faithfulness     | ?/5      | ?/5       | +/-   |
+| Answer Relevance | ?/5      | ?/5       | +/-   |
+| Context Recall   | ?/5      | ?/5       | +/-   |
+| Completeness     | ?/5      | ?/5       | +/-   |
 
 **Nhận xét:**
 > TODO: Variant 1 cải thiện ở câu nào? Tại sao?
@@ -83,12 +83,12 @@ retrieval_mode = "hybrid"   # hoặc biến khác
 ```
 
 **Scorecard Variant 2:**
-| Metric | Baseline | Variant 1 | Variant 2 | Best |
-|--------|----------|-----------|-----------|------|
-| Faithfulness | ? | ? | ? | ? |
-| Answer Relevance | ? | ? | ? | ? |
-| Context Recall | ? | ? | ? | ? |
-| Completeness | ? | ? | ? | ? |
+| Metric           | Baseline | Variant 1 | Variant 2 | Best |
+| ---------------- | -------- | --------- | --------- | ---- |
+| Faithfulness     | ?        | ?         | ?         | ?    |
+| Answer Relevance | ?        | ?         | ?         | ?    |
+| Context Recall   | ?        | ?         | ?         | ?    |
+| Completeness     | ?        | ?         | ?         | ?    |
 
 ---
 

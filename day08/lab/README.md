@@ -19,12 +19,12 @@ Nhóm xây dựng **trợ lý nội bộ cho khối CS + IT Helpdesk**: trả l�
 
 ## Mục tiêu học tập
 
-| Mục tiêu | Sprint liên quan |
-|-----------|----------------|
-| Build indexing pipeline với metadata | Sprint 1 |
-| Build retrieval + grounded answer function | Sprint 2 |
-| So sánh dense / hybrid / rerank, chọn và justify variant | Sprint 3 |
-| Đánh giá pipeline bằng scorecard, A/B comparison | Sprint 4 |
+| Mục tiêu                                                 | Sprint liên quan |
+| -------------------------------------------------------- | ---------------- |
+| Build indexing pipeline với metadata                     | Sprint 1         |
+| Build retrieval + grounded answer function               | Sprint 2         |
+| So sánh dense / hybrid / rerank, chọn và justify variant | Sprint 3         |
+| Đánh giá pipeline bằng scorecard, A/B comparison         | Sprint 4         |
 
 ---
 
@@ -116,11 +116,11 @@ python index.py    # Xem preview preprocess + chunking (không cần API key)
 
 **Chọn 1 trong 3 variants:**
 
-| Variant | Implement | Khi nào chọn |
-|---------|-----------|-------------|
-| **Hybrid** | `retrieve_sparse()` + `retrieve_hybrid()` | Corpus có cả câu tự nhiên lẫn keyword/mã lỗi |
-| **Rerank** | `rerank()` với cross-encoder | Dense search nhiều noise |
-| **Query Transform** | `transform_query()` | Query dùng alias, tên cũ |
+| Variant             | Implement                                 | Khi nào chọn                                 |
+| ------------------- | ----------------------------------------- | -------------------------------------------- |
+| **Hybrid**          | `retrieve_sparse()` + `retrieve_hybrid()` | Corpus có cả câu tự nhiên lẫn keyword/mã lỗi |
+| **Rerank**          | `rerank()` với cross-encoder              | Dense search nhiều noise                     |
+| **Query Transform** | `transform_query()`                       | Query dùng alias, tên cũ                     |
 
 **Definition of Done:**
 - [ ] Variant chạy được end-to-end
@@ -151,25 +151,25 @@ python index.py    # Xem preview preprocess + chunking (không cần API key)
 
 ## Deliverables (Nộp bài)
 
-| Item | File | Owner |
-|------|------|-------|
-| Code pipeline | `index.py`, `rag_answer.py`, `eval.py` | Tech Lead |
-| Test questions | `data/test_questions.json` (đã có mẫu) | Eval Owner |
-| Scorecard | `results/scorecard_baseline.md`, `scorecard_variant.md` | Eval Owner |
-| Architecture docs | `docs/architecture.md` | Documentation Owner |
-| Tuning log | `docs/tuning-log.md` | Documentation Owner |
-| Báo cáo cá nhân | `reports/individual/[ten].md` | Từng người |
+| Item              | File                                                    | Owner               |
+| ----------------- | ------------------------------------------------------- | ------------------- |
+| Code pipeline     | `index.py`, `rag_answer.py`, `eval.py`                  | Tech Lead           |
+| Test questions    | `data/test_questions.json` (đã có mẫu)                  | Eval Owner          |
+| Scorecard         | `results/scorecard_baseline.md`, `scorecard_variant.md` | Eval Owner          |
+| Architecture docs | `docs/architecture.md`                                  | Documentation Owner |
+| Tuning log        | `docs/tuning-log.md`                                    | Documentation Owner |
+| Báo cáo cá nhân   | `reports/individual/[ten].md`                           | Từng người          |
 
 ---
 
 ## Phân vai (Giao ngay phút đầu)
 
-| Vai trò | Trách nhiệm chính | Sprint lead |
-|---------|------------------|------------|
-| **Tech Lead** | Giữ nhịp sprint, nối code end-to-end | 1, 2 |
-| **Retrieval Owner** | Chunking, metadata, retrieval strategy, rerank | 1, 3 |
-| **Eval Owner** | Test questions, expected evidence, scorecard, A/B | 3, 4 |
-| **Documentation Owner** | architecture.md, tuning-log, báo cáo nhóm | 4 |
+| Vai trò                 | Trách nhiệm chính                                 | Sprint lead |
+| ----------------------- | ------------------------------------------------- | ----------- |
+| **Tech Lead**           | Giữ nhịp sprint, nối code end-to-end              | 1, 2        |
+| **Retrieval Owner**     | Chunking, metadata, retrieval strategy, rerank    | 1, 3        |
+| **Eval Owner**          | Test questions, expected evidence, scorecard, A/B | 3, 4        |
+| **Documentation Owner** | architecture.md, tuning-log, báo cáo nhóm         | 4           |
 
 ---
 

@@ -19,6 +19,9 @@ import re
 from pathlib import Path
 from typing import List, Dict, Any, Optional
 from dotenv import load_dotenv
+from huggingface_hub import login
+
+login(token=os.getenv("HUGGINGFACE_TOKEN"))
 
 load_dotenv()
 
@@ -31,7 +34,7 @@ CHROMA_DB_DIR = Path(__file__).parent / "chroma_db"
 
 # TODO Sprint 1: Điều chỉnh chunk size và overlap theo quyết định của nhóm
 # Gợi ý từ slide: chunk 300-500 tokens, overlap 50-80 tokens
-CHUNK_SIZE = 400       # tokens (ước lượng bằng số ký tự / 4)
+CHUNK_SIZE = 500       # tokens (ước lượng bằng số ký tự / 4)
 CHUNK_OVERLAP = 80     # tokens overlap giữa các chunk
 
 
@@ -146,7 +149,7 @@ def chunk_document(doc: Dict[str, Any]) -> List[Dict[str, Any]]:
         if re.match(r"===.*?===", part):
             # Lưu section trước (nếu có nội dung)
             if current_section_text.strip():
-                section_chunks = _split_by_size(
+                section_chunks = _split_by_recursive(
                     current_section_text.strip(),
                     base_metadata=base_metadata,
                     section=current_section,
@@ -214,6 +217,93 @@ def _split_by_size(
 
     return chunks
 
+def _split_by_recursive(
+    text: str,
+    base_metadata: Dict,
+    section: str,
+    chunk_chars: int = CHUNK_SIZE * 4,
+    overlap_chars: int = CHUNK_OVERLAP * 4,
+    separators: Optional[List[str]] = ["\n\n"],
+) -> List[Dict[str, Any]]:
+    """
+    Cải thiện split_by_size() bằng cách split theo paragraph trước, rồi ghép lại.
+    Nếu một paragraph vẫn quá dài, mới split tiếp theo ký tự.
+
+    Gợi ý:
+    - Split theo paragraph: paragraphs = text.split("\n\n")
+    - Ghép paragraphs lại cho đến khi gần đủ chunk_chars
+    - Lưu lại phần cuối của chunk trước để làm overlap cho chunk sau
+    """
+    if len(text) <= chunk_chars:
+        return [{
+            "text": text,
+            "metadata": {**base_metadata, "section": section},
+        }]
+
+    paragraphs = [p.strip() for p in text.split("\n\n") if p.strip()]
+    chunks = []
+    current_parts: List[str] = []
+    previous_tail = ""
+
+    def flush_current() -> None:
+        """Flush current paragraph group into one chunk with overlap from previous chunk."""
+        nonlocal current_parts, previous_tail
+        if not current_parts:
+            return
+
+        raw_chunk = "\n\n".join(current_parts).strip()
+        if not raw_chunk:
+            current_parts = []
+            return
+
+        if overlap_chars > 0 and previous_tail and not raw_chunk.startswith(previous_tail):
+            final_text = f"{previous_tail}\n\n{raw_chunk}"
+        else:
+            final_text = raw_chunk
+
+        chunks.append({
+            "text": final_text,
+            "metadata": {**base_metadata, "section": section},
+        })
+
+        previous_tail = raw_chunk[-overlap_chars:] if overlap_chars > 0 else ""
+        current_parts = []
+
+    current_len = 0
+    for para in paragraphs:
+        # Paragraph quá dài: flush chunk hiện tại rồi split theo ký tự
+        if len(para) > chunk_chars:
+            flush_current()
+            start = 0
+            while start < len(para):
+                raw_piece = para[start:start + chunk_chars].strip()
+                if raw_piece:
+                    if overlap_chars > 0 and previous_tail and not raw_piece.startswith(previous_tail):
+                        final_piece = f"{previous_tail}\n\n{raw_piece}"
+                    else:
+                        final_piece = raw_piece
+
+                    chunks.append({
+                        "text": final_piece,
+                        "metadata": {**base_metadata, "section": section},
+                    })
+                    previous_tail = raw_piece[-overlap_chars:] if overlap_chars > 0 else ""
+                start += chunk_chars
+            current_len = 0
+            continue
+
+        sep_len = 2 if current_parts else 0
+        projected_len = current_len + sep_len + len(para)
+        if projected_len <= chunk_chars:
+            current_parts.append(para)
+            current_len = projected_len
+        else:
+            flush_current()
+            current_parts = [para]
+            current_len = len(para)
+
+    flush_current()
+    return chunks
 
 # =============================================================================
 # STEP 3: EMBED + STORE
@@ -241,10 +331,9 @@ def get_embedding(text: str) -> List[float]:
         model = SentenceTransformer("paraphrase-multilingual-MiniLM-L12-v2")
         return model.encode(text).tolist()
     """
-    raise NotImplementedError(
-        "TODO: Implement get_embedding().\n"
-        "Chọn Option A (OpenAI) hoặc Option B (Sentence Transformers) trong TODO comment."
-    )
+    from sentence_transformers import SentenceTransformer
+    model = SentenceTransformer("google/embeddinggemma-300m")
+    return model.encode(text).tolist()
 
 
 def build_index(docs_dir: Path = DOCS_DIR, db_dir: Path = CHROMA_DB_DIR) -> None:
@@ -277,6 +366,15 @@ def build_index(docs_dir: Path = DOCS_DIR, db_dir: Path = CHROMA_DB_DIR) -> None
     # TODO: Khởi tạo ChromaDB
     # client = chromadb.PersistentClient(path=str(db_dir))
     # collection = client.get_or_create_collection(...)
+    import chromadb
+
+    client = chromadb.CloudClient(
+        api_key=os.getenv("CHROMA_API_KEY"),
+        tenant='500e56f0-ec41-4f7a-84a2-1fa6176134d4',
+        database='quang-ai'
+    )
+    client.delete_collection("lab_08")
+    collection = client.get_or_create_collection(name="lab_08")
 
     total_chunks = 0
     doc_files = list(docs_dir.glob("*.txt"))
@@ -290,22 +388,22 @@ def build_index(docs_dir: Path = DOCS_DIR, db_dir: Path = CHROMA_DB_DIR) -> None
         raw_text = filepath.read_text(encoding="utf-8")
 
         # TODO: Gọi preprocess_document
-        # doc = preprocess_document(raw_text, str(filepath))
+        doc = preprocess_document(raw_text, str(filepath))
 
         # TODO: Gọi chunk_document
-        # chunks = chunk_document(doc)
+        chunks = chunk_document(doc)
 
         # TODO: Embed và lưu từng chunk vào ChromaDB
-        # for i, chunk in enumerate(chunks):
-        #     chunk_id = f"{filepath.stem}_{i}"
-        #     embedding = get_embedding(chunk["text"])
-        #     collection.upsert(
-        #         ids=[chunk_id],
-        #         embeddings=[embedding],
-        #         documents=[chunk["text"]],
-        #         metadatas=[chunk["metadata"]],
-        #     )
-        # total_chunks += len(chunks)
+        for i, chunk in enumerate(chunks):
+            chunk_id = f"{filepath.stem}_{i}"
+            embedding = get_embedding(chunk["text"])
+            collection.upsert(
+                ids=[chunk_id],
+                embeddings=[embedding],
+                documents=[chunk["text"]],
+                metadatas=[chunk["metadata"]],
+            )
+        total_chunks += len(chunks)
 
         # Placeholder để code không lỗi khi chưa implement
         doc = preprocess_document(raw_text, str(filepath))
@@ -335,8 +433,12 @@ def list_chunks(db_dir: Path = CHROMA_DB_DIR, n: int = 5) -> None:
     """
     try:
         import chromadb
-        client = chromadb.PersistentClient(path=str(db_dir))
-        collection = client.get_collection("rag_lab")
+        client = chromadb.CloudClient(
+            api_key=os.getenv("CHROMA_API_KEY"),
+            tenant='500e56f0-ec41-4f7a-84a2-1fa6176134d4',
+            database='quang-ai'
+        )
+        collection = client.get_collection("lab_08")
         results = collection.get(limit=n, include=["documents", "metadatas"])
 
         print(f"\n=== Top {n} chunks trong index ===\n")
@@ -365,8 +467,12 @@ def inspect_metadata_coverage(db_dir: Path = CHROMA_DB_DIR) -> None:
     """
     try:
         import chromadb
-        client = chromadb.PersistentClient(path=str(db_dir))
-        collection = client.get_collection("rag_lab")
+        client = chromadb.CloudClient(
+            api_key=os.getenv("CHROMA_API_KEY"),
+            tenant='500e56f0-ec41-4f7a-84a2-1fa6176134d4',
+            database='quang-ai'
+        )
+        collection = client.get_collection("lab_08")
         results = collection.get(include=["metadatas"])
 
         print(f"\nTổng chunks: {len(results['metadatas'])}")
@@ -422,12 +528,12 @@ if __name__ == "__main__":
     print("\n--- Build Full Index ---")
     print("Lưu ý: Cần implement get_embedding() trước khi chạy bước này!")
     # Uncomment dòng dưới sau khi implement get_embedding():
-    # build_index()
+    build_index()
 
     # Bước 4: Kiểm tra index
     # Uncomment sau khi build_index() thành công:
-    # list_chunks()
-    # inspect_metadata_coverage()
+    list_chunks()
+    inspect_metadata_coverage()
 
     print("\nSprint 1 setup hoàn thành!")
     print("Việc cần làm:")
