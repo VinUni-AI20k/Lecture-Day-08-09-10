@@ -20,14 +20,20 @@ Kết quả chi tiết xem:
 - `results/ab_comparison.csv`
 - `docs/tuning-log.md` (ghi nhận quan sát theo từng câu + kết luận tuning)
 
-Nhận xét ngắn:
-- Variant nhắm tới việc tăng khả năng bắt **keyword/alias/mã lỗi** bằng hybrid + rerank + query expansion.
-- Kết quả cho thấy có **trade-off**: một số metric/câu cải thiện, nhưng cũng có câu bị regression; nhóm dùng scorecard + tuning-log để quyết định hướng tune tiếp theo A/B rule.
+Tóm tắt định lượng (từ scorecard):
+- Baseline: **faithfulness cao**, recall/completeness nhìn chung ổn định; một số câu vẫn thiếu evidence (ví dụ q06, q09).
+- Variant: hướng tới tăng khả năng bắt **keyword/alias/mã lỗi** (hybrid + rerank + query expansion). Kết quả cho thấy **trade-off**: một số metric/câu cải thiện, nhưng cũng có câu bị regression.
+
+Failure modes nổi bật (từ tuning-log + per-question):
+- **Keyword / error-code mismatch**: q09 dạng mã lỗi có thể không có mapping trong corpus → retrieval khó “cứu” chỉ bằng đổi strategy; cần fix bằng data hoặc policy abstain rõ ràng.
+- **Reranker instability**: reranker generic có thể cho điểm gần-uniform → thứ tự top-k bị xáo trộn, làm giảm completeness ở một số câu.
+- **Coverage của chunking**: alias/ghi chú hoặc phần “không theo section” nếu bị rơi sẽ kéo theo retrieval fail dù tune weights.
 
 ### 5) What we would improve next
 - Tuning funnel: thử tăng `top_k_search` (ví dụ 15) trước rerank, giữ `top_k_select=3` để tăng coverage mà vẫn kiểm soát context length.
 - Chuẩn hoá query transform (expansion/decomposition) theo loại câu hỏi để tránh mở rộng “lạc hướng”.
 - Bổ sung dữ liệu có cấu trúc (nếu cần): ví dụ bảng tham chiếu mã lỗi/keyword nội bộ để tăng recall cho các câu kiểu “error code”.
+ - Chốt policy “abstain có giải thích”: nếu không có evidence trong docs thì trả lời “không đủ dữ liệu trong tài liệu được cung cấp” + bước tiếp theo (escalation), tránh hallucination.
 
 ### 6) Team contribution (from individual reports)
 - **Tech Lead — Nguyen Trong Tien**
