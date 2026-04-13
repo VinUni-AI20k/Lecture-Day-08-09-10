@@ -18,7 +18,8 @@
 ```
 
 **Mô tả ngắn gọn:**
-> TODO: Mô tả hệ thống trong 2-3 câu. Nhóm xây gì? Cho ai dùng? Giải quyết vấn đề gì?
+> Hệ thống xây dựng một pipeline RAG cho trợ lý nội bộ IT/CS, lấy thông tin từ tài liệu chính sách và FAQ rồi lưu thành vector index để truy vấn nhanh.
+> Sprint 1 xử lý phần index: preprocess, chunk, embed và lưu docs vào ChromaDB với metadata để phục vụ retrieval.
 
 ---
 
@@ -27,24 +28,31 @@
 ### Tài liệu được index
 | File | Nguồn | Department | Số chunk |
 |------|-------|-----------|---------|
-| `policy_refund_v4.txt` | policy/refund-v4.pdf | CS | TODO |
-| `sla_p1_2026.txt` | support/sla-p1-2026.pdf | IT | TODO |
-| `access_control_sop.txt` | it/access-control-sop.md | IT Security | TODO |
-| `it_helpdesk_faq.txt` | support/helpdesk-faq.md | IT | TODO |
-| `hr_leave_policy.txt` | hr/leave-policy-2026.pdf | HR | TODO |
+| `policy_refund_v4.txt` | policy/refund-v4.pdf | CS | 6 |
+| `sla_p1_2026.txt` | support/sla-p1-2026.pdf | IT | 5 |
+| `access_control_sop.txt` | it/access-control-sop.md | IT Security | 8 |
+| `it_helpdesk_faq.txt` | support/helpdesk-faq.md | IT | 6 |
+| `hr_leave_policy.txt` | hr/leave-policy-2026.pdf | HR | 5 |
 
 ### Quyết định chunking
 | Tham số | Giá trị | Lý do |
 |---------|---------|-------|
-| Chunk size | TODO tokens | TODO |
-| Overlap | TODO tokens | TODO |
-| Chunking strategy | Heading-based / paragraph-based | TODO |
-| Metadata fields | source, section, effective_date, department, access | Phục vụ filter, freshness, citation |
+| Chunk size | ~400 tokens (ước lượng ~1600 ký tự) | Giữ chunk đủ ngữ cảnh cho retrieval, không quá dài để prompt bị quá tải |
+| Overlap | ~80 tokens (ước lượng ~320 ký tự) | Bảo đảm không mất thông tin giữa các chunk và giữ liên tục khi cắt section dài |
+| Chunking strategy | Heading-based + paragraph-based split | Ưu tiên cắt tại section/paragraph để giữ nguyên ý nghĩa, giảm cắt ngang câu |
+| Metadata fields | source, section, effective_date, department, access | Giúp citation, lọc tài liệu theo domain và kiểm tra dữ liệu index              |
 
 ### Embedding model
-- **Model**: TODO (OpenAI text-embedding-3-small / paraphrase-multilingual-MiniLM-L12-v2)
-- **Vector store**: ChromaDB (PersistentClient)
+- **Model**: `get_embedding()` hỗ trợ OpenAI hoặc Sentence Transformers;
+  - OpenAI nếu có `OPENAI_API_KEY`
+  - Local fallback `paraphrase-multilingual-MiniLM-L12-v2` nếu không có key
+- **Vector store**: ChromaDB PersistentClient
 - **Similarity metric**: Cosine
+
+### Kết quả Sprint 1
+- Tổng số documents index: 5
+- Tổng số chunks tạo ra: 30
+- Mỗi doc đã index thành 5-8 chunks, metadata đầy đủ và không thiếu source/effective_date
 
 ---
 
