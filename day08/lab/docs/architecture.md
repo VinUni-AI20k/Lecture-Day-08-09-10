@@ -18,7 +18,9 @@
 ```
 
 **Mô tả ngắn gọn:**
-> TODO: Mô tả hệ thống trong 2-3 câu. Nhóm xây gì? Cho ai dùng? Giải quyết vấn đề gì?
+> Nhóm xây dựng một hệ thống RAG làm trợ lý tri thức nội bộ cho khối CS và IT Helpdesk.  
+> Hệ thống index các tài liệu chính sách, SLA, SOP và FAQ vào ChromaDB, sau đó retrieve ngữ cảnh liên quan để LLM sinh câu trả lời có căn cứ và citation nguồn.  
+> Mục tiêu là giúp nhân sự tra cứu nhanh, giảm trả lời sai theo trí nhớ và chuẩn hóa phản hồi theo tài liệu chính thức.
 
 ---
 
