@@ -60,6 +60,14 @@ CHROMA_COLLECTION = "rag_lab"
 RRF_K = _env_int("RRF_K", 60, 10, 120)
 ABSTAIN_ANSWER = "Không đủ dữ liệu trong tài liệu để trả lời."
 
+# Ngưỡng score tối thiểu để coi context là "đủ mạnh".
+# Dense/Hybrid score = 1 - cosine_distance (0..1); BM25 raw score có thể > 1.
+# Nếu max score trong top-k < ngưỡng → context quá yếu → abstain trước khi gọi LLM.
+# Mặc định 0.15 (thực nghiệm): dưới ngưỡng này gần như không có nội dung liên quan.
+WEAK_CONTEXT_SCORE_THRESHOLD = float(
+    os.getenv("WEAK_CONTEXT_SCORE_THRESHOLD", "0.15")
+)
+
 # Cache BM25 corpus (reload sau khi build_index)
 _bm25_bundle: Optional[Tuple[Any, List[str], List[str], List[Dict[str, Any]]]] = None
 
@@ -354,16 +362,23 @@ def build_context_block(chunks: List[Dict[str, Any]]) -> str:
 def build_grounded_prompt(query: str, context_block: str) -> str:
     """
     Grounded prompt: evidence-only, abstain, citation [n], cùng ngôn ngữ với câu hỏi.
-    """
-    prompt = f"""You are an internal CS/IT policy assistant. Follow strictly:
 
-1) Use ONLY information from the numbered context snippets below. Do not use outside knowledge.
-2) **Same-or-different / comparison questions (e.g. leave types, access levels):** If the context defines two or more separate categories (e.g. distinct headings like "Annual Leave" vs "Sick Leave", or separate numbered items), you MUST answer by contrasting them using that text. State clearly whether the question's wording treats them as one thing or not, per policy. Cite [n]. **Do not abstain** when those definitions appear in any snippet.
-3) **Abstain** only when no snippet contains facts needed to address the question at all. Then reply exactly:
+    Abstain rules (hardened):
+      - Abstain khi không có snippet nào chứa dữ kiện liên quan.
+      - Tuyệt đối không tự bịa số, ngày, tên, quy trình không có trong context.
+      - Mọi claim phải có [n] trích dẫn; không citation → không claim.
+    """
+    prompt = f"""You are an internal CS/IT policy assistant. Follow these rules strictly:
+
+1) Use ONLY information from the numbered context snippets below. Do NOT use any outside knowledge.
+2) **Never invent specifics.** Do NOT fabricate numbers, dates, names, thresholds, or procedures that are not explicitly stated in the snippets — even if they seem plausible. If a detail is missing, treat it as absent.
+3) **Same-or-different / comparison questions:** If the context defines two or more separate categories with distinct headings or numbered items, contrast them and cite [n]. Do NOT abstain when those definitions appear in any snippet.
+4) **Abstain** when no snippet contains facts needed to address the question. Then reply exactly:
     "{ABSTAIN_ANSWER}"
-   (English questions may use: "Insufficient information in the documents to answer.")
-4) When you cite evidence, include bracket references like [1], [2] matching snippet numbers.
-5) Be concise and factual. Same language as the user's question (Vietnamese or English).
+   (For English questions use: "Insufficient information in the documents to answer.")
+   Also abstain for any sub-part of a question whose answer is not in the snippets — do not answer the missing part with guesses.
+5) Every factual claim MUST be supported by a bracket reference [1], [2], … matching snippet numbers. Answers without citations are not allowed when context is available.
+6) Be concise and factual. Use the same language as the user's question (Vietnamese or English).
 
 Question: {query}
 
@@ -761,6 +776,37 @@ def rag_answer_impl(
             out["pipeline_steps"] = steps
         return out
 
+    # --- Hardened abstain: kiểm tra context quá yếu trước khi gọi LLM ---
+    # Nếu toàn bộ chunk đều có score thấp hơn ngưỡng, không đủ bằng chứng → abstain.
+    # Áp dụng cho dense/hybrid (score 0..1). BM25 raw score thường > 1 khi có hit,
+    # nên ngưỡng 0.15 sẽ không phát sinh false-positive với BM25.
+    max_score = max((float(c.get("score", 0.0)) for c in candidates), default=0.0)
+    if max_score < WEAK_CONTEXT_SCORE_THRESHOLD:
+        weak_detail = (
+            f"Max chunk score {max_score:.4f} < ngưỡng {WEAK_CONTEXT_SCORE_THRESHOLD} "
+            f"— context quá yếu, không đủ bằng chứng. Abstain sớm để tránh hallucination."
+        )
+        out: Dict[str, Any] = {
+            "query": query,
+            "answer": ABSTAIN_ANSWER,
+            "sources": [],
+            "chunks_used": [],
+            "config": config,
+            "abstain_reason": "weak_context_score",
+        }
+        if trace:
+            steps.append({
+                "step": 4,
+                "name": "Context check",
+                "emoji": "4️⃣",
+                "detail": weak_detail,
+                "table": _trace_chunk_rows(candidates),
+            })
+            out["pipeline_steps"] = steps
+        if verbose:
+            print(f"[RAG] Abstain (weak context): {weak_detail}")
+        return out
+
     # --- Bước 3: Build context và prompt ---
     context_block = build_context_block(candidates)
     if not context_block.strip():
@@ -974,6 +1020,29 @@ def rag_answer_stream(
                 "answer": ABSTAIN_ANSWER,
                 "sources": [], "chunks_used": [], "query": query, "config": config,
                 "pipeline_steps": [step1, step2, step3],
+                "telemetry": _finish_tel(tel, tok, rid, config, query, ok=True),
+                "request_id": rid,
+            }
+            yield {"event": "done", "data": done_data}
+            return
+
+        # ── Hardened abstain: kiểm tra context quá yếu trước khi gọi LLM ──
+        max_score = max((float(c.get("score", 0.0)) for c in candidates), default=0.0)
+        if max_score < WEAK_CONTEXT_SCORE_THRESHOLD:
+            weak_step = {
+                "step": 4, "name": "Context check", "emoji": "4️⃣",
+                "detail": (
+                    f"Max chunk score {max_score:.4f} < ngưỡng {WEAK_CONTEXT_SCORE_THRESHOLD} "
+                    f"— context quá yếu. Abstain sớm để tránh hallucination."
+                ),
+                "table": _trace_chunk_rows(candidates),
+            }
+            yield {"event": "step", "data": weak_step}
+            done_data = {
+                "answer": ABSTAIN_ANSWER,
+                "sources": [], "chunks_used": [], "query": query, "config": config,
+                "abstain_reason": "weak_context_score",
+                "pipeline_steps": [step1, step2, step3, weak_step],
                 "telemetry": _finish_tel(tel, tok, rid, config, query, ok=True),
                 "request_id": rid,
             }
