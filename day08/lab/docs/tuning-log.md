@@ -43,17 +43,25 @@ llm_model = _____
 
 ## Variant 1 (Sprint 3)
 
-**Ngày:** ___________  
-**Biến thay đổi:** ___________  
+**Ngày:** 2026-04-13  
+**Biến thay đổi:** `retrieval_mode`: `"dense"` → `"hybrid"` (Dense + BM25 + RRF)  
 **Lý do chọn biến này:**
-> TODO: Giải thích theo evidence từ baseline results.
-> Ví dụ: "Chọn hybrid vì q07 (alias query) và q09 (mã lỗi ERR-403) đều thất bại với dense.
-> Corpus có cả ngôn ngữ tự nhiên (policy) lẫn tên riêng/mã lỗi (ticket code, SLA label)."
+> Chọn **hybrid retrieval** vì corpus có hai kiểu tín hiệu khác nhau:
+> 1) câu tự nhiên dài trong policy/SOP (dense làm tốt), và  
+> 2) từ khóa đặc thù như mã lỗi, SLA label, tên quy trình (BM25 làm tốt hơn).
+>
+> Baseline dense có rủi ro bỏ sót exact-match query (ví dụ kiểu `ERR-403-AUTH`, `P1`, `Level 3`) khi embedding ưu tiên ngữ nghĩa tổng quát.  
+> Hybrid dùng **Reciprocal Rank Fusion (RRF)** để hợp nhất ưu điểm của dense và sparse, giúp tăng **context recall** mà vẫn giữ grounded generation.
+>
+> Nhóm chỉ đổi **1 biến retrieval_mode** để tuân thủ A/B Rule; các tham số khác giữ nguyên để so sánh công bằng.
 
 **Config thay đổi:**
 ```
 retrieval_mode = "hybrid"   # hoặc biến khác
-# Các tham số còn lại giữ nguyên như baseline
+top_k_search = 10
+top_k_select = 3
+use_rerank = False
+# Giữ nguyên các biến còn lại so với baseline để đo đúng tác động của retrieval_mode
 ```
 
 **Scorecard Variant 1:**
