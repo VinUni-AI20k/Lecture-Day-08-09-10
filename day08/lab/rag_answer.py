@@ -368,6 +368,62 @@ def transform_query(query: str, strategy: str = "expansion") -> List[str]:
     - HyDE: query mơ hồ, search theo nghĩa không hiệu quả
     """
     # TODO Sprint 3: Implement query transformation
+    import json
+    import re
+
+    strategy = (strategy or "expansion").strip().lower()
+    if strategy not in {"expansion", "decomposition", "hyde"}:
+        return [query]
+
+    if strategy == "expansion":
+        transform_prompt = f"""Given the query: "{query}"
+Generate 2-3 alternative phrasings or related terms in Vietnamese.
+Keep each item concise and useful for retrieval.
+Output strictly as a JSON array of strings."""
+    elif strategy == "decomposition":
+        transform_prompt = f"""Break down this complex query into 2-3 simpler sub-queries: "{query}"
+Each sub-query should target one intent only.
+Output strictly as a JSON array of strings."""
+    else:  # hyde
+        transform_prompt = f"""Question: "{query}"
+Write 1 short hypothetical answer paragraph in Vietnamese that is likely to appear in relevant documents.
+Do not include explanations.
+Output strictly as a JSON array with exactly 1 string."""
+
+    try:
+        raw_output = call_llm(transform_prompt).strip()
+
+        # Robustly extract JSON array in case model wraps it with extra text/markdown.
+        json_match = re.search(r"\[[\s\S]*\]", raw_output)
+        json_payload = json_match.group(0) if json_match else raw_output
+        parsed = json.loads(json_payload)
+
+        if not isinstance(parsed, list):
+            return [query]
+
+        cleaned: List[str] = []
+        seen = {query.strip().lower()}
+        for item in parsed:
+            if not isinstance(item, str):
+                continue
+            text = item.strip()
+            if not text:
+                continue
+            key = text.lower()
+            if key in seen:
+                continue
+            seen.add(key)
+            cleaned.append(text)
+
+        if strategy == "hyde":
+            return cleaned[:1] if cleaned else [query]
+
+        if cleaned:
+            return [query] + cleaned[:3]
+    except Exception:
+        # Fall back to original query if transformation fails or output is malformed.
+        pass
+
     # Tạm thời trả về query gốc
     return [query]
 
