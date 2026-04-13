@@ -1,32 +1,32 @@
 # Scorecard: variant_hybrid
-Generated: 2026-04-13 16:38
+Generated: 2026-04-13 17:16
 
 ## Summary
 
 | Metric | Average Score |
 |--------|--------------|
-| Faithfulness | 4.20/5 |
-| Answer Relevance | 4.60/5 |
+| Faithfulness | 4.30/5 |
+| Answer Relevance | 4.40/5 |
 | Context Recall | 5.00/5 |
-| Completeness | 3.20/5 |
+| Completeness | 3.70/5 |
 
 ## Quick Notes
 
 - Config label: `variant_hybrid`
-- Weakest questions: q09, q06, q01
+- Weakest questions: q09, q06, q07
 - Strongest questions: q05, q03, q02
 
 ## Per-Question Results
 
 | ID | Category | Faithful | Relevant | Recall | Complete | Notes |
 |----|----------|----------|----------|--------|----------|-------|
-| q01 | SLA | 3 | 5 | 5 | 2 | The answer correctly states the resolution time of 4 hours but omits the initial |
+| q01 | SLA | 5 | 5 | 5 | 5 | The answer is fully supported by the retrieved chunks, which explicitly state th |
 | q02 | Refund | 5 | 5 | 5 | 5 | The answer is fully supported by the retrieved chunks, which state that customer |
 | q03 | Access Control | 5 | 5 | 5 | 5 | The answer is fully supported by the retrieved chunks, specifically confirming t |
-| q04 | Refund | 5 | 4 | 5 | 2 | The answer correctly states that there is insufficient data to provide a definit |
+| q04 | Refund | 5 | 5 | 5 | 4 | The answer is fully supported by the retrieved chunks, which state that digital  |
 | q05 | IT Helpdesk | 5 | 5 | 5 | 5 | The answer is directly supported by the retrieved chunk, which states the same f |
-| q06 | SLA | 2 | 3 | 5 | 2 | The answer mentions escalation procedures but does not support the specific clai |
-| q07 | Access Control | 4 | 5 | 5 | 3 | The answer correctly identifies the document as 'it/access-control-sop.md', but  |
-| q08 | HR Policy | 5 | 5 | 5 | 4 | The answer is fully supported by the retrieved chunk, which states that employee |
-| q09 | Insufficient Context | 3 | 4 | None | 2 | The answer states insufficient data, which is accurate given the lack of relevan |
-| q10 | Refund | 5 | 5 | 5 | 2 | The answer correctly states that there is insufficient data to provide a definit |
+| q06 | SLA | 2 | 3 | 5 | 2 | The answer includes information about temporary permissions granted by the IT Ad |
+| q07 | Access Control | 2 | 3 | 5 | 2 | The answer states the document is 'Approval Matrix for System Access', but the e |
+| q08 | HR Policy | 5 | 5 | 5 | 4 | The answer is fully supported by the retrieved chunks, specifically stating that |
+| q09 | Insufficient Context | 4 | 3 | None | 2 | The answer correctly states that there is insufficient data, but it does not men |
+| q10 | Refund | 5 | 5 | 5 | 3 | The answer correctly states that there is insufficient data to determine if the  |
