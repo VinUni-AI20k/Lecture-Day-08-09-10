@@ -505,6 +505,9 @@ def build_context_block(chunks: List[Dict[str, Any]]) -> str:
         header = f"[{i}] {source}"
         if section:
             header += f" | {section}"
+        # Thêm Effective_date
+        if effective_date := meta.get("effective_date"):
+            header += f" | effective_date={effective_date}"
         if score > 0:
             header += f" | score={score:.2f}"
 
