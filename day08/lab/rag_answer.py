@@ -21,7 +21,13 @@ Definition of Done Sprint 3:
   ✓ Giải thích được tại sao chọn biến đó để tune
 """
 
+import chromadb
+import json
 import os
+
+from rank_bm25 import BM25Okapi
+from sentence_transformers import CrossEncoder
+from index import get_embedding, CHROMA_DB_DIR
 from typing import List, Dict, Any, Optional, Tuple
 from dotenv import load_dotenv
 
@@ -31,8 +37,8 @@ load_dotenv()
 # CẤU HÌNH
 # =============================================================================
 
-TOP_K_SEARCH = 10    # Số chunk lấy từ vector store trước rerank (search rộng)
-TOP_K_SELECT = 3     # Số chunk gửi vào prompt sau rerank/select (top-3 sweet spot)
+TOP_K_SEARCH = 10  # Số chunk lấy từ vector store trước rerank (search rộng)
+TOP_K_SELECT = 3  # Số chunk gửi vào prompt sau rerank/select (top-3 sweet spot)
 
 LLM_MODEL = os.getenv("LLM_MODEL", "gpt-4o-mini")
 
@@ -40,6 +46,7 @@ LLM_MODEL = os.getenv("LLM_MODEL", "gpt-4o-mini")
 # =============================================================================
 # RETRIEVAL — DENSE (Vector Search)
 # =============================================================================
+
 
 def retrieve_dense(query: str, top_k: int = TOP_K_SEARCH) -> List[Dict[str, Any]]:
     """
@@ -76,8 +83,6 @@ def retrieve_dense(query: str, top_k: int = TOP_K_SEARCH) -> List[Dict[str, Any]
         # Lưu ý: distances trong ChromaDB cosine = 1 - similarity
         # Score = 1 - distance
     """
-    import chromadb
-    from index import get_embedding, CHROMA_DB_DIR
 
     client = chromadb.PersistentClient(path=str(CHROMA_DB_DIR))
     collection = client.get_collection("rag_lab")
@@ -90,7 +95,7 @@ def retrieve_dense(query: str, top_k: int = TOP_K_SEARCH) -> List[Dict[str, Any]
     results = collection.query(
         query_embeddings=[query_embedding],
         n_results=top_k,
-        include=["documents", "metadatas", "distances"]
+        include=["documents", "metadatas", "distances"],
     )
 
     chunks = []
@@ -112,6 +117,7 @@ def retrieve_dense(query: str, top_k: int = TOP_K_SEARCH) -> List[Dict[str, Any]
 BM25_INDEX = None
 BM25_CHUNKS = []
 
+
 def retrieve_sparse(query: str, top_k: int = TOP_K_SEARCH) -> List[Dict[str, Any]]:
     global BM25_INDEX, BM25_CHUNKS
 
@@ -119,7 +125,6 @@ def retrieve_sparse(query: str, top_k: int = TOP_K_SEARCH) -> List[Dict[str, Any
         print("[BM25] Building index...")
 
         # ⚠️ Lấy toàn bộ chunk từ Chroma
-        
 
         client = chromadb.PersistentClient(path=str(CHROMA_DB_DIR))
         collection = client.get_collection("rag_lab")
@@ -139,9 +144,9 @@ def retrieve_sparse(query: str, top_k: int = TOP_K_SEARCH) -> List[Dict[str, Any
     tokenized_query = query.lower().split()
     scores = BM25_INDEX.get_scores(tokenized_query)
 
-    top_indices = sorted(
-        range(len(scores)), key=lambda i: scores[i], reverse=True
-    )[:top_k]
+    top_indices = sorted(range(len(scores)), key=lambda i: scores[i], reverse=True)[
+        :top_k
+    ]
 
     results = []
     for i in top_indices:
@@ -163,7 +168,9 @@ def retrieve_sparse(query: str, top_k: int = TOP_K_SEARCH) -> List[Dict[str, Any
     bm25 = BM25Okapi(tokenized_corpus)
     scores = bm25.get_scores(query.lower().split())
 
-    top_indices = sorted(range(len(scores)), key=lambda i: scores[i], reverse=True)[:top_k]
+    top_indices = sorted(range(len(scores)), key=lambda i: scores[i], reverse=True)[
+        :top_k
+    ]
     return [
         {"text": all_docs[i], "metadata": all_metas[i], "score": float(scores[i])}
         for i in top_indices
@@ -173,6 +180,7 @@ def retrieve_sparse(query: str, top_k: int = TOP_K_SEARCH) -> List[Dict[str, Any
 # =============================================================================
 # RETRIEVAL — HYBRID (Dense + Sparse với Reciprocal Rank Fusion)
 # =============================================================================
+
 
 def retrieve_hybrid(
     query: str,
@@ -185,7 +193,7 @@ def retrieve_hybrid(
     sparse_results = retrieve_sparse(query, top_k)
 
     def rank_map(results):
-        return {c["text"]: i+1 for i, c in enumerate(results)}
+        return {c["text"]: i + 1 for i, c in enumerate(results)}
 
     d_rank = rank_map(dense_results)
     s_rank = rank_map(sparse_results)
@@ -198,14 +206,10 @@ def retrieve_hybrid(
         dr = d_rank.get(key, 1e6)
         sr = s_rank.get(key, 1e6)
 
-        score = (
-            dense_weight * (1 / (60 + dr)) +
-            sparse_weight * (1 / (60 + sr))
-        )
+        score = dense_weight * (1 / (60 + dr)) + sparse_weight * (1 / (60 + sr))
 
         chunk = next(
-            (c for c in dense_results + sparse_results if c["text"] == key),
-            None
+            (c for c in dense_results + sparse_results if c["text"] == key), None
         )
 
         if chunk:
@@ -223,6 +227,7 @@ def retrieve_hybrid(
 
 RERANK_MODEL = None
 
+
 def rerank(
     query: str,
     candidates: List[Dict[str, Any]],
@@ -238,11 +243,7 @@ def rerank(
     pairs = [[query, c["text"]] for c in candidates]
     scores = RERANK_MODEL.predict(pairs)
 
-    ranked = sorted(
-        zip(candidates, scores),
-        key=lambda x: x[1],
-        reverse=True
-    )
+    ranked = sorted(zip(candidates, scores), key=lambda x: x[1], reverse=True)
 
     results = []
     for chunk, score in ranked[:top_k]:
@@ -252,9 +253,11 @@ def rerank(
 
     return results
 
+
 # =============================================================================
 # QUERY TRANSFORMATION (Sprint 3 alternative)
 # =============================================================================
+
 
 def transform_query(query: str, strategy: str = "expansion") -> List[str]:
     if strategy == "none":
@@ -277,6 +280,7 @@ Return JSON array of strings.
 # =============================================================================
 # GENERATION — GROUNDED ANSWER FUNCTION
 # =============================================================================
+
 
 def build_context_block(chunks: List[Dict[str, Any]]) -> str:
     """
@@ -362,6 +366,7 @@ def call_llm(prompt: str) -> str:
     Lưu ý: Dùng temperature=0 hoặc thấp để output ổn định cho evaluation.
     """
     from openai import OpenAI
+
     client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
     response = client.chat.completions.create(
         model=LLM_MODEL,
@@ -433,7 +438,9 @@ def rag_answer(
         print(f"\n[RAG] Query: {query}")
         print(f"[RAG] Retrieved {len(candidates)} candidates (mode={retrieval_mode})")
         for i, c in enumerate(candidates[:3]):
-            print(f"  [{i+1}] score={c.get('score', 0):.3f} | {c['metadata'].get('source', '?')}")
+            print(
+                f"  [{i+1}] score={c.get('score', 0):.3f} | {c['metadata'].get('source', '?')}"
+            )
 
     # --- Bước 2: Rerank (optional) ---
     if use_rerank:
@@ -455,10 +462,7 @@ def rag_answer(
     answer = call_llm(prompt)
 
     # --- Bước 5: Extract sources ---
-    sources = list({
-        c["metadata"].get("source", "unknown")
-        for c in candidates
-    })
+    sources = list({c["metadata"].get("source", "unknown") for c in candidates})
 
     return {
         "query": query,
@@ -473,6 +477,7 @@ def rag_answer(
 # SPRINT 3: SO SÁNH BASELINE VS VARIANT
 # =============================================================================
 
+
 def compare_retrieval_strategies(query: str) -> None:
     """
     So sánh các retrieval strategies với cùng một query.
@@ -485,7 +490,7 @@ def compare_retrieval_strategies(query: str) -> None:
     """
     print(f"\n{'='*60}")
     print(f"Query: {query}")
-    print('='*60)
+    print("=" * 60)
 
     strategies = ["dense", "hybrid"]  # Thêm "sparse" sau khi implement
 
@@ -526,7 +531,9 @@ if __name__ == "__main__":
             print(f"Answer: {result['answer']}")
             print(f"Sources: {result['sources']}")
         except NotImplementedError:
-            print("Chưa implement — hoàn thành TODO trong retrieve_dense() và call_llm() trước.")
+            print(
+                "Chưa implement — hoàn thành TODO trong retrieve_dense() và call_llm() trước."
+            )
         except Exception as e:
             print(f"Lỗi: {e}")
 
