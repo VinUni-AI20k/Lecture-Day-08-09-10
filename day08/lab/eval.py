@@ -52,11 +52,17 @@ BASELINE_CONFIG = {
 # Cấu hình variant (Sprint 3 — điều chỉnh theo lựa chọn của nhóm)
 # TODO Sprint 4: Cập nhật VARIANT_CONFIG theo variant nhóm đã implement
 VARIANT_CONFIG = {
-    "retrieval_mode": "hybrid",   # Hoặc "dense" nếu chỉ đổi rerank
+    "retrieval_mode": "hybrid",
     "top_k_search": 10,
     "top_k_select": 3,
-    "use_rerank": True,           # Hoặc False nếu variant là hybrid không rerank
-    "label": "variant_hybrid_rerank",
+    "use_rerank": True,
+    # ADDED: Query transformation — bật để thử Variant C
+    "use_query_transform": True,
+    "transform_strategy": "expansion",   # "expansion" | "decomposition" | "hyde"
+    # ADDED: Hybrid retrieval weights — chỉ áp dụng khi retrieval_mode="hybrid"
+    "dense_weight": 0.6,   # Tăng nếu queries chủ yếu là ngôn ngữ tự nhiên
+    "sparse_weight": 0.4,  # Tăng nếu queries có nhiều keyword/alias/mã lỗi
+    "label": "variant_hybrid_rerank_qt",
 }
 
 
@@ -378,6 +384,12 @@ def run_scorecard(
                 top_k_search=config.get("top_k_search", 10),
                 top_k_select=config.get("top_k_select", 3),
                 use_rerank=config.get("use_rerank", False),
+                # ADDED: Query transformation params từ config
+                use_query_transform=config.get("use_query_transform", False),
+                transform_strategy=config.get("transform_strategy", "expansion"),
+                # ADDED: Hybrid weights từ config
+                dense_weight=config.get("dense_weight", 0.6),
+                sparse_weight=config.get("sparse_weight", 0.4),
                 verbose=False,
             )
             answer = result["answer"]

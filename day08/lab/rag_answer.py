@@ -434,8 +434,8 @@ Output strictly as a JSON array with exactly 1 string."""
         # Fall back to original query if transformation fails or output is malformed.
         pass
 
-    # Tạm thời trả về query gốc
-    return [query]
+    # # Tạm thời trả về query gốc
+    # return [query]
 
 
 # =============================================================================
@@ -525,10 +525,14 @@ def rag_answer(
     top_k_search: int = TOP_K_SEARCH,
     top_k_select: int = TOP_K_SELECT,
     use_rerank: bool = False,
+    use_query_transform: bool = False,
+    transform_strategy: str = "expansion",
+    dense_weight: float = 0.6,
+    sparse_weight: float = 0.4,
     verbose: bool = False,
 ) -> Dict[str, Any]:
     """
-    Pipeline RAG hoàn chỉnh: query → retrieve → (rerank) → generate.
+    Pipeline RAG hoàn chỉnh: query → (transform) → retrieve → (rerank) → generate.
 
     Args:
         query: Câu hỏi
@@ -536,6 +540,8 @@ def rag_answer(
         top_k_search: Số chunk lấy từ vector store (search rộng)
         top_k_select: Số chunk đưa vào prompt (sau rerank/select)
         use_rerank: Có dùng cross-encoder rerank không
+        use_query_transform: Có dùng query transformation trước khi retrieve không
+        transform_strategy: "expansion" | "decomposition" | "hyde"
         verbose: In thêm thông tin debug
 
     Returns:
@@ -557,7 +563,7 @@ def rag_answer(
     TODO Sprint 3 — Thử các variant:
     - Variant A: đổi retrieval_mode="hybrid"
     - Variant B: bật use_rerank=True
-    - Variant C: thêm query transformation trước khi retrieve
+    - Variant C: bật use_query_transform=True, transform_strategy="expansion"
     """
     def _print_candidates(title: str, items: List[Dict[str, Any]], preview_chars: int = 100) -> None:
         print(f"[RAG] {title}: {len(items)} chunks")
@@ -579,17 +585,43 @@ def rag_answer(
         "top_k_search": top_k_search,
         "top_k_select": top_k_select,
         "use_rerank": use_rerank,
+        "use_query_transform": use_query_transform,
+        "transform_strategy": transform_strategy if use_query_transform else None,
+        "dense_weight": dense_weight,
+        "sparse_weight": sparse_weight,
     }
 
+    # --- Bước 0: Query Transformation (optional) ---
+    # ADDED: Expand/decompose/hyde query trước khi retrieve để tăng recall
+    queries = [query]
+    if use_query_transform:
+        queries = transform_query(query, strategy=transform_strategy) or [query]
+        if verbose:
+            print(f"\n[RAG] Query transform ({transform_strategy}): {queries}")
+
     # --- Bước 1: Retrieve ---
-    if retrieval_mode == "dense":
-        candidates = retrieve_dense(query, top_k=top_k_search)
-    elif retrieval_mode == "sparse":
-        candidates = retrieve_sparse(query, top_k=top_k_search)
-    elif retrieval_mode == "hybrid":
-        candidates = retrieve_hybrid(query, top_k=top_k_search)
-    else:
-        raise ValueError(f"retrieval_mode không hợp lệ: {retrieval_mode}")
+    # ADDED: Retrieve cho từng query, merge và deduplicate theo text key
+    def _retrieve(q: str) -> List[Dict[str, Any]]:
+        if retrieval_mode == "dense":
+            return retrieve_dense(q, top_k=top_k_search)
+        elif retrieval_mode == "sparse":
+            return retrieve_sparse(q, top_k=top_k_search)
+        elif retrieval_mode == "hybrid":
+            return retrieve_hybrid(q, top_k=top_k_search, dense_weight=dense_weight, sparse_weight=sparse_weight)
+        else:
+            raise ValueError(f"retrieval_mode không hợp lệ: {retrieval_mode}")
+
+    seen_texts: dict = {}
+    for q in queries:
+        for chunk in _retrieve(q):
+            key = chunk["text"]
+            if key not in seen_texts:
+                seen_texts[key] = chunk
+            else:
+                # Giữ score cao nhất nếu chunk xuất hiện trong nhiều queries
+                if chunk.get("score", 0) > seen_texts[key].get("score", 0):
+                    seen_texts[key] = chunk
+    candidates = list(seen_texts.values())
 
     if verbose:
         print(f"\n[RAG] Query: {query}")

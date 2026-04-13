@@ -27,4 +27,7 @@ rank-bm25>=0.2.2                 # BM25 keyword search
 # === Utils ===
 tqdm>=4.66.0                     # Progress bar khi index nhiều docs
 
+# === UI ===
+streamlit>=1.35.0                # RAG testing UI (app.py)
+
 pytest
