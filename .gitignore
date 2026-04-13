@@ -4,3 +4,12 @@
 
 # Grading questions — không public trước 17:00
 day08/lab/data/grading_questions.json
+
+/.venv
+.env
+day08/lab/chroma_db/
+
+
+
+venv/
+__pycache__/
