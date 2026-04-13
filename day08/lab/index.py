@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import List, Dict, Any
 
 import bm25s
-from langchain.schema import Document
+from langchain_core.documents import Document
 from langchain_openai import OpenAIEmbeddings
 from langchain_community.vectorstores import Chroma
 from dotenv import load_dotenv
@@ -66,22 +66,28 @@ def split_into_chunks(content: str, base_meta: dict) -> list[Document]:
     Đầu ra là danh sách các object Document chứa chunks text và metadata.
     Nhớ xử lý Append alias vào metadata của chunk đầu tiên nếu file có trong ALIAS_MAP.
     """
-    # Loại bỏ metadata header khỏi content để tránh trùng lặp
-    cleaned_content = re.sub(r"^(Source|Department|Effective Date|Access):.*$\n?", "", content, flags=re.MULTILINE | re.IGNORECASE).strip()
-    
+    # Xóa toàn bộ phần header: từ đầu file đến trước section === đầu tiên
+    # (bao gồm tiêu đề tài liệu, metadata key:value, và ghi chú giữa header và section)
+    first_section = re.search(r"===", content)
+    if first_section:
+        cleaned_content = content[first_section.start():].strip()
+    else:
+        # Không có section header → fallback: xóa các dòng metadata rồi dùng toàn bộ
+        cleaned_content = re.sub(r"^(Source|Department|Effective Date|Access):.*$\n?", "", content, flags=re.MULTILINE | re.IGNORECASE).strip()
+
     # Split by section headers
     section_parts = re.split(r"(===\s*.+?\s*===)", cleaned_content)
-    
+
     documents = []
     current_section = "General"
-    
+
     i = 0
     while i < len(section_parts):
         part = section_parts[i].strip()
         if not part:
             i += 1
             continue
-            
+
         if re.match(r"===\s*.+?\s*===", part):
             current_section = part.strip("= ").strip()
             i += 1
@@ -95,17 +101,10 @@ def split_into_chunks(content: str, base_meta: dict) -> list[Document]:
                     documents.append(doc)
                 i += 1
         else:
-            # Nội dung trước mọi section header
-            doc = Document(
-                page_content=part,
-                metadata={**base_meta, "section": current_section}
-            )
-            documents.append(doc)
             i += 1
 
-    # Xử lý Alias đặc biệt cho chunk đầu tiên
+    # Xử lý Alias: append vào page_content chunk đầu tiên để BM25 bắt được tên cũ
     source_key = base_meta.get("source", "").lower()
-    # Tìm kiếm tương đối trong ALIAS_MAP
     for path_key, aliases in ALIAS_MAP.items():
         if path_key.lower() in source_key:
             if documents:
@@ -144,26 +143,43 @@ def build_vector_index(documents: List[Document]) -> Chroma:
     """
     Build hoặc load Chroma vector store từ danh sách Document.
     """
+    # Sử dụng hàm helper để hỗ trợ fallback OpenAI/Gemini
     embedding_fn = get_embeddings_fn()
-    
-    persist_dir = CHROMA_PERSIST_DIR
-    os.makedirs(persist_dir, exist_ok=True)
+    os.makedirs(CHROMA_PERSIST_DIR, exist_ok=True)
+
+    if Path(CHROMA_PERSIST_DIR).exists() and any(Path(CHROMA_PERSIST_DIR).iterdir()):
+        print("[Chroma] Loading existing index...")
+        return Chroma(persist_directory=CHROMA_PERSIST_DIR, embedding_function=embedding_fn)
 
     print(f"[Chroma] Building index from {len(documents)} chunks...")
-    vectorstore = Chroma.from_documents(
+    return Chroma.from_documents(
         documents=documents,
         embedding=embedding_fn,
-        persist_directory=persist_dir,
+        persist_directory=CHROMA_PERSIST_DIR,
     )
-    return vectorstore
 
 def build_bm25_index(documents: list[Document]) -> tuple:
     """
     Build BM25S sparse index và trả về (retriever, documents).
     Phải lưu (persist) ra thư mục BM25_INDEX_DIR.
     """
-    # TODO: Implement build_bm25_index
-    pass
+    # [Khai] build_bm25_index
+    index_dir = Path(BM25_INDEX_DIR)
+    index_dir.mkdir(parents=True, exist_ok=True)
+
+    corpus = [doc.page_content for doc in documents]
+    tokens = bm25s.tokenize(corpus, stopwords=None)
+
+    retriever = bm25s.BM25()
+    retriever.index(tokens)
+
+    with open(index_dir / "bm25.pkl", "wb") as f:
+        pickle.dump(retriever, f)
+    with open(index_dir / "docs.pkl", "wb") as f:
+        pickle.dump(documents, f)
+
+    print(f"[BM25S] Index built: {len(documents)} chunks")
+    return retriever, documents
 
 def list_chunks(vectorstore):
     #khanhnq
@@ -187,7 +203,8 @@ def list_chunks(vectorstore):
             print(f"  Source: {meta.get('source', 'N/A')}")
             print(f"  Section: {meta.get('section', 'N/A')}")
             print(f"  Date: {meta.get('effective_date', 'N/A')}")
-            print(f"  Preview: {doc_preview}...")
+            preview = doc_content[:150].replace('\n', ' ')
+            print(f"  Preview: {preview}...")
             
         print("="*50 + "\n")
     except Exception as e:
@@ -202,37 +219,29 @@ def build_all(docs_dir=DOCS_DIR):
     4. Gọi build_vector_index và build_bm25_index
     5. Gọi list_chunks để xác minh
     """
-    all_chunks = []
-    docs_path = Path(docs_dir)
-    if not docs_path.exists():
-        print(f"Lỗi: Thư mục {docs_dir} không tồn tại.")
+    # [Khai] build_all
+    all_chunks: List[Document] = []
+    txt_files = list(Path(docs_dir).glob("*.txt"))
+
+    if not txt_files:
+        print(f"[ERROR] Không tìm thấy file .txt trong {docs_dir}")
         return
 
-    print(f"Bắt đầu xử lý tài liệu trong: {docs_dir}")
-    for filepath in docs_path.glob("*.txt"):
-        print(f"  Đang xử lý: {filepath.name}")
+    for filepath in txt_files:
         content = filepath.read_text(encoding="utf-8")
         meta = parse_metadata(content)
         chunks = split_into_chunks(content, meta)
         all_chunks.extend(chunks)
-        print(f"    -> Tạo ra {len(chunks)} chunks")
+        print(f"  {filepath.name}: {len(chunks)} chunks")
 
-    if not all_chunks:
-        print("Không tìm thấy chunks nào để index.")
-        return
+    print(f"\nTotal: {len(all_chunks)} chunks từ {len(txt_files)} files")
 
-    print(f"\nTổng cộng: {len(all_chunks)} chunks.")
-    
-    # Build Chroma
-    vectorstore = build_vector_index(all_chunks)
-    
-    # Build BM25S (Cần cho Sprint 3 Hybrid Search)
-    build_bm25_index(all_chunks)
-    
-    # Verify
-    list_chunks(vectorstore)
-    print("Hoàn tất build_all!")
-    return vectorstore
+    chroma = build_vector_index(all_chunks)
+    bm25, docs = build_bm25_index(all_chunks)
+    list_chunks(chroma)
+
+    print("\n✅ Build index hoàn thành.")
+    return chroma, bm25, docs
 
 if __name__ == "__main__":
     print("Bắt đầu chạy build_all() cho vòng khởi tạo Index...")
