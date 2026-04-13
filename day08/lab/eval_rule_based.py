@@ -17,18 +17,13 @@ A/B Rule (từ slide):
   Đổi đồng thời chunking + hybrid + rerank + prompt = không biết biến nào có tác dụng.
 """
 
-import os
-import re
 import json
 import csv
-import argparse
+import re
 from pathlib import Path
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Tuple
 from datetime import datetime
-from dotenv import load_dotenv
 from rag_answer import rag_answer
-
-load_dotenv()
 
 # =============================================================================
 # CẤU HÌNH
@@ -52,329 +47,10 @@ VARIANT_CONFIG = {
     "retrieval_mode": "hybrid",   # Hoặc "dense" nếu chỉ đổi rerank
     "top_k_search": 10,
     "top_k_select": 3,
-    "use_rerank": True,           # Hoặc False nếu variant là hybrid không rerank
-    "label": "variant_hybrid_rerank",
+    "use_rerank": False,          # Giữ 1 biến nếu team đang thử hybrid-only
+    "label": "variant_hybrid",
 }
 
-DEFAULT_SCORING_MODE = os.getenv("EVAL_SCORING_MODE", "llm").lower()
-
-def _call_judge_llm(prompt: str) -> Optional[str]:
-    """
-    Gọi LLM để chấm điểm (judge). Hỗ trợ OpenAI và Gemini.
-    Trả về text response hoặc None nếu không gọi được.
-
-    """
-    provider = os.getenv("LLM_PROVIDER", "openai").lower()
-
-    try:
-        if provider == "openai":
-            from openai import OpenAI
-            client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-            response = client.chat.completions.create(
-                model=os.getenv("LLM_MODEL", "gpt-4o-mini"),
-                messages=[{"role": "user", "content": prompt}],
-                temperature=0,
-                max_tokens=300,
-            )
-            return response.choices[0].message.content
-
-        elif provider == "gemini":
-            import google.generativeai as genai
-            genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
-            model = genai.GenerativeModel(os.getenv("GEMINI_MODEL", "gemini-1.5-flash"))
-            response = model.generate_content(prompt)
-            return response.text
-
-        else:
-            print(f"[Judge] Provider '{provider}' not supported. Set LLM_PROVIDER=openai or gemini.")
-            return None
-
-    except Exception as e:
-        print(f"[Judge] LLM call failed: {e}")
-        return None
-
-
-def _parse_judge_response(response_text: Optional[str]) -> Dict[str, Any]:
-    """
-    Parse JSON response từ LLM judge.
-    Xử lý các trường hợp: JSON thuần, JSON trong markdown code block, hoặc lỗi.
-    """
-    if not response_text:
-        return {"score": None, "notes": "LLM judge not available"}
-
-    # Thử parse trực tiếp
-    try:
-        result = json.loads(response_text)
-        score = int(result.get("score", 0))
-        score = max(1, min(5, score))  # Clamp 1-5
-        notes = result.get("reason", result.get("notes", result.get("missing_points", "")))
-        if isinstance(notes, list):
-            notes = "; ".join(notes)
-        return {"score": score, "notes": str(notes)}
-    except (json.JSONDecodeError, ValueError):
-        pass
-
-    # Thử extract JSON từ markdown code block
-    json_match = re.search(r'```(?:json)?\s*({.*?})\s*```', response_text, re.DOTALL)
-    if json_match:
-        try:
-            result = json.loads(json_match.group(1))
-            score = int(result.get("score", 0))
-            score = max(1, min(5, score))
-            notes = result.get("reason", result.get("notes", ""))
-            if isinstance(notes, list):
-                notes = "; ".join(notes)
-            return {"score": score, "notes": str(notes)}
-        except (json.JSONDecodeError, ValueError):
-            pass
-
-    # Thử extract JSON từ bất kỳ đâu trong response
-    json_match = re.search(r'({[^{}]*"score"[^{}]*})', response_text, re.DOTALL)
-    if json_match:
-        try:
-            result = json.loads(json_match.group(1))
-            score = int(result.get("score", 0))
-            score = max(1, min(5, score))
-            notes = result.get("reason", result.get("notes", ""))
-            if isinstance(notes, list):
-                notes = "; ".join(notes)
-            return {"score": score, "notes": str(notes)}
-        except (json.JSONDecodeError, ValueError):
-            pass
-
-    # Fallback: thử tìm số điểm trong text
-    score_match = re.search(r'(\d)[/\s]*5', response_text)
-    if score_match:
-        return {"score": int(score_match.group(1)), "notes": response_text[:100]}
-
-    return {"score": None, "notes": f"Could not parse: {response_text[:100]}"}
-
-
-# =============================================================================
-# LLM-AS-JUDGE SCORING
-# =============================================================================
-
-def score_faithfulness_llm(
-    answer: str,
-    chunks_used: List[Dict[str, Any]],
-) -> Dict[str, Any]:
-    """
-    Faithfulness: Câu trả lời có bám đúng chứng cứ đã retrieve không?
-    Câu hỏi: Model có tự bịa thêm thông tin ngoài retrieved context không?
-
-    Thang điểm 1-5:
-      5: Mọi thông tin trong answer đều có trong retrieved chunks
-      4: Gần như hoàn toàn grounded, 1 chi tiết nhỏ chưa chắc chắn
-      3: Phần lớn grounded, một số thông tin có thể từ model knowledge
-      2: Nhiều thông tin không có trong retrieved chunks
-      1: Câu trả lời không grounded, phần lớn là model bịa
-
-    Implemented by: nghlong3004 (Eval Owner) — LLM-as-Judge
-    """
-    # Edge case: pipeline chưa chạy hoặc không có answer
-    if not answer or answer.startswith("PIPELINE_"):
-        return {"score": None, "notes": "No answer to evaluate"}
-
-    # Ghép context từ chunks
-    context_text = "\n\n".join([
-        f"[Chunk {i+1}] {c.get('metadata', {}).get('source', '?')}: {c.get('text', '')[:300]}"
-        for i, c in enumerate(chunks_used[:5])  # Max 5 chunks để tiết kiệm token
-    ])
-
-    if not context_text.strip():
-        return {"score": 1, "notes": "No context chunks — answer is ungrounded"}
-
-    prompt = f"""You are a strict evaluator. Rate the FAITHFULNESS of the answer.
-Faithfulness = Is every claim in the answer supported by the retrieved context?
-
-Scoring:
-  5 = Every fact in the answer is directly found in the context.
-  4 = Almost fully grounded, 1 minor detail uncertain.
-  3 = Mostly grounded, some info may come from model knowledge.
-  2 = Many claims not supported by context.
-  1 = Answer is mostly fabricated / not grounded.
-
-Retrieved Context:
-{context_text}
-
-Answer to evaluate:
-{answer}
-
-Output ONLY a JSON object: {{"score": <int 1-5>, "reason": "<brief explanation>"}}"""
-
-    response = _call_judge_llm(prompt)
-    return _parse_judge_response(response)
-
-
-def score_answer_relevance_llm(
-    query: str,
-    answer: str,
-) -> Dict[str, Any]:
-    """
-    Answer Relevance: Answer có trả lời đúng câu hỏi người dùng hỏi không?
-    Câu hỏi: Model có bị lạc đề hay trả lời đúng vấn đề cốt lõi không?
-
-    Thang điểm 1-5:
-      5: Answer trả lời trực tiếp và đầy đủ câu hỏi
-      4: Trả lời đúng nhưng thiếu vài chi tiết phụ
-      3: Trả lời có liên quan nhưng chưa đúng trọng tâm
-      2: Trả lời lạc đề một phần
-      1: Không trả lời câu hỏi
-
-    Implemented by: nghlong3004 (Eval Owner) — LLM-as-Judge
-    """
-    if not answer or answer.startswith("PIPELINE_"):
-        return {"score": None, "notes": "No answer to evaluate"}
-
-    prompt = f"""You are a strict evaluator. Rate the ANSWER RELEVANCE.
-Answer Relevance = Does the answer directly address the user's question?
-
-Scoring:
-  5 = Answer directly and fully addresses the question.
-  4 = Addresses the question but misses minor details.
-  3 = Related but doesn't hit the core point.
-  2 = Partially off-topic.
-  1 = Does not answer the question at all.
-
-Note: If the question asks about something NOT in the documents, and the answer correctly says
-"I don't have enough information" or similar abstain response, give score 5 (correct behavior).
-
-Question:
-{query}
-
-Answer:
-{answer}
-
-Output ONLY a JSON object: {{"score": <int 1-5>, "reason": "<brief explanation>"}}"""
-
-    response = _call_judge_llm(prompt)
-    return _parse_judge_response(response)
-
-
-def score_context_recall(
-    chunks_used: List[Dict[str, Any]],
-    expected_sources: List[str],
-) -> Dict[str, Any]:
-    """
-    Context Recall: Retriever có mang về đủ evidence cần thiết không?
-    Câu hỏi: Expected source có nằm trong retrieved chunks không?
-
-    Đây là metric đo retrieval quality, không phải generation quality.
-
-    Cách tính đơn giản:
-        recall = (số expected source được retrieve) / (tổng số expected sources)
-
-    Ví dụ:
-        expected_sources = ["policy/refund-v4.pdf", "sla-p1-2026.pdf"]
-        retrieved_sources = ["policy/refund-v4.pdf", "helpdesk-faq.md"]
-        recall = 1/2 = 0.5
-
-    TODO Sprint 4:
-    1. Lấy danh sách source từ chunks_used
-    2. Kiểm tra xem expected_sources có trong retrieved sources không
-    3. Tính recall score
-    """
-    if not expected_sources:
-        # Câu hỏi không có expected source (ví dụ: "Không đủ dữ liệu" cases)
-        return {"score": None, "recall": None, "notes": "No expected sources"}
-
-    retrieved_sources = {
-        c.get("metadata", {}).get("source", "")
-        for c in chunks_used
-    }
-
-    # TODO: Kiểm tra matching theo partial path (vì source paths có thể khác format)
-    found = 0
-    missing = []
-    for expected in expected_sources:
-        # Kiểm tra partial match (tên file)
-        expected_name = expected.split("/")[-1].replace(".pdf", "").replace(".md", "")
-        matched = any(expected_name.lower() in r.lower() for r in retrieved_sources)
-        if matched:
-            found += 1
-        else:
-            missing.append(expected)
-
-    recall = found / len(expected_sources) if expected_sources else 0
-
-    return {
-        "score": round(recall * 5),  # Convert to 1-5 scale
-        "recall": recall,
-        "found": found,
-        "missing": missing,
-        "notes": f"Retrieved: {found}/{len(expected_sources)} expected sources" +
-                 (f". Missing: {missing}" if missing else ""),
-    }
-
-
-def score_completeness_llm(
-    query: str,
-    answer: str,
-    expected_answer: str,
-) -> Dict[str, Any]:
-    """
-    Completeness: Answer có thiếu điều kiện ngoại lệ hoặc bước quan trọng không?
-    Câu hỏi: Answer có bao phủ đủ thông tin so với expected_answer không?
-
-    Thang điểm 1-5:
-      5: Answer bao gồm đủ tất cả điểm quan trọng trong expected_answer
-      4: Thiếu 1 chi tiết nhỏ
-      3: Thiếu một số thông tin quan trọng
-      2: Thiếu nhiều thông tin quan trọng
-      1: Thiếu phần lớn nội dung cốt lõi
-
-    Implemented by: nghlong3004 (Eval Owner) — LLM-as-Judge
-    """
-    if not answer or answer.startswith("PIPELINE_"):
-        return {"score": None, "notes": "No answer to evaluate"}
-
-    if not expected_answer:
-        return {"score": None, "notes": "No expected answer to compare"}
-
-    prompt = f"""You are a strict evaluator. Rate the COMPLETENESS of the model answer
-by comparing it against the expected answer.
-
-Completeness = Does the model answer cover all key points from the expected answer?
-
-Scoring:
-  5 = All key points from expected answer are covered.
-  4 = Missing 1 minor detail.
-  3 = Missing some important information.
-  2 = Missing many important points.
-  1 = Missing most of the core content.
-
-Question:
-{query}
-
-Expected Answer (ground truth):
-{expected_answer}
-
-Model Answer (to evaluate):
-{answer}
-
-Output ONLY a JSON object: {{"score": <int 1-5>, "reason": "<brief explanation>", "missing_points": ["<point1>", ...]}}"""
-
-    response = _call_judge_llm(prompt)
-    result = _parse_judge_response(response)
-
-    # Extract missing_points nếu có
-    if response:
-        try:
-            parsed = json.loads(response)
-            if "missing_points" in parsed:
-                missing = parsed["missing_points"]
-                if isinstance(missing, list) and missing:
-                    result["notes"] += f" | Missing: {'; '.join(missing)}"
-        except (json.JSONDecodeError, ValueError):
-            pass
-
-    return result
-
-
-# =============================================================================
-# RULE-BASED SCORING
-# Section rieng de de track code heuristic / non-LLM
-# =============================================================================
 
 STOPWORDS = {
     "a", "an", "and", "are", "as", "at", "be", "but", "by", "cho", "co", "cua",
@@ -409,10 +85,13 @@ def _extract_citations(answer: str) -> List[int]:
 
 
 def _chunks_to_text(chunks_used: List[Dict[str, Any]]) -> str:
-    return "\n".join(chunk.get("text", "") for chunk in chunks_used)
+    parts = []
+    for chunk in chunks_used:
+        parts.append(chunk.get("text", ""))
+    return "\n".join(parts)
 
 
-def _coverage_ratio(reference: str, candidate: str):
+def _coverage_ratio(reference: str, candidate: str) -> Tuple[float, List[str], List[str]]:
     ref_tokens = set(_tokenize(reference))
     cand_tokens = set(_tokenize(candidate))
     if not ref_tokens:
@@ -424,16 +103,18 @@ def _coverage_ratio(reference: str, candidate: str):
     return ratio, overlap, missing
 
 
-def _score_from_ratio(ratio: float) -> int:
+def _score_from_ratio(ratio: float, allow_zero: bool = False) -> int:
     if ratio >= 0.9:
-        return 5
-    if ratio >= 0.7:
-        return 4
-    if ratio >= 0.45:
-        return 3
-    if ratio >= 0.2:
-        return 2
-    return 1
+        score = 5
+    elif ratio >= 0.7:
+        score = 4
+    elif ratio >= 0.45:
+        score = 3
+    elif ratio >= 0.2:
+        score = 2
+    else:
+        score = 1
+    return score if allow_zero or score > 0 else 1
 
 
 def _is_abstain_answer(answer: str) -> bool:
@@ -450,10 +131,43 @@ def _is_abstain_answer(answer: str) -> bool:
     return any(marker in text for marker in abstain_markers)
 
 
-def score_faithfulness_rule(
+# =============================================================================
+# SCORING FUNCTIONS
+# 4 metrics từ slide: Faithfulness, Answer Relevance, Context Recall, Completeness
+# =============================================================================
+
+def score_faithfulness(
     answer: str,
     chunks_used: List[Dict[str, Any]],
 ) -> Dict[str, Any]:
+    """
+    Faithfulness: Câu trả lời có bám đúng chứng cứ đã retrieve không?
+    Câu hỏi: Model có tự bịa thêm thông tin ngoài retrieved context không?
+
+    Thang điểm 1-5:
+      5: Mọi thông tin trong answer đều có trong retrieved chunks
+      4: Gần như hoàn toàn grounded, 1 chi tiết nhỏ chưa chắc chắn
+      3: Phần lớn grounded, một số thông tin có thể từ model knowledge
+      2: Nhiều thông tin không có trong retrieved chunks
+      1: Câu trả lời không grounded, phần lớn là model bịa
+
+    TODO Sprint 4 — Có 2 cách chấm:
+
+    Cách 1 — Chấm thủ công (Manual, đơn giản):
+        Đọc answer và chunks_used, chấm điểm theo thang trên.
+        Ghi lý do ngắn gọn vào "notes".
+
+    Cách 2 — LLM-as-Judge (Tự động, nâng cao):
+        Gửi prompt cho LLM:
+            "Given these retrieved chunks: {chunks}
+             And this answer: {answer}
+             Rate the faithfulness on a scale of 1-5.
+             5 = completely grounded in the provided context.
+             1 = answer contains information not in the context.
+             Output JSON: {'score': <int>, 'reason': '<string>'}"
+
+    Trả về dict với: score (1-5) và notes (lý do)
+    """
     answer_text = _normalize_text(answer)
     if not answer_text:
         return {"score": 1, "notes": "Empty answer"}
@@ -470,7 +184,10 @@ def score_faithfulness_rule(
     ratio, overlap, missing = _coverage_ratio(answer, context_text)
 
     citation_ids = _extract_citations(answer)
-    invalid_citations = [cid for cid in citation_ids if cid < 1 or cid > len(chunks_used)]
+    invalid_citations = [
+        cid for cid in citation_ids
+        if cid < 1 or cid > len(chunks_used)
+    ]
 
     score = _score_from_ratio(ratio)
     if citation_ids:
@@ -478,23 +195,39 @@ def score_faithfulness_rule(
     if invalid_citations:
         score = max(1, score - 1)
 
-    notes = [f"rule ratio={ratio:.2f}"]
+    notes = [f"Lexical grounding ratio={ratio:.2f}"]
     if citation_ids:
-        notes.append(f"citations={citation_ids}")
+        notes.append(f"Citations={citation_ids}")
     if invalid_citations:
-        notes.append(f"invalid citations={invalid_citations}")
+        notes.append(f"Invalid citations={invalid_citations}")
     if missing:
-        notes.append(f"missing from context: {', '.join(missing[:6])}")
+        notes.append(f"Missing from context: {', '.join(missing[:6])}")
     elif overlap:
-        notes.append(f"covered terms: {', '.join(overlap[:6])}")
+        notes.append(f"Covered terms: {', '.join(overlap[:6])}")
 
-    return {"score": score, "notes": ". ".join(notes)}
+    return {
+        "score": score,
+        "notes": ". ".join(notes),
+    }
 
 
-def score_answer_relevance_rule(
+def score_answer_relevance(
     query: str,
     answer: str,
 ) -> Dict[str, Any]:
+    """
+    Answer Relevance: Answer có trả lời đúng câu hỏi người dùng hỏi không?
+    Câu hỏi: Model có bị lạc đề hay trả lời đúng vấn đề cốt lõi không?
+
+    Thang điểm 1-5:
+      5: Answer trả lời trực tiếp và đầy đủ câu hỏi
+      4: Trả lời đúng nhưng thiếu vài chi tiết phụ
+      3: Trả lời có liên quan nhưng chưa đúng trọng tâm
+      2: Trả lời lạc đề một phần
+      1: Không trả lời câu hỏi
+
+    TODO Sprint 4: Implement tương tự score_faithfulness
+    """
     answer_text = _normalize_text(answer)
     if not answer_text:
         return {"score": 1, "notes": "Empty answer"}
@@ -506,22 +239,99 @@ def score_answer_relevance_rule(
     score = _score_from_ratio(ratio)
 
     if _is_abstain_answer(answer):
+        # Abstain hop le cho cau hoi khong co trong docs van duoc xem la co lien quan,
+        # nhung khong nen cham tuyet doi.
         score = max(score, 3)
 
-    notes = [f"rule overlap={ratio:.2f}"]
+    notes = [f"Query-answer overlap={ratio:.2f}"]
     if overlap:
-        notes.append(f"matched terms: {', '.join(overlap[:6])}")
+        notes.append(f"Matched terms: {', '.join(overlap[:6])}")
     if missing:
-        notes.append(f"unanswered terms: {', '.join(missing[:6])}")
+        notes.append(f"Unanswered terms: {', '.join(missing[:6])}")
 
     return {"score": score, "notes": ". ".join(notes)}
 
 
-def score_completeness_rule(
+def score_context_recall(
+    chunks_used: List[Dict[str, Any]],
+    expected_sources: List[str],
+) -> Dict[str, Any]:
+    """
+    Context Recall: Retriever có mang về đủ evidence cần thiết không?
+    Câu hỏi: Expected source có nằm trong retrieved chunks không?
+
+    Đây là metric đo retrieval quality, không phải generation quality.
+
+    Cách tính đơn giản:
+        recall = (số expected source được retrieve) / (tổng số expected sources)
+
+    Ví dụ:
+        expected_sources = ["policy/refund-v4.pdf", "sla-p1-2026.pdf"]
+        retrieved_sources = ["policy/refund-v4.pdf", "helpdesk-faq.md"]
+        recall = 1/2 = 0.5
+
+    TODO Sprint 4:
+    1. Lấy danh sách source từ chunks_used
+    2. Kiểm tra xem expected_sources có trong retrieved sources không
+    3. Tính recall score
+    """
+    if not expected_sources:
+        # Câu hỏi không có expected source (ví dụ: "Không đủ dữ liệu" cases)
+        return {"score": 5 if not chunks_used else 4, "recall": None, "notes": "No expected sources"}
+
+    retrieved_sources = {
+        c.get("metadata", {}).get("source", "")
+        for c in chunks_used
+    }
+
+    found = 0
+    missing = []
+    for expected in expected_sources:
+        # Kiểm tra partial match (tên file)
+        expected_name = expected.split("/")[-1].replace(".pdf", "").replace(".md", "")
+        matched = any(expected_name.lower() in r.lower() for r in retrieved_sources)
+        if matched:
+            found += 1
+        else:
+            missing.append(expected)
+
+    recall = found / len(expected_sources) if expected_sources else 0
+
+    score = max(1, min(5, round(recall * 5)))
+
+    return {
+        "score": score,
+        "recall": recall,
+        "found": found,
+        "missing": missing,
+        "notes": f"Retrieved: {found}/{len(expected_sources)} expected sources" +
+                 (f". Missing: {missing}" if missing else ""),
+    }
+
+
+def score_completeness(
     query: str,
     answer: str,
     expected_answer: str,
 ) -> Dict[str, Any]:
+    """
+    Completeness: Answer có thiếu điều kiện ngoại lệ hoặc bước quan trọng không?
+    Câu hỏi: Answer có bao phủ đủ thông tin so với expected_answer không?
+
+    Thang điểm 1-5:
+      5: Answer bao gồm đủ tất cả điểm quan trọng trong expected_answer
+      4: Thiếu 1 chi tiết nhỏ
+      3: Thiếu một số thông tin quan trọng
+      2: Thiếu nhiều thông tin quan trọng
+      1: Thiếu phần lớn nội dung cốt lõi
+
+    TODO Sprint 4:
+    Option 1 — Chấm thủ công: So sánh answer vs expected_answer và chấm.
+    Option 2 — LLM-as-Judge:
+        "Compare the model answer with the expected answer.
+         Rate completeness 1-5. Are all key points covered?
+         Output: {'score': int, 'missing_points': [str]}"
+    """
     if not answer.strip():
         return {"score": 1, "notes": "Empty answer"}
 
@@ -550,50 +360,15 @@ def score_completeness_rule(
         if query_tokens & expected_tokens:
             score = 1
 
-    notes = [f"rule coverage={ratio:.2f}"]
+    notes = [f"Expected-answer coverage={ratio:.2f}"]
     if overlap:
-        notes.append(f"covered terms: {', '.join(overlap[:6])}")
+        notes.append(f"Covered key terms: {', '.join(overlap[:6])}")
     if missing:
-        notes.append(f"missing terms: {', '.join(missing[:6])}")
+        notes.append(f"Missing key terms: {', '.join(missing[:6])}")
     if missing_numbers:
-        notes.append(f"missing numbers: {', '.join(missing_numbers)}")
+        notes.append(f"Missing numbers: {', '.join(missing_numbers)}")
 
     return {"score": score, "notes": ". ".join(notes)}
-
-
-# =============================================================================
-# SCORING DISPATCH
-# =============================================================================
-
-def score_faithfulness(
-    answer: str,
-    chunks_used: List[Dict[str, Any]],
-    scoring_mode: str = DEFAULT_SCORING_MODE,
-) -> Dict[str, Any]:
-    if scoring_mode == "rule":
-        return score_faithfulness_rule(answer, chunks_used)
-    return score_faithfulness_llm(answer, chunks_used)
-
-
-def score_answer_relevance(
-    query: str,
-    answer: str,
-    scoring_mode: str = DEFAULT_SCORING_MODE,
-) -> Dict[str, Any]:
-    if scoring_mode == "rule":
-        return score_answer_relevance_rule(query, answer)
-    return score_answer_relevance_llm(query, answer)
-
-
-def score_completeness(
-    query: str,
-    answer: str,
-    expected_answer: str,
-    scoring_mode: str = DEFAULT_SCORING_MODE,
-) -> Dict[str, Any]:
-    if scoring_mode == "rule":
-        return score_completeness_rule(query, answer, expected_answer)
-    return score_completeness_llm(query, answer, expected_answer)
 
 
 # =============================================================================
@@ -604,7 +379,6 @@ def run_scorecard(
     config: Dict[str, Any],
     test_questions: Optional[List[Dict]] = None,
     verbose: bool = True,
-    scoring_mode: str = DEFAULT_SCORING_MODE,
 ) -> List[Dict[str, Any]]:
     """
     Chạy toàn bộ test questions qua pipeline và chấm điểm.
@@ -636,7 +410,6 @@ def run_scorecard(
     print(f"\n{'='*70}")
     print(f"Chạy scorecard: {label}")
     print(f"Config: {config}")
-    print(f"Scoring mode: {scoring_mode}")
     print('='*70)
 
     for q in test_questions:
@@ -670,15 +443,10 @@ def run_scorecard(
             chunks_used = []
 
         # --- Chấm điểm ---
-        faith = score_faithfulness(answer, chunks_used, scoring_mode=scoring_mode)
-        relevance = score_answer_relevance(query, answer, scoring_mode=scoring_mode)
+        faith = score_faithfulness(answer, chunks_used)
+        relevance = score_answer_relevance(query, answer)
         recall = score_context_recall(chunks_used, expected_sources)
-        complete = score_completeness(
-            query,
-            answer,
-            expected_answer,
-            scoring_mode=scoring_mode,
-        )
+        complete = score_completeness(query, answer, expected_answer)
 
         row = {
             "id": question_id,
@@ -686,6 +454,11 @@ def run_scorecard(
             "query": query,
             "answer": answer,
             "expected_answer": expected_answer,
+            "expected_sources": expected_sources,
+            "retrieved_sources": [
+                c.get("metadata", {}).get("source", "")
+                for c in chunks_used
+            ],
             "faithfulness": faith["score"],
             "faithfulness_notes": faith["notes"],
             "relevance": relevance["score"],
@@ -695,7 +468,6 @@ def run_scorecard(
             "completeness": complete["score"],
             "completeness_notes": complete["notes"],
             "config_label": label,
-            "scoring_mode": scoring_mode,
         }
         results.append(row)
 
@@ -829,13 +601,14 @@ Generated: {timestamp}
         md += f"| {metric.replace('_', ' ').title()} | {avg_str} |\n"
 
     md += "\n## Per-Question Results\n\n"
-    md += "| ID | Category | Faithful | Relevant | Recall | Complete | Notes |\n"
-    md += "|----|----------|----------|----------|--------|----------|-------|\n"
+    md += "| ID | Category | Faithful | Relevant | Recall | Complete | Sources |\n"
+    md += "|----|----------|----------|----------|--------|----------|---------|\n"
 
     for r in results:
+        sources = ", ".join(r.get("retrieved_sources", [])[:2]) or "N/A"
         md += (f"| {r['id']} | {r['category']} | {r.get('faithfulness', 'N/A')} | "
                f"{r.get('relevance', 'N/A')} | {r.get('context_recall', 'N/A')} | "
-               f"{r.get('completeness', 'N/A')} | {r.get('faithfulness_notes', '')[:50]} |\n")
+               f"{r.get('completeness', 'N/A')} | {sources[:60]} |\n")
 
     return md
 
@@ -845,15 +618,6 @@ Generated: {timestamp}
 # =============================================================================
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Run evaluation scorecard")
-    parser.add_argument(
-        "--scoring-mode",
-        choices=["llm", "rule"],
-        default=DEFAULT_SCORING_MODE,
-        help="Scoring backend to use",
-    )
-    args = parser.parse_args()
-
     print("=" * 60)
     print("Sprint 4: Evaluation & Scorecard")
     print("=" * 60)
@@ -882,7 +646,6 @@ if __name__ == "__main__":
             config=BASELINE_CONFIG,
             test_questions=test_questions,
             verbose=True,
-            scoring_mode=args.scoring_mode,
         )
 
         # Save scorecard
