@@ -1,0 +1,1321 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lab Day 08 — RAG Pipeline Team Guide</title>
+<style>
+  :root {
+    --bg: #0f1117;
+    --surface: #181b23;
+    --surface2: #1e2230;
+    --border: #2a2e3d;
+    --text: #e2e4ea;
+    --text2: #9498a8;
+    --accent: #6c8cff;
+    --accent2: #4a6adf;
+    --green: #34d399;
+    --green-bg: rgba(52,211,153,.08);
+    --orange: #fb923c;
+    --orange-bg: rgba(251,146,60,.08);
+    --red: #f87171;
+    --red-bg: rgba(248,113,113,.08);
+    --purple: #a78bfa;
+    --purple-bg: rgba(167,139,250,.08);
+    --cyan: #22d3ee;
+    --cyan-bg: rgba(34,211,238,.08);
+    --yellow: #fbbf24;
+    --yellow-bg: rgba(251,191,36,.08);
+    --pink: #f472b6;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    padding: 0;
+  }
+
+  /* ── Hero ── */
+  .hero {
+    background: linear-gradient(135deg, #1a1f35 0%, #0f1117 50%, #151a2e 100%);
+    border-bottom: 1px solid var(--border);
+    padding: 60px 24px 48px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero::before {
+    content: '';
+    position: absolute;
+    top: -120px; right: -120px;
+    width: 400px; height: 400px;
+    background: radial-gradient(circle, rgba(108,140,255,.12) 0%, transparent 70%);
+    border-radius: 50%;
+  }
+  .hero::after {
+    content: '';
+    position: absolute;
+    bottom: -80px; left: -80px;
+    width: 300px; height: 300px;
+    background: radial-gradient(circle, rgba(52,211,153,.08) 0%, transparent 70%);
+    border-radius: 50%;
+  }
+  .hero h1 {
+    font-size: 2.4rem;
+    font-weight: 800;
+    letter-spacing: -1px;
+    margin-bottom: 8px;
+    position: relative;
+  }
+  .hero h1 span { color: var(--accent); }
+  .hero .subtitle {
+    color: var(--text2);
+    font-size: 1.1rem;
+    margin-bottom: 20px;
+    position: relative;
+  }
+  .hero-tags {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    position: relative;
+  }
+  .hero-tag {
+    padding: 6px 16px;
+    border-radius: 20px;
+    font-size: .82rem;
+    font-weight: 600;
+    border: 1px solid var(--border);
+    background: var(--surface);
+  }
+
+  /* ── Container ── */
+  .container {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 0 24px;
+  }
+
+  /* ── Section ── */
+  .section {
+    padding: 48px 0;
+  }
+  .section + .section {
+    border-top: 1px solid var(--border);
+  }
+  .section-label {
+    font-size: .72rem;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 8px;
+  }
+  .section-title {
+    font-size: 1.6rem;
+    font-weight: 700;
+    margin-bottom: 6px;
+  }
+  .section-desc {
+    color: var(--text2);
+    font-size: .95rem;
+    margin-bottom: 28px;
+    max-width: 700px;
+  }
+
+  /* ── Pipeline Flow ── */
+  .pipeline {
+    display: flex;
+    align-items: stretch;
+    gap: 0;
+    overflow-x: auto;
+    padding: 8px 0 16px;
+  }
+  .pipe-step {
+    flex: 1;
+    min-width: 180px;
+    position: relative;
+  }
+  .pipe-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px 16px;
+    height: 100%;
+    position: relative;
+    z-index: 1;
+  }
+  .pipe-step:not(:last-child)::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    right: -16px;
+    width: 32px;
+    height: 2px;
+    background: var(--border);
+    z-index: 0;
+  }
+  .pipe-step:not(:last-child) {
+    margin-right: 32px;
+  }
+  .pipe-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    margin-bottom: 12px;
+    font-weight: 700;
+  }
+  .pipe-card h4 {
+    font-size: .95rem;
+    margin-bottom: 4px;
+  }
+  .pipe-card p {
+    font-size: .82rem;
+    color: var(--text2);
+    line-height: 1.5;
+  }
+
+  /* ── Sprint Cards ── */
+  .sprint-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 16px;
+  }
+  .sprint-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 24px 20px;
+    position: relative;
+    transition: border-color .2s;
+  }
+  .sprint-card:hover {
+    border-color: var(--accent);
+  }
+  .sprint-num {
+    font-size: .7rem;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+  .sprint-card h3 {
+    font-size: 1.1rem;
+    margin-bottom: 4px;
+  }
+  .sprint-card .time {
+    font-size: .8rem;
+    color: var(--text2);
+    margin-bottom: 12px;
+  }
+  .sprint-card .file-tag {
+    display: inline-block;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 2px 10px;
+    font-size: .78rem;
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    color: var(--accent);
+    margin-bottom: 14px;
+  }
+  .task-list {
+    list-style: none;
+    padding: 0;
+  }
+  .task-list li {
+    font-size: .85rem;
+    color: var(--text2);
+    padding: 4px 0 4px 20px;
+    position: relative;
+  }
+  .task-list li::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 11px;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    border: 2px solid var(--border);
+  }
+  .done-tag {
+    margin-top: 16px;
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-size: .78rem;
+    font-weight: 600;
+    border: 1px dashed;
+  }
+
+  /* sprint colors */
+  .s1 .sprint-num { color: var(--green); }
+  .s1 .sprint-card { border-left: 3px solid var(--green); }
+  .s1 .done-tag { color: var(--green); border-color: rgba(52,211,153,.3); background: var(--green-bg); }
+  .s2 .sprint-num { color: var(--accent); }
+  .s2 .sprint-card { border-left: 3px solid var(--accent); }
+  .s2 .done-tag { color: var(--accent); border-color: rgba(108,140,255,.3); background: rgba(108,140,255,.08); }
+  .s3 .sprint-num { color: var(--orange); }
+  .s3 .sprint-card { border-left: 3px solid var(--orange); }
+  .s3 .done-tag { color: var(--orange); border-color: rgba(251,146,60,.3); background: var(--orange-bg); }
+  .s4 .sprint-num { color: var(--purple); }
+  .s4 .sprint-card { border-left: 3px solid var(--purple); }
+  .s4 .done-tag { color: var(--purple); border-color: rgba(167,139,250,.3); background: var(--purple-bg); }
+
+  /* ── Role Grid ── */
+  .role-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+    gap: 16px;
+  }
+  .role-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 24px 20px;
+    transition: border-color .2s;
+  }
+  .role-card:hover { border-color: var(--accent); }
+  .role-avatar {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.3rem;
+    margin-bottom: 14px;
+    font-weight: 700;
+  }
+  .role-card h4 { font-size: 1rem; margin-bottom: 4px; }
+  .role-card .sprint-lead { font-size: .78rem; color: var(--text2); margin-bottom: 10px; }
+  .role-card ul {
+    list-style: none;
+    padding: 0;
+  }
+  .role-card li {
+    font-size: .83rem;
+    color: var(--text2);
+    padding: 3px 0 3px 18px;
+    position: relative;
+  }
+  .role-card li::before {
+    content: '>';
+    position: absolute;
+    left: 0;
+    color: var(--accent);
+    font-weight: 700;
+    font-family: monospace;
+  }
+
+  /* ── Docs Table ── */
+  .docs-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 12px;
+  }
+  .doc-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px 18px;
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+  }
+  .doc-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: .9rem;
+    flex-shrink: 0;
+    font-weight: 700;
+  }
+  .doc-card h5 {
+    font-size: .88rem;
+    margin-bottom: 2px;
+  }
+  .doc-card .doc-meta {
+    font-size: .78rem;
+    color: var(--text2);
+  }
+  .doc-card .doc-sample {
+    font-size: .76rem;
+    color: var(--text2);
+    margin-top: 4px;
+    padding: 6px 10px;
+    background: var(--surface2);
+    border-radius: 6px;
+    border-left: 2px solid var(--border);
+  }
+
+  /* ── Score Breakdown ── */
+  .score-row {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  .score-block {
+    flex: 1;
+    min-width: 200px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 24px 20px;
+  }
+  .score-block h4 {
+    font-size: .9rem;
+    margin-bottom: 6px;
+  }
+  .score-big {
+    font-size: 2.4rem;
+    font-weight: 800;
+    letter-spacing: -2px;
+    line-height: 1;
+    margin-bottom: 8px;
+  }
+  .score-items {
+    list-style: none;
+    padding: 0;
+  }
+  .score-items li {
+    font-size: .82rem;
+    color: var(--text2);
+    padding: 4px 0;
+    display: flex;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--border);
+  }
+  .score-items li:last-child { border-bottom: none; }
+  .score-items .pts { color: var(--text); font-weight: 600; }
+
+  /* ── Warning Box ── */
+  .warn-box {
+    background: var(--red-bg);
+    border: 1px solid rgba(248,113,113,.25);
+    border-radius: 12px;
+    padding: 20px 24px;
+    margin-top: 20px;
+  }
+  .warn-box h4 {
+    color: var(--red);
+    font-size: .95rem;
+    margin-bottom: 8px;
+  }
+  .warn-box ul {
+    padding-left: 20px;
+  }
+  .warn-box li {
+    font-size: .85rem;
+    color: var(--text2);
+    padding: 3px 0;
+  }
+  .warn-box li strong { color: var(--red); }
+
+  /* ── Checklist / What to Learn ── */
+  .learn-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 16px;
+  }
+  .learn-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 24px 20px;
+  }
+  .learn-card h4 {
+    font-size: .95rem;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .learn-card h4 .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    display: inline-block;
+  }
+  .learn-card ul {
+    list-style: none;
+    padding: 0;
+  }
+  .learn-card li {
+    font-size: .84rem;
+    color: var(--text2);
+    padding: 5px 0 5px 22px;
+    position: relative;
+    border-bottom: 1px solid rgba(42,46,61,.5);
+  }
+  .learn-card li:last-child { border-bottom: none; }
+  .learn-card li::before {
+    content: '?';
+    position: absolute;
+    left: 0;
+    font-weight: 700;
+    font-family: monospace;
+    font-size: .8rem;
+  }
+  .learn-card.concept li::before { content: '~'; color: var(--cyan); }
+  .learn-card.tool li::before { content: '#'; color: var(--green); }
+  .learn-card.skill li::before { content: '*'; color: var(--orange); }
+  .learn-card.trap li::before { content: '!'; color: var(--red); }
+
+  /* ── Connection Map ── */
+  .conn-wrap {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 32px 28px;
+    overflow-x: auto;
+  }
+  .conn-diagram {
+    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+    font-size: .82rem;
+    line-height: 1.8;
+    color: var(--text2);
+    white-space: pre;
+  }
+  .conn-diagram .highlight { color: var(--accent); font-weight: 700; }
+  .conn-diagram .g { color: var(--green); }
+  .conn-diagram .o { color: var(--orange); }
+  .conn-diagram .p { color: var(--purple); }
+  .conn-diagram .r { color: var(--red); }
+  .conn-diagram .c { color: var(--cyan); }
+  .conn-diagram .y { color: var(--yellow); }
+  .conn-diagram .dim { color: #555a6e; }
+
+  /* ── Timeline ── */
+  .timeline {
+    position: relative;
+    padding-left: 32px;
+  }
+  .timeline::before {
+    content: '';
+    position: absolute;
+    left: 11px;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: var(--border);
+  }
+  .tl-item {
+    position: relative;
+    margin-bottom: 24px;
+  }
+  .tl-item::before {
+    content: '';
+    position: absolute;
+    left: -25px;
+    top: 6px;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    border: 2px solid var(--accent);
+    background: var(--bg);
+  }
+  .tl-item.active::before {
+    background: var(--accent);
+  }
+  .tl-item.danger::before {
+    border-color: var(--red);
+    background: var(--red);
+  }
+  .tl-time {
+    font-size: .78rem;
+    color: var(--text2);
+    font-weight: 600;
+  }
+  .tl-title {
+    font-size: .92rem;
+    font-weight: 600;
+  }
+  .tl-desc {
+    font-size: .82rem;
+    color: var(--text2);
+  }
+
+  /* ── Test Questions ── */
+  .q-grid {
+    display: grid;
+    gap: 8px;
+  }
+  .q-row {
+    display: grid;
+    grid-template-columns: 50px 1fr 140px 80px;
+    gap: 12px;
+    align-items: center;
+    padding: 12px 16px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: .84rem;
+  }
+  .q-row .qid {
+    font-family: monospace;
+    font-weight: 700;
+    color: var(--accent);
+  }
+  .q-row .cat {
+    font-size: .75rem;
+    padding: 2px 10px;
+    border-radius: 12px;
+    background: var(--surface2);
+    color: var(--text2);
+    text-align: center;
+    border: 1px solid var(--border);
+  }
+  .q-row .diff {
+    text-align: center;
+    font-size: .75rem;
+    font-weight: 600;
+  }
+  .diff.easy { color: var(--green); }
+  .diff.medium { color: var(--orange); }
+  .diff.hard { color: var(--red); }
+
+  /* ── Grading Questions Preview ── */
+  .gq-grid {
+    display: grid;
+    gap: 8px;
+  }
+  .gq-row {
+    display: grid;
+    grid-template-columns: 50px 1fr 80px 100px;
+    gap: 12px;
+    align-items: center;
+    padding: 12px 16px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: .84rem;
+  }
+  .gq-row .qid { font-family: monospace; font-weight: 700; color: var(--orange); }
+  .gq-row .pts { font-weight: 700; text-align: center; }
+  .gq-row .skill-tag {
+    font-size: .73rem;
+    padding: 2px 8px;
+    border-radius: 10px;
+    text-align: center;
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    color: var(--text2);
+  }
+
+  /* ── Deliverables ── */
+  .deliv-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 12px;
+  }
+  .deliv-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px 18px;
+  }
+  .deliv-card h5 {
+    font-size: .88rem;
+    margin-bottom: 4px;
+  }
+  .deliv-card .deliv-file {
+    font-family: monospace;
+    font-size: .78rem;
+    color: var(--accent);
+  }
+  .deliv-card .deliv-owner {
+    font-size: .78rem;
+    color: var(--text2);
+    margin-top: 4px;
+  }
+  .deliv-card .deliv-deadline {
+    font-size: .75rem;
+    font-weight: 600;
+    margin-top: 6px;
+    padding: 2px 10px;
+    border-radius: 10px;
+    display: inline-block;
+  }
+  .dl-code { color: var(--red); background: var(--red-bg); }
+  .dl-report { color: var(--green); background: var(--green-bg); }
+
+  /* ── Tip box ── */
+  .tip-box {
+    background: var(--cyan-bg);
+    border: 1px solid rgba(34,211,238,.2);
+    border-radius: 12px;
+    padding: 18px 22px;
+    margin-top: 16px;
+  }
+  .tip-box h4 { color: var(--cyan); font-size: .9rem; margin-bottom: 6px; }
+  .tip-box p, .tip-box li { font-size: .84rem; color: var(--text2); }
+  .tip-box code {
+    background: var(--surface2);
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-size: .8rem;
+    color: var(--cyan);
+  }
+
+  /* ── Footer ── */
+  .footer {
+    border-top: 1px solid var(--border);
+    padding: 32px 24px;
+    text-align: center;
+    color: var(--text2);
+    font-size: .82rem;
+  }
+
+  /* ── Responsive ── */
+  @media (max-width: 700px) {
+    .hero h1 { font-size: 1.6rem; }
+    .pipeline { flex-direction: column; }
+    .pipe-step:not(:last-child) { margin-right: 0; margin-bottom: 16px; }
+    .pipe-step:not(:last-child)::after { display: none; }
+    .q-row { grid-template-columns: 40px 1fr; }
+    .q-row .cat, .q-row .diff { display: none; }
+    .gq-row { grid-template-columns: 40px 1fr 60px; }
+    .gq-row .skill-tag { display: none; }
+    .score-row { flex-direction: column; }
+    .conn-diagram { font-size: .68rem; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════ HERO ══════════════════════ -->
+<div class="hero">
+  <h1>Lab Day 08 — <span>RAG Pipeline</span></h1>
+  <p class="subtitle">Indexing &rarr; Retrieval &rarr; Generation &rarr; Evaluation &mdash; 4 sprints, 4 tieng</p>
+  <div class="hero-tags">
+    <span class="hero-tag" style="color:var(--green)">ChromaDB</span>
+    <span class="hero-tag" style="color:var(--accent)">OpenAI / Gemini</span>
+    <span class="hero-tag" style="color:var(--orange)">BM25 + Dense</span>
+    <span class="hero-tag" style="color:var(--purple)">LLM-as-Judge</span>
+  </div>
+</div>
+
+<div class="container">
+
+<!-- ══════════════════════ OVERVIEW ══════════════════════ -->
+<div class="section">
+  <div class="section-label">Tong quan</div>
+  <div class="section-title">Nhom xay dung cai gi?</div>
+  <p class="section-desc">
+    Xay dung <strong>tro ly noi bo cho CS + IT Helpdesk</strong>: nhan cau hoi tu nhan vien &rarr;
+    tim dung tai lieu noi bo &rarr; tra loi co trich dan nguon &rarr; tu choi tra loi neu khong du du lieu.
+  </p>
+
+  <!-- Pipeline Flow -->
+  <div class="pipeline">
+    <div class="pipe-step">
+      <div class="pipe-card">
+        <div class="pipe-icon" style="background:var(--green-bg);color:var(--green)">1</div>
+        <h4>Index</h4>
+        <p>Doc 5 tai lieu .txt &rarr; cat chunk theo heading &rarr; gan metadata &rarr; embed &rarr; luu ChromaDB</p>
+      </div>
+    </div>
+    <div class="pipe-step">
+      <div class="pipe-card">
+        <div class="pipe-icon" style="background:rgba(108,140,255,.1);color:var(--accent)">2</div>
+        <h4>Retrieve</h4>
+        <p>Nhan cau hoi &rarr; embed query &rarr; tim top-K chunk gan nhat trong vector store</p>
+      </div>
+    </div>
+    <div class="pipe-step">
+      <div class="pipe-card">
+        <div class="pipe-icon" style="background:var(--orange-bg);color:var(--orange)">3</div>
+        <h4>Generate</h4>
+        <p>Ghep chunks vao prompt &rarr; goi LLM &rarr; tra loi co citation [1] [2] &rarr; abstain neu thieu data</p>
+      </div>
+    </div>
+    <div class="pipe-step">
+      <div class="pipe-card">
+        <div class="pipe-icon" style="background:var(--purple-bg);color:var(--purple)">4</div>
+        <h4>Evaluate</h4>
+        <p>Cham 4 metrics &rarr; so sanh baseline vs variant &rarr; ghi scorecard &rarr; bao cao</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════ 5 TAI LIEU ══════════════════════ -->
+<div class="section">
+  <div class="section-label">Du lieu dau vao</div>
+  <div class="section-title">5 tai lieu noi bo duoc index</div>
+  <p class="section-desc">Day la toan bo "knowledge base" cua he thong. Moi cau hoi se chi duoc tra loi tu 5 file nay.</p>
+
+  <div class="docs-grid">
+    <div class="doc-card">
+      <div class="doc-icon" style="background:var(--cyan-bg);color:var(--cyan)">$</div>
+      <div>
+        <h5>policy_refund_v4.txt</h5>
+        <div class="doc-meta">CS &middot; 01/02/2026 &middot; 6 dieu khoan</div>
+        <div class="doc-sample">Hoan tien trong 7 ngay, KTS khong hoan, Flash Sale khong hoan, store credit 110%</div>
+      </div>
+    </div>
+    <div class="doc-card">
+      <div class="doc-icon" style="background:var(--red-bg);color:var(--red)">!</div>
+      <div>
+        <h5>sla_p1_2026.txt</h5>
+        <div class="doc-meta">IT &middot; 15/01/2026 &middot; 5 phan</div>
+        <div class="doc-sample">P1: phan hoi 15 phut, resolution 4 gio, escalate 10 phut, v2026.1 giam tu 6h xuong 4h</div>
+      </div>
+    </div>
+    <div class="doc-card">
+      <div class="doc-icon" style="background:var(--yellow-bg);color:var(--yellow)">@</div>
+      <div>
+        <h5>access_control_sop.txt</h5>
+        <div class="doc-meta">IT Security &middot; 01/01/2026 &middot; 7 section</div>
+        <div class="doc-sample">4 cap quyen (L1-L4), L3 can 3 nguoi duyet, ten cu "Approval Matrix", escalation khan cap 24h</div>
+      </div>
+    </div>
+    <div class="doc-card">
+      <div class="doc-icon" style="background:var(--green-bg);color:var(--green)">?</div>
+      <div>
+        <h5>it_helpdesk_faq.txt</h5>
+        <div class="doc-meta">IT &middot; 20/01/2026 &middot; 6 section Q&A</div>
+        <div class="doc-sample">Khoa sau 5 lan sai, doi MK 90 ngay, VPN max 2 thiet bi, Cisco AnyConnect</div>
+      </div>
+    </div>
+    <div class="doc-card">
+      <div class="doc-icon" style="background:var(--purple-bg);color:var(--purple)">H</div>
+      <div>
+        <h5>hr_leave_policy.txt</h5>
+        <div class="doc-meta">HR &middot; 01/01/2026 &middot; 5 phan</div>
+        <div class="doc-sample">12-18 ngay phep/nam, om 10 ngay, remote max 2 ngay/tuan, lam them 150-300%</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════ 4 SPRINTS ══════════════════════ -->
+<div class="section">
+  <div class="section-label">Ke hoach lam viec</div>
+  <div class="section-title">4 Sprints &mdash; moi sprint 60 phut</div>
+  <p class="section-desc">Lam tuan tu. Sprint sau phu thuoc sprint truoc. Khong skip.</p>
+
+  <div class="sprint-grid">
+    <!-- Sprint 1 -->
+    <div class="s1">
+      <div class="sprint-card">
+        <div class="sprint-num">Sprint 1</div>
+        <h3>Build Index</h3>
+        <div class="time">60 phut &middot; Retrieval Owner + Tech Lead</div>
+        <div class="file-tag">index.py</div>
+        <ul class="task-list">
+          <li>Implement <code>get_embedding()</code> &mdash; chon OpenAI hoac SentenceTransformers</li>
+          <li>Uncomment + hoan thien <code>build_index()</code> &mdash; embed va upsert ChromaDB</li>
+          <li>Chay <code>list_chunks()</code> kiem tra chunk + metadata</li>
+        </ul>
+        <div class="done-tag">Done: index 5 files, moi chunk co source + section + effective_date</div>
+      </div>
+    </div>
+
+    <!-- Sprint 2 -->
+    <div class="s2">
+      <div class="sprint-card">
+        <div class="sprint-num">Sprint 2</div>
+        <h3>Baseline RAG</h3>
+        <div class="time">60 phut &middot; Tech Lead</div>
+        <div class="file-tag">rag_answer.py</div>
+        <ul class="task-list">
+          <li>Implement <code>retrieve_dense()</code> &mdash; query ChromaDB bang embedding</li>
+          <li>Implement <code>call_llm()</code> &mdash; goi OpenAI hoac Gemini</li>
+          <li>Test voi 3+ cau hoi mau, verify citation + abstain</li>
+        </ul>
+        <div class="done-tag">Done: "SLA P1?" &rarr; answer co [1], "ERR-403" &rarr; "Khong du du lieu"</div>
+      </div>
+    </div>
+
+    <!-- Sprint 3 -->
+    <div class="s3">
+      <div class="sprint-card">
+        <div class="sprint-num">Sprint 3</div>
+        <h3>Tuning (chon 1)</h3>
+        <div class="time">60 phut &middot; Retrieval Owner</div>
+        <div class="file-tag">rag_answer.py</div>
+        <ul class="task-list">
+          <li><strong>Hybrid:</strong> BM25 + Dense voi RRF &mdash; tot cho keyword + ma loi</li>
+          <li><strong>Rerank:</strong> Cross-encoder cham lai top chunks &mdash; giam noise</li>
+          <li><strong>Query Transform:</strong> Expansion/HyDE &mdash; xu ly alias, ten cu</li>
+        </ul>
+        <div class="done-tag">Done: 1 variant chay E2E + bang so sanh baseline vs variant</div>
+      </div>
+    </div>
+
+    <!-- Sprint 4 -->
+    <div class="s4">
+      <div class="sprint-card">
+        <div class="sprint-num">Sprint 4</div>
+        <h3>Evaluation</h3>
+        <div class="time">60 phut &middot; Eval Owner + Doc Owner</div>
+        <div class="file-tag">eval.py</div>
+        <ul class="task-list">
+          <li>Cham 4 metrics cho 10 test questions (thu cong hoac LLM-as-Judge)</li>
+          <li>Chay <code>run_scorecard()</code> baseline + variant</li>
+          <li><code>compare_ab()</code> &rarr; delta + giai thich</li>
+          <li>Dien architecture.md + tuning-log.md + bao cao ca nhan</li>
+        </ul>
+        <div class="done-tag">Done: scorecard 2 ban, A/B comparison, docs day du</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════ CONNECTION MAP ══════════════════════ -->
+<div class="section">
+  <div class="section-label">Ket noi</div>
+  <div class="section-title">Cac phan noi voi nhau the nao?</div>
+  <p class="section-desc">Moi file goi ham tu file truoc. Lam sai thu tu = khong chay duoc.</p>
+
+  <div class="conn-wrap">
+    <div class="conn-diagram">
+<span class="dim">data/docs/</span>                        <span class="dim">data/</span>
+<span class="dim">  5 files .txt</span>                      <span class="dim">  test_questions.json (10 cau)</span>
+<span class="dim">      |</span>                                  <span class="dim">|</span>
+      v                                  |
+<span class="g">+--------------+</span>                         |
+<span class="g">|  index.py    |</span> Sprint 1                 |
+<span class="g">|  (build)     |</span>                         |
+<span class="g">+--------------+</span>                         |
+      |                                  |
+      | <span class="dim">tao ChromaDB index</span>               |
+      v                                  |
+<span class="highlight">+--------------+</span>                         |
+<span class="highlight">| rag_answer.py|</span> Sprint 2+3               |
+<span class="highlight">|  (query)     |</span>                         |
+<span class="highlight">+--------------+</span>                         |
+      |  <span class="dim">import get_embedding</span>            |
+      |  <span class="dim">tu index.py</span>                     |
+      |                                  |
+      | <span class="dim">rag_answer() tra ve</span>              |
+      | <span class="dim">{answer, sources, chunks}</span>        |
+      v                                  v
+<span class="p">+----------------------------------+</span>
+<span class="p">|           eval.py                |</span> Sprint 4
+<span class="p">|  import rag_answer tu rag_answer |</span>
+<span class="p">|  load test_questions.json        |</span>
+<span class="p">|  cham 4 metrics, so sanh A/B     |</span>
+<span class="p">+----------------------------------+</span>
+      |
+      v
+<span class="y">results/</span>               <span class="y">docs/</span>                    <span class="y">reports/</span>
+<span class="y">  scorecard_*.md</span>       <span class="y">  architecture.md</span>        <span class="y">  individual/[ten].md</span>
+                       <span class="y">  tuning-log.md</span>
+</div>
+  </div>
+
+  <div class="tip-box" style="margin-top:16px">
+    <h4>Key imports can nho</h4>
+    <ul style="list-style:none;padding:0">
+      <li><code>rag_answer.py</code> import <code>get_embedding</code> + <code>CHROMA_DB_DIR</code> tu <code>index.py</code></li>
+      <li><code>eval.py</code> import <code>rag_answer</code> tu <code>rag_answer.py</code></li>
+      <li>Doi embedding model o <code>index.py</code> = phai re-index + cap nhat <code>rag_answer.py</code></li>
+    </ul>
+  </div>
+</div>
+
+<!-- ══════════════════════ ROLES ══════════════════════ -->
+<div class="section">
+  <div class="section-label">Phan cong</div>
+  <div class="section-title">4 vai tro &mdash; giao ngay phut dau</div>
+  <p class="section-desc">Moi nguoi co trach nhiem chinh rieng nhung van ho tro nhau. Report ca nhan phai khop voi phan minh thuc su lam.</p>
+
+  <div class="role-grid">
+    <div class="role-card">
+      <div class="role-avatar" style="background:rgba(108,140,255,.15);color:var(--accent)">TL</div>
+      <h4>Tech Lead</h4>
+      <div class="sprint-lead">Lead Sprint 1, 2</div>
+      <ul>
+        <li>Giu nhip sprint, dam bao code noi E2E</li>
+        <li>Setup repo, .env, dependencies</li>
+        <li>Implement <code>get_embedding()</code> + <code>call_llm()</code></li>
+        <li>Dam bao <code>python index.py && python rag_answer.py && python eval.py</code> chay thong</li>
+      </ul>
+    </div>
+
+    <div class="role-card">
+      <div class="role-avatar" style="background:var(--orange-bg);color:var(--orange)">RO</div>
+      <h4>Retrieval Owner</h4>
+      <div class="sprint-lead">Lead Sprint 1, 3</div>
+      <ul>
+        <li>Quyet dinh chunking strategy (size, overlap)</li>
+        <li>Thiet ke metadata fields</li>
+        <li>Implement variant: hybrid / rerank / query transform</li>
+        <li>Chay <code>compare_retrieval_strategies()</code> va justify lua chon</li>
+      </ul>
+    </div>
+
+    <div class="role-card">
+      <div class="role-avatar" style="background:var(--purple-bg);color:var(--purple)">EO</div>
+      <h4>Eval Owner</h4>
+      <div class="sprint-lead">Lead Sprint 3, 4</div>
+      <ul>
+        <li>Cham diem 10 test questions (thu cong hoac LLM-Judge)</li>
+        <li>Chay <code>run_scorecard()</code> cho baseline + variant</li>
+        <li>Tao scorecard_baseline.md va scorecard_variant.md</li>
+        <li>Chay grading_questions luc 17:00 va tao log</li>
+      </ul>
+    </div>
+
+    <div class="role-card">
+      <div class="role-avatar" style="background:var(--green-bg);color:var(--green)">DO</div>
+      <h4>Documentation Owner</h4>
+      <div class="sprint-lead">Lead Sprint 4</div>
+      <ul>
+        <li>Dien <code>docs/architecture.md</code> &mdash; mo ta pipeline</li>
+        <li>Dien <code>docs/tuning-log.md</code> &mdash; A/B log</li>
+        <li>Thu thap thong tin tu cac thanh vien khac</li>
+        <li>Dam bao moi nguoi viet bao cao ca nhan</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════ TEST QUESTIONS ══════════════════════ -->
+<div class="section">
+  <div class="section-label">Kiem thu</div>
+  <div class="section-title">10 Test Questions (da co san)</div>
+  <p class="section-desc">Dung de test pipeline khi dev. Cac cau hoi grading se duoc public luc 17:00.</p>
+
+  <div class="q-grid">
+    <div class="q-row">
+      <span class="qid">q01</span>
+      <span>SLA xu ly ticket P1 la bao lau?</span>
+      <span class="cat">SLA</span>
+      <span class="diff easy">Easy</span>
+    </div>
+    <div class="q-row">
+      <span class="qid">q02</span>
+      <span>Khach hang co the yeu cau hoan tien trong bao nhieu ngay?</span>
+      <span class="cat">Refund</span>
+      <span class="diff easy">Easy</span>
+    </div>
+    <div class="q-row">
+      <span class="qid">q03</span>
+      <span>Ai phai phe duyet de cap quyen Level 3?</span>
+      <span class="cat">Access Control</span>
+      <span class="diff medium">Medium</span>
+    </div>
+    <div class="q-row">
+      <span class="qid">q04</span>
+      <span>San pham ky thuat so co duoc hoan tien khong?</span>
+      <span class="cat">Refund</span>
+      <span class="diff medium">Medium</span>
+    </div>
+    <div class="q-row">
+      <span class="qid">q05</span>
+      <span>Tai khoan bi khoa sau bao nhieu lan dang nhap sai?</span>
+      <span class="cat">IT Helpdesk</span>
+      <span class="diff easy">Easy</span>
+    </div>
+    <div class="q-row">
+      <span class="qid">q06</span>
+      <span>Escalation trong su co P1 dien ra the nao?</span>
+      <span class="cat">SLA</span>
+      <span class="diff medium">Medium</span>
+    </div>
+    <div class="q-row">
+      <span class="qid">q07</span>
+      <span>Approval Matrix de cap quyen la tai lieu nao?</span>
+      <span class="cat">Access Control</span>
+      <span class="diff hard">Hard &mdash; alias/ten cu</span>
+    </div>
+    <div class="q-row">
+      <span class="qid">q08</span>
+      <span>Nhan vien duoc lam remote toi da may ngay/tuan?</span>
+      <span class="cat">HR Policy</span>
+      <span class="diff easy">Easy</span>
+    </div>
+    <div class="q-row">
+      <span class="qid">q09</span>
+      <span>ERR-403-AUTH la loi gi va cach xu ly?</span>
+      <span class="cat" style="color:var(--red)">No Data &rarr; Abstain</span>
+      <span class="diff hard">Hard &mdash; abstain</span>
+    </div>
+    <div class="q-row">
+      <span class="qid">q10</span>
+      <span>Hoan tien khan cap cho khach VIP, quy trinh co khac khong?</span>
+      <span class="cat">Refund</span>
+      <span class="diff hard">Hard &mdash; grounding</span>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════ GRADING QUESTIONS ══════════════════════ -->
+<div class="section">
+  <div class="section-label">Cham diem (30/100)</div>
+  <div class="section-title">10 Grading Questions &mdash; public luc 17:00</div>
+  <p class="section-desc">Day la 10 cau hoi an duoc GV public luc 17:00. Nhom co 1 tieng de chay pipeline va nop log. Tong 98 diem raw, quy doi thanh 30 diem nhom.</p>
+
+  <div class="gq-grid">
+    <div class="gq-row"><span class="qid">gq01</span><span>SLA P1 thay doi the nao so voi phien ban truoc?</span><span class="pts" style="color:var(--orange)">10</span><span class="skill-tag">Freshness + version</span></div>
+    <div class="gq-row"><span class="qid">gq02</span><span>Remote + VPN + gioi han thiet bi?</span><span class="pts" style="color:var(--orange)">10</span><span class="skill-tag">Multi-doc synthesis</span></div>
+    <div class="gq-row"><span class="qid">gq03</span><span>Flash Sale + da kich hoat &rarr; hoan tien khong?</span><span class="pts" style="color:var(--orange)">10</span><span class="skill-tag">Exception completeness</span></div>
+    <div class="gq-row"><span class="qid">gq04</span><span>Store credit duoc bao nhieu %?</span><span class="pts" style="color:var(--yellow)">8</span><span class="skill-tag">Numeric fact</span></div>
+    <div class="gq-row"><span class="qid">gq05</span><span>Contractor can Admin Access &mdash; dieu kien?</span><span class="pts" style="color:var(--orange)">10</span><span class="skill-tag">Multi-section</span></div>
+    <div class="gq-row"><span class="qid">gq06</span><span>P1 luc 2am &rarr; cap quyen tam thoi the nao?</span><span class="pts" style="color:var(--red)">12</span><span class="skill-tag">Cross-doc multi-hop</span></div>
+    <div class="gq-row" style="border-color:rgba(248,113,113,.4)"><span class="qid">gq07</span><span>Muc phat vi pham SLA P1 la bao nhieu? <strong style="color:var(--red)">&larr; BAY</strong></span><span class="pts" style="color:var(--red)">10</span><span class="skill-tag" style="color:var(--red);border-color:rgba(248,113,113,.3)">ABSTAIN!</span></div>
+    <div class="gq-row"><span class="qid">gq08</span><span>Bao nghi phep 3 ngay = nghi om 3 ngay khong?</span><span class="pts" style="color:var(--orange)">10</span><span class="skill-tag">Disambiguation</span></div>
+    <div class="gq-row"><span class="qid">gq09</span><span>Mat khau doi may ngay, nhac truoc may ngay?</span><span class="pts" style="color:var(--yellow)">8</span><span class="skill-tag">Multi-detail FAQ</span></div>
+    <div class="gq-row"><span class="qid">gq10</span><span>Chinh sach v4 ap dung don truoc 01/02 khong?</span><span class="pts" style="color:var(--orange)">10</span><span class="skill-tag">Temporal scoping</span></div>
+  </div>
+
+  <div class="warn-box" style="margin-top:16px">
+    <h4>gq07 la BAY &mdash; khong co answer trong tai lieu!</h4>
+    <ul>
+      <li>Tra loi dung "Khong co thong tin" = <strong style="color:var(--green)">+10 diem</strong></li>
+      <li>Bia ra con so hoac quy dinh = <strong>-5 diem (PENALTY)</strong></li>
+      <li>Day la cau test <strong>anti-hallucination</strong>. Prompt phai co "Answer only from context" va "say you do not know"</li>
+    </ul>
+  </div>
+</div>
+
+<!-- ══════════════════════ SCORING ══════════════════════ -->
+<div class="section">
+  <div class="section-label">Diem so</div>
+  <div class="section-title">Cau truc diem: 100 = 60 nhom + 40 ca nhan</div>
+
+  <div class="score-row">
+    <div class="score-block">
+      <h4>Diem Nhom</h4>
+      <div class="score-big" style="color:var(--accent)">60</div>
+      <ul class="score-items">
+        <li><span>Sprint Deliverables (code chay duoc)</span><span class="pts">20</span></li>
+        <li><span>Group Documentation (architecture + tuning-log)</span><span class="pts">10</span></li>
+        <li><span>Grading Questions (10 cau an, 98 raw &rarr; 30)</span><span class="pts">30</span></li>
+      </ul>
+    </div>
+    <div class="score-block">
+      <h4>Diem Ca Nhan</h4>
+      <div class="score-big" style="color:var(--green)">40</div>
+      <ul class="score-items">
+        <li><span>Individual Report (500-800 tu)</span><span class="pts">30</span></li>
+        <li><span>Code Contribution Evidence</span><span class="pts">10</span></li>
+      </ul>
+    </div>
+    <div class="score-block">
+      <h4>Bonus</h4>
+      <div class="score-big" style="color:var(--yellow)">+5</div>
+      <ul class="score-items">
+        <li><span>LLM-as-Judge trong eval.py</span><span class="pts">+2</span></li>
+        <li><span>10 grading log + timestamp hop le</span><span class="pts">+1</span></li>
+        <li><span>gq06 (cau kho nhat) Full marks</span><span class="pts">+2</span></li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="warn-box">
+    <h4>Mat toan bo 0/40 diem ca nhan neu:</h4>
+    <ul>
+      <li><strong>Report khong khop code</strong> &mdash; khai bao lam X nhung repo khong co bang chung</li>
+      <li><strong>Nhan cong lao nguoi khac</strong> &mdash; commit history se bi kiem tra</li>
+      <li><strong>Report sao chep nhau</strong> &mdash; 0 diem cho TAT CA nguoi lien quan</li>
+      <li><strong>Khong giai thich duoc phan minh khai bao</strong> &mdash; GV co the hoi bat ky luc nao</li>
+    </ul>
+  </div>
+</div>
+
+<!-- ══════════════════════ TIMELINE ══════════════════════ -->
+<div class="section">
+  <div class="section-label">Timeline</div>
+  <div class="section-title">Moc thoi gian quan trong</div>
+
+  <div class="timeline">
+    <div class="tl-item active">
+      <div class="tl-time">Bat dau lab</div>
+      <div class="tl-title">Phan vai + Setup</div>
+      <div class="tl-desc">Giao 4 vai tro, <code>pip install -r requirements.txt</code>, tao .env, chay <code>python index.py</code> de test</div>
+    </div>
+    <div class="tl-item">
+      <div class="tl-time">Sprint 1-2 (~2 gio)</div>
+      <div class="tl-title">Index + Baseline RAG</div>
+      <div class="tl-desc">Phai co pipeline chay E2E: hoi cau hoi &rarr; nhan answer co citation</div>
+    </div>
+    <div class="tl-item">
+      <div class="tl-time">Sprint 3 (~1 gio)</div>
+      <div class="tl-title">Implement 1 variant + so sanh</div>
+      <div class="tl-desc">Chon hybrid/rerank/query-transform, A/B rule: chi doi 1 bien</div>
+    </div>
+    <div class="tl-item" style="border-left:none">
+      <div class="tl-time" style="color:var(--orange)">17:00</div>
+      <div class="tl-title" style="color:var(--orange)">grading_questions.json duoc public</div>
+      <div class="tl-desc">Bat dau chay pipeline voi 10 cau an, tao logs/grading_run.json</div>
+    </div>
+    <div class="tl-item danger">
+      <div class="tl-time" style="color:var(--red)">18:00 &mdash; DEADLINE CODE</div>
+      <div class="tl-title" style="color:var(--red)">Lock tat ca file .py, logs, docs, scorecard</div>
+      <div class="tl-desc">Commit sau 18:00 khong duoc tinh. Chi report ca nhan la duoc commit muon.</div>
+    </div>
+    <div class="tl-item">
+      <div class="tl-time">Sau 18:00</div>
+      <div class="tl-title">Hoan thien bao cao ca nhan</div>
+      <div class="tl-desc">reports/individual/[ten].md va reports/group_report.md</div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════ DELIVERABLES ══════════════════════ -->
+<div class="section">
+  <div class="section-label">Nop bai</div>
+  <div class="section-title">Tat ca file can nop</div>
+
+  <div class="deliv-grid">
+    <div class="deliv-card">
+      <h5>Code Pipeline</h5>
+      <div class="deliv-file">index.py, rag_answer.py, eval.py</div>
+      <div class="deliv-owner">Owner: Tech Lead</div>
+      <div class="deliv-deadline dl-code">Truoc 18:00</div>
+    </div>
+    <div class="deliv-card">
+      <h5>Grading Log</h5>
+      <div class="deliv-file">logs/grading_run.json</div>
+      <div class="deliv-owner">Owner: Eval Owner</div>
+      <div class="deliv-deadline dl-code">Truoc 18:00</div>
+    </div>
+    <div class="deliv-card">
+      <h5>Scorecards</h5>
+      <div class="deliv-file">results/scorecard_baseline.md, scorecard_variant.md</div>
+      <div class="deliv-owner">Owner: Eval Owner</div>
+      <div class="deliv-deadline dl-code">Truoc 18:00</div>
+    </div>
+    <div class="deliv-card">
+      <h5>Architecture Docs</h5>
+      <div class="deliv-file">docs/architecture.md, docs/tuning-log.md</div>
+      <div class="deliv-owner">Owner: Documentation Owner</div>
+      <div class="deliv-deadline dl-code">Truoc 18:00</div>
+    </div>
+    <div class="deliv-card">
+      <h5>Group Report</h5>
+      <div class="deliv-file">reports/group_report.md</div>
+      <div class="deliv-owner">Owner: Tech Lead / Doc Owner</div>
+      <div class="deliv-deadline dl-report">Duoc commit muon</div>
+    </div>
+    <div class="deliv-card">
+      <h5>Individual Report</h5>
+      <div class="deliv-file">reports/individual/[ten].md</div>
+      <div class="deliv-owner">Owner: Moi nguoi 1 file (500-800 tu)</div>
+      <div class="deliv-deadline dl-report">Duoc commit muon</div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════ WHAT TO LEARN ══════════════════════ -->
+<div class="section">
+  <div class="section-label">Chuan bi</div>
+  <div class="section-title">Can tim hieu truoc / trong khi lam</div>
+  <p class="section-desc">Moi vai tro nen nam cac kien thuc tuong ung de lam nhanh trong 4 gio.</p>
+
+  <div class="learn-grid">
+    <div class="learn-card concept">
+      <h4><span class="dot" style="background:var(--cyan)"></span> Khai niem RAG can hieu</h4>
+      <ul>
+        <li>Embedding la gi? Tai sao text thanh vector de search?</li>
+        <li>Dense vs Sparse retrieval: semantic search vs keyword match</li>
+        <li>Chunking: tai sao phai cat? Chunk lon/nho anh huong gi?</li>
+        <li>Grounded generation: ep LLM chi tra loi tu context</li>
+        <li>Hallucination: khi nao LLM "bia"? Tai sao nguy hiem?</li>
+        <li>Abstain: pipeline tu choi tra loi khi khong du data</li>
+      </ul>
+    </div>
+
+    <div class="learn-card tool">
+      <h4><span class="dot" style="background:var(--green)"></span> Cong cu / thu vien can biet dung</h4>
+      <ul>
+        <li><strong>ChromaDB</strong>: PersistentClient, get_or_create_collection, upsert, query</li>
+        <li><strong>OpenAI API</strong>: embeddings.create() + chat.completions.create()</li>
+        <li><strong>Hoac Gemini</strong>: genai.configure() + GenerativeModel.generate_content()</li>
+        <li><strong>sentence-transformers</strong>: SentenceTransformer + CrossEncoder</li>
+        <li><strong>rank-bm25</strong>: BM25Okapi de lam sparse search</li>
+        <li><strong>python-dotenv</strong>: load API key tu .env</li>
+      </ul>
+    </div>
+
+    <div class="learn-card skill">
+      <h4><span class="dot" style="background:var(--orange)"></span> Ky nang Sprint 3 (chon 1 de sau)</h4>
+      <ul>
+        <li><strong>Hybrid RRF</strong>: cong thuc Reciprocal Rank Fusion la gi?</li>
+        <li><strong>Rerank</strong>: cross-encoder khac bi-encoder cho nao?</li>
+        <li><strong>Query expansion</strong>: goi LLM de sinh synonym, alias</li>
+        <li><strong>HyDE</strong>: Hypothetical Document Embedding &mdash; ý tuong</li>
+        <li>A/B testing: tai sao chi doi 1 bien moi lan?</li>
+      </ul>
+    </div>
+
+    <div class="learn-card trap">
+      <h4><span class="dot" style="background:var(--red)"></span> Bay / loi thuong gap</h4>
+      <ul>
+        <li>Dung khac embedding model khi index vs khi query &rarr; sai hoan toan</li>
+        <li>Chunk cat giua dieu khoan &rarr; mat ngu canh &rarr; answer sai</li>
+        <li>Prompt khong co "only from context" &rarr; LLM tu bia &rarr; -50% diem cau</li>
+        <li>Quen metadata &rarr; khong co citation &rarr; mat diem Sprint 2</li>
+        <li>gq07 la bay: khong co data nhung van tra loi = penalty nang</li>
+        <li>Commit code sau 18:00 &rarr; khong duoc tinh</li>
+        <li>Report copy nhau &rarr; 0/40 cho TAT CA nguoi lien quan</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="tip-box" style="margin-top:16px">
+    <h4>Debug theo Error Tree (khi pipeline tra loi sai)</h4>
+    <ul style="list-style:none;padding:0">
+      <li><strong>1. Indexing?</strong> &rarr; <code>list_chunks()</code> &mdash; Chunk co dung? Metadata du?</li>
+      <li><strong>2. Retrieval?</strong> &rarr; <code>score_context_recall()</code> &mdash; Expected source co duoc retrieve?</li>
+      <li><strong>3. Generation?</strong> &rarr; <code>score_faithfulness()</code> &mdash; Answer co bam context? Prompt co "Answer only from context"?</li>
+    </ul>
+  </div>
+</div>
+
+<!-- ══════════════════════ QUICK START ══════════════════════ -->
+<div class="section">
+  <div class="section-label">Bat dau nhanh</div>
+  <div class="section-title">5 phut dau tien</div>
+
+  <div class="conn-wrap" style="background:var(--surface)">
+    <div class="conn-diagram" style="font-size:.85rem">
+<span class="dim"># 1. Cai dependencies</span>
+<span class="g">pip install -r requirements.txt</span>
+
+<span class="dim"># 2. Tao .env</span>
+<span class="g">cp .env.example .env</span>
+<span class="dim"># Dien OPENAI_API_KEY hoac GOOGLE_API_KEY</span>
+
+<span class="dim"># 3. Test setup (khong can API key)</span>
+<span class="g">python index.py</span>
+<span class="dim"># Se thay: preprocess + chunking preview cho 1 file</span>
+
+<span class="dim"># 4. Sau khi implement get_embedding() + build_index():</span>
+<span class="g">python index.py</span>    <span class="dim"># Build full index</span>
+
+<span class="dim"># 5. Sau khi implement retrieve_dense() + call_llm():</span>
+<span class="g">python rag_answer.py</span>  <span class="dim"># Test 4 cau hoi</span>
+
+<span class="dim"># 6. Sau khi implement variant + scoring:</span>
+<span class="g">python eval.py</span>     <span class="dim"># Scorecard + A/B</span>
+
+<span class="dim"># 7. Chay grading (sau 17:00):</span>
+<span class="dim"># Load grading_questions.json, chay pipeline, luu logs/grading_run.json</span>
+</div>
+  </div>
+</div>
+
+</div><!-- /container -->
+
+<div class="footer">
+  Lab Day 08 &mdash; AI in Action (AICB-P1) &middot; RAG Pipeline: Indexing &rarr; Retrieval &rarr; Generation &rarr; Evaluation
+</div>
+
+</body>
+</html>
