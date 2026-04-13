@@ -104,13 +104,11 @@ llm_model = openai-gpt-4o
 
 ## Tóm tắt học được
 
-> TODO (Sprint 4): Điền sau khi hoàn thành evaluation.
-
 1. **Lỗi phổ biến nhất trong pipeline này là gì?**
-   > _____________
+   > Lỗi phổ biến nhất là retrieval lấy đúng tài liệu nhưng thứ tự chunk chưa tối ưu cho generation, dẫn đến câu trả lời đúng nguồn nhưng relevance/completeness chưa cao (đặc biệt các câu multi-hop như q06).
 
 2. **Biến nào có tác động lớn nhất tới chất lượng?**
-   > _____________
+   > Biến có tác động lớn nhất là `use_rerank`. Khi bật rerank, Faithfulness tăng 4.60 -> 4.70, Relevance tăng 3.00 -> 3.20, Completeness tăng 3.50 -> 3.60, trong khi Context Recall giữ 5.00.
 
 3. **Nếu có thêm 1 giờ, nhóm sẽ thử gì tiếp theo?**
-   > _____________
+   > Nhóm sẽ thử 2 hướng: (1) chạy A/B với `retrieval_mode="hybrid"` giữ nguyên các biến khác để kiểm tra gain trên câu keyword/alias; (2) bật `query_transform="expansion"` cho các câu multi-hop để tăng evidence coverage trước bước rerank.
