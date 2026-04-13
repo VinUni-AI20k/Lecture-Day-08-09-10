@@ -34,7 +34,7 @@ from rag_answer import rag_answer
 load_dotenv()
 client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
     
-TEST_QUESTIONS_PATH = Path(__file__).parent / "data" / "test_questions.json"
+TEST_QUESTIONS_PATH = Path(__file__).parent / "data" / "grading_question.json"
 RESULTS_DIR = Path(__file__).parent / "results"
 
 # Cấu hình baseline (Sprint 2)
@@ -50,9 +50,9 @@ BASELINE_CONFIG = {
 # TODO Sprint 4: Cập nhật VARIANT_CONFIG theo variant nhóm đã implement
 VARIANT_CONFIG = {
     "retrieval_mode": "hybrid",   # Hoặc "dense" nếu chỉ đổi rerank
-    "top_k_search": 10,
+    "top_k_search": 5,
     "top_k_select": 5,
-    "use_rerank": True,           # Hoặc False nếu variant là hybrid không rerank
+    "use_rerank": False,           # Hoặc False nếu variant là hybrid không rerank
     "label": "variant_hybrid_rerank",
 }
 
@@ -97,7 +97,7 @@ def score_faithfulness(
     # TODO Sprint 4: Implement scoring
     # Tạm thời trả về None (yêu cầu chấm thủ công)
 
-    context = "\n---\n".join([c.get("content", "") for c in chunks_used])
+    context = "\n---\n".join([c.get("text", "") for c in chunks_used])
     prompt = f"""Rate FAITHFULNESS (1-5). Does the answer only use info from the context?
     CONTEXT: {context}
     ANSWER: {answer}
@@ -464,8 +464,6 @@ Generated: {timestamp}
 
     return md
 
-client = openai.OpenAI(api_key="OPENAI_API_KEY")
-    
 def ask_llm_judge(prompt: str) -> Dict[str, Any]:
     """Gửi yêu cầu chấm điểm tới LLM và bắt JSON trả về."""
     try:
@@ -475,8 +473,7 @@ def ask_llm_judge(prompt: str) -> Dict[str, Any]:
                 {"role": "system", "content": "You are an objective RAG evaluator, LLM as judge. Always output valid JSON."},
                 {"role": "user", "content": prompt}
             ],
-            response_format={"type": "json_object"},
-            temperature=0.9
+            response_format={"type": "json_object"}
         )
         return json.loads(response.choices[0].message.content)
     except Exception as e:
