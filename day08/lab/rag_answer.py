@@ -36,6 +36,50 @@ TOP_K_SELECT = 3     # Số chunk gửi vào prompt sau rerank/select (top-3 swe
 
 LLM_MODEL = os.getenv("LLM_MODEL", "gpt-4o-mini")
 
+# =============================================================================
+# MODULE-LEVEL CACHE (tránh re-init mỗi lần gọi)
+# =============================================================================
+
+_chroma_collection = None   # ChromaDB collection singleton
+_bm25_index = None          # BM25 index cache
+_bm25_docs = None           # Docs tương ứng với BM25 index
+_bm25_metas = None          # Metadata tương ứng
+_cross_encoder = None       # CrossEncoder model cache
+
+
+def _get_collection():
+    """Trả về ChromaDB collection, khởi tạo một lần duy nhất."""
+    global _chroma_collection
+    if _chroma_collection is None:
+        import chromadb
+        from index import CHROMA_DB_DIR
+        client = chromadb.PersistentClient(path=str(CHROMA_DB_DIR))
+        _chroma_collection = client.get_collection("rag_lab")
+    return _chroma_collection
+
+
+def _get_bm25():
+    """Trả về (bm25, docs, metas), build một lần duy nhất."""
+    global _bm25_index, _bm25_docs, _bm25_metas
+    if _bm25_index is None:
+        from rank_bm25 import BM25Okapi
+        collection = _get_collection()
+        results = collection.get(include=["documents", "metadatas"])
+        _bm25_docs = results["documents"]
+        _bm25_metas = results["metadatas"]
+        tokenized_corpus = [doc.lower().split() for doc in _bm25_docs]
+        _bm25_index = BM25Okapi(tokenized_corpus)
+    return _bm25_index, _bm25_docs, _bm25_metas
+
+
+def _get_cross_encoder():
+    """Trả về CrossEncoder model, load một lần duy nhất."""
+    global _cross_encoder
+    if _cross_encoder is None:
+        from sentence_transformers import CrossEncoder
+        _cross_encoder = CrossEncoder("cross-encoder/ms-marco-MiniLM-L-6-v2")
+    return _cross_encoder
+
 
 # =============================================================================
 # RETRIEVAL — DENSE (Vector Search)
@@ -76,12 +120,9 @@ def retrieve_dense(query: str, top_k: int = TOP_K_SEARCH) -> List[Dict[str, Any]
         # Lưu ý: distances trong ChromaDB cosine = 1 - similarity
         # Score = 1 - distance
     """
-    import chromadb
-    from index import get_embedding, CHROMA_DB_DIR
+    from index import get_embedding
 
-    client = chromadb.PersistentClient(path=str(CHROMA_DB_DIR))
-    collection = client.get_collection("rag_lab")
-
+    collection = _get_collection()
     query_embedding = get_embedding(query)
     results = collection.query(
         query_embeddings=[query_embedding],
@@ -133,28 +174,15 @@ def retrieve_sparse(query: str, top_k: int = TOP_K_SEARCH) -> List[Dict[str, Any
         top_indices = sorted(range(len(scores)), key=lambda i: scores[i], reverse=True)[:top_k]
     """
     try:
-        from rank_bm25 import BM25Okapi
+        bm25, docs, metas = _get_bm25()
     except ImportError:
         print("[retrieve_sparse] Thiếu rank_bm25. Hãy cài: pip install rank-bm25")
         return []
-        
-    import chromadb
-    from index import CHROMA_DB_DIR
 
-    client = chromadb.PersistentClient(path=str(CHROMA_DB_DIR))
-    collection = client.get_collection("rag_lab")
-    results = collection.get(include=["documents", "metadatas"])
-    
-    docs = results["documents"]
-    metas = results["metadatas"]
-    
     if not docs:
         return []
-        
-    tokenized_corpus = [doc.lower().split() for doc in docs]
-    bm25 = BM25Okapi(tokenized_corpus)
+
     tokenized_query = query.lower().split()
-    
     scores = bm25.get_scores(tokenized_query)
     top_indices = sorted(range(len(scores)), key=lambda i: scores[i], reverse=True)[:top_k]
     
@@ -271,12 +299,11 @@ def rerank(
         return []
         
     try:
-        from sentence_transformers import CrossEncoder
-        model = CrossEncoder("cross-encoder/ms-marco-MiniLM-L-6-v2")
+        model = _get_cross_encoder()
     except ImportError:
         print("[rerank] Thiếu sentence_transformers. Bỏ qua rerank.")
         return candidates[:top_k]
-        
+
     pairs = [[query, chunk["text"]] for chunk in candidates]
     scores = model.predict(pairs)
     
