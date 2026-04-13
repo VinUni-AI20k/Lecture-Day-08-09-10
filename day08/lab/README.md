@@ -276,3 +276,29 @@ Mở [http://localhost:3000](http://localhost:3000) → **Mở chat**. Debug cli
 - OpenAI Embeddings: https://platform.openai.com/docs/guides/embeddings
 - Sentence Transformers: https://www.sbert.net
 - rank-bm25: https://github.com/dorianbrown/rank_bm25
+
+---
+
+## Loi thuong gap va cach xu ly nhanh
+
+### 1. API chua chay nen UI khong tra loi
+- Dau hieu: UI chat bao loi fetch/API, khong nhan duoc response.
+- Cach xu ly:
+  1. Mo terminal tai `day08/lab/`.
+  2. Chay `uvicorn api_server:app --reload --host 127.0.0.1 --port 8000`.
+  3. Thu lai `http://127.0.0.1:8000/api/health`.
+
+### 2. Port bi chiem (`Address already in use`)
+- Dau hieu: Uvicorn hoac Next.js bao port da duoc su dung.
+- Cach xu ly:
+  - Doi port API: `uvicorn api_server:app --reload --host 127.0.0.1 --port 8010`
+  - Doi port UI: `npm run dev -- -p 3001`
+  - Neu doi port API, tao `rag-ui/.env.local`:
+    `NEXT_PUBLIC_RAG_API_URL=http://127.0.0.1:8010`
+
+### 3. Thieu bien moi truong trong `.env`
+- Dau hieu: Script bao thieu API key, model khong goi duoc.
+- Cach xu ly:
+  1. Tao file: `copy .env.example .env`
+  2. Dien it nhat mot key: `OPENAI_API_KEY` hoac `GOOGLE_API_KEY`
+  3. Chay lai `python rag_answer.py`
