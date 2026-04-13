@@ -131,8 +131,41 @@ def retrieve_sparse(query: str, top_k: int = TOP_K_SEARCH) -> List[Dict[str, Any
     """
     # TODO Sprint 3: Implement BM25 search
     # Tạm thời return empty list
-    print("[retrieve_sparse] Chưa implement — Sprint 3")
-    return []
+    # print("[retrieve_sparse] Chưa implement — Sprint 3")
+    # return []
+    """Sparse retrieval: tìm kiếm theo keyword (BM25)."""
+    import chromadb
+    from rank_bm25 import BM25Okapi
+    from index import CHROMA_DB_DIR
+    # Bước 1: Load toàn bộ chunks từ ChromaDB
+    client = chromadb.PersistentClient(path=str(CHROMA_DB_DIR))
+    collection = client.get_collection("rag_lab")
+    all_data = collection.get(include=["documents", "metadatas"])
+    documents = all_data["documents"]
+    metadatas = all_data["metadatas"]
+    if not documents:
+        return []
+    # Bước 2: Tokenize corpus và build BM25 index
+    tokenized_corpus = [doc.lower().split() for doc in documents]
+    bm25 = BM25Okapi(tokenized_corpus)
+    # Bước 3: Tính score cho query
+    tokenized_query = query.lower().split()
+    scores = bm25.get_scores(tokenized_query)
+    # Bước 4: Lấy top_k theo score giảm dần
+    top_indices = sorted(
+        range(len(scores)),
+        key=lambda i: scores[i],
+        reverse=True
+    )[:top_k]
+    # Bước 5: Trả về kết quả
+    results = []
+    for idx in top_indices:
+        results.append({
+            "text": documents[idx],
+            "metadata": metadatas[idx],
+            "score": float(scores[idx]),
+        })
+    return results
 
 
 # =============================================================================
