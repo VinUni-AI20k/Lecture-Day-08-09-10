@@ -53,4 +53,3 @@ Nếu có thêm thời gian, tôi sẽ tập trung vào việc **Optimize Prompt
 
 ---
 
-*Lưu file này với tên: `reports/individual/tech_lead.md`*
