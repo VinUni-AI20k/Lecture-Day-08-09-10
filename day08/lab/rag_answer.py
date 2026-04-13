@@ -31,8 +31,8 @@ load_dotenv()
 # CẤU HÌNH
 # =============================================================================
 
-TOP_K_SEARCH = 10    # Số chunk lấy từ vector store trước rerank (search rộng)
-TOP_K_SELECT = 3     # Số chunk gửi vào prompt sau rerank/select (top-3 sweet spot)
+TOP_K_SEARCH = 10  # Số chunk lấy từ vector store trước rerank (search rộng)
+TOP_K_SELECT = 3  # Số chunk gửi vào prompt sau rerank/select (top-3 sweet spot)
 
 LLM_MODEL = os.getenv("LLM_MODEL", "gpt-4o-mini")
 
@@ -76,10 +76,31 @@ def retrieve_dense(query: str, top_k: int = TOP_K_SEARCH) -> List[Dict[str, Any]
         # Lưu ý: distances trong ChromaDB cosine = 1 - similarity
         # Score = 1 - distance
     """
-    raise NotImplementedError(
-        "TODO Sprint 2: Implement retrieve_dense().\n"
-        "Tham khảo comment trong hàm để biết cách query ChromaDB."
+    import chromadb
+    from index import get_embedding, CHROMA_DB_DIR
+
+    client = chromadb.PersistentClient(path=str(CHROMA_DB_DIR))
+    collection = client.get_collection("rag_lab")
+
+    query_embedding = get_embedding(query)
+    results = collection.query(
+        query_embeddings=[query_embedding],
+        n_results=top_k,
+        include=["documents", "metadatas", "distances"]
     )
+
+    return [
+        {
+            "text": doc,
+            "metadata": meta,
+            "score": 1 - dist,
+        }
+        for doc, meta, dist in zip(
+            results["documents"][0],
+            results["metadatas"][0],
+            results["distances"][0],
+        )
+    ]
 
 
 # =============================================================================
@@ -120,10 +141,10 @@ def retrieve_sparse(query: str, top_k: int = TOP_K_SEARCH) -> List[Dict[str, Any
 # =============================================================================
 
 def retrieve_hybrid(
-    query: str,
-    top_k: int = TOP_K_SEARCH,
-    dense_weight: float = 0.6,
-    sparse_weight: float = 0.4,
+        query: str,
+        top_k: int = TOP_K_SEARCH,
+        dense_weight: float = 0.6,
+        sparse_weight: float = 0.4,
 ) -> List[Dict[str, Any]]:
     """
     Hybrid retrieval: kết hợp dense và sparse bằng Reciprocal Rank Fusion (RRF).
@@ -160,9 +181,9 @@ def retrieve_hybrid(
 # =============================================================================
 
 def rerank(
-    query: str,
-    candidates: List[Dict[str, Any]],
-    top_k: int = TOP_K_SELECT,
+        query: str,
+        candidates: List[Dict[str, Any]],
+        top_k: int = TOP_K_SELECT,
 ) -> List[Dict[str, Any]]:
     """
     Rerank các candidate chunks bằng cross-encoder.
@@ -323,12 +344,12 @@ def call_llm(prompt: str) -> str:
 
 
 def rag_answer(
-    query: str,
-    retrieval_mode: str = "dense",
-    top_k_search: int = TOP_K_SEARCH,
-    top_k_select: int = TOP_K_SELECT,
-    use_rerank: bool = False,
-    verbose: bool = False,
+        query: str,
+        retrieval_mode: str = "dense",
+        top_k_search: int = TOP_K_SEARCH,
+        top_k_select: int = TOP_K_SELECT,
+        use_rerank: bool = False,
+        verbose: bool = False,
 ) -> Dict[str, Any]:
     """
     Pipeline RAG hoàn chỉnh: query → retrieve → (rerank) → generate.
@@ -383,7 +404,7 @@ def rag_answer(
         print(f"\n[RAG] Query: {query}")
         print(f"[RAG] Retrieved {len(candidates)} candidates (mode={retrieval_mode})")
         for i, c in enumerate(candidates[:3]):
-            print(f"  [{i+1}] score={c.get('score', 0):.3f} | {c['metadata'].get('source', '?')}")
+            print(f"  [{i + 1}] score={c.get('score', 0):.3f} | {c['metadata'].get('source', '?')}")
 
     # --- Bước 2: Rerank (optional) ---
     if use_rerank:
@@ -433,9 +454,9 @@ def compare_retrieval_strategies(query: str) -> None:
 
     A/B Rule (từ slide): Chỉ đổi MỘT biến mỗi lần.
     """
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print(f"Query: {query}")
-    print('='*60)
+    print('=' * 60)
 
     strategies = ["dense", "hybrid"]  # Thêm "sparse" sau khi implement
 
