@@ -23,6 +23,36 @@
 - Mục tiêu 4: Ưu tiên việc nhỏ, làm xong nhanh, commit ngay (không dồn việc đến cuối).
 - Mục tiêu 5: Nhóm trưởng (Tri Thanh) tập trung điều phối, review và kết nối tiến độ, nên số commit có thể ít hơn các bạn khác.
 
+## Mục ưu tiên cao (bổ sung bắt buộc để tối đa điểm)
+
+1. **A/B đúng chuẩn:** mỗi lần chỉ đổi 1 biến (ví dụ chỉ bật `hybrid`, hoặc chỉ bật `rerank`).
+2. **Có bằng chứng đo được:** phải có bảng trước/sau cho các chỉ số chính (không chỉ mô tả cảm tính).
+3. **Có testset đủ loại câu hỏi:** ngoài câu dễ, phải có paraphrase/alias và câu không có đáp án.
+4. **Có log + report để truy vết:** khi sai phải chỉ ra sai ở retrieval hay generation.
+5. **Mỗi người có commit thể hiện vai trò rõ:** tránh commit trộn nhiều phần.
+
+## Phân công phần còn thiếu (rất cụ thể, dễ giao việc)
+
+| Phần còn thiếu (ưu tiên cao) | Owner chính | Owner phụ | Output phải nộp | Commit mẫu |
+|---|---|---|---|---|
+| A/B chỉ đổi 1 biến (hybrid **hoặc** rerank) | Quach Gia Duoc | Hoang Kim Tri Thanh (review) | `docs/tuning-log.md` có Baseline config, Tuning config, và biến đã đổi | `docs(day08-lab): document single-variable ab setup` |
+| Bảng điểm trước/sau (Recall/Faithfulness/Relevance) | Pham Quoc Dung | Quach Gia Duoc | `results/ab_comparison.csv` + 1 đoạn tóm tắt trong report | `feat(day08-lab): add before-after triad score table` |
+| Testset bổ sung paraphrase/alias/no-answer | Dang Dinh Tu Anh | Nguyen Thanh Nam (soạn wording) | file câu hỏi cập nhật + note mục đích từng câu | `chore(day08-lab): expand testset with alias and no-answer cases` |
+| Log để truy vết retrieval vs generation | Hoang Kim Tri Thanh | Dang Dinh Tu Anh | checklist debug trong README + field log thống nhất | `docs(day08-lab): add retrieval-vs-generation debug checklist` |
+| Giải thích "vì sao tuning tốt hơn baseline" (dễ hiểu) | Nguyen Thanh Nam | Pham Quoc Dung (cấp số liệu) | 1 đoạn tiếng Việt ngắn trong report nộp | `docs(day08-lab): add plain-language tuning explanation` |
+
+**Quy tắc giao việc nhanh:** mỗi dòng trong bảng trên tương ứng ít nhất 1 commit riêng.
+
+## Chỉ số mục tiêu cần đạt (measurable outcomes)
+
+- **Context Recall:** giữ ở mức cao, mục tiêu >= 0.85 trên bộ test nhóm.
+- **Faithfulness:** mục tiêu >= 0.80 (theo gate CI/CD trong slide Day 08).
+- **Answer Relevance:** giữ ổn định, mục tiêu >= 0.85.
+- **Abstain đúng (câu không có dữ liệu):** đạt 100% trên các câu dạng "không có trong docs".
+- **A/B report:** bắt buộc có 1 bảng baseline vs tuning, ghi rõ biến đã thay đổi.
+
+Lưu ý: nếu chưa đủ hạ tầng metric tự động hoàn chỉnh, vẫn cần báo cáo theo cùng format để so sánh nhất quán.
+
 ## Quy ước commit chung (bắt buộc)
 
 - Mỗi commit chỉ làm 1 việc nhỏ.
@@ -161,6 +191,18 @@ Checklist chốt:
 3. Đảm bảo không commit `.env`, `chroma_db`, log runtime.
 4. Ghi commit tổng hợp:
    - `chore(day08-lab): integrate team contributions and refresh reports`
+5. Đính kèm bằng chứng "đổi 1 biến" trong `docs/tuning-log.md`:
+   - Baseline config
+   - Tuning config
+   - Chỉ số trước/sau
+
+## Checklist minh chứng nộp bài (ưu tiên cao)
+
+- [ ] Có đủ 10 test questions + expected evidence/answer.
+- [ ] Có scorecard baseline và scorecard tuning.
+- [ ] Có 1 đoạn giải thích ngắn: "vì sao tuning tốt hơn baseline".
+- [ ] Có log/run artifact để giảng viên kiểm tra lại.
+- [ ] Có lịch sử commit rõ ai làm gì, không chồng chéo trách nhiệm.
 
 ## KPI commit đề xuất (để thầy dễ chấm phân công)
 
