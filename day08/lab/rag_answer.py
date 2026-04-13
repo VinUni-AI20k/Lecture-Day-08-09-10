@@ -29,12 +29,13 @@ from openai import OpenAI  # Add OpenAI import to match index.py
 load_dotenv()
 
 # =============================================================================
-# CẤU HÌNH
+# CẤU HÌNH (OPTIMIZED)
 # =============================================================================
 
-TOP_K_SEARCH = 10    # Số chunk lấy từ vector store trước rerank (search rộng)
-# Số chunk gửi vào prompt sau rerank/select (top-3 sweet spot)
-TOP_K_SELECT = 3
+# Increased from 10 to 18 for better cross-document retrieval (gq02, gq06 need chunks from 2+ files)
+TOP_K_SEARCH = 18    # Higher initial retrieval for better recall
+# Increased from 3 to 5 after reranking - more context helps with multi-detail questions (gq03, gq05, gq08)
+TOP_K_SELECT = 5     # More selected chunks after reranking for completeness
 
 LLM_MODEL = os.getenv("LLM_MODEL", "gpt-4o-mini")
 

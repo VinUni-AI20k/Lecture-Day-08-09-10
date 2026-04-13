@@ -1,0 +1,125 @@
+[
+  {
+    "id": "gq01",
+    "question": "SLA xử lý ticket P1 đã thay đổi như thế nào so với phiên bản trước?",
+    "answer": "SLA xử lý ticket P1 đã thay đổi từ 6 giờ xuống 4 giờ cho quy trình khắc phục (resolution) trong phiên bản mới nhất [2].",
+    "sources": [
+      "policy/refund-v4.pdf",
+      "support/sla-p1-2026.pdf"
+    ],
+    "chunks_retrieved": 5,
+    "retrieval_mode": "hybrid",
+    "timestamp": "2026-04-13T17:41:03.845104"
+  },
+  {
+    "id": "gq02",
+    "question": "Khi làm việc remote, tôi phải dùng VPN và được kết nối trên tối đa bao nhiêu thiết bị?",
+    "answer": "Khi làm việc remote, bạn có thể kết nối VPN trên tối đa 2 thiết bị cùng lúc [2].",
+    "sources": [
+      "support/helpdesk-faq.md",
+      "hr/leave-policy-2026.pdf"
+    ],
+    "chunks_retrieved": 5,
+    "retrieval_mode": "hybrid",
+    "timestamp": "2026-04-13T17:41:16.835537"
+  },
+  {
+    "id": "gq03",
+    "question": "Đơn hàng mua trong chương trình Flash Sale và đã kích hoạt sản phẩm có được hoàn tiền không?",
+    "answer": "Đơn hàng đã áp dụng mã giảm giá đặc biệt theo chương trình khuyến mãi Flash Sale và sản phẩm đã được kích hoạt sẽ không được hoàn tiền [1].",
+    "sources": [
+      "policy/refund-v4.pdf"
+    ],
+    "chunks_retrieved": 5,
+    "retrieval_mode": "hybrid",
+    "timestamp": "2026-04-13T17:41:30.032463"
+  },
+  {
+    "id": "gq04",
+    "question": "Nếu chọn nhận store credit thay vì hoàn tiền, tôi được bao nhiêu phần trăm so với số tiền gốc?",
+    "answer": "Nếu chọn nhận store credit thay vì hoàn tiền, bạn sẽ nhận được giá trị 110% so với số tiền gốc [1].",
+    "sources": [
+      "policy/refund-v4.pdf",
+      "support/helpdesk-faq.md",
+      "support/sla-p1-2026.pdf"
+    ],
+    "chunks_retrieved": 5,
+    "retrieval_mode": "hybrid",
+    "timestamp": "2026-04-13T17:41:42.754869"
+  },
+  {
+    "id": "gq05",
+    "question": "Contractor từ bên ngoài công ty có thể được cấp quyền Admin Access không? Nếu có, cần bao nhiêu ngày và có yêu cầu đặc biệt gì?",
+    "answer": "Có, contractor từ bên ngoài công ty có thể được cấp quyền Admin Access. Quy trình yêu cầu bao gồm việc tạo Access Request ticket trên Jira, được phê duyệt bởi Line Manager trong 1 ngày làm việc, và sau đó IT Admin sẽ kiểm tra compliance và cấp quyền. Thời gian cụ thể có thể thay đổi tùy thuộc vào quy trình phê duyệt và kiểm tra [5].",
+    "sources": [
+      "support/helpdesk-faq.md",
+      "it/access-control-sop.md"
+    ],
+    "chunks_retrieved": 5,
+    "retrieval_mode": "hybrid",
+    "timestamp": "2026-04-13T17:41:56.371365"
+  },
+  {
+    "id": "gq06",
+    "question": "Lúc 2 giờ sáng xảy ra sự cố P1, on-call engineer cần cấp quyền tạm thời cho một engineer xử lý incident. Quy trình cụ thể như thế nào và quyền này tồn tại bao lâu?",
+    "answer": "Quy trình cấp quyền tạm thời cho engineer trong sự cố P1 như sau:\n\n1. On-call IT Admin có thể cấp quyền tạm thời (tối đa 24 giờ) sau khi được Tech Lead phê duyệt bằng lời.\n2. Sau 24 giờ, phải có ticket chính thức hoặc quyền sẽ bị thu hồi tự động.\n3. Mọi quyền tạm thời phải được ghi log vào hệ thống Security Audit [1].",
+    "sources": [
+      "it/access-control-sop.md",
+      "support/sla-p1-2026.pdf"
+    ],
+    "chunks_retrieved": 5,
+    "retrieval_mode": "hybrid",
+    "timestamp": "2026-04-13T17:42:12.028069"
+  },
+  {
+    "id": "gq07",
+    "question": "Công ty sẽ phạt bao nhiêu nếu team IT vi phạm cam kết SLA P1?",
+    "answer": "Tôi không biết.",
+    "sources": [
+      "support/helpdesk-faq.md",
+      "support/sla-p1-2026.pdf"
+    ],
+    "chunks_retrieved": 5,
+    "retrieval_mode": "hybrid",
+    "timestamp": "2026-04-13T17:42:25.270709"
+  },
+  {
+    "id": "gq08",
+    "question": "Nhân viên phải báo trước bao nhiêu ngày để xin nghỉ phép năm? Con số này có giống với số ngày cần giấy tờ khi nghỉ ốm không?",
+    "answer": "Nhân viên phải báo trước ít nhất 3 ngày làm việc để xin nghỉ phép năm [2]. Đối với nghỉ ốm, yêu cầu thông báo cho Line Manager trước 9:00 sáng ngày nghỉ, và nếu nghỉ trên 3 ngày liên tiếp thì cần giấy tờ y tế [1]. Con số này không giống nhau.",
+    "sources": [
+      "it/access-control-sop.md",
+      "support/sla-p1-2026.pdf",
+      "hr/leave-policy-2026.pdf"
+    ],
+    "chunks_retrieved": 5,
+    "retrieval_mode": "hybrid",
+    "timestamp": "2026-04-13T17:42:38.446579"
+  },
+  {
+    "id": "gq09",
+    "question": "Mật khẩu tài khoản công ty cần đổi định kỳ không? Nếu có, hệ thống sẽ nhắc nhở trước bao nhiêu ngày và đổi qua đâu?",
+    "answer": "Có, mật khẩu phải được thay đổi mỗi 90 ngày. Hệ thống sẽ nhắc nhở 7 ngày trước khi hết hạn [1].",
+    "sources": [
+      "policy/refund-v4.pdf",
+      "support/helpdesk-faq.md",
+      "it/access-control-sop.md",
+      "support/sla-p1-2026.pdf"
+    ],
+    "chunks_retrieved": 5,
+    "retrieval_mode": "hybrid",
+    "timestamp": "2026-04-13T17:42:50.735762"
+  },
+  {
+    "id": "gq10",
+    "question": "Chính sách hoàn tiền hiện tại áp dụng cho đơn hàng đặt trước ngày 01/02/2026 không?",
+    "answer": "Chính sách hoàn tiền hiện tại không áp dụng cho đơn hàng đặt trước ngày 01/02/2026. Các đơn hàng đặt trước ngày này sẽ áp dụng theo chính sách hoàn tiền phiên bản 3 [1].",
+    "sources": [
+      "policy/refund-v4.pdf",
+      "it/access-control-sop.md"
+    ],
+    "chunks_retrieved": 5,
+    "retrieval_mode": "hybrid",
+    "timestamp": "2026-04-13T17:43:03.855821"
+  }
+]

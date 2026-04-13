@@ -1,3 +1,4 @@
+from openai import OpenAI
 import os
 import re
 from pathlib import Path
@@ -9,8 +10,10 @@ load_dotenv()
 DOCS_DIR = Path(__file__).parent / "data" / "docs"
 CHROMA_DB_DIR = Path(__file__).parent / "chroma_db"
 
-CHUNK_SIZE = 400
-CHUNK_OVERLAP = 80
+# OPTIMIZED: Larger chunks capture more complete context for complex questions
+# Better chunk overlap preserves context boundaries for multi-detail extraction
+CHUNK_SIZE = 600  # Increased from 400 to get fuller sections in single chunk
+CHUNK_OVERLAP = 150  # Increased from 80 to reduce context loss at boundaries
 
 
 # =============================================================================
@@ -69,7 +72,8 @@ def chunk_document(doc: Dict[str, Any]) -> List[Dict[str, Any]]:
         if re.match(r"===.*?===", part):
             if current_text.strip():
                 chunks.extend(
-                    _split_by_size(current_text.strip(), base_metadata, current_section)
+                    _split_by_size(current_text.strip(),
+                                   base_metadata, current_section)
                 )
 
             current_section = part.strip("= ").strip()
@@ -79,7 +83,8 @@ def chunk_document(doc: Dict[str, Any]) -> List[Dict[str, Any]]:
 
     if current_text.strip():
         chunks.extend(
-            _split_by_size(current_text.strip(), base_metadata, current_section)
+            _split_by_size(current_text.strip(),
+                           base_metadata, current_section)
         )
 
     return chunks
@@ -132,9 +137,9 @@ def _split_by_size(
 # EMBEDDING (OpenAI)
 # =============================================================================
 
-from openai import OpenAI
 
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+
 
 def get_embedding(text: str) -> List[float]:
     response = client.embeddings.create(

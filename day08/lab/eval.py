@@ -25,6 +25,7 @@ from typing import List, Dict, Any, Optional
 from datetime import datetime
 from rag_answer import rag_answer, call_llm
 
+
 def _ask_llm_as_judge(prompt: str) -> Dict[str, Any]:
     """Helper method for LLM-as-Judge"""
     try:
@@ -41,25 +42,29 @@ def _ask_llm_as_judge(prompt: str) -> Dict[str, Any]:
 # CẤU HÌNH
 # =============================================================================
 
-TEST_QUESTIONS_PATH = Path(__file__).parent / "data" / "test_questions.json"
+
+TEST_QUESTIONS_PATH = Path(__file__).parent / "data" / "grading_questions.json"
 RESULTS_DIR = Path(__file__).parent / "results"
 
-# Cấu hình baseline (Sprint 2)
+# Cấu hình baseline (OPTIMIZED - Increased chunk_size and retrieval depth)
 BASELINE_CONFIG = {
     "retrieval_mode": "dense",
-    "top_k_search": 10,
-    "top_k_select": 3,
+    # Increased from 10: better cross-document recall (gq02, gq06)
+    "top_k_search": 18,
+    "top_k_select": 5,       # Increased from 3: more context for multi-detail extraction
     "use_rerank": False,
-    "label": "baseline_dense",
+    "label": "optimized_dense",
 }
 
-# Cấu hình variant (Sprint 3 — điều chỉnh theo lựa chọn của nhóm)
+# Cấu hình variant (OPTIMIZED - Hybrid + Reranking for best performance)
 VARIANT_CONFIG = {
+    # Combines dense + sparse for both semantic + keyword matching
     "retrieval_mode": "hybrid",
-    "top_k_search": 10,
-    "top_k_select": 3,
+    "top_k_search": 18,          # Higher search depth for cross-document questions
+    "top_k_select": 5,           # More selected chunks after cross-encoder reranking
+    # Cross-encoder improves temporal/version reasoning (gq01, gq10)
     "use_rerank": True,
-    "label": "variant_hybrid_rerank",
+    "label": "optimized_hybrid_rerank",
 }
 
 
@@ -113,7 +118,7 @@ Rate the faithfulness on a scale of 1-5.
 5 = completely grounded in the provided context.
 1 = answer contains information not in the context.
 Output JSON: {{"score": <int>, "reason": "<string>"}}"""
-    
+
     result = _ask_llm_as_judge(prompt)
     return {
         "score": result.get("score"),
@@ -149,7 +154,7 @@ Rate the answer relevance on a scale of 1-5.
 5 = directly and fully answers the query.
 1 = perfectly irrelevant or does not answer the query.
 Output JSON: {{"score": <int>, "reason": "<string>"}}"""
-    
+
     result = _ask_llm_as_judge(prompt)
     return {
         "score": result.get("score"),
@@ -194,8 +199,10 @@ def score_context_recall(
     missing = []
     for expected in expected_sources:
         # Kiểm tra partial match (tên file)
-        expected_name = expected.split("/")[-1].replace(".pdf", "").replace(".md", "")
-        matched = any(expected_name.lower() in r.lower() for r in retrieved_sources)
+        expected_name = expected.split(
+            "/")[-1].replace(".pdf", "").replace(".md", "")
+        matched = any(expected_name.lower() in r.lower()
+                      for r in retrieved_sources)
         if matched:
             found += 1
         else:
@@ -209,7 +216,7 @@ def score_context_recall(
         "found": found,
         "missing": missing,
         "notes": f"Retrieved: {found}/{len(expected_sources)} expected sources" +
-                 (f". Missing: {missing}" if missing else ""),
+        (f". Missing: {missing}" if missing else ""),
     }
 
 
@@ -242,7 +249,7 @@ Output JSON: {{"score": <int>, "missing_points": ["<string>"]}}"""
 
     result = _ask_llm_as_judge(prompt)
     missing = result.get("missing_points", [])
-    
+
     return {
         "score": result.get("score"),
         "notes": f"Missing: {', '.join(missing)}" if missing else "All points covered",
@@ -345,7 +352,8 @@ def run_scorecard(
     for metric in ["faithfulness", "relevance", "context_recall", "completeness"]:
         scores = [r[metric] for r in results if r[metric] is not None]
         avg = sum(scores) / len(scores) if scores else None
-        print(f"\nAverage {metric}: {avg:.2f}" if avg else f"\nAverage {metric}: N/A (chưa chấm)")
+        print(
+            f"\nAverage {metric}: {avg:.2f}" if avg else f"\nAverage {metric}: N/A (chưa chấm)")
 
     return results
 
@@ -372,8 +380,10 @@ def compare_ab(
     print("-" * 55)
 
     for metric in metrics:
-        b_scores = [r[metric] for r in baseline_results if r[metric] is not None]
-        v_scores = [r[metric] for r in variant_results if r[metric] is not None]
+        b_scores = [r[metric]
+                    for r in baseline_results if r[metric] is not None]
+        v_scores = [r[metric]
+                    for r in variant_results if r[metric] is not None]
 
         b_avg = sum(b_scores) / len(b_scores) if b_scores else None
         v_avg = sum(v_scores) / len(v_scores) if v_scores else None
@@ -386,7 +396,8 @@ def compare_ab(
         print(f"{metric:<20} {b_str:>10} {v_str:>10} {d_str:>8}")
 
     # Per-question comparison
-    print(f"\n{'Câu':<6} {'Baseline F/R/Rc/C':<22} {'Variant F/R/Rc/C':<22} {'Better?':<10}")
+    print(
+        f"\n{'Câu':<6} {'Baseline F/R/Rc/C':<22} {'Variant F/R/Rc/C':<22} {'Better?':<10}")
     print("-" * 65)
 
     b_by_id = {r["id"]: r for r in baseline_results}
@@ -404,7 +415,8 @@ def compare_ab(
         # So sánh đơn giản
         b_total = sum(b_row.get(m, 0) or 0 for m in metrics)
         v_total = sum(v_row.get(m, 0) or 0 for m in metrics)
-        better = "Variant" if v_total > b_total else ("Baseline" if b_total > v_total else "Tie")
+        better = "Variant" if v_total > b_total else (
+            "Baseline" if b_total > v_total else "Tie")
 
         print(f"{qid:<6} {b_scores_str:<22} {v_scores_str:<22} {better:<10}")
 
@@ -422,10 +434,85 @@ def compare_ab(
 
 
 # =============================================================================
-# REPORT GENERATOR
+# GRADING RUN — Generate logs/grading_run.json
 # =============================================================================
 
-def generate_scorecard_summary(results: List[Dict], label: str) -> str:
+def run_grading(
+    test_questions: Optional[List[Dict]] = None,
+    retrieval_mode: str = "hybrid",
+    use_rerank: bool = True,
+    output_path: Optional[Path] = None,
+) -> List[Dict[str, Any]]:
+    """
+    Chạy pipeline trên grading_questions.json và sinh log.
+
+    Format output: logs/grading_run.json với các trường:
+    - id, question, answer, sources, chunks_retrieved, retrieval_mode, timestamp
+    """
+    if test_questions is None:
+        with open(TEST_QUESTIONS_PATH, "r", encoding="utf-8") as f:
+            test_questions = json.load(f)
+
+    if output_path is None:
+        output_path = Path(__file__).parent / "logs" / "grading_run.json"
+
+    log = []
+    print(f"\n{'='*70}")
+    print("Running Grading Questions Pipeline")
+    print(f"Mode: {retrieval_mode}, Rerank: {use_rerank}")
+    print('='*70)
+
+    for q in test_questions:
+        question_id = q["id"]
+        query = q["question"]
+
+        try:
+            # Chạy pipeline
+            result = rag_answer(
+                query=query,
+                retrieval_mode=retrieval_mode,
+                top_k_search=18,
+                top_k_select=5,
+                use_rerank=use_rerank,
+                verbose=False,
+            )
+            answer = result["answer"]
+            sources = result["sources"]
+            chunks_retrieved = len(result["chunks_used"])
+
+            print(f"[{question_id}] ✓ Retrieved {chunks_retrieved} chunks")
+
+        except Exception as e:
+            answer = f"ERROR: {str(e)}"
+            sources = []
+            chunks_retrieved = 0
+            print(f"[{question_id}] ✗ Error: {str(e)[:50]}")
+
+        log_entry = {
+            "id": question_id,
+            "question": query,
+            "answer": answer,
+            "sources": sources,
+            "chunks_retrieved": chunks_retrieved,
+            "retrieval_mode": retrieval_mode,
+            "timestamp": datetime.now().isoformat(),
+        }
+        log.append(log_entry)
+
+    # Lưu log
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    with open(output_path, "w", encoding="utf-8") as f:
+        json.dump(log, f, ensure_ascii=False, indent=2)
+
+    print(f"\nLog lưu tại: {output_path}")
+    return log
+
+
+# =============================================================================
+# SCORECARD SUMMARY GENERATOR
+# =============================================================================
+
+def generate_scorecard_summary(results: List[Dict[str, Any]], label: str) -> str:
     """
     Tạo báo cáo tóm tắt scorecard dạng markdown.
     """
@@ -486,6 +573,14 @@ if __name__ == "__main__":
         print("Không tìm thấy file test_questions.json!")
         test_questions = []
 
+    # --- Tạo grading_run.json log ---
+    print("\n--- Tạo Grading Run Log ---")
+    grading_log = run_grading(
+        test_questions=test_questions,
+        retrieval_mode="hybrid",
+        use_rerank=True,
+    )
+
     # --- Chạy Baseline ---
     print("\n--- Chạy Baseline ---")
     print("Lưu ý: Cần hoàn thành Sprint 2 trước khi chạy scorecard!")
@@ -498,7 +593,8 @@ if __name__ == "__main__":
 
         # Save scorecard
         RESULTS_DIR.mkdir(parents=True, exist_ok=True)
-        baseline_md = generate_scorecard_summary(baseline_results, "baseline_dense")
+        baseline_md = generate_scorecard_summary(
+            baseline_results, BASELINE_CONFIG["label"])
         scorecard_path = RESULTS_DIR / "scorecard_baseline.md"
         scorecard_path.write_text(baseline_md, encoding="utf-8")
         print(f"\nScorecard lưu tại: {scorecard_path}")
@@ -514,7 +610,8 @@ if __name__ == "__main__":
         test_questions=test_questions,
         verbose=True,
     )
-    variant_md = generate_scorecard_summary(variant_results, VARIANT_CONFIG["label"])
+    variant_md = generate_scorecard_summary(
+        variant_results, VARIANT_CONFIG["label"])
     (RESULTS_DIR / "scorecard_variant.md").write_text(variant_md, encoding="utf-8")
 
     # --- A/B Comparison ---
