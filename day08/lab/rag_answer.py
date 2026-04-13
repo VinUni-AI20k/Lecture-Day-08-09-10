@@ -176,10 +176,60 @@ def retrieve_hybrid(
     - Corpus có cả câu tự nhiên VÀ tên riêng, mã lỗi, điều khoản
     - Query như "Approval Matrix" khi doc đổi tên thành "Access Control SOP"
     """
-    # TODO Sprint 3: Implement hybrid RRF
-    # Tạm thời fallback về dense
-    print("[retrieve_hybrid] Chưa implement RRF — fallback về dense")
-    return retrieve_dense(query, top_k)
+    # Chuẩn hóa weights để tránh trường hợp tổng weight = 0
+    dense_weight = max(0.0, dense_weight)
+    sparse_weight = max(0.0, sparse_weight)
+    weight_sum = dense_weight + sparse_weight
+    if weight_sum == 0:
+        dense_weight, sparse_weight = 0.5, 0.5
+    else:
+        dense_weight /= weight_sum
+        sparse_weight /= weight_sum
+
+    # Search rộng hơn top_k một chút để fusion có ý nghĩa hơn.
+    retrieval_k = max(top_k, top_k * 2)
+
+    dense_results = retrieve_dense(query, retrieval_k)
+    sparse_results = retrieve_sparse(query, retrieval_k)
+
+    # Nếu sparse chưa có dữ liệu (hoặc chưa implement), fallback về dense để không làm hỏng pipeline.
+    if not sparse_results:
+        return dense_results[:top_k]
+
+    # Dùng fingerprint để nhận diện cùng một chunk giữa dense/sparse.
+    def _chunk_key(chunk: Dict[str, Any]) -> str:
+        meta = chunk.get("metadata", {})
+        source = str(meta.get("source", ""))
+        section = str(meta.get("section", ""))
+        text = str(chunk.get("text", ""))
+        text_head = text[:120]
+        return f"{source}||{section}||{text_head}"
+
+    rank_constant = 60  # hằng số RRF tiêu chuẩn
+    fused_scores: Dict[str, float] = {}
+    best_chunk_by_key: Dict[str, Dict[str, Any]] = {}
+
+    for rank, chunk in enumerate(dense_results, start=1):
+        key = _chunk_key(chunk)
+        fused_scores[key] = fused_scores.get(key, 0.0) + dense_weight * (1.0 / (rank_constant + rank))
+        if key not in best_chunk_by_key:
+            best_chunk_by_key[key] = chunk
+
+    for rank, chunk in enumerate(sparse_results, start=1):
+        key = _chunk_key(chunk)
+        fused_scores[key] = fused_scores.get(key, 0.0) + sparse_weight * (1.0 / (rank_constant + rank))
+        if key not in best_chunk_by_key:
+            best_chunk_by_key[key] = chunk
+
+    ranked_items = sorted(fused_scores.items(), key=lambda x: x[1], reverse=True)
+
+    merged_results: List[Dict[str, Any]] = []
+    for key, rrf_score in ranked_items[:top_k]:
+        chunk = dict(best_chunk_by_key[key])
+        chunk["score"] = rrf_score
+        merged_results.append(chunk)
+
+    return merged_results
 
 
 # =============================================================================
@@ -217,9 +267,40 @@ def rerank(
     - Dense/hybrid trả về nhiều chunk nhưng có noise
     - Muốn chắc chắn chỉ 3-5 chunk tốt nhất vào prompt
     """
-    # TODO Sprint 3: Implement rerank
-    # Tạm thời trả về top_k đầu tiên (không rerank)
-    return candidates[:top_k]
+    if not candidates:
+        return []
+
+    top_k = max(1, min(top_k, len(candidates)))
+
+    # Runtime import để tránh lỗi unresolved import khi package chưa cài.
+    try:
+        from sentence_transformers import CrossEncoder
+    except ImportError:
+        print("[rerank] sentence_transformers chưa cài, fallback top_k đầu tiên")
+        return candidates[:top_k]
+
+    # Cache model theo function attribute để không load lại mỗi query.
+    model = getattr(rerank, "_cross_encoder_model", None)
+    if model is None:
+        model = CrossEncoder("cross-encoder/ms-marco-MiniLM-L-6-v2")
+        setattr(rerank, "_cross_encoder_model", model)
+
+    pairs = [[query, chunk.get("text", "")] for chunk in candidates]
+    scores = model.predict(pairs)
+
+    ranked_pairs = sorted(
+        zip(candidates, scores),
+        key=lambda x: float(x[1]),
+        reverse=True,
+    )
+
+    reranked = []
+    for chunk, score in ranked_pairs[:top_k]:
+        out = dict(chunk)
+        out["score"] = float(score)
+        reranked.append(out)
+
+    return reranked
 
 
 # =============================================================================
