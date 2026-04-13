@@ -233,7 +233,7 @@ function AssistantBubble({
               </ReactMarkdown>
             )}
           </div>
-          {/* Streaming citation legend */}
+          {/* Danh sách tài liệu tham chiếu */}
           {!isStreaming && chunks && chunks.length > 0 && (
             <div className="mt-2 pt-2 border-t border-border/60 flex flex-wrap gap-1.5">
               {chunks.slice(0, 8).map((c, i) => {

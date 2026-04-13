@@ -35,9 +35,9 @@ export function InspectorPanel({ last, loading, streamingSteps, className }: Pro
             <Brain className="h-3.5 w-3.5 text-white" />
           </div>
           <div>
-            <h2 className="text-sm font-bold text-white tracking-tight">RAG Inspector</h2>
+            <h2 className="text-sm font-bold text-white tracking-tight">Trình Kiểm Tra RAG</h2>
             <p className="text-[10px] text-blue-200/80 leading-none mt-0.5">
-              Live pipeline visualization
+              Trực quan hóa pipeline theo thời gian thực
             </p>
           </div>
         </div>
@@ -49,7 +49,7 @@ export function InspectorPanel({ last, loading, streamingSteps, className }: Pro
 
           {/* Pipeline Steps — always first */}
           <section>
-            <SectionLabel>Pipeline Steps</SectionLabel>
+            <SectionLabel>Các Bước Pipeline</SectionLabel>
             <StepTimeline
               steps={steps}
               loading={loading}
@@ -60,7 +60,7 @@ export function InspectorPanel({ last, loading, streamingSteps, className }: Pro
           {/* Telemetry — shown once done */}
           {last && !loading && (
             <section>
-              <SectionLabel>Performance</SectionLabel>
+              <SectionLabel>Hiệu Suất</SectionLabel>
               <TelemetryCard
                 telemetry={last.telemetry}
                 requestId={last.request_id}
@@ -72,7 +72,7 @@ export function InspectorPanel({ last, loading, streamingSteps, className }: Pro
           {/* Sources */}
           {last && !loading && (last.sources?.length ?? 0) > 0 && (
             <section>
-              <SectionLabel>Sources</SectionLabel>
+              <SectionLabel>Nguồn Tài Liệu</SectionLabel>
               <SourcesSection sources={last.sources ?? []} />
             </section>
           )}

@@ -49,41 +49,41 @@ const MODES: {
     label: "Dense",
     icon: Zap,
     color: "#2563eb",
-    description: "Vector similarity search using embeddings. Best for semantic questions.",
-    badge: "Recommended",
+    description: "Tìm kiếm theo ngữ nghĩa qua vector embedding. Tốt nhất cho câu hỏi ngữ nghĩa.",
+    badge: "Khuyên dùng",
   },
   {
     value: "sparse",
-    label: "Sparse",
+    label: "Sparse (BM25)",
     icon: BookOpen,
     color: "#7c3aed",
-    description: "Keyword-based BM25 search. Best for exact term matching.",
-    badge: "Keyword",
+    description: "Tìm kiếm theo từ khóa BM25. Tốt cho khớp chính xác thuật ngữ kỹ thuật.",
+    badge: "Theo từ khóa",
   },
   {
     value: "hybrid",
     label: "Hybrid",
     icon: GitMerge,
     color: "#0891b2",
-    description: "Dense + BM25 combined via RRF fusion. Best overall coverage.",
-    badge: "Best coverage",
+    description: "Kết hợp Dense + BM25 qua RRF fusion. Phủ rộng nhất, tổng quát nhất.",
+    badge: "Phủ rộng nhất",
   },
 ];
 
 // ── Presets ───────────────────────────────────────────────────────────────────
 const PRESETS: { label: string; icon: React.FC<{ className?: string }>; settings: Settings }[] = [
   {
-    label: "Fast",
+    label: "Nhanh",
     icon: Gauge,
     settings: { mode: "dense", useRerank: false, topKSearch: 8, topKSelect: 3 },
   },
   {
-    label: "Balanced",
+    label: "Cân bằng",
     icon: Layers,
     settings: { mode: "hybrid", useRerank: false, topKSearch: 12, topKSelect: 4 },
   },
   {
-    label: "Thorough",
+    label: "Toàn diện",
     icon: Sparkles,
     settings: { mode: "hybrid", useRerank: true, topKSearch: 20, topKSelect: 6 },
   },
@@ -102,6 +102,8 @@ export function SettingsDrawer({ open, onOpenChange, settings, onChange }: Props
   }
 
   const activeMode = MODES.find((m) => m.value === settings.mode)!;
+  // Always clamp topKSelect to topKSearch to avoid stale display after topKSearch decreases
+  const effectiveTopKSelect = Math.min(settings.topKSelect, settings.topKSearch);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -113,10 +115,10 @@ export function SettingsDrawer({ open, onOpenChange, settings, onChange }: Props
         >
           <DialogHeader>
             <DialogTitle className="text-white text-base font-bold tracking-tight">
-              Retrieval Settings
+              Cài Đặt Truy Xuất
             </DialogTitle>
             <p className="text-blue-100/80 text-xs mt-0.5">
-              Configure your RAG pipeline parameters
+              Điều chỉnh tham số pipeline RAG
             </p>
           </DialogHeader>
         </div>
@@ -125,7 +127,7 @@ export function SettingsDrawer({ open, onOpenChange, settings, onChange }: Props
 
           {/* ── Presets ─────────────────────────────────────────────── */}
           <section>
-            <SectionLabel>Quick Presets</SectionLabel>
+            <SectionLabel>Cấu Hình Nhanh</SectionLabel>
             <div className="grid grid-cols-3 gap-2">
               {PRESETS.map((p) => {
                 const Icon = p.icon;
@@ -157,7 +159,7 @@ export function SettingsDrawer({ open, onOpenChange, settings, onChange }: Props
 
           {/* ── Retrieval Mode ──────────────────────────────────────── */}
           <section>
-            <SectionLabel>Retrieval Mode</SectionLabel>
+            <SectionLabel>Chế Độ Truy Xuất</SectionLabel>
             <div className="space-y-2">
               {MODES.map((m) => {
                 const Icon = m.icon;
@@ -221,15 +223,15 @@ export function SettingsDrawer({ open, onOpenChange, settings, onChange }: Props
 
           {/* ── top_k_search ───────────────────────────────────────── */}
           <section>
-            <SectionLabel>Retrieval Depth</SectionLabel>
+            <SectionLabel>Độ Sâu Truy Xuất</SectionLabel>
             <div className="rounded-xl border border-border bg-muted/30 p-4 space-y-3">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-semibold text-foreground">
-                    Candidates to fetch
+                    Số chunk tìm kiếm
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    Wider pool = more recall, slower
+                    Pool rộng hơn = nhớ lại nhiều hơn, chậm hơn
                   </p>
                 </div>
                 <div
@@ -252,8 +254,8 @@ export function SettingsDrawer({ open, onOpenChange, settings, onChange }: Props
                 }
               />
               <div className="flex justify-between text-[10px] text-muted-foreground font-medium">
-                <span>Narrow (3)</span>
-                <span>Wide (24)</span>
+                <span>Hẹp (3)</span>
+                <span>Rộng (24)</span>
               </div>
             </div>
           </section>
@@ -264,29 +266,29 @@ export function SettingsDrawer({ open, onOpenChange, settings, onChange }: Props
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-semibold text-foreground">
-                    Chunks into prompt
+                    Chunk đưa vào prompt
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    More chunks = richer context, higher cost
+                    Nhiều chunk = ngữ cảnh phong phú hơn, chi phí cao hơn
                   </p>
                 </div>
                 <div
                   className="flex h-9 w-9 items-center justify-center rounded-xl text-sm font-bold"
                   style={{ background: "var(--primary-subtle)", color: "var(--primary-subtle-foreground)" }}
                 >
-                  {settings.topKSelect}
+                  {effectiveTopKSelect}
                 </div>
               </div>
               <Slider
                 min={1}
                 max={settings.topKSearch}
                 step={1}
-                value={[settings.topKSelect]}
+                value={[effectiveTopKSelect]}
                 onValueChange={([v]) => patch({ topKSelect: v })}
               />
               <div className="flex justify-between text-[10px] text-muted-foreground font-medium">
-                <span>Focused (1)</span>
-                <span>Broad ({settings.topKSearch})</span>
+                <span>Tập trung (1)</span>
+                <span>Rộng ({settings.topKSearch})</span>
               </div>
             </div>
           </section>
@@ -311,15 +313,15 @@ export function SettingsDrawer({ open, onOpenChange, settings, onChange }: Props
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-semibold text-foreground">
-                  Cross-encoder Rerank
+                  Sắp Xếp Lại (Cross-encoder)
                 </p>
                 <p className="mt-0.5 text-xs text-muted-foreground leading-relaxed">
-                  Re-scores each (query, chunk) pair using a cross-encoder model.
-                  Slower but significantly more accurate.
+                  Chấm điểm lại từng cặp (câu hỏi, chunk) bằng model cross-encoder.
+                  Chậm hơn nhưng chính xác hơn đáng kể.
                 </p>
                 {settings.useRerank && (
                   <p className="mt-1 text-xs font-medium text-primary">
-                    ✓ Enabled — using cross-encoder/ms-marco-MiniLM-L-6-v2
+                    ✓ Đang bật — cross-encoder/ms-marco-MiniLM-L-6-v2
                   </p>
                 )}
               </div>
@@ -336,23 +338,23 @@ export function SettingsDrawer({ open, onOpenChange, settings, onChange }: Props
           <section>
             <div className="flex flex-wrap gap-2">
               <PipelinePill
-                label="Mode"
+                label="Chế độ"
                 value={activeMode.label}
                 color={activeMode.color}
               />
               <PipelinePill
-                label="Fetch"
-                value={`${settings.topKSearch} chunks`}
+                label="Tìm"
+                value={`${settings.topKSearch} chunk`}
                 color="#059669"
               />
               <PipelinePill
-                label="Use"
-                value={`${settings.topKSelect} chunks`}
+                label="Dùng"
+                value={`${effectiveTopKSelect} chunk`}
                 color="#0891b2"
               />
               <PipelinePill
                 label="Rerank"
-                value={settings.useRerank ? "ON" : "off"}
+                value={settings.useRerank ? "BẬT" : "tắt"}
                 color={settings.useRerank ? "#ea580c" : undefined}
               />
             </div>
@@ -362,7 +364,7 @@ export function SettingsDrawer({ open, onOpenChange, settings, onChange }: Props
           <section className="pb-1">
             <div className="flex items-center justify-between rounded-lg bg-muted/50 border border-border px-3 py-2">
               <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                FastAPI
+                FastAPI endpoint
               </span>
               <code className="text-[11px] font-mono text-foreground">
                 {api || "http://127.0.0.1:8010"}/api/rag

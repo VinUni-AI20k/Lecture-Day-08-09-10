@@ -55,7 +55,7 @@ export function ChatInput({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         onKeyDown={handleKey}
-        placeholder="Ask a question… (Enter to send, Shift+Enter for newline)"
+        placeholder="Đặt câu hỏi… (Enter để gửi, Shift+Enter xuống dòng)"
         rows={1}
         disabled={disabled || loading}
         className="flex-1 resize-none bg-transparent text-sm outline-none placeholder:text-muted-foreground disabled:opacity-50 min-h-[36px] max-h-[200px] leading-relaxed py-0.5 font-medium"
@@ -68,8 +68,8 @@ export function ChatInput({
           variant="destructive"
           onClick={onStop}
           className="h-9 w-9 shrink-0 rounded-xl shadow-sm"
-          aria-label="Stop generation"
-          title="Stop"
+          aria-label="Dừng tạo câu trả lời"
+          title="Dừng"
         >
           <Square className="h-3.5 w-3.5 fill-current" />
         </Button>

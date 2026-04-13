@@ -172,7 +172,7 @@ export default function ChatPage() {
               href="/"
               className="text-xs text-blue-200 hover:text-white transition-colors font-medium"
             >
-              ← Home
+              ← Trang chủ
             </Link>
             <div className="h-4 w-px bg-white/20" />
             <div className="flex items-center gap-2">
@@ -180,7 +180,7 @@ export default function ChatPage() {
                 <span className="text-[10px] font-bold text-white">RAG</span>
               </div>
               <h1 className="text-sm font-bold text-white tracking-tight">
-                Day 08 — RAG Pipeline
+                Ngày 08 — Pipeline RAG
               </h1>
             </div>
           </div>
@@ -211,7 +211,7 @@ export default function ChatPage() {
                   <Settings2 className="h-4 w-4" />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent>Retrieval settings</TooltipContent>
+              <TooltipContent>Cài đặt truy xuất</TooltipContent>
             </Tooltip>
 
             <Tooltip>
@@ -228,7 +228,7 @@ export default function ChatPage() {
                   <PanelRight className="h-4 w-4" />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent>Toggle inspector</TooltipContent>
+              <TooltipContent>Bật/tắt Inspector</TooltipContent>
             </Tooltip>
           </div>
         </header>
@@ -280,7 +280,7 @@ export default function ChatPage() {
                     loading={loading}
                   />
                   <p className="mt-1.5 text-center text-[10px] text-muted-foreground">
-                    Enter to send · Shift+Enter for new line
+                    Enter để gửi · Shift+Enter xuống dòng
                   </p>
                 </div>
               </div>
@@ -359,16 +359,16 @@ function EmptyState({ onQuestion }: { onQuestion: (q: string) => void }) {
       </div>
 
       <h2 className="text-xl font-bold tracking-tight mb-1 text-gradient">
-        Ask your documents
+        Hỏi tài liệu của bạn
       </h2>
       <p className="text-sm text-muted-foreground max-w-xs leading-relaxed mb-8">
-        Powered by RAG — every answer is grounded in your indexed documents with full 5-step pipeline transparency.
+        Được hỗ trợ bởi RAG — mỗi câu trả lời đều có căn cứ từ tài liệu đã lập chỉ mục, với trực quan hóa pipeline 5 bước đầy đủ.
       </p>
 
       {/* Example chips */}
       <div className="flex flex-col gap-2 w-full max-w-sm">
         <p className="text-[11px] font-bold uppercase tracking-widest text-primary/60 mb-1">
-          Try asking
+          Thử hỏi
         </p>
         {EXAMPLE_QUESTIONS.map((q, i) => (
           <button

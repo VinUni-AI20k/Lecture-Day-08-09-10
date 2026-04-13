@@ -12,7 +12,7 @@ export function SourcesSection({ sources }: Props) {
   return (
     <div className="rounded-xl border border-border bg-card p-3 space-y-2">
       <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-        Sources ({sources.length})
+        Tài liệu tham chiếu ({sources.length})
       </p>
       <ul className="space-y-1.5">
         {sources.map((src, i) => (
