@@ -31,7 +31,7 @@ load_dotenv()
 # CẤU HÌNH
 # =============================================================================
 
-TOP_K_SEARCH = 10    # Số chunk lấy từ vector store trước rerank (search rộng)
+TOP_K_SEARCH = 8    # Số chunk lấy từ vector store trước rerank (search rộng)
 TOP_K_SELECT = 3     # Số chunk gửi vào prompt sau rerank/select (top-3 sweet spot)
 
 LLM_MODEL = os.getenv("LLM_MODEL", "gpt-4o-mini")

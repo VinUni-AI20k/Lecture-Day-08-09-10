@@ -34,6 +34,8 @@ CHROMA_DB_DIR = Path(__file__).parent / "chroma_db"
 CHUNK_SIZE = 400       # tokens (ước lượng bằng số ký tự / 4)
 CHUNK_OVERLAP = 80     # tokens overlap giữa các chunk
 
+_LOCAL_EMBEDDING_MODEL = None
+
 
 # =============================================================================
 # STEP 1: PREPROCESS
@@ -243,14 +245,28 @@ def get_embedding(text: str) -> List[float]:
         model = SentenceTransformer("paraphrase-multilingual-MiniLM-L12-v2")
         return model.encode(text).tolist()
     """
-    from google import genai
-    client = genai.Client(api_key=os.getenv("GOOGLE_API_KEY"))
-    response = client.models.embed_content(
-        model="gemini-embedding-2-preview",
-        contents=text,
-        # config={"task_type": "retrieval_document"}
-    )
-    return response.embeddings[0].values
+    google_api_key = os.getenv("GOOGLE_API_KEY")
+
+    if google_api_key:
+        try:
+            import google.generativeai as genai
+
+            genai.configure(api_key=google_api_key)
+            response = genai.embed_content(
+                model="models/text-embedding-004",
+                content=text,
+            )
+            return response["embedding"]
+        except Exception:
+            # Nếu Google embedding không sẵn sàng, fallback sang local model.
+            pass
+
+    from sentence_transformers import SentenceTransformer
+
+    global _LOCAL_EMBEDDING_MODEL
+    if _LOCAL_EMBEDDING_MODEL is None:
+        _LOCAL_EMBEDDING_MODEL = SentenceTransformer("paraphrase-multilingual-MiniLM-L12-v2")
+    return _LOCAL_EMBEDDING_MODEL.encode(text).tolist()
 
 
 def build_index(docs_dir: Path = DOCS_DIR, db_dir: Path = CHROMA_DB_DIR) -> None:
