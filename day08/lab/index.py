@@ -241,10 +241,13 @@ def get_embedding(text: str) -> List[float]:
         model = SentenceTransformer("paraphrase-multilingual-MiniLM-L12-v2")
         return model.encode(text).tolist()
     """
-    raise NotImplementedError(
-        "TODO: Implement get_embedding().\n"
-        "Chọn Option A (OpenAI) hoặc Option B (Sentence Transformers) trong TODO comment."
+    from openai import OpenAI
+    client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+    response = client.embeddings.create(
+        input=text,
+        model="text-embedding-3-small"
     )
+    return response.data[0].embedding
 
 
 def build_index(docs_dir: Path = DOCS_DIR, db_dir: Path = CHROMA_DB_DIR) -> None:
@@ -275,9 +278,20 @@ def build_index(docs_dir: Path = DOCS_DIR, db_dir: Path = CHROMA_DB_DIR) -> None
     db_dir.mkdir(parents=True, exist_ok=True)
 
     # TODO: Khởi tạo ChromaDB
-    # client = chromadb.PersistentClient(path=str(db_dir))
+    client = chromadb.PersistentClient(path=str(db_dir))
     # collection = client.get_or_create_collection(...)
 
+    try:
+        client.delete_collection("rag_lab")
+    except Exception:
+        pass
+    collection = client.get_or_create_collection(
+        name="rag_lab",
+        metadata={
+            "name": "rag_lab",
+            "hnsw:space": "cosine"
+        }
+    )
     total_chunks = 0
     doc_files = list(docs_dir.glob("*.txt"))
 
@@ -290,31 +304,24 @@ def build_index(docs_dir: Path = DOCS_DIR, db_dir: Path = CHROMA_DB_DIR) -> None
         raw_text = filepath.read_text(encoding="utf-8")
 
         # TODO: Gọi preprocess_document
-        # doc = preprocess_document(raw_text, str(filepath))
+        doc = preprocess_document(raw_text, str(filepath))
 
         # TODO: Gọi chunk_document
-        # chunks = chunk_document(doc)
-
-        # TODO: Embed và lưu từng chunk vào ChromaDB
-        # for i, chunk in enumerate(chunks):
-        #     chunk_id = f"{filepath.stem}_{i}"
-        #     embedding = get_embedding(chunk["text"])
-        #     collection.upsert(
-        #         ids=[chunk_id],
-        #         embeddings=[embedding],
-        #         documents=[chunk["text"]],
-        #         metadatas=[chunk["metadata"]],
-        #     )
-        # total_chunks += len(chunks)
-
-        # Placeholder để code không lỗi khi chưa implement
-        doc = preprocess_document(raw_text, str(filepath))
         chunks = chunk_document(doc)
-        print(f"    → {len(chunks)} chunks (embedding chưa implement)")
+
+        for i, chunk in enumerate(chunks):
+            chunk_id = f"{filepath.stem}_{i}"
+            embedding = get_embedding(chunk["text"])
+            collection.upsert(
+                ids=[chunk_id],
+                embeddings=[embedding],
+                documents=[chunk["text"]],
+                metadatas=[chunk["metadata"]],
+            )
+        print(f"    → {len(chunks)} chunks indexed")
         total_chunks += len(chunks)
 
     print(f"\nHoàn thành! Tổng số chunks: {total_chunks}")
-    print("Lưu ý: Embedding chưa được implement. Xem TODO trong get_embedding() và build_index().")
 
 
 # =============================================================================
@@ -418,20 +425,12 @@ if __name__ == "__main__":
             print(f"\n  [Chunk {i+1}] Section: {chunk['metadata']['section']}")
             print(f"  Text: {chunk['text'][:150]}...")
 
-    # Bước 3: Build index (yêu cầu implement get_embedding)
+    # Bước 3: Build index
     print("\n--- Build Full Index ---")
-    print("Lưu ý: Cần implement get_embedding() trước khi chạy bước này!")
-    # Uncomment dòng dưới sau khi implement get_embedding():
-    # build_index()
+    build_index()
 
     # Bước 4: Kiểm tra index
-    # Uncomment sau khi build_index() thành công:
-    # list_chunks()
-    # inspect_metadata_coverage()
+    list_chunks()
+    inspect_metadata_coverage()
 
-    print("\nSprint 1 setup hoàn thành!")
-    print("Việc cần làm:")
-    print("  1. Implement get_embedding() - chọn OpenAI hoặc Sentence Transformers")
-    print("  2. Implement phần TODO trong build_index()")
-    print("  3. Chạy build_index() và kiểm tra với list_chunks()")
-    print("  4. Nếu chunking chưa tốt: cải thiện _split_by_size() để split theo paragraph")
+    print("\nSprint 1 hoàn thành!")
