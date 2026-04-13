@@ -93,7 +93,6 @@ def retrieve_dense(query: str, top_k: int = TOP_K_SEARCH) -> List[Dict[str, Any]
         include=["documents", "metadatas", "distances"]
     )
 
-    print(results)
 
     chunks = []
     for doc, meta, dist in zip(
@@ -294,27 +293,28 @@ def rerank(
     chunks_str = "\n\n".join(chunk_texts)
     prompt = f"""
         You are a ranking assistant.
-
         Given a query and a list of document chunks, select the {top_k} most relevant chunks.
 
-        Return ONLY a JSON array of indices (e.g., [0, 2, 5])
+        Return ONLY a valid JSON array of integer indices, for example: [0, 2, 5]
+        Do not include any explanation or extra text.
+
         Query: {query}
 
         Chunks:
         {chunks_str}
-    """
+        """
     response = call_llm(prompt)
+ 
     import json
     try:
         indices = json.loads(response)
-    except:
-        print("⚠️ LLM output lỗi, fallback")
+    except Exception:
+        print("LLM output lỗi, fallback")
         return candidates[:top_k]
 
-    # lấy chunk tương ứng
     selected = []
     for i in indices:
-        if 0 <= i < len(candidates):
+        if isinstance(i, int) and 0 <= i < len(candidates):
             selected.append(candidates[i])
 
     return selected[:top_k]
@@ -352,13 +352,33 @@ def transform_query(query: str, strategy: str = "expansion") -> List[str]:
     - HyDE: query mơ hồ, search theo nghĩa không hiệu quả
     """
     # TODO Sprint 3: Implement query transformation
-    
-    Strategies="""
-    "Given the query: '{query}'
-         Generate 2-3 alternative phrasings or related terms in Vietnamese.
-         Output as JSON array of strings."
+    # Trả về luôn List[str] để các bước downstream có thể iterate an toàn.
+    prompt = f"""
+        You are a query rewriting assistant.
+        Original query: {query}
+        Strategy: {strategy}
+
+        Return ONLY valid JSON.
+        If strategy is "expansion", return a JSON array of 2-3 alternative phrasings or related terms.
+        If strategy is "decomposition", return a JSON array of 2-3 simpler sub-queries.
+        If strategy is "hyde", return a JSON array with 1 hypothetical answer-like query.
+        Do not include any explanation.
     """
-    return List(call_llm(Strategies.format(query=query)))
+    response = call_llm(prompt)
+
+    import json
+    try:
+        parsed = json.loads(response)
+    except Exception:
+        return [query]
+
+    if isinstance(parsed, list):
+        return [str(item) for item in parsed if str(item).strip()]
+
+    if isinstance(parsed, str) and parsed.strip():
+        return [parsed.strip()]
+
+    return [query]
     
 
 
@@ -623,9 +643,9 @@ if __name__ == "__main__":
             print(f"Lỗi: {e}")
 
     # Uncomment sau khi Sprint 3 hoàn thành:
-    # print("\n--- Sprint 3: So sánh strategies ---")
-    # compare_retrieval_strategies("Approval Matrix để cấp quyền là tài liệu nào?")
-    # compare_retrieval_strategies("ERR-403-AUTH")
+    print("\n--- Sprint 3: So sánh strategies ---")
+    compare_retrieval_strategies("Approval Matrix để cấp quyền là tài liệu nào?")
+    compare_retrieval_strategies("ERR-403-AUTH")
 
     print("\n\nViệc cần làm Sprint 2:")
     print("  1. Implement retrieve_dense() — query ChromaDB")
