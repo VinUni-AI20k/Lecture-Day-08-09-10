@@ -73,6 +73,12 @@
 **Lý do chọn variant này:**
 > Hybrid RRF giúp vừa bắt từ khóa (P1, ERR-403, Flash Sale) vừa giữ ngữ nghĩa (alias như “Approval Matrix” → Access Control SOP). Rerank cross-encoder chọn top-3 chunk sát câu hỏi nhất sau khi search rộng.
 
+### Giai thich ngan gon: vi sao tuning tot hon baseline
+- Baseline chi dung dense retrieval nen de bo sot cac cau co tu khoa dac thu (vi du ma loi hoac ten chinh sach viet tat).
+- Variant hybrid + rerank tim rong hon (dense + BM25), sau do loc lai top chunk sat cau hoi nhat truoc khi gui vao LLM.
+- Ket qua thuc te: cau tra loi on dinh hon, giam boi canh nhieu, va citation de kiem chung hon.
+- Ket luan de bao cao: tuning khong "lam model thong minh hon", ma giup dua dung ngu canh vao model nen chat luong cau tra loi tang len.
+
 ---
 
 ## 4. Generation (Sprint 2)
