@@ -18,7 +18,20 @@
 ```
 
 **Mô tả ngắn gọn:**
-> TODO: Mô tả hệ thống trong 2-3 câu. Nhóm xây gì? Cho ai dùng? Giải quyết vấn đề gì?
+> Hệ thống này là một pipeline RAG nội bộ giúp tra cứu nhanh các tài liệu policy, SOP, SLA và FAQ cho đội IT, CS, HR.
+> Dữ liệu được index thành các chunk có metadata và lưu trong ChromaDB; khi có câu hỏi, hệ thống retrieve (dense/hybrid), có thể rerank, rồi sinh câu trả lời grounded kèm citation nguồn.
+> Mục tiêu là giảm thời gian tìm tài liệu, tăng độ chính xác câu trả lời và hạn chế hallucination nhờ chỉ trả lời từ ngữ cảnh đã truy xuất.
+
+### Phân vai (tham chiếu README)
+
+| Vai trò | Tên | Trách nhiệm chính | Sprint lead |
+|---------|-----|------------------|------------|
+| **Tech Lead** | Tống Tiến Mạnh | Giữ nhịp sprint, nối code end-to-end | 1, 2 |
+| **Retrieval Owner** | Nguyễn Minh Hiếu | Chunking, metadata, retrieval strategy, rerank | 1, 3 |
+| **Retrieval Owner** | Nguyễn Tùng Lâm | Chunking, metadata, retrieval strategy, rerank | 1, 3 |
+| **Eval Owner** | Nguyễn Việt Long | Test questions, expected evidence, scorecard, A/B | 3, 4 |
+| **Eval Owner** | Hà Huy Hoàng | Test questions, expected evidence, scorecard, A/B | 3, 4 |
+| **Documentation Owner** | Nguyễn Quang Đăng | architecture.md, tuning-log, báo cáo nhóm | 4 |
 
 ---
 
