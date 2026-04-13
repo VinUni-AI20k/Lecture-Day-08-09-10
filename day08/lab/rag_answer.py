@@ -22,6 +22,7 @@ Definition of Done Sprint 3:
 """
 
 import os
+import re
 from typing import List, Dict, Any, Optional, Tuple
 from dotenv import load_dotenv
 
@@ -76,10 +77,31 @@ def retrieve_dense(query: str, top_k: int = TOP_K_SEARCH) -> List[Dict[str, Any]
         # Lưu ý: distances trong ChromaDB cosine = 1 - similarity
         # Score = 1 - distance
     """
-    raise NotImplementedError(
-        "TODO Sprint 2: Implement retrieve_dense().\n"
-        "Tham khảo comment trong hàm để biết cách query ChromaDB."
+    import chromadb
+    from index import get_embedding, CHROMA_DB_DIR
+
+    client = chromadb.PersistentClient(path=str(CHROMA_DB_DIR))
+    collection = client.get_collection("rag_lab")
+
+    query_embedding = get_embedding(query)
+    results = collection.query(
+        query_embeddings=[query_embedding],
+        n_results=top_k,
+        include=["documents", "metadatas", "distances"],
     )
+
+    chunks = []
+    for doc, meta, dist in zip(
+        results["documents"][0],
+        results["metadatas"][0],
+        results["distances"][0],
+    ):
+        chunks.append({
+            "text": doc,
+            "metadata": meta,
+            "score": round(1 - dist, 4),
+        })
+    return chunks
 
 
 # =============================================================================
@@ -109,10 +131,46 @@ def retrieve_sparse(query: str, top_k: int = TOP_K_SEARCH) -> List[Dict[str, Any
         scores = bm25.get_scores(tokenized_query)
         top_indices = sorted(range(len(scores)), key=lambda i: scores[i], reverse=True)[:top_k]
     """
-    # TODO Sprint 3: Implement BM25 search
-    # Tạm thời return empty list
-    print("[retrieve_sparse] Chưa implement — Sprint 3")
-    return []
+    try:
+        from rank_bm25 import BM25Okapi
+    except ImportError as exc:
+        print(f"[retrieve_sparse] Thiếu rank-bm25, fallback rỗng: {exc}")
+        return []
+
+    import chromadb
+    import re
+    from index import CHROMA_DB_DIR
+
+    client = chromadb.PersistentClient(path=str(CHROMA_DB_DIR))
+    collection = client.get_collection("rag_lab")
+    results = collection.get(include=["documents", "metadatas"])
+
+    documents = results.get("documents") or []
+    metadatas = results.get("metadatas") or []
+    if not documents:
+        return []
+
+    def _tokenize(text: str) -> List[str]:
+        return re.findall(r"\w+|[^\w\s]", (text or "").lower(), flags=re.UNICODE)
+
+    tokenized_corpus = [_tokenize(doc) for doc in documents]
+    bm25 = BM25Okapi(tokenized_corpus)
+    scores = bm25.get_scores(_tokenize(query))
+
+    top_indices = sorted(
+        range(len(scores)),
+        key=lambda i: scores[i],
+        reverse=True,
+    )[:top_k]
+
+    sparse_results = []
+    for idx in top_indices:
+        sparse_results.append({
+            "text": documents[idx],
+            "metadata": metadatas[idx] if idx < len(metadatas) else {},
+            "score": round(float(scores[idx]), 4),
+        })
+    return sparse_results
 
 
 # =============================================================================
@@ -148,10 +206,49 @@ def retrieve_hybrid(
     - Corpus có cả câu tự nhiên VÀ tên riêng, mã lỗi, điều khoản
     - Query như "Approval Matrix" khi doc đổi tên thành "Access Control SOP"
     """
-    # TODO Sprint 3: Implement hybrid RRF
-    # Tạm thời fallback về dense
-    print("[retrieve_hybrid] Chưa implement RRF — fallback về dense")
-    return retrieve_dense(query, top_k)
+    dense_results = retrieve_dense(query, top_k=top_k)
+    sparse_results = retrieve_sparse(query, top_k=top_k)
+
+    if not dense_results and not sparse_results:
+        return []
+    if not sparse_results:
+        return dense_results
+    if not dense_results:
+        return sparse_results
+
+    # Reciprocal Rank Fusion:
+    # score(doc) = dense_weight/(60 + rank_dense) + sparse_weight/(60 + rank_sparse)
+    rrf_k = 60
+    fused_scores: Dict[str, float] = {}
+    chunk_map: Dict[str, Dict[str, Any]] = {}
+
+    def _chunk_key(chunk: Dict[str, Any]) -> str:
+        meta = chunk.get("metadata", {})
+        source = meta.get("source", "")
+        section = meta.get("section", "")
+        text = chunk.get("text", "")
+        return f"{source}|{section}|{text[:160]}"
+
+    for rank, chunk in enumerate(dense_results, start=1):
+        key = _chunk_key(chunk)
+        fused_scores[key] = fused_scores.get(key, 0.0) + dense_weight * (1.0 / (rrf_k + rank))
+        if key not in chunk_map:
+            chunk_map[key] = chunk
+
+    for rank, chunk in enumerate(sparse_results, start=1):
+        key = _chunk_key(chunk)
+        fused_scores[key] = fused_scores.get(key, 0.0) + sparse_weight * (1.0 / (rrf_k + rank))
+        if key not in chunk_map:
+            chunk_map[key] = chunk
+
+    merged = []
+    for key, score in fused_scores.items():
+        item = dict(chunk_map[key])
+        item["score"] = round(score, 6)
+        merged.append(item)
+
+    merged.sort(key=lambda x: x.get("score", 0), reverse=True)
+    return merged[:top_k]
 
 
 # =============================================================================
@@ -274,11 +371,13 @@ def build_grounded_prompt(query: str, context_block: str) -> str:
     - Thêm ngôn ngữ phản hồi (tiếng Việt vs tiếng Anh)
     - Điều chỉnh tone phù hợp với use case (CS helpdesk, IT support)
     """
-    prompt = f"""Answer only from the retrieved context below.
-If the context is insufficient to answer the question, say you do not know and do not make up information.
-Cite the source field (in brackets like [1]) when possible.
-Keep your answer short, clear, and factual.
-Respond in the same language as the question.
+    prompt = f"""Chỉ trả lời dựa trên ngữ cảnh được cung cấp bên dưới.
+Nếu ngữ cảnh không đủ để trả lời câu hỏi, hãy trả về chính xác câu sau:
+không đủ dữ liệu để trả lời.
+Khi trả về không đủ dữ liệu, không thêm bất kỳ trích dẫn, giải thích hoặc nội dung nào khác và trả ra source rỗng.
+Nếu có đủ dữ liệu để trả lời, BẮT BUỘC phải có ít nhất một citation dạng [n] (ví dụ [1], [2]).
+Giữ câu trả lời ngắn gọn, rõ ràng và mang tính.
+Trả lời bằng cùng ngôn ngữ với câu hỏi
 
 Question: {query}
 
@@ -316,10 +415,16 @@ def call_llm(prompt: str) -> str:
 
     Lưu ý: Dùng temperature=0 hoặc thấp để output ổn định cho evaluation.
     """
-    raise NotImplementedError(
-        "TODO Sprint 2: Implement call_llm().\n"
-        "Chọn Option A (OpenAI) hoặc Option B (Gemini) trong TODO comment."
+    from openai import OpenAI
+
+    client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+    response = client.chat.completions.create(
+        model=LLM_MODEL,
+        messages=[{"role": "user", "content": prompt}],
+        temperature=0,
+        max_tokens=512,
     )
+    return response.choices[0].message.content
 
 
 def rag_answer(
@@ -394,21 +499,46 @@ def rag_answer(
     if verbose:
         print(f"[RAG] After select: {len(candidates)} chunks")
 
+    # Không có evidence thì abstain ngay và source rỗng
+    if not candidates:
+        return {
+            "query": query,
+            "answer": "Không đủ dữ liệu để trả lời từ tài liệu hiện có.",
+            "sources": [],
+            "chunks_used": [],
+            "config": config,
+        }
+
     # --- Bước 3: Build context và prompt ---
     context_block = build_context_block(candidates)
     prompt = build_grounded_prompt(query, context_block)
 
-    if verbose:
-        print(f"\n[RAG] Prompt:\n{prompt[:500]}...\n")
+    # Không in prompt đầy đủ để tránh log dài và lộ nội dung nhạy cảm
 
     # --- Bước 4: Generate ---
     answer = call_llm(prompt)
 
     # --- Bước 5: Extract sources ---
-    sources = list({
-        c["metadata"].get("source", "unknown")
-        for c in candidates
-    })
+    answer_norm = (answer or "").strip().lower()
+    abstain_markers = [
+        "khong_du_du_lieu",
+        "không đủ dữ liệu",
+        "khong du du lieu",
+        "i do not know",
+        "insufficient",
+    ]
+    is_abstain = any(marker in answer_norm for marker in abstain_markers)
+
+    if is_abstain:
+        answer = "Không đủ dữ liệu để trả lời từ tài liệu hiện có."
+        sources = []
+    else:
+        sources = list({
+            c["metadata"].get("source", "unknown")
+            for c in candidates
+        })
+        if sources and not re.search(r"\[\d+\]", answer or ""):
+            answer = f"{(answer or '').rstrip()} [1]"
 
     return {
         "query": query,
@@ -437,18 +567,30 @@ def compare_retrieval_strategies(query: str) -> None:
     print(f"Query: {query}")
     print('='*60)
 
-    strategies = ["dense", "hybrid"]  # Thêm "sparse" sau khi implement
+    strategies = ["dense", "hybrid"]
+    rows = []
 
     for strategy in strategies:
         print(f"\n--- Strategy: {strategy} ---")
         try:
             result = rag_answer(query, retrieval_mode=strategy, verbose=False)
+            answer = (result["answer"] or "").replace("\n", " ").strip()
+            preview = (answer[:97] + "...") if len(answer) > 100 else answer
+            source_count = len(result["sources"])
+            abstain = "Yes" if source_count == 0 else "No"
+            rows.append((strategy, source_count, abstain, preview))
             print(f"Answer: {result['answer']}")
             print(f"Sources: {result['sources']}")
-        except NotImplementedError as e:
-            print(f"Chưa implement: {e}")
         except Exception as e:
+            rows.append((strategy, 0, "Error", str(e)))
             print(f"Lỗi: {e}")
+
+    print("\nBảng so sánh baseline vs variant (Markdown):")
+    print("| Strategy | #Sources | Abstain | Answer Preview |")
+    print("|---|---:|---|---|")
+    for strategy, source_count, abstain, preview in rows:
+        safe_preview = preview.replace("|", "/")
+        print(f"| {strategy} | {source_count} | {abstain} | {safe_preview} |")
 
 
 # =============================================================================
@@ -481,18 +623,18 @@ if __name__ == "__main__":
             print(f"Lỗi: {e}")
 
     # Uncomment sau khi Sprint 3 hoàn thành:
-    # print("\n--- Sprint 3: So sánh strategies ---")
-    # compare_retrieval_strategies("Approval Matrix để cấp quyền là tài liệu nào?")
-    # compare_retrieval_strategies("ERR-403-AUTH")
+    print("\n--- Sprint 3: So sánh strategies ---")
+    compare_retrieval_strategies("Approval Matrix để cấp quyền là tài liệu nào?")
+    compare_retrieval_strategies("ERR-403-AUTH")
 
-    print("\n\nViệc cần làm Sprint 2:")
-    print("  1. Implement retrieve_dense() — query ChromaDB")
-    print("  2. Implement call_llm() — gọi OpenAI hoặc Gemini")
-    print("  3. Chạy rag_answer() với 3+ test queries")
-    print("  4. Verify: output có citation không? Câu không có docs → abstain không?")
+    # print("\n\nViệc cần làm Sprint 2:")
+    # print("  1. Implement retrieve_dense() — query ChromaDB")
+    # print("  2. Implement call_llm() — gọi OpenAI hoặc Gemini")
+    # print("  3. Chạy rag_answer() với 3+ test queries")
+    # print("  4. Verify: output có citation không? Câu không có docs → abstain không?")
 
-    print("\nViệc cần làm Sprint 3:")
-    print("  1. Chọn 1 trong 3 variants: hybrid, rerank, hoặc query transformation")
-    print("  2. Implement variant đó")
-    print("  3. Chạy compare_retrieval_strategies() để thấy sự khác biệt")
-    print("  4. Ghi lý do chọn biến đó vào docs/tuning-log.md")
+    # print("\nViệc cần làm Sprint 3:")
+    # print("  1. Chọn 1 trong 3 variants: hybrid, rerank, hoặc query transformation")
+    # print("  2. Implement variant đó")
+    # print("  3. Chạy compare_retrieval_strategies() để thấy sự khác biệt")
+    # print("  4. Ghi lý do chọn biến đó vào docs/tuning-log.md")
