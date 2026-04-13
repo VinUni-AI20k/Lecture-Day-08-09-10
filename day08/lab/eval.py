@@ -19,35 +19,52 @@ A/B Rule (từ slide):
 
 import json
 import csv
+import re
 from pathlib import Path
 from typing import List, Dict, Any, Optional
 from datetime import datetime
-from rag_answer import rag_answer
+from rag_answer import rag_answer, call_llm
+
+
+def _ask_llm_as_judge(prompt: str) -> Dict[str, Any]:
+    """Helper method for LLM-as-Judge"""
+    try:
+        response = call_llm(prompt)
+        # Extract json via regex
+        match = re.search(r'\{.*\}', response, re.DOTALL)
+        if match:
+            return json.loads(match.group(0))
+        return {"score": 1, "reason": f"Parse error: {response}"}
+    except Exception as e:
+        return {"score": None, "reason": f"Error: {e}"}
 
 # =============================================================================
 # CẤU HÌNH
 # =============================================================================
 
-TEST_QUESTIONS_PATH = Path(__file__).parent / "data" / "test_questions.json"
+
+TEST_QUESTIONS_PATH = Path(__file__).parent / "data" / "grading_questions.json"
 RESULTS_DIR = Path(__file__).parent / "results"
 
-# Cấu hình baseline (Sprint 2)
+# Cấu hình baseline (OPTIMIZED - Increased chunk_size and retrieval depth)
 BASELINE_CONFIG = {
     "retrieval_mode": "dense",
-    "top_k_search": 10,
-    "top_k_select": 3,
+    # Increased from 10: better cross-document recall (gq02, gq06)
+    "top_k_search": 18,
+    "top_k_select": 5,       # Increased from 3: more context for multi-detail extraction
     "use_rerank": False,
-    "label": "baseline_dense",
+    "label": "optimized_dense",
 }
 
-# Cấu hình variant (Sprint 3 — điều chỉnh theo lựa chọn của nhóm)
-# TODO Sprint 4: Cập nhật VARIANT_CONFIG theo variant nhóm đã implement
+# Cấu hình variant (OPTIMIZED - Hybrid + Reranking for best performance)
 VARIANT_CONFIG = {
-    "retrieval_mode": "hybrid",   # Hoặc "dense" nếu chỉ đổi rerank
-    "top_k_search": 10,
-    "top_k_select": 3,
-    "use_rerank": True,           # Hoặc False nếu variant là hybrid không rerank
-    "label": "variant_hybrid_rerank",
+    # Combines dense + sparse for both semantic + keyword matching
+    "retrieval_mode": "hybrid",
+    "top_k_search": 18,          # Higher search depth for cross-document questions
+    "top_k_select": 5,           # More selected chunks after cross-encoder reranking
+    # Cross-encoder improves temporal/version reasoning (gq01, gq10)
+    "use_rerank": True,
+    "label": "optimized_hybrid_rerank",
 }
 
 
@@ -88,11 +105,24 @@ def score_faithfulness(
 
     Trả về dict với: score (1-5) và notes (lý do)
     """
-    # TODO Sprint 4: Implement scoring
-    # Tạm thời trả về None (yêu cầu chấm thủ công)
+    if not answer or not chunks_used:
+        return {"score": None, "notes": "Missing answer or chunks"}
+    chunks_text = "\n".join([f"- {c.get('text', '')}" for c in chunks_used])
+    prompt = f"""Given these retrieved chunks:
+{chunks_text}
+
+And this answer:
+{answer}
+
+Rate the faithfulness on a scale of 1-5.
+5 = completely grounded in the provided context.
+1 = answer contains information not in the context.
+Output JSON: {{"score": <int>, "reason": "<string>"}}"""
+
+    result = _ask_llm_as_judge(prompt)
     return {
-        "score": None,
-        "notes": "TODO: Chấm thủ công hoặc implement LLM-as-Judge",
+        "score": result.get("score"),
+        "notes": result.get("reason", "No reason provided"),
     }
 
 
@@ -111,11 +141,24 @@ def score_answer_relevance(
       2: Trả lời lạc đề một phần
       1: Không trả lời câu hỏi
 
-    TODO Sprint 4: Implement tương tự score_faithfulness
     """
+    if not answer:
+        return {"score": None, "notes": "Missing answer"}
+    prompt = f"""Given this query:
+{query}
+
+And this answer:
+{answer}
+
+Rate the answer relevance on a scale of 1-5.
+5 = directly and fully answers the query.
+1 = perfectly irrelevant or does not answer the query.
+Output JSON: {{"score": <int>, "reason": "<string>"}}"""
+
+    result = _ask_llm_as_judge(prompt)
     return {
-        "score": None,
-        "notes": "TODO: Implement score_answer_relevance",
+        "score": result.get("score"),
+        "notes": result.get("reason", "No reason provided"),
     }
 
 
@@ -151,13 +194,15 @@ def score_context_recall(
         for c in chunks_used
     }
 
-    # TODO: Kiểm tra matching theo partial path (vì source paths có thể khác format)
+    # Kiểm tra matching theo partial path (vì source paths có thể khác format)
     found = 0
     missing = []
     for expected in expected_sources:
         # Kiểm tra partial match (tên file)
-        expected_name = expected.split("/")[-1].replace(".pdf", "").replace(".md", "")
-        matched = any(expected_name.lower() in r.lower() for r in retrieved_sources)
+        expected_name = expected.split(
+            "/")[-1].replace(".pdf", "").replace(".md", "")
+        matched = any(expected_name.lower() in r.lower()
+                      for r in retrieved_sources)
         if matched:
             found += 1
         else:
@@ -171,7 +216,7 @@ def score_context_recall(
         "found": found,
         "missing": missing,
         "notes": f"Retrieved: {found}/{len(expected_sources)} expected sources" +
-                 (f". Missing: {missing}" if missing else ""),
+        (f". Missing: {missing}" if missing else ""),
     }
 
 
@@ -191,16 +236,23 @@ def score_completeness(
       2: Thiếu nhiều thông tin quan trọng
       1: Thiếu phần lớn nội dung cốt lõi
 
-    TODO Sprint 4:
-    Option 1 — Chấm thủ công: So sánh answer vs expected_answer và chấm.
-    Option 2 — LLM-as-Judge:
-        "Compare the model answer with the expected answer.
-         Rate completeness 1-5. Are all key points covered?
-         Output: {'score': int, 'missing_points': [str]}"
     """
+    if not answer or not expected_answer:
+        return {"score": None, "notes": "Missing answer or expected answer"}
+    prompt = f"""Compare the model answer with the expected answer.
+Query: {query}
+Expected Answer: {expected_answer}
+Model Answer: {answer}
+
+Rate completeness 1-5. Are all key points covered?
+Output JSON: {{"score": <int>, "missing_points": ["<string>"]}}"""
+
+    result = _ask_llm_as_judge(prompt)
+    missing = result.get("missing_points", [])
+
     return {
-        "score": None,
-        "notes": "TODO: Implement score_completeness (so sánh với expected_answer)",
+        "score": result.get("score"),
+        "notes": f"Missing: {', '.join(missing)}" if missing else "All points covered",
     }
 
 
@@ -224,14 +276,6 @@ def run_scorecard(
     Returns:
         List scorecard results, mỗi item là một row
 
-    TODO Sprint 4:
-    1. Load test_questions từ data/test_questions.json
-    2. Với mỗi câu hỏi:
-       a. Gọi rag_answer() với config tương ứng
-       b. Chấm 4 metrics
-       c. Lưu kết quả
-    3. Tính average scores
-    4. In bảng kết quả
     """
     if test_questions is None:
         with open(TEST_QUESTIONS_PATH, "r", encoding="utf-8") as f:
@@ -308,7 +352,8 @@ def run_scorecard(
     for metric in ["faithfulness", "relevance", "context_recall", "completeness"]:
         scores = [r[metric] for r in results if r[metric] is not None]
         avg = sum(scores) / len(scores) if scores else None
-        print(f"\nAverage {metric}: {avg:.2f}" if avg else f"\nAverage {metric}: N/A (chưa chấm)")
+        print(
+            f"\nAverage {metric}: {avg:.2f}" if avg else f"\nAverage {metric}: N/A (chưa chấm)")
 
     return results
 
@@ -325,20 +370,6 @@ def compare_ab(
     """
     So sánh baseline vs variant theo từng câu hỏi và tổng thể.
 
-    TODO Sprint 4:
-    Điền vào bảng sau để trình bày trong báo cáo:
-
-    | Metric          | Baseline | Variant | Delta |
-    |-----------------|----------|---------|-------|
-    | Faithfulness    |   ?/5    |   ?/5   |  +/?  |
-    | Answer Relevance|   ?/5    |   ?/5   |  +/?  |
-    | Context Recall  |   ?/5    |   ?/5   |  +/?  |
-    | Completeness    |   ?/5    |   ?/5   |  +/?  |
-
-    Câu hỏi cần trả lời:
-    - Variant tốt hơn baseline ở câu nào? Vì sao?
-    - Biến nào (chunking / hybrid / rerank) đóng góp nhiều nhất?
-    - Có câu nào variant lại kém hơn baseline không? Tại sao?
     """
     metrics = ["faithfulness", "relevance", "context_recall", "completeness"]
 
@@ -349,8 +380,10 @@ def compare_ab(
     print("-" * 55)
 
     for metric in metrics:
-        b_scores = [r[metric] for r in baseline_results if r[metric] is not None]
-        v_scores = [r[metric] for r in variant_results if r[metric] is not None]
+        b_scores = [r[metric]
+                    for r in baseline_results if r[metric] is not None]
+        v_scores = [r[metric]
+                    for r in variant_results if r[metric] is not None]
 
         b_avg = sum(b_scores) / len(b_scores) if b_scores else None
         v_avg = sum(v_scores) / len(v_scores) if v_scores else None
@@ -363,7 +396,8 @@ def compare_ab(
         print(f"{metric:<20} {b_str:>10} {v_str:>10} {d_str:>8}")
 
     # Per-question comparison
-    print(f"\n{'Câu':<6} {'Baseline F/R/Rc/C':<22} {'Variant F/R/Rc/C':<22} {'Better?':<10}")
+    print(
+        f"\n{'Câu':<6} {'Baseline F/R/Rc/C':<22} {'Variant F/R/Rc/C':<22} {'Better?':<10}")
     print("-" * 65)
 
     b_by_id = {r["id"]: r for r in baseline_results}
@@ -381,7 +415,8 @@ def compare_ab(
         # So sánh đơn giản
         b_total = sum(b_row.get(m, 0) or 0 for m in metrics)
         v_total = sum(v_row.get(m, 0) or 0 for m in metrics)
-        better = "Variant" if v_total > b_total else ("Baseline" if b_total > v_total else "Tie")
+        better = "Variant" if v_total > b_total else (
+            "Baseline" if b_total > v_total else "Tie")
 
         print(f"{qid:<6} {b_scores_str:<22} {v_scores_str:<22} {better:<10}")
 
@@ -399,14 +434,87 @@ def compare_ab(
 
 
 # =============================================================================
-# REPORT GENERATOR
+# GRADING RUN — Generate logs/grading_run.json
 # =============================================================================
 
-def generate_scorecard_summary(results: List[Dict], label: str) -> str:
+def run_grading(
+    test_questions: Optional[List[Dict]] = None,
+    retrieval_mode: str = "hybrid",
+    use_rerank: bool = True,
+    output_path: Optional[Path] = None,
+) -> List[Dict[str, Any]]:
+    """
+    Chạy pipeline trên grading_questions.json và sinh log.
+
+    Format output: logs/grading_run.json với các trường:
+    - id, question, answer, sources, chunks_retrieved, retrieval_mode, timestamp
+    """
+    if test_questions is None:
+        with open(TEST_QUESTIONS_PATH, "r", encoding="utf-8") as f:
+            test_questions = json.load(f)
+
+    if output_path is None:
+        output_path = Path(__file__).parent / "logs" / "grading_run.json"
+
+    log = []
+    print(f"\n{'='*70}")
+    print("Running Grading Questions Pipeline")
+    print(f"Mode: {retrieval_mode}, Rerank: {use_rerank}")
+    print('='*70)
+
+    for q in test_questions:
+        question_id = q["id"]
+        query = q["question"]
+
+        try:
+            # Chạy pipeline
+            result = rag_answer(
+                query=query,
+                retrieval_mode=retrieval_mode,
+                top_k_search=18,
+                top_k_select=5,
+                use_rerank=use_rerank,
+                verbose=False,
+            )
+            answer = result["answer"]
+            sources = result["sources"]
+            chunks_retrieved = len(result["chunks_used"])
+
+            print(f"[{question_id}] ✓ Retrieved {chunks_retrieved} chunks")
+
+        except Exception as e:
+            answer = f"ERROR: {str(e)}"
+            sources = []
+            chunks_retrieved = 0
+            print(f"[{question_id}] ✗ Error: {str(e)[:50]}")
+
+        log_entry = {
+            "id": question_id,
+            "question": query,
+            "answer": answer,
+            "sources": sources,
+            "chunks_retrieved": chunks_retrieved,
+            "retrieval_mode": retrieval_mode,
+            "timestamp": datetime.now().isoformat(),
+        }
+        log.append(log_entry)
+
+    # Lưu log
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    with open(output_path, "w", encoding="utf-8") as f:
+        json.dump(log, f, ensure_ascii=False, indent=2)
+
+    print(f"\nLog lưu tại: {output_path}")
+    return log
+
+
+# =============================================================================
+# SCORECARD SUMMARY GENERATOR
+# =============================================================================
+
+def generate_scorecard_summary(results: List[Dict[str, Any]], label: str) -> str:
     """
     Tạo báo cáo tóm tắt scorecard dạng markdown.
-
-    TODO Sprint 4: Cập nhật template này theo kết quả thực tế của nhóm.
     """
     metrics = ["faithfulness", "relevance", "context_recall", "completeness"]
     averages = {}
@@ -465,6 +573,14 @@ if __name__ == "__main__":
         print("Không tìm thấy file test_questions.json!")
         test_questions = []
 
+    # --- Tạo grading_run.json log ---
+    print("\n--- Tạo Grading Run Log ---")
+    grading_log = run_grading(
+        test_questions=test_questions,
+        retrieval_mode="hybrid",
+        use_rerank=True,
+    )
+
     # --- Chạy Baseline ---
     print("\n--- Chạy Baseline ---")
     print("Lưu ý: Cần hoàn thành Sprint 2 trước khi chạy scorecard!")
@@ -477,7 +593,8 @@ if __name__ == "__main__":
 
         # Save scorecard
         RESULTS_DIR.mkdir(parents=True, exist_ok=True)
-        baseline_md = generate_scorecard_summary(baseline_results, "baseline_dense")
+        baseline_md = generate_scorecard_summary(
+            baseline_results, BASELINE_CONFIG["label"])
         scorecard_path = RESULTS_DIR / "scorecard_baseline.md"
         scorecard_path.write_text(baseline_md, encoding="utf-8")
         print(f"\nScorecard lưu tại: {scorecard_path}")
@@ -487,29 +604,25 @@ if __name__ == "__main__":
         baseline_results = []
 
     # --- Chạy Variant (sau khi Sprint 3 hoàn thành) ---
-    # TODO Sprint 4: Uncomment sau khi implement variant trong rag_answer.py
-    # print("\n--- Chạy Variant ---")
-    # variant_results = run_scorecard(
-    #     config=VARIANT_CONFIG,
-    #     test_questions=test_questions,
-    #     verbose=True,
-    # )
-    # variant_md = generate_scorecard_summary(variant_results, VARIANT_CONFIG["label"])
-    # (RESULTS_DIR / "scorecard_variant.md").write_text(variant_md, encoding="utf-8")
+    print("\n--- Chạy Variant ---")
+    variant_results = run_scorecard(
+        config=VARIANT_CONFIG,
+        test_questions=test_questions,
+        verbose=True,
+    )
+    variant_md = generate_scorecard_summary(
+        variant_results, VARIANT_CONFIG["label"])
+    (RESULTS_DIR / "scorecard_variant.md").write_text(variant_md, encoding="utf-8")
 
     # --- A/B Comparison ---
-    # TODO Sprint 4: Uncomment sau khi có cả baseline và variant
-    # if baseline_results and variant_results:
-    #     compare_ab(
-    #         baseline_results,
-    #         variant_results,
-    #         output_csv="ab_comparison.csv"
-    #     )
+    if baseline_results and variant_results:
+        compare_ab(
+            baseline_results,
+            variant_results,
+            output_csv="ab_comparison.csv"
+        )
 
     print("\n\nViệc cần làm Sprint 4:")
     print("  1. Hoàn thành Sprint 2 + 3 trước")
-    print("  2. Chấm điểm thủ công hoặc implement LLM-as-Judge trong score_* functions")
-    print("  3. Chạy run_scorecard(BASELINE_CONFIG)")
-    print("  4. Chạy run_scorecard(VARIANT_CONFIG)")
-    print("  5. Gọi compare_ab() để thấy delta")
-    print("  6. Cập nhật docs/tuning-log.md với kết quả và nhận xét")
+    print("  2. Cập nhật docs/tuning-log.md với kết quả và nhận xét")
+    print("  3. Viết Individual Report")
