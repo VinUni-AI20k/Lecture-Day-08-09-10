@@ -219,33 +219,29 @@ def _split_by_size(
 
 def get_embedding(text: str, task: str = "retrieval.passage") -> List[float]:
     """
-    Tạo embedding vector cho một đoạn text sử dụng JINA AI API.
-    """
-    import requests
-    
-    api_key = os.getenv("AUTHORIZATION_JINA")
-    if not api_key:
-        raise ValueError("AUTHORIZATION_JINA not found in environment. Please add to .env")
-        
-    url = "https://api.jina.ai/v1/embeddings"
-    headers = {
-        "Content-Type": "application/json",
-        "Authorization": f"Bearer {api_key}"
-    }
-    data = {
-        "model": "jina-embeddings-v5-text-small",
-        "task": task,
-        "normalized": True,
-        "input": [text]
-    }
+    Tạo embedding vector cho một đoạn text.
 
-    try:
-        response = requests.post(url, headers=headers, json=data, timeout=10)
-        response.raise_for_status()
-        return response.json()["data"][0]["embedding"]
-    except Exception as e:
-        print(f"Lỗi khi gọi JINA API: {e}")
-        raise e
+    TODO Sprint 1:
+    Chọn một trong hai:
+
+    Option A — OpenAI Embeddings (cần OPENAI_API_KEY):
+        from openai import OpenAI
+        client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+        response = client.embeddings.create(
+            input=text,
+            model="text-embedding-3-small"
+        )
+        return response.data[0].embedding
+
+    Option B — Sentence Transformers (chạy local, không cần API key):
+        from sentence_transformers import SentenceTransformer
+        model = SentenceTransformer("paraphrase-multilingual-MiniLM-L12-v2")
+        return model.encode(text).tolist()
+    """
+    raise NotImplementedError(
+        "TODO: Implement get_embedding().\n"
+        "Chọn Option A (OpenAI) hoặc Option B (Sentence Transformers) trong TODO comment."
+    )
 
 
 def build_index(docs_dir: Path = DOCS_DIR, db_dir: Path = CHROMA_DB_DIR) -> None:

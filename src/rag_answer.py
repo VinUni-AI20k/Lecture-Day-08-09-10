@@ -344,14 +344,9 @@ def build_grounded_prompt(query: str, context_block: str) -> str:
     - Thêm ngôn ngữ phản hồi (tiếng Việt vs tiếng Anh)
     - Điều chỉnh tone phù hợp với use case (CS helpdesk, IT support)
     """
-    prompt = f"""Answer only from the retrieved context below.
-If the context is insufficient to answer the question, say you do not know and do not make up information.
-Cite the source field (in brackets like [1]) when possible.
-Keep your answer short, clear, and factual.
-Respond in the same language as the question.
-
-Question: {query}
-
+    prompt = f"""Bạn là một trợ lý IT và HR nội bộ. 
+    Dưới đây là các tài liệu tham khảo (Context).
+    
 YÊU CẦU BẮT BUỘC:
 1. CHỈ sử dụng thông tin từ Context để trả lời. TUYỆT ĐỐI KHÔNG dùng kiến thức bên ngoài.
 2. Nếu Context không có câu trả lời, hãy nói chính xác: "Tôi không có đủ dữ liệu để trả lời câu hỏi này."
