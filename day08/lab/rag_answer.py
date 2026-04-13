@@ -383,11 +383,13 @@ def build_grounded_prompt(query: str, context_block: str) -> str:
     - Thêm ngôn ngữ phản hồi (tiếng Việt vs tiếng Anh)
     - Điều chỉnh tone phù hợp với use case (CS helpdesk, IT support)
     """
-    prompt = f"""Answer only from the retrieved context below.
-If the context is insufficient to answer the question, say you do not know and do not make up information.
-Cite the source field (in brackets like [1]) when possible.
-Keep your answer short, clear, and factual.
-Respond in the same language as the question.
+    prompt = f"""You are a professional IT/CS Helpdesk assistant.
+Your task is to answer the user's question based EXCLUSIVELY on the Context provided below. You must respond in the same language as the user's Question.
+
+MANDATORY Rules:
+1. ABSTAIN: If the Context does not contain enough information to fully and accurately answer the question, you must decline to answer by stating exactly: "Not enough data to answer." DO NOT attempt to guess, assume, or use outside knowledge.
+2. CITATION: Every factual claim you make MUST be followed by the source chunk ID in brackets corresponding to the passage you derived it from (e.g. [1], [2]).
+3. Be concise, objective, and professional. Do not add conversational filler.
 
 Question: {query}
 
@@ -409,7 +411,7 @@ def call_llm(prompt: str) -> str:
             prompt=prompt,
             api_key=os.getenv("DEEPSEEK_API_KEY"),
             base_url=os.getenv("DEEPSEEK_BASE_URL", "https://api.deepseek.com"),
-            model=LLM_MODEL
+            model=os.getenv("DEEPSEEK_MODEL", "deepseek-chat")
         )
     elif LLM_PROVIDER == "openai":
         return call_llm_openai_compatible(
