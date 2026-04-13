@@ -22,10 +22,10 @@ llm_model = gemini-2.5-flash
 **Scorecard Baseline:**
 | Metric | Average Score |
 |--------|--------------|
-| Faithfulness | ? /5 |
-| Answer Relevance | ? /5 |
-| Context Recall | ? /5 |
-| Completeness | ? /5 |
+| Faithfulness | 4/5 |
+| Answer Relevance |4/5 |
+| Context Recall | 4/5 |
+| Completeness | 4/5 |
 
 **Câu hỏi yếu nhất (điểm thấp):**
 > TODO: Liệt kê 2-3 câu hỏi có điểm thấp nhất và lý do tại sao.
