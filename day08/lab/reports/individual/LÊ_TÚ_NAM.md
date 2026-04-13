@@ -66,6 +66,8 @@ _________________
 > 1-2 cải tiến cụ thể bạn muốn thử.
 > Không phải "làm tốt hơn chung chung" mà phải là:
 > "Tôi sẽ thử X vì kết quả eval cho thấy Y."
+
+
 Nếu có thêm thời gian, em muốn thử cải tiến bước rerank để tăng điểm Completeness. Hiện tại, việc dùng CrossEncoder có xu hướng chọn các chunk “relevant nhất” nhưng lại bỏ sót các thông tin bổ sung, dẫn đến câu trả lời chưa đầy đủ (Completeness ~3.9). Vì vậy, em muốn thử kết hợp thêm cơ chế diversity như MMR (Maximal Marginal Relevance) hoặc tăng số lượng chunk sau rerank. Lý do là kết quả eval cho thấy vấn đề không nằm ở thiếu relevance mà là thiếu độ bao phủ thông tin trong context.
 _________________
 
