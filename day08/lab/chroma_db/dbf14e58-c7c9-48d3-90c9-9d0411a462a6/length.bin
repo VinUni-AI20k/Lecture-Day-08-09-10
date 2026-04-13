@@ -1,0 +1,1 @@
+invalid type: string "Quyền phải được thu hồi trong các trường hợp:\n- Nhân viên nghỉ việc: Thu hồi ngay trong ngày cuối.\n- Hết hạn contract: Thu hồi đúng ngày hết hạn.\n- Chuyển bộ phận: Điều chỉnh trong 3 ngày làm việc.", expected f6425,-0.00762939453125,-0.0028476715087890625,0.0034122467041015625,0.00595855712890625,0.0009236335754394531,
