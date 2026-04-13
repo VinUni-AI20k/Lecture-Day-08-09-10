@@ -205,6 +205,8 @@ def run_scorecard(
                 top_k_search=config.get("top_k_search", 10),
                 top_k_select=config.get("top_k_select", 3),
                 use_rerank=config.get("use_rerank", False),
+                use_query_transform=config.get("use_query_transform", False),
+                query_transform_strategy=config.get("query_transform_strategy", "expansion"),
                 verbose=False,
             )
             answer = result["answer"]
