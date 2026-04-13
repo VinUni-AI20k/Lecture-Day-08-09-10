@@ -2,7 +2,7 @@
 
 **Họ và tên:** Trần Nhật Vĩ  
 **Vai trò trong nhóm:** Documentation Owner  
-**Ngày nộp:** 13/04/2026  
+**Ngày nộp:** 2026-04-13 
 **Độ dài yêu cầu:** 500–800 từ
 
 ---
