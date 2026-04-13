@@ -1,0 +1,182 @@
+{
+  "run_id": "grading-variant-hybrid-only-20260413",
+  "timestamp": "2026-04-13T15:45:00+07:00",
+  "config": {
+    "retrieval_mode": "hybrid",
+    "top_k_search": 10,
+    "top_k_select": 3,
+    "use_rerank": false,
+    "llm_model": "gpt-4o-mini",
+    "temperature": 0,
+    "label": "variant_hybrid_only"
+  },
+  "num_questions": 10,
+  "metrics_avg": {
+    "faithfulness": 5.0,
+    "relevance": 3.8,
+    "context_recall": 5.0,
+    "completeness": 4.0
+  },
+  "results": [
+    {
+      "id": "q01",
+      "category": "SLA",
+      "query": "SLA xử lý ticket P1 là bao lâu?",
+      "retrieval_mode": "hybrid",
+      "sources": ["support/sla-p1-2026.pdf"],
+      "chunks_retrieved": 3,
+      "answer": "SLA xử lý ticket P1 bao gồm: phản hồi ban đầu 15 phút, thời gian xử lý và khắc phục 4 giờ, escalation tự động lên Senior Engineer nếu không có phản hồi trong 10 phút, update stakeholder mỗi 30 phút [1].",
+      "scores": {
+        "faithfulness": 5,
+        "relevance": 5,
+        "context_recall": 5,
+        "completeness": 5
+      },
+      "notes": "Dense + BM25 hybrid đều kéo về đúng chunk SLA P1. Câu trả lời đầy đủ và có citation [1]."
+    },
+    {
+      "id": "q02",
+      "category": "Refund",
+      "query": "Khách hàng có thể yêu cầu hoàn tiền trong bao nhiêu ngày?",
+      "retrieval_mode": "hybrid",
+      "sources": ["policy/refund-v4.pdf"],
+      "chunks_retrieved": 3,
+      "answer": "Khách hàng có thể yêu cầu hoàn tiền trong vòng 7 ngày làm việc kể từ thời điểm xác nhận đơn hàng, với điều kiện sản phẩm bị lỗi do nhà sản xuất và chưa được sử dụng hoặc mở seal [1].",
+      "scores": {
+        "faithfulness": 5,
+        "relevance": 5,
+        "context_recall": 5,
+        "completeness": 5
+      },
+      "notes": "Hybrid retrieval lấy đúng chunk refund policy. Citation đầy đủ."
+    },
+    {
+      "id": "q03",
+      "category": "Access Control",
+      "query": "Ai phải phê duyệt để cấp quyền Level 3?",
+      "retrieval_mode": "hybrid",
+      "sources": ["it/access-control-sop.md"],
+      "chunks_retrieved": 3,
+      "answer": "Để cấp quyền Level 3, cần có sự phê duyệt của Line Manager, IT Admin và IT Security [1].",
+      "scores": {
+        "faithfulness": 5,
+        "relevance": 5,
+        "context_recall": 5,
+        "completeness": 5
+      },
+      "notes": "Hybrid RRF kết hợp keyword 'Level 3' từ BM25 với semantic từ dense, chunk chính xác."
+    },
+    {
+      "id": "q04",
+      "category": "Refund",
+      "query": "Sản phẩm kỹ thuật số có được hoàn tiền không?",
+      "retrieval_mode": "hybrid",
+      "sources": ["policy/refund-v4.pdf"],
+      "chunks_retrieved": 3,
+      "answer": "Sản phẩm kỹ thuật số (license key, subscription) không được hoàn tiền theo chính sách, ngay cả khi yêu cầu được gửi trong vòng 7 ngày [1].",
+      "scores": {
+        "faithfulness": 5,
+        "relevance": 5,
+        "context_recall": 5,
+        "completeness": 5
+      },
+      "notes": "Câu trả lời grounded hoàn toàn."
+    },
+    {
+      "id": "q05",
+      "category": "IT Helpdesk",
+      "query": "Tài khoản bị khóa sau bao nhiêu lần đăng nhập sai?",
+      "retrieval_mode": "hybrid",
+      "sources": ["support/helpdesk-faq.md"],
+      "chunks_retrieved": 3,
+      "answer": "Tài khoản bị khóa sau 5 lần đăng nhập sai liên tiếp. Để mở khóa, liên hệ IT Helpdesk hoặc tự reset qua portal SSO [1].",
+      "scores": {
+        "faithfulness": 5,
+        "relevance": 5,
+        "context_recall": 5,
+        "completeness": 5
+      },
+      "notes": "Hybrid tìm đúng chunk FAQ. Không sai lệch."
+    },
+    {
+      "id": "q06",
+      "category": "SLA",
+      "query": "Escalation trong sự cố P1 diễn ra như thế nào?",
+      "retrieval_mode": "hybrid",
+      "sources": ["support/sla-p1-2026.pdf"],
+      "chunks_retrieved": 3,
+      "answer": "Ticket P1 tự động escalate lên Senior Engineer nếu không có phản hồi trong 10 phút kể từ khi tạo ticket [1]. On-call IT Admin cũng có thể cấp quyền tạm thời (tối đa 24 giờ) để khắc phục, cần phê duyệt bằng lời từ Tech Lead [1].",
+      "scores": {
+        "faithfulness": 5,
+        "relevance": 5,
+        "context_recall": 5,
+        "completeness": 5
+      },
+      "notes": "Hybrid kéo về cả chunk escalation và temporary access. Đầy đủ và grounded."
+    },
+    {
+      "id": "q07",
+      "category": "Access Control",
+      "query": "Approval Matrix để cấp quyền hệ thống là tài liệu nào?",
+      "retrieval_mode": "hybrid",
+      "sources": ["it/access-control-sop.md"],
+      "chunks_retrieved": 3,
+      "answer": "Tài liệu quy định Approval Matrix để cấp quyền hệ thống là 'Access Control SOP' (it/access-control-sop.md) [1]. Đây là phiên bản đổi tên từ tài liệu cũ 'Approval Matrix for System Access'.",
+      "scores": {
+        "faithfulness": 5,
+        "relevance": 5,
+        "context_recall": 5,
+        "completeness": 4
+      },
+      "notes": "Hybrid có lợi thế ở câu này: BM25 tìm được từ khóa 'Approval Matrix' trong chunk dù tên tài liệu đã đổi. Dense đơn thuần có thể bỏ sót. Completeness=4 vì chưa nêu rõ đây là tên mới."
+    },
+    {
+      "id": "q08",
+      "category": "HR Policy",
+      "query": "Nhân viên được làm remote tối đa mấy ngày mỗi tuần?",
+      "retrieval_mode": "hybrid",
+      "sources": ["hr/leave-policy-2026.pdf"],
+      "chunks_retrieved": 3,
+      "answer": "Nhân viên có thể làm remote tối đa 2 ngày mỗi tuần sau khi hoàn thành thời gian thử việc. Lịch remote phải được Team Lead phê duyệt qua HR Portal [1].",
+      "scores": {
+        "faithfulness": 5,
+        "relevance": 5,
+        "context_recall": 5,
+        "completeness": 5
+      },
+      "notes": "Câu trả lời đầy đủ, có citation."
+    },
+    {
+      "id": "q09",
+      "category": "Insufficient Context",
+      "query": "ERR-403-AUTH là lỗi gì và cách xử lý?",
+      "retrieval_mode": "hybrid",
+      "sources": [],
+      "chunks_retrieved": 3,
+      "answer": "Không đủ dữ liệu trong tài liệu để trả lời.",
+      "scores": {
+        "faithfulness": 5,
+        "relevance": 1,
+        "context_recall": null,
+        "completeness": 2
+      },
+      "notes": "Abstain đúng. Relevance=1 vì không trả lời được câu hỏi (không có dữ liệu). Completeness=2 vì không gợi ý liên hệ IT Helpdesk như expected_answer."
+    },
+    {
+      "id": "q10",
+      "category": "Refund",
+      "query": "Nếu cần hoàn tiền khẩn cấp cho khách hàng VIP, quy trình có khác không?",
+      "retrieval_mode": "hybrid",
+      "sources": ["policy/refund-v4.pdf"],
+      "chunks_retrieved": 3,
+      "answer": "Không đủ dữ liệu trong tài liệu để trả lời.",
+      "scores": {
+        "faithfulness": 5,
+        "relevance": 1,
+        "context_recall": 5,
+        "completeness": 1
+      },
+      "notes": "Abstain đúng — không bịa quy trình VIP. Tuy nhiên expected_answer nói policy không đề cập VIP, nên model nên nêu được rằng không có quy trình đặc biệt thay vì abstain hoàn toàn. Completeness=1."
+    }
+  ]
+}
