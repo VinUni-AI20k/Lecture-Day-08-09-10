@@ -1,123 +1,115 @@
-# Group Report — Day 08 (RAG Pipeline)
+# Báo Cáo Nhóm — Lab Day 08: Full RAG Pipeline
 
-## 1. Mục tiêu
+**Tên nhóm:** E3-C401  
+**Thành viên:**
+| Tên | Vai trò | Email |
+|-----|---------|-------|
+| Hoàng Kim Trí Thành | Tech Lead | hoangkimtrithanh@gmail.com |
+| Quách Gia Dược | Retrieval Owner | quachgiaduoc2004@gmail.com |
+| Phạm Quốc Dũng | Eval Owner | phamquocdung2109@gmail.com |
+| Nguyễn Thành Nam | Documentation Owner | nguyenthanhnam2512@gmail.com |
+| Đặng Đình Tú Anh | Core AI | anhscientist2202@gmail.com |
 
-Nhóm xây dựng RAG pipeline trả lời câu hỏi nội bộ (chính sách, SLA, FAQ) dựa trên 5 tài liệu gốc, đảm bảo grounded (không bịa), có citation, và đo lường được chất lượng qua A/B testing.
+**Ngày nộp:** 13/04/2026  
+**Repo:** https://github.com/jot2003/Lab8-Lab9-Lab10_C401_E3  
+**Độ dài khuyến nghị:** 600–900 từ
 
-## 2. Kiến trúc hệ thống
+---
 
-```
-User query → Embedding → ChromaDB search (top-20) → Select top-8 → Abstain guard → Prompt v2 → gpt-4o-mini → Answer + [n] citation
-```
+## 1. Pipeline nhóm đã xây dựng (150–200 từ)
 
-- **Indexing**: 5 file → 29 chunk (heading-based, ~400 tokens, overlap 80), metadata gồm source/section/effective_date.
-- **Retrieval**: Dense (cosine) là production. Hybrid (dense + BM25 RRF) đã implement nhưng thua dense ở Relevance (3.8 vs 4.2) trên bộ test 10 câu.
-- **Generation**: gpt-4o-mini, temperature=0. Prompt v2 gồm 9 rules: grounded, per-fact citation, scope awareness, actionable details.
-- **Abstain**: 3 lớp (empty retrieve → weak score < 0.05 → prompt rule).
+Nhóm xây dựng pipeline RAG theo luồng: người dùng đặt câu hỏi → embed query → truy vấn ChromaDB → chọn context phù hợp → dựng grounded prompt → gọi LLM → trả answer kèm citation `[n]`. Ở tầng indexing, nhóm dùng chunking theo section heading (`=== ... ===`) rồi cắt mềm theo paragraph/câu, với cấu hình khoảng `~400 tokens` và `~80 tokens overlap`; sau khi build index có tổng 29 chunk từ 5 tài liệu chính sách nội bộ. Mỗi chunk giữ metadata như `source`, `section`, `effective_date` để phục vụ freshness và trace nguồn.
 
-Chi tiết: `docs/architecture.md`
+Embedding model mặc định là OpenAI `text-embedding-3-small` (hoặc local model khi chạy local mode). Retrieval baseline của nhóm là dense cosine search; sau tuning, production config là `top_k_search=20`, `top_k_select=8`, `use_rerank=False`, `threshold=0.05`. Ở generation, nhóm dùng `gpt-4o-mini` (temperature=0) với prompt v2 có rule chống hallucination, bắt buộc citation theo snippet, và rule xử lý câu cross-section/cross-document.
 
-## 3. Quyết định kỹ thuật chính
+**Chunking decision:**  
+Nhóm chọn chunk nhỏ vừa phải + overlap để tránh cắt đôi điều khoản quan trọng, đặc biệt các câu hỏi cần tổng hợp nhiều section như gq05.
 
-### 3.1 Tại sao giữ Dense thay vì Hybrid?
+**Embedding model:**  
+OpenAI `text-embedding-3-small` cho bản production; local embedding dùng cho môi trường không có API.
 
-Thử nghiệm A/B ban đầu (dense vs hybrid, cùng k=10, select=3):
-- Hybrid thua Relevance (3.8 vs 4.2) và Completeness (4.0 vs 4.2).
-- BM25 noise làm loãng context cho câu hỏi tự nhiên.
-- Hybrid chỉ có lợi thế ở câu alias/keyword hiếm (gq07 — "Approval Matrix").
-- Kết luận: dense ổn định hơn trên bộ 10 câu hiện tại.
+**Retrieval variant (Sprint 3):**  
+Nhóm có implement hybrid/rerank nhưng chọn dense optimized làm production vì kết quả scorecard tốt và ổn định hơn trên bộ grading.
 
-### 3.2 Tại sao tăng top_k_select từ 3 lên 8?
+---
 
-Phân tích failure mode baseline:
-- gq05 (Zero): thiếu cả section scope lẫn section detail — chỉ 3 chunk không đủ.
-- gq09 (Partial): FAQ chunk xếp thứ 4–5, bị loại khỏi top 3.
-- gq06 (Partial): chunk hotline xếp thứ 7.
+## 2. Quyết định kỹ thuật quan trọng nhất (200–250 từ)
 
-Tăng k_select=8 giải quyết cả 3 trường hợp. Cost trade-off: context dài hơn (~1600 tokens → ~4000 tokens) nhưng gpt-4o-mini xử lý tốt trong window 128k.
+**Quyết định:** Giữ production retrieval là **dense optimized** thay vì chuyển sang hybrid.
 
-### 3.3 Tại sao hạ threshold từ 0.15 xuống 0.05?
+**Bối cảnh vấn đề:**  
+Baseline dense (`k_search=10`, `k_select=3`, `threshold=0.15`) bị hụt điểm vì thiếu context cho các câu multi-section và có false abstain ở gq05. Nhóm đứng trước lựa chọn: chuyển hẳn sang hybrid/rerank để tăng recall, hoặc giữ dense nhưng tăng độ phủ retrieval và chỉnh prompt/guard.
 
-gq05 baseline: chunk "contractor" + "Admin Access Level 4" có cosine score ~0.12, bị chặn bởi threshold=0.15 → false abstain. Hạ xuống 0.05 cho phép chunk qua; L3 (prompt rule) vẫn bảo vệ chống hallucination.
+**Các phương án đã cân nhắc:**
 
-### 3.4 Prompt v1 → v2
+| Phương án | Ưu điểm | Nhược điểm |
+|-----------|---------|-----------|
+| Dense + tăng `top_k_select`, giảm threshold | Ít thay đổi kiến trúc, dễ kiểm soát, giảm false abstain | Context dài hơn, cần prompt chặt để tránh loãng |
+| Hybrid (dense+BM25) +/− rerank | Bắt keyword alias tốt hơn, hữu ích cho query đặc thù | Dễ kéo noise từ BM25, score scale khác làm tuning khó |
 
-- Thêm "stay focused" tránh over-generation (gq01 baseline có thêm v2025.3 không liên quan).
-- Thêm "scope + applicability" tránh abstain sai cho câu cross-section (gq05).
-- Thêm "per-fact citation" thay vì gom hết vào [1].
-- Thêm "actionable details" để LLM include URL, ext., hotline (gq09).
+**Phương án đã chọn và lý do:**  
+Nhóm chọn dense optimized: `top_k_search=20`, `top_k_select=8`, `threshold=0.05`, prompt v2. Lý do chính là hiệu quả thực tế tốt hơn trên bộ 10 câu grading, đồng thời giữ pipeline ổn định và dễ giải thích trong report.
 
-## 4. Kết quả benchmark
+**Bằng chứng từ scorecard/tuning-log:**  
+Theo scorecard, raw score tăng từ `69/98` lên `83/98` (+14), projected từ `21.1/30` lên `25.4/30`. Hai lỗi lớn được sửa trực tiếp: gq05 (Zero→Full) và gq09 (Partial→Full). Các số liệu này khớp với `results/scorecard_baseline.md`, `results/scorecard_variant.md` và `docs/tuning-log.md`.
 
-### Grading questions (10 câu, bộ `grading_questions.json`)
+---
 
-| | Baseline | Variant (production) | Delta |
-|---|:---:|:---:|:---:|
-| Faithfulness | 4.90 | **5.00** | +0.10 |
-| Relevance | 4.20 | **5.00** | +0.80 |
-| Context Recall | 4.44 | **4.89** | +0.44 |
-| Completeness | 4.10 | **4.70** | +0.60 |
-| Full | 5 | **7** | +2 |
-| Partial | 4 | 3 | −1 |
-| Zero | 1 | **0** | −1 |
-| **Raw score** | 69/98 | **83/98** | **+14** |
-| **Projected /30** | 21.1 | **25.4** | **+4.3** |
-| Hallucination | 0 | 0 | 0 |
+## 3. Kết quả grading questions (100–150 từ)
 
-Chi tiết per-question: `results/scorecard_baseline.md`, `results/scorecard_variant.md`
+**Ước tính điểm raw:** 83 / 98
 
-### Câu vẫn Partial ở variant
+**Câu tốt nhất:** ID: gq05 — Lý do: cải thiện mạnh nhất (Zero→Full) sau khi tăng `top_k_select` và giảm threshold, giúp pipeline lấy đủ cả scope + detail section thay vì abstain sai.
 
-| Câu | Root cause | Giải pháp tiềm năng |
-|-----|-----------|---------------------|
-| gq02 | LLM gom citation vào [1] dù info từ 2 doc | Tách prompt rule "cross-doc citation" riêng |
-| gq04 | Thiếu tên "Điều 5" trong citation | Cải thiện chunk header format |
-| gq06 | ext. 9999 nằm rank 7, LLM bỏ qua | Tăng k_select hoặc thêm rerank |
+**Câu fail:** ID: không có câu Zero ở variant; các câu còn Partial là gq02, gq04, gq06. Root cause chủ yếu nằm ở retrieval ranking/citation attribution (LLM gom citation, bỏ sót ext. 9999).
 
-## 5. Phân công nhóm và đóng góp
+**Câu gq07 (abstain):** Pipeline xử lý đúng: trả lời "Không đủ dữ liệu trong tài liệu để trả lời.", không bịa mức phạt và không phát sinh penalty hallucination.
 
-| Thành viên | Vai trò | Đóng góp chính |
-|-----------|---------|----------------|
-| Hoàng Kim Trí Thành | Nhóm trưởng | Điều phối, review/merge branch, tối ưu pipeline, xây dựng UI |
-| Đặng Đình Tú Anh | Core AI | Harden abstain, citation grounding, A/B log, adversarial test |
-| Quách Gia Dược | Retrieval flow | Cải thiện retrieval trace, xử lý abstain |
-| Phạm Quốc Dũng | Eval/Scorecard | Edge case eval, scorecard formatting |
-| Nguyễn Thành Nam | Documentation | Quick start, troubleshooting guide, tuning explanation |
+---
 
-Chi tiết phân công: `docs/team_task_allocation.md`
+## 4. A/B Comparison — Baseline vs Variant (150–200 từ)
 
-## 6. Trạng thái Git
+**Biến đã thay đổi (chỉ 1 biến):**  
+Về mặt chiến lược retrieval: thử `retrieval_mode dense` so với `hybrid` ở setup single-variable để kiểm tra effect của strategy.  
+Ở production tuning cuối cùng, nhóm tối ưu dense bằng thay đổi tham số retrieval depth/threshold theo evidence scorecard.
 
-### Branches
+| Metric | Baseline | Variant | Delta |
+|--------|---------|---------|-------|
+| Faithfulness | 4.90 | 5.00 | +0.10 |
+| Relevance | 4.20 | 5.00 | +0.80 |
+| Context Recall | 4.44 | 4.89 | +0.44 |
+| Completeness | 4.10 | 4.70 | +0.60 |
 
-| Branch | Trạng thái |
-|--------|-----------|
-| `fork/main` | Production — đã tổng hợp tất cả |
-| `fork/DangDinhTuAnh-2A202600019` | Merged — 3 đợt merge |
-| `fork/PhamQuocDung-2A202600490` | Merged |
-| `fork/QuachGiaDuoc-2A202600423` | Merged |
-| `fork/nam/docs-day08-tasks` | Merged |
+**Kết luận:**  
+Variant production (dense optimized) tốt hơn baseline ở toàn bộ 4 metric. Điểm quan trọng nhất là giảm lỗi thiếu context ở các câu multi-section/cross-doc. Nhóm vẫn ghi nhận hybrid có lợi thế cho một số alias query, nhưng trên bộ grading hiện tại dense optimized cho chất lượng tổng thể cao hơn và ổn định hơn nên được chọn làm cấu hình chốt.
 
-### Giai đoạn phát triển
+---
 
-1. **Dựng nền**: API server, ChromaDB index, Next.js UI cơ bản, telemetry framework.
-2. **Phân công**: Task allocation file, priority checklist, branch strategy.
-3. **Nhập core AI**: Merge branch TuAnh (abstain + citation), Gia Dược (retrieval flow), Quốc Dũng (eval), Nam (docs).
-4. **UI/UX**: Panel RAG inspector, streaming SSE, Việt hóa, citation tương tác, test questions.
-5. **Tối ưu**: Benchmark 10 câu, tuning k_select/threshold/prompt, đạt 83/98.
+## 5. Phân công và đánh giá nhóm (100–150 từ)
 
-## 7. Đối chiếu yêu cầu SCORING.md
+**Phân công thực tế:**
 
-| File bắt buộc | Trạng thái |
-|---------------|-----------|
-| `index.py` | Chạy được, tạo 29 chunk |
-| `rag_answer.py` | Chạy được, có citation + abstain |
-| `eval.py` | Chạy được end-to-end |
-| `data/docs/` | Đủ 5 tài liệu |
-| `logs/grading_run.json` | Có, 10 câu, config variant |
-| `results/scorecard_baseline.md` | Có, đủ metrics |
-| `results/scorecard_variant.md` | Có, đủ metrics + A/B comparison |
-| `docs/architecture.md` | Có, diagram + chunking + retrieval config |
-| `docs/tuning-log.md` | Có, A/B table + per-question breakdown |
-| `reports/group_report.md` | File này |
-| `reports/individual/` | Đủ 5 file |
+| Thành viên | Phần đã làm | Sprint |
+|------------|-------------|--------|
+| Hoàng Kim Trí Thành | Điều phối, review/merge, tích hợp và chốt config production | Sprint 2-4 |
+| Đặng Đình Tú Anh | Core AI: harden abstain, citation grounding, grading artifacts | Sprint 3-4 |
+| Quách Gia Dược | Retrieval flow, trace pipeline, tuning-log evidence | Sprint 3 |
+| Phạm Quốc Dũng | Eval/scorecard formatting, grading report export | Sprint 4 |
+| Nguyễn Thành Nam | Quick start, troubleshooting, chuẩn hóa docs | Sprint 4 |
+
+**Điều nhóm làm tốt:**  
+Chia việc rõ theo vai trò, merge theo đợt, và luôn có evidence định lượng (scorecard/A-B) trước khi chốt quyết định kỹ thuật.
+
+**Điều nhóm làm chưa tốt:**  
+Một số nhánh cập nhật artifact chưa đồng bộ thời điểm, dẫn đến phải rà lại commit khá nhiều trước khi chốt báo cáo cuối.
+
+---
+
+## 6. Nếu có thêm 1 ngày, nhóm sẽ làm gì? (50–100 từ)
+
+Nhóm sẽ tập trung xử lý 3 câu Partial còn lại (gq02, gq04, gq06) bằng 2 hướng có bằng chứng: (1) cải thiện citation attribution cho câu cross-document; (2) tăng khả năng đưa chi tiết “peripheral” như hotline/ext vào answer mà không làm tăng hallucination. Đồng thời chạy lại benchmark cố định seed/config để kiểm tra mức cải thiện thật trước khi thay đổi production.
+
+---
+
+*File này lưu tại: `reports/group_report.md`*  
+*Commit sau 18:00 được phép theo SCORING.md*
