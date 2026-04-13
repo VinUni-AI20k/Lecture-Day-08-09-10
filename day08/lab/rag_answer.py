@@ -47,12 +47,34 @@ LLM_MODEL = os.getenv("LLM_MODEL", "gemini-3-flash-preview")
 # Retry config
 MAX_LLM_RETRIES = 3
 INITIAL_RETRY_WAIT = 2.0  # seconds, exponential backoff
+MAX_OUTPUT_TOKENS = int(os.getenv("LLM_MAX_OUTPUT_TOKENS", "1024"))
 
 _SPARSE_INDEX_CACHE: Dict[str, Any] = {}
 
 
 def _get_gemini_api_key() -> str:
     return os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY") or ""
+
+
+def _extract_gemini_text(response: Any) -> str:
+    """Lấy đầy đủ text từ Gemini response, kể cả khi có nhiều parts/candidates."""
+    texts: List[str] = []
+
+    candidates = getattr(response, "candidates", None) or []
+    for candidate in candidates:
+        content = getattr(candidate, "content", None)
+        parts = getattr(content, "parts", None) or []
+        for part in parts:
+            part_text = getattr(part, "text", None)
+            if part_text:
+                texts.append(part_text)
+
+    if texts:
+        return "\n".join(t.strip() for t in texts if t and t.strip()).strip()
+
+    # Fallback cho SDK versions trả text trực tiếp
+    direct_text = getattr(response, "text", None)
+    return (direct_text or "").strip()
 
 
 def _tokenize_for_bm25(text: str) -> List[str]:
@@ -543,11 +565,11 @@ def call_llm(
                 contents=prompt,
                 config=types.GenerateContentConfig(
                     temperature=0,
-                    max_output_tokens=512,
+                    max_output_tokens=MAX_OUTPUT_TOKENS,
                 ),
             )
 
-            text = getattr(response, "text", None)
+            text = _extract_gemini_text(response)
             if text and text.strip():
                 if retry_count > 0:
                     print(f"[LLM] ✓ Thành công sau {retry_count} retry(s)")
