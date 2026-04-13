@@ -33,7 +33,7 @@ export default function RootLayout({
     <html
       lang="vi"
       className={cn(
-        "h-full",
+        "h-full min-h-0",
         "antialiased",
         geistSans.variable,
         geistMono.variable,
@@ -42,7 +42,7 @@ export default function RootLayout({
       )}
       suppressHydrationWarning
     >
-      <body className="min-h-full flex flex-col">
+      <body className="m-0 h-dvh overflow-hidden p-0">
         <Providers>
           <AppShell>{children}</AppShell>
         </Providers>

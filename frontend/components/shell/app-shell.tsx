@@ -25,9 +25,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const { setTheme } = useTheme()
 
   return (
-    <div className="flex min-h-full flex-1 flex-col md:flex-row">
+    <div className="flex min-h-0 flex-1 flex-col overflow-hidden md:flex-row">
       <aside
-        className="flex w-full shrink-0 flex-col border-b border-border bg-card md:h-auto md:min-h-full md:w-56 md:border-r md:border-b-0"
+        className="border-border bg-card flex w-full shrink-0 flex-col border-b md:h-full md:w-56 md:shrink-0 md:border-r md:border-b-0"
         aria-label="Điều hướng chính"
       >
         <div className="flex items-center gap-2 border-b border-border px-4 py-3 md:flex-col md:items-stretch md:gap-3 md:border-b md:py-4">
@@ -84,7 +84,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           })}
         </nav>
       </aside>
-      <div className="flex min-h-0 min-w-0 flex-1 flex-col">{children}</div>
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+        {children}
+      </div>
     </div>
   )
 }

@@ -2,7 +2,7 @@
 
 import * as React from "react"
 
-import type { UiMessage } from "@/hooks/use-agent-chat"
+import type { UiMessage } from "@/lib/types/chat-ui"
 import { usePrefersReducedMotion } from "@/hooks/use-prefers-reduced-motion"
 import { cn } from "@/lib/utils"
 import { ScrollArea } from "@/components/ui/scroll-area"
@@ -19,12 +19,15 @@ export function ChatMessages({
   messages,
   streamingText,
   loading,
+  busy,
   onSuggestionClick,
   className,
 }: {
   messages: UiMessage[]
   streamingText: string
   loading: boolean
+  /** Đang chờ / stream phản hồi — dùng cho aria-busy trên vùng log. */
+  busy?: boolean
   onSuggestionClick: (text: string) => void
   className?: string
 }) {
@@ -42,13 +45,15 @@ export function ChatMessages({
 
   return (
     <ScrollArea
-      className={cn("min-h-0 flex-1", className)}
+      className={cn("h-full min-h-0 flex-1", className)}
       aria-label="Luồng hội thoại"
     >
       <div
         className="flex flex-col gap-4 p-4 pb-2"
+        role="log"
         aria-live="polite"
         aria-relevant="additions text"
+        aria-busy={busy ?? loading}
       >
         {empty && (
           <div className="mx-auto flex max-w-lg flex-col gap-3 text-center">

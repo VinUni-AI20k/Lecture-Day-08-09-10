@@ -3,7 +3,7 @@
 import * as React from "react"
 import { ClipboardCopy, Route } from "lucide-react"
 
-import type { TraceRow } from "@/hooks/use-agent-chat"
+import type { TraceRow } from "@/lib/types/chat-ui"
 import type { AgentNode } from "@/lib/types/agent-events"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"

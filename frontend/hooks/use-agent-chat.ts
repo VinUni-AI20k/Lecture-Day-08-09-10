@@ -2,85 +2,58 @@
 
 import * as React from "react"
 import { toast } from "sonner"
+import { useShallow } from "zustand/react/shallow"
 
 import { iterateAgentEventsFromResponse } from "@/lib/agent/parse-sse"
-import type { AgentNode } from "@/lib/types/agent-events"
-import type {
-  PipelineMetrics,
-  RetrievalChunk,
-} from "@/lib/types/agent-events"
+import { useAssistantStore } from "@/stores/assistant-store"
 
-export type UiMessage = {
-  id: string
-  role: "user" | "assistant"
-  content: string
-}
-
-export type TraceRow =
-  | {
-      kind: "step"
-      stepId: string
-      label: string
-      node: AgentNode
-    }
-  | { kind: "route"; route: string; reason: string }
-
-function id() {
-  return `m_${Math.random().toString(36).slice(2, 11)}`
-}
+export type { TraceRow, UiMessage } from "@/lib/types/chat-ui"
 
 export function useAgentChat() {
-  const [messages, setMessages] = React.useState<UiMessage[]>([])
-  const [streamingText, setStreamingText] = React.useState("")
-  const [loading, setLoading] = React.useState(false)
-  const [traceRows, setTraceRows] = React.useState<TraceRow[]>([])
-  const [sources, setSources] = React.useState<RetrievalChunk[]>([])
-  const [pipeline, setPipeline] = React.useState<PipelineMetrics | null>(null)
-  const [lastTraceId, setLastTraceId] = React.useState<string | undefined>()
-  const [grounded, setGrounded] = React.useState<boolean | null>(null)
+  const {
+    messages,
+    streamingText,
+    loading,
+    traceRows,
+    sources,
+    pipeline,
+    lastTraceId,
+    grounded,
+  } = useAssistantStore(
+    useShallow((s) => ({
+      messages: s.messages,
+      streamingText: s.streamingText,
+      loading: s.loading,
+      traceRows: s.traceRows,
+      sources: s.sources,
+      pipeline: s.pipeline,
+      lastTraceId: s.lastTraceId,
+      grounded: s.grounded,
+    }))
+  )
 
   const abortRef = React.useRef<AbortController | null>(null)
 
   const stop = React.useCallback(() => {
     abortRef.current?.abort()
     abortRef.current = null
-    setLoading(false)
-    setStreamingText((prev) => {
-      if (prev.trim()) {
-        setMessages((m) => [
-          ...m,
-          {
-            id: id(),
-            role: "assistant",
-            content: `${prev.trim()}\n\n*(Phản hồi đã dừng theo yêu cầu.)*`,
-          },
-        ])
-      }
-      return ""
-    })
+    const snap = useAssistantStore.getState().streamingText
+    useAssistantStore.getState().pushStoppedAssistant(snap)
   }, [])
 
   const send = React.useCallback(async (text: string) => {
     const trimmed = text.trim()
-    if (!trimmed || loading) return
+    if (!trimmed) return
+    if (useAssistantStore.getState().loading) return
 
-    const userMsg: UiMessage = { id: id(), role: "user", content: trimmed }
-    setMessages((m) => [...m, userMsg])
-    setStreamingText("")
-    setTraceRows([])
-    setSources([])
-    setPipeline(null)
-    setGrounded(null)
-    setLastTraceId(undefined)
-    setLoading(true)
+    useAssistantStore.getState().beginSend(trimmed)
 
     const ac = new AbortController()
     abortRef.current = ac
 
-    const nextMessages = [...messages, userMsg].map(({ role, content }) => ({
-      role,
-      content,
-    }))
+    const nextMessages = useAssistantStore.getState().messages.map(
+      ({ role, content }) => ({ role, content })
+    )
 
     try {
       const res = await fetch("/api/chat", {
@@ -102,63 +75,61 @@ export function useAgentChat() {
       for await (const ev of iterateAgentEventsFromResponse(res)) {
         switch (ev.type) {
           case "step_started":
-            setTraceRows((rows) => [
-              ...rows,
-              {
-                kind: "step",
-                stepId: ev.stepId,
-                label: ev.label,
-                node: ev.node,
-              },
-            ])
+            useAssistantStore.getState().pushTraceRow({
+              kind: "step",
+              stepId: ev.stepId,
+              label: ev.label,
+              node: ev.node,
+            })
             break
           case "route_decision":
-            setTraceRows((rows) => [
-              ...rows,
-              { kind: "route", route: ev.route, reason: ev.reason },
-            ])
+            useAssistantStore.getState().pushTraceRow({
+              kind: "route",
+              route: ev.route,
+              reason: ev.reason,
+            })
             break
           case "retrieval_result":
-            setSources(ev.chunks)
-            setGrounded(ev.chunks.length > 0)
+            useAssistantStore.getState().setSources(ev.chunks)
             break
           case "token":
             buffer += ev.delta
-            setStreamingText(buffer)
+            useAssistantStore.getState().setStreamingText(buffer)
             break
           case "pipeline_signal":
-            setPipeline(ev.metrics)
+            useAssistantStore.getState().setPipeline(ev.metrics)
             break
           case "error":
             toast.error(ev.message)
             break
           case "done":
-            setLastTraceId(ev.traceId)
+            useAssistantStore.getState().setLastTraceId(ev.traceId)
             break
         }
       }
 
       if (buffer.trim()) {
-        setMessages((m) => [
-          ...m,
-          { id: id(), role: "assistant", content: buffer },
-        ])
+        useAssistantStore.getState().pushAssistantMessage(buffer)
+      } else {
+        useAssistantStore.getState().setLoading(false)
+        useAssistantStore.getState().clearStreaming()
       }
-      setStreamingText("")
     } catch (e) {
       if (e instanceof DOMException && e.name === "AbortError") {
         return
       }
       const msg = e instanceof Error ? e.message : "Lỗi không xác định"
       toast.error(msg)
+      useAssistantStore.getState().setLoading(false)
+      useAssistantStore.getState().clearStreaming()
     } finally {
-      setLoading(false)
       abortRef.current = null
-      setStreamingText("")
     }
-  }, [loading, messages])
+  }, [])
 
   const copyTraceJson = React.useCallback(async () => {
+    const { lastTraceId, traceRows, sources, pipeline, grounded } =
+      useAssistantStore.getState()
     const payload = {
       traceId: lastTraceId,
       traceRows,
@@ -172,7 +143,14 @@ export function useAgentChat() {
     } catch {
       toast.error("Không copy được")
     }
-  }, [traceRows, sources, pipeline, grounded, lastTraceId])
+  }, [])
+
+  const clearSession = React.useCallback(() => {
+    abortRef.current?.abort()
+    abortRef.current = null
+    useAssistantStore.getState().clearSession()
+    toast.message("Đã bắt đầu cuộc trò chuyện mới")
+  }, [])
 
   return {
     messages,
@@ -186,5 +164,6 @@ export function useAgentChat() {
     send,
     stop,
     copyTraceJson,
+    clearSession,
   }
 }

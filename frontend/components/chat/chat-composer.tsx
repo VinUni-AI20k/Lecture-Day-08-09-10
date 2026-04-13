@@ -19,6 +19,7 @@ export function ChatComposer({
   className?: string
 }) {
   const [value, setValue] = React.useState("")
+  const hintId = React.useId()
 
   const submit = () => {
     const t = value.trim()
@@ -30,7 +31,7 @@ export function ChatComposer({
   return (
     <div
       className={cn(
-        "border-border bg-background/80 supports-backdrop-filter:backdrop-blur-sm sticky bottom-0 border-t p-3",
+        "border-border bg-background/95 supports-backdrop-filter:backdrop-blur-sm shrink-0 border-t p-3",
         className
       )}
     >
@@ -43,13 +44,17 @@ export function ChatComposer({
           className="min-h-[72px] resize-none"
           disabled={loading}
           onKeyDown={(e) => {
-            if (e.key === "Enter" && !e.shiftKey) {
-              e.preventDefault()
-              submit()
-            }
+            if (e.key !== "Enter" || e.shiftKey) return
+            e.preventDefault()
+            submit()
           }}
           aria-label="Nội dung tin nhắn"
+          aria-describedby={hintId}
         />
+        <p id={hintId} className="text-muted-foreground text-[11px] leading-snug">
+          <span className="sr-only">Phím tắt. </span>
+          Enter gửi · Shift+Enter xuống dòng
+        </p>
         <div className="flex justify-end gap-2">
           {loading ? (
             <Button
