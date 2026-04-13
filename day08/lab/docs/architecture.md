@@ -1,136 +1,33 @@
-# Architecture — RAG Pipeline (Day 08 Lab)
+# Architecture Document - RAG Pipeline Lab Day 08
 
-> Template: Điền vào các mục này khi hoàn thành từng sprint.
-> Deliverable của Documentation Owner.
+Hệ thống RAG được thiết kế để phục vụ nhu cầu tra cứu nội bộ (IT/HR Helpdesk) với độ chính xác cao và khả năng trích dẫn nguồn minh bạch.
 
-## 1. Tổng quan kiến trúc
+## 1. Indexing Pipeline
+- **Preprocessing**: Sử dụng Regex để bóc tách metadata (Source, Department, Effective Date, Access) từ header của tài liệu văn bản. Tài liệu được làm sạch các dòng trống thừa.
+- **Chunking Strategy**: 
+    - Phương pháp: Paragraph-based chunking.
+    - Logic: Cắt văn bản tại ranh giới đoạn văn (`\n\n`) để giữ tính trọn vẹn của ý nghĩa.
+    - Cấu hình: Chunk size khoảng 1600 ký tự (~400 tokens), Overlap 320 ký tự để duy trì ngữ cảnh giữa các đoạn liền kề.
+- **Embedding**: Sử dụng mô hình `text-embedding-3-small` của OpenAI.
+- **Vector Store**: ChromaDB (Persistent) với cấu hình `hnsw:space: cosine`.
 
-```
-[Raw Docs]
-    ↓
-[index.py: Preprocess → Chunk → Embed → Store]
-    ↓
-[ChromaDB Vector Store]
-    ↓
-[rag_answer.py: Query → Retrieve → Rerank → Generate]
-    ↓
-[Grounded Answer + Citation]
-```
+## 2. Retrieval Strategies
+Hệ thống hỗ trợ 3 chế độ tìm kiếm:
+- **Dense Retrieval**: Sử dụng vector similarity để tìm các đoạn văn có ý nghĩa gần gũi nhất với câu hỏi.
+- **Sparse Retrieval**: Sử dụng thuật toán BM25 (thư viện `rank-bm25`) để tìm kiếm chính xác theo từ khóa/mã lỗi.
+- **Hybrid Search (Strategy)**: Kết hợp Dense và Sparse để tận dụng ý nghĩa ngữ nghĩa và độ chính xác của từ khóa.
+- **Reciprocal Rank Fusion - RRF (Method)**: Sử dụng thuật toán RRF để trộn và xếp hạng lại kết quả từ hai phương pháp trên.
 
-**Mô tả ngắn gọn:**
-> TODO: Mô tả hệ thống trong 2-3 câu. Nhóm xây gì? Cho ai dùng? Giải quyết vấn đề gì?
+## 3. Diversity with MMR
+- **MMR (Maximal Marginal Relevance)**: Được sử dụng để lựa chọn tập hợp top-k chunks đa dạng nhất, tránh trùng lặp thông tin retrieved khi đưa vào prompt.
 
----
+## 4. Generation & Grounding
+- **LLM**: OpenAI `gpt-4o-mini`.
+- **System Prompt**: 
+    - Ép buộc mô hình chỉ sử dụng `Context` được cung cấp.
+    - Cấm tuyệt đối việc tự bịa thông tin (Hallucination).
+    - Quy chuẩn định dạng trích dẫn `[n]` và danh sách nguồn cuối câu trả lời.
 
-## 2. Indexing Pipeline (Sprint 1)
-
-### Tài liệu được index
-| File | Nguồn | Department | Số chunk |
-|------|-------|-----------|---------|
-| `policy_refund_v4.txt` | policy/refund-v4.pdf | CS | TODO |
-| `sla_p1_2026.txt` | support/sla-p1-2026.pdf | IT | TODO |
-| `access_control_sop.txt` | it/access-control-sop.md | IT Security | TODO |
-| `it_helpdesk_faq.txt` | support/helpdesk-faq.md | IT | TODO |
-| `hr_leave_policy.txt` | hr/leave-policy-2026.pdf | HR | TODO |
-
-### Quyết định chunking
-| Tham số | Giá trị | Lý do |
-|---------|---------|-------|
-| Chunk size | TODO tokens | TODO |
-| Overlap | TODO tokens | TODO |
-| Chunking strategy | Heading-based / paragraph-based | TODO |
-| Metadata fields | source, section, effective_date, department, access | Phục vụ filter, freshness, citation |
-
-### Embedding model
-- **Model**: TODO (OpenAI text-embedding-3-small / paraphrase-multilingual-MiniLM-L12-v2)
-- **Vector store**: ChromaDB (PersistentClient)
-- **Similarity metric**: Cosine
-
----
-
-## 3. Retrieval Pipeline (Sprint 2 + 3)
-
-### Baseline (Sprint 2)
-| Tham số | Giá trị |
-|---------|---------|
-| Strategy | Dense (embedding similarity) |
-| Top-k search | 10 |
-| Top-k select | 3 |
-| Rerank | Không |
-
-### Variant (Sprint 3)
-| Tham số | Giá trị | Thay đổi so với baseline |
-|---------|---------|------------------------|
-| Strategy | TODO (hybrid / dense) | TODO |
-| Top-k search | TODO | TODO |
-| Top-k select | TODO | TODO |
-| Rerank | TODO (cross-encoder / MMR) | TODO |
-| Query transform | TODO (expansion / HyDE / decomposition) | TODO |
-
-**Lý do chọn variant này:**
-> TODO: Giải thích tại sao chọn biến này để tune.
-> Ví dụ: "Chọn hybrid vì corpus có cả câu tự nhiên (policy) lẫn mã lỗi và tên chuyên ngành (SLA ticket P1, ERR-403)."
-
----
-
-## 4. Generation (Sprint 2)
-
-### Grounded Prompt Template
-```
-Answer only from the retrieved context below.
-If the context is insufficient, say you do not know.
-Cite the source field when possible.
-Keep your answer short, clear, and factual.
-
-Question: {query}
-
-Context:
-[1] {source} | {section} | score={score}
-{chunk_text}
-
-[2] ...
-
-Answer:
-```
-
-### LLM Configuration
-| Tham số | Giá trị |
-|---------|---------|
-| Model | TODO (gpt-4o-mini / gemini-1.5-flash) |
-| Temperature | 0 (để output ổn định cho eval) |
-| Max tokens | 512 |
-
----
-
-## 5. Failure Mode Checklist
-
-> Dùng khi debug — kiểm tra lần lượt: index → retrieval → generation
-
-| Failure Mode | Triệu chứng | Cách kiểm tra |
-|-------------|-------------|---------------|
-| Index lỗi | Retrieve về docs cũ / sai version | `inspect_metadata_coverage()` trong index.py |
-| Chunking tệ | Chunk cắt giữa điều khoản | `list_chunks()` và đọc text preview |
-| Retrieval lỗi | Không tìm được expected source | `score_context_recall()` trong eval.py |
-| Generation lỗi | Answer không grounded / bịa | `score_faithfulness()` trong eval.py |
-| Token overload | Context quá dài → lost in the middle | Kiểm tra độ dài context_block |
-
----
-
-## 6. Diagram (tùy chọn)
-
-> TODO: Vẽ sơ đồ pipeline nếu có thời gian. Có thể dùng Mermaid hoặc drawio.
-
-```mermaid
-graph LR
-    A[User Query] --> B[Query Embedding]
-    B --> C[ChromaDB Vector Search]
-    C --> D[Top-10 Candidates]
-    D --> E{Rerank?}
-    E -->|Yes| F[Cross-Encoder]
-    E -->|No| G[Top-3 Select]
-    F --> G
-    G --> H[Build Context Block]
-    H --> I[Grounded Prompt]
-    I --> J[LLM]
-    J --> K[Answer + Citation]
-```
+## 5. Evaluation
+- **Framework**: Tự xây dựng scorecard chấm điểm 1-5.
+- **Judge**: Sử dụng mô hình **LLM-as-Judge** để tự động hóa việc chấm điểm Faithfulness, Relevance và Completeness dựa trên rubric định sẵn.

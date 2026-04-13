@@ -23,6 +23,7 @@ from pathlib import Path
 from typing import List, Dict, Any, Optional
 from datetime import datetime
 from rag_answer import rag_answer
+import os
 
 # =============================================================================
 # CẤU HÌNH
@@ -31,23 +32,20 @@ from rag_answer import rag_answer
 TEST_QUESTIONS_PATH = Path(__file__).parent / "data" / "test_questions.json"
 RESULTS_DIR = Path(__file__).parent / "results"
 
-# Cấu hình baseline (Sprint 2)
 BASELINE_CONFIG = {
     "retrieval_mode": "dense",
     "top_k_search": 10,
     "top_k_select": 3,
-    "use_rerank": False,
     "label": "baseline_dense",
 }
 
-# Cấu hình variant (Sprint 3 — điều chỉnh theo lựa chọn của nhóm)
-# TODO Sprint 4: Cập nhật VARIANT_CONFIG theo variant nhóm đã implement
+# Cấu hình variant (Sprint 3)
 VARIANT_CONFIG = {
-    "retrieval_mode": "hybrid",   # Hoặc "dense" nếu chỉ đổi rerank
+    "retrieval_mode": "hybrid",
     "top_k_search": 10,
     "top_k_select": 3,
-    "use_rerank": True,           # Hoặc False nếu variant là hybrid không rerank
-    "label": "variant_hybrid_rerank",
+    "use_mmr": True,
+    "label": "variant_hybrid_mmr",
 }
 
 
@@ -62,38 +60,43 @@ def score_faithfulness(
 ) -> Dict[str, Any]:
     """
     Faithfulness: Câu trả lời có bám đúng chứng cứ đã retrieve không?
-    Câu hỏi: Model có tự bịa thêm thông tin ngoài retrieved context không?
-
-    Thang điểm 1-5:
-      5: Mọi thông tin trong answer đều có trong retrieved chunks
-      4: Gần như hoàn toàn grounded, 1 chi tiết nhỏ chưa chắc chắn
-      3: Phần lớn grounded, một số thông tin có thể từ model knowledge
-      2: Nhiều thông tin không có trong retrieved chunks
-      1: Câu trả lời không grounded, phần lớn là model bịa
-
-    TODO Sprint 4 — Có 2 cách chấm:
-
-    Cách 1 — Chấm thủ công (Manual, đơn giản):
-        Đọc answer và chunks_used, chấm điểm theo thang trên.
-        Ghi lý do ngắn gọn vào "notes".
-
-    Cách 2 — LLM-as-Judge (Tự động, nâng cao):
-        Gửi prompt cho LLM:
-            "Given these retrieved chunks: {chunks}
-             And this answer: {answer}
-             Rate the faithfulness on a scale of 1-5.
-             5 = completely grounded in the provided context.
-             1 = answer contains information not in the context.
-             Output JSON: {'score': <int>, 'reason': '<string>'}"
-
-    Trả về dict với: score (1-5) và notes (lý do)
+    Sử dụng LLM-as-Judge.
     """
-    # TODO Sprint 4: Implement scoring
-    # Tạm thời trả về None (yêu cầu chấm thủ công)
-    return {
-        "score": None,
-        "notes": "TODO: Chấm thủ công hoặc implement LLM-as-Judge",
-    }
+    if not chunks_used:
+        return {"score": 1, "notes": "No chunks found"}
+
+    from openai import OpenAI
+    client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+    
+    context = "\n\n".join([f"Chunk {i+1}:\n{c['text']}" for i, c in enumerate(chunks_used)])
+    
+    prompt = f"""Bạn là một quan tòa công tâm chấm điểm hệ thống RAG. 
+Nhiệm vụ: Đánh giá tính TRUNG THỰC (Faithfulness) của Answer dựa trên Context.
+Answer được coi là Faithful nếu mọi thông tin trong Answer đều có thể tìm thấy dữ liệu bổ trợ trong Context.
+
+Context:
+{context}
+
+Answer:
+{answer}
+
+Hãy chấm điểm trên thang từ 1 đến 5:
+5: Hoàn toàn trung thực, mọi ý đều có trong context.
+1: Có thông tin bịa đặt (hallucination) không có trong context.
+
+Trả về duy nhất JSON format: {{"score": <int>, "reason": "<string>"}}"""
+
+    try:
+        from rag_answer import LLM_MODEL
+        response = client.chat.completions.create(
+            model=LLM_MODEL,
+            messages=[{"role": "user", "content": prompt}],
+            response_format={"type": "json_object"}
+        )
+        result = json.loads(response.choices[0].message.content)
+        return {"score": int(result["score"]), "notes": result["reason"]}
+    except Exception as e:
+        return {"score": None, "notes": f"Error in LLM-as-Judge: {e}"}
 
 
 def score_answer_relevance(
@@ -102,21 +105,34 @@ def score_answer_relevance(
 ) -> Dict[str, Any]:
     """
     Answer Relevance: Answer có trả lời đúng câu hỏi người dùng hỏi không?
-    Câu hỏi: Model có bị lạc đề hay trả lời đúng vấn đề cốt lõi không?
-
-    Thang điểm 1-5:
-      5: Answer trả lời trực tiếp và đầy đủ câu hỏi
-      4: Trả lời đúng nhưng thiếu vài chi tiết phụ
-      3: Trả lời có liên quan nhưng chưa đúng trọng tâm
-      2: Trả lời lạc đề một phần
-      1: Không trả lời câu hỏi
-
-    TODO Sprint 4: Implement tương tự score_faithfulness
+    Sử dụng LLM-as-Judge.
     """
-    return {
-        "score": None,
-        "notes": "TODO: Implement score_answer_relevance",
-    }
+    from openai import OpenAI
+    client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+    
+    prompt = f"""Bạn là quan tòa chấm điểm hệ thống RAG. 
+Nhiệm vụ: Đánh giá độ LIÊN QUAN (Relevance) của Answer đối với Query.
+
+Query: {query}
+Answer: {answer}
+
+Chấm điểm trên thang 1-5:
+5: Trả lời trực tiếp, đầy đủ và đúng trọng tâm câu hỏi.
+1: Trả lời lạc đề hoặc không trả lời câu hỏi.
+
+Trả về duy nhất JSON format: {{"score": <int>, "reason": "<string>"}}"""
+
+    try:
+        from rag_answer import LLM_MODEL
+        response = client.chat.completions.create(
+            model=LLM_MODEL,
+            messages=[{"role": "user", "content": prompt}],
+            response_format={"type": "json_object"}
+        )
+        result = json.loads(response.choices[0].message.content)
+        return {"score": int(result["score"]), "notes": result["reason"]}
+    except Exception as e:
+        return {"score": None, "notes": f"Error: {e}"}
 
 
 def score_context_recall(
@@ -181,27 +197,37 @@ def score_completeness(
     expected_answer: str,
 ) -> Dict[str, Any]:
     """
-    Completeness: Answer có thiếu điều kiện ngoại lệ hoặc bước quan trọng không?
-    Câu hỏi: Answer có bao phủ đủ thông tin so với expected_answer không?
-
-    Thang điểm 1-5:
-      5: Answer bao gồm đủ tất cả điểm quan trọng trong expected_answer
-      4: Thiếu 1 chi tiết nhỏ
-      3: Thiếu một số thông tin quan trọng
-      2: Thiếu nhiều thông tin quan trọng
-      1: Thiếu phần lớn nội dung cốt lõi
-
-    TODO Sprint 4:
-    Option 1 — Chấm thủ công: So sánh answer vs expected_answer và chấm.
-    Option 2 — LLM-as-Judge:
-        "Compare the model answer with the expected answer.
-         Rate completeness 1-5. Are all key points covered?
-         Output: {'score': int, 'missing_points': [str]}"
+    Completeness: Answer có bao phủ đủ các ý chính so với đáp án mẫu không?
+    Sử dụng LLM-as-Judge.
     """
-    return {
-        "score": None,
-        "notes": "TODO: Implement score_completeness (so sánh với expected_answer)",
-    }
+    if not expected_answer:
+        return {"score": None, "notes": "No expected answer provided"}
+
+    from openai import OpenAI
+    client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+    
+    prompt = f"""Đánh giá tính ĐẦY ĐỦ (Completeness) của Answer so với Expected Answer.
+
+Expected Answer: {expected_answer}
+Model Answer: {answer}
+
+Chấm điểm 1-5:
+5: Bao phủ tất cả các điểm quan trọng.
+1: Thiếu hầu hết thông tin cốt lõi.
+
+Trả về duy nhất JSON format: {{"score": <int>, "reason": "<string>"}}"""
+
+    try:
+        from rag_answer import LLM_MODEL
+        response = client.chat.completions.create(
+            model=LLM_MODEL,
+            messages=[{"role": "user", "content": prompt}],
+            response_format={"type": "json_object"}
+        )
+        result = json.loads(response.choices[0].message.content)
+        return {"score": int(result["score"]), "notes": result["reason"]}
+    except Exception as e:
+        return {"score": None, "notes": f"Error: {e}"}
 
 
 # =============================================================================
@@ -262,7 +288,7 @@ def run_scorecard(
                 retrieval_mode=config.get("retrieval_mode", "dense"),
                 top_k_search=config.get("top_k_search", 10),
                 top_k_select=config.get("top_k_select", 3),
-                use_rerank=config.get("use_rerank", False),
+                use_mmr=config.get("use_mmr", False),
                 verbose=False,
             )
             answer = result["answer"]
@@ -435,7 +461,7 @@ Generated: {timestamp}
     for r in results:
         md += (f"| {r['id']} | {r['category']} | {r.get('faithfulness', 'N/A')} | "
                f"{r.get('relevance', 'N/A')} | {r.get('context_recall', 'N/A')} | "
-               f"{r.get('completeness', 'N/A')} | {r.get('faithfulness_notes', '')[:50]} |\n")
+               f"{r.get('completeness', 'N/A')} | {r.get('faithfulness_notes', '')} |\n")
 
     return md
 
@@ -487,24 +513,25 @@ if __name__ == "__main__":
         baseline_results = []
 
     # --- Chạy Variant (sau khi Sprint 3 hoàn thành) ---
-    # TODO Sprint 4: Uncomment sau khi implement variant trong rag_answer.py
-    # print("\n--- Chạy Variant ---")
-    # variant_results = run_scorecard(
-    #     config=VARIANT_CONFIG,
-    #     test_questions=test_questions,
-    #     verbose=True,
-    # )
-    # variant_md = generate_scorecard_summary(variant_results, VARIANT_CONFIG["label"])
-    # (RESULTS_DIR / "scorecard_variant.md").write_text(variant_md, encoding="utf-8")
-
-    # --- A/B Comparison ---
-    # TODO Sprint 4: Uncomment sau khi có cả baseline và variant
-    # if baseline_results and variant_results:
-    #     compare_ab(
-    #         baseline_results,
-    #         variant_results,
-    #         output_csv="ab_comparison.csv"
-    #     )
+    print("\n--- Chạy Variant ---")
+    try:
+        variant_results = run_scorecard(
+            config=VARIANT_CONFIG,
+            test_questions=test_questions,
+            verbose=True,
+        )
+        variant_md = generate_scorecard_summary(variant_results, VARIANT_CONFIG["label"])
+        (RESULTS_DIR / "scorecard_variant.md").write_text(variant_md, encoding="utf-8")
+        
+        # --- A/B Comparison ---
+        if baseline_results and variant_results:
+            compare_ab(
+                baseline_results,
+                variant_results,
+                output_csv="ab_comparison.csv"
+            )
+    except Exception as e:
+        print(f"Error running variant evaluation: {e}")
 
     print("\n\nViệc cần làm Sprint 4:")
     print("  1. Hoàn thành Sprint 2 + 3 trước")

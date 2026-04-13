@@ -1,0 +1,47 @@
+(lab) (base) namdv@namdv-Latitude-5490:~/workspace/Lecture-Day-08-09-10/day08/lab$ python rag_answer.py --query "Approval Matrix để cấp quyền là tài liệu nào?" --mode hybrid --mmr --verbose
+
+###### Ghi chú: Tài liệu này trước đây có tên "Approval Matrix for System Access".
+
+--- Running RAG for: Approval Matrix để cấp quyền là tài liệu nào? (mode=hybrid, mmr=True) ---
+
+[RAG] Query: Approval Matrix để cấp quyền là tài liệu nào?
+[RAG] Retrieved 10 candidates (mode=hybrid)
+[RAG] Running MMR...
+[RAG] Final selected: 3 chunks
+
+ANSWER:
+Tôi xin lỗi, thông tin này không có trong tài liệu nội bộ.
+
+SOURCES:
+policy/refund-v4.pdf, it/access-control-sop.md
+
+==========================================================
+
+
+
+(lab) (base) namdv@namdv-Latitude-5490:~/workspace/Lecture-Day-08-09-10/day08/lab$ python rag_answer.py --query "SLA xử lý ticket P1 là bao lâu?" --compare
+
+============================================================
+Query: SLA xử lý ticket P1 là bao lâu?
+============================================================
+
+--- Strategy: dense ---
+Answer: SLA xử lý ticket P1 là 4 giờ cho việc khắc phục (resolution) sau khi phản hồi ban đầu được thực hiện trong 15 phút kể từ khi ticket được tạo [1]. 
+
+Danh sách nguồn đã sử dụng:
+[1] support/sla-p1-2026.pdf
+Sources: ['policy/refund-v4.pdf', 'support/sla-p1-2026.pdf']
+
+--- Strategy: sparse ---
+Answer: SLA xử lý ticket P1 là 4 giờ [2]. 
+
+Danh sách nguồn đã sử dụng:
+[2] support/sla-p1-2026.pdf | Phần 2: SLA theo mức độ ưu tiên.
+Sources: ['policy/refund-v4.pdf', 'support/sla-p1-2026.pdf']
+
+--- Strategy: hybrid ---
+Answer: SLA xử lý ticket P1 là 15 phút cho phản hồi ban đầu và 4 giờ cho việc xử lý và khắc phục [1]. 
+
+Danh sách nguồn đã sử dụng:
+[1] support/sla-p1-2026.pdf
+Sources: ['policy/refund-v4.pdf', 'support/sla-p1-2026.pdf']

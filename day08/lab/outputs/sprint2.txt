@@ -1,0 +1,22 @@
+(base) namdv@namdv-Latitude-5490:~/workspace/Lecture-Day-08-09-10/day08/lab$ python rag_answer.py --query "SLA xử lý ticket P1 là bao lâu?" --mode dense
+--- Running RAG for: SLA xử lý ticket P1 là bao lâu? (mode=dense, mmr=False) ---
+
+ANSWER:
+SLA xử lý ticket P1 là 4 giờ cho việc xử lý và khắc phục sau phản hồi ban đầu trong 15 phút kể từ khi ticket được tạo [1]. 
+
+Danh sách nguồn đã sử dụng:
+[1] support/sla-p1-2026.pdf
+
+SOURCES:
+support/sla-p1-2026.pdf, policy/refund-v4.pdf
+
+===============================================
+
+(lab) (base) namdv@namdv-Latitude-5490:~/workspace/Lecture-Day-08-09-10/day08/lab$ python rag_answer.py --query "ERR-403-AUTH là lỗi gì?" --mode dense
+--- Running RAG for: ERR-403-AUTH là lỗi gì? (mode=dense, mmr=False) ---
+
+ANSWER:
+Tôi xin lỗi, thông tin này không có trong tài liệu nội bộ.
+
+SOURCES:
+support/sla-p1-2026.pdf, it/access-control-sop.md

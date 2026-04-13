@@ -1,0 +1,103 @@
+(base) namdv@namdv-Latitude-5490:~/workspace/Lecture-Day-08-09-10/day08/lab$ python index.py 
+============================================================
+Sprint 1: Build RAG Index
+============================================================
+
+Tìm thấy 5 tài liệu:
+  - policy_refund_v4.txt
+  - it_helpdesk_faq.txt
+  - sla_p1_2026.txt
+  - hr_leave_policy.txt
+  - access_control_sop.txt
+
+--- Test preprocess + chunking ---
+
+File: policy_refund_v4.txt
+  Metadata: {'source': 'policy/refund-v4.pdf', 'section': '', 'department': 'CS', 'effective_date': '2026-02-01', 'access': 'internal'}
+  Số chunks: 6
+
+  [Chunk 1] Section: Điều 1: Phạm vi áp dụng
+  Text: Chính sách này áp dụng cho tất cả các đơn hàng được đặt trên hệ thống nội bộ kể từ ngày 01/02/2026.
+Các đơn hàng đặt trước ngày có hiệu lực sẽ áp dụng...
+
+  [Chunk 2] Section: Điều 2: Điều kiện được hoàn tiền
+  Text: Khách hàng được quyền yêu cầu hoàn tiền khi đáp ứng đủ các điều kiện sau:
+- Sản phẩm bị lỗi do nhà sản xuất, không phải do người dùng.
+- Yêu cầu được ...
+
+  [Chunk 3] Section: Điều 3: Điều kiện áp dụng và ngoại lệ
+  Text: Hoàn tiền — Điều kiện áp dụng:
+Yêu cầu được gửi trong vòng 7 ngày kể từ thời điểm xác nhận đơn hàng.
+
+Ngoại lệ không được hoàn tiền:
+- Sản phẩm thuộc ...
+
+--- Build Full Index ---
+Đang build index từ: /home/namdv/workspace/Lecture-Day-08-09-10/day08/lab/data/docs
+  Processing: policy_refund_v4.txt
+    → Embedding 6 chunks...
+  Processing: it_helpdesk_faq.txt
+    → Embedding 6 chunks...
+  Processing: sla_p1_2026.txt
+    → Embedding 5 chunks...
+  Processing: hr_leave_policy.txt
+    → Embedding 5 chunks...
+  Processing: access_control_sop.txt
+    → Embedding 7 chunks...
+
+Hoàn thành! Tổng số chunks: 29
+
+=== Top 5 chunks trong index ===
+
+[Chunk 1]
+  Source: policy/refund-v4.pdf
+  Section: Điều 1: Phạm vi áp dụng
+  Effective Date: 2026-02-01
+  Text preview: Chính sách này áp dụng cho tất cả các đơn hàng được đặt trên hệ thống nội bộ kể từ ngày 01/02/2026.
+Các đơn hàng đặt trư...
+
+[Chunk 2]
+  Source: policy/refund-v4.pdf
+  Section: Điều 2: Điều kiện được hoàn tiền
+  Effective Date: 2026-02-01
+  Text preview: Khách hàng được quyền yêu cầu hoàn tiền khi đáp ứng đủ các điều kiện sau:
+- Sản phẩm bị lỗi do nhà sản xuất, không phải ...
+
+[Chunk 3]
+  Source: policy/refund-v4.pdf
+  Section: Điều 3: Điều kiện áp dụng và ngoại lệ
+  Effective Date: 2026-02-01
+  Text preview: Hoàn tiền — Điều kiện áp dụng:
+Yêu cầu được gửi trong vòng 7 ngày kể từ thời điểm xác nhận đơn hàng.
+
+Ngoại lệ không đượ...
+
+[Chunk 4]
+  Source: policy/refund-v4.pdf
+  Section: Điều 4: Quy trình xử lý yêu cầu hoàn tiền
+  Effective Date: 2026-02-01
+  Text preview: Bước 1: Khách hàng gửi yêu cầu qua hệ thống ticket nội bộ với category "Refund Request".
+Bước 2: CS Agent xem xét trong ...
+
+[Chunk 5]
+  Source: policy/refund-v4.pdf
+  Section: Điều 5: Hình thức hoàn tiền
+  Effective Date: 2026-02-01
+  Text preview: - Hoàn tiền qua phương thức thanh toán gốc: áp dụng trong 100% trường hợp đủ điều kiện.
+- Hoàn tiền qua credit nội bộ (s...
+
+
+Tổng chunks: 29
+Phân bố theo department:
+  CS: 6 chunks
+  IT: 11 chunks
+  HR: 5 chunks
+  IT Security: 7 chunks
+Chunks thiếu effective_date: 0
+
+Sprint 1 setup hoàn thành!
+Việc cần làm:
+  1. Implement get_embedding() - chọn OpenAI hoặc Sentence Transformers
+  2. Implement phần TODO trong build_index()
+  3. Chạy build_index() và kiểm tra với list_chunks()
+  4. Nếu chunking chưa tốt: cải thiện _split_by_size() để split theo paragraph

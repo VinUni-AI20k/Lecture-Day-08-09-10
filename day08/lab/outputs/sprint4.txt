@@ -1,0 +1,169 @@
+(lab) (base) namdv@namdv-Latitude-5490:~/workspace/Lecture-Day-08-09-10/day08/lab$ python eval.py
+============================================================
+Sprint 4: Evaluation & Scorecard
+============================================================
+
+Loading test questions từ: /home/namdv/workspace/Lecture-Day-08-09-10/day08/lab/data/test_questions.json
+Tìm thấy 10 câu hỏi
+  [q01] SLA xử lý ticket P1 là bao lâu? (SLA)
+  [q02] Khách hàng có thể yêu cầu hoàn tiền trong bao nhiêu ngày? (Refund)
+  [q03] Ai phải phê duyệt để cấp quyền Level 3? (Access Control)
+  ...
+
+--- Chạy Baseline ---
+Lưu ý: Cần hoàn thành Sprint 2 trước khi chạy scorecard!
+
+======================================================================
+Chạy scorecard: baseline_dense
+Config: {'retrieval_mode': 'dense', 'top_k_search': 10, 'top_k_select': 3, 'label': 'baseline_dense'}
+======================================================================
+
+[q01] SLA xử lý ticket P1 là bao lâu?
+  Answer: SLA xử lý ticket P1 là 4 giờ cho việc xử lý và khắc phục sau phản hồi ban đầu trong 15 phút kể từ kh...
+  Faithful: 5 | Relevant: 5 | Recall: 5 | Complete: 5
+
+[q02] Khách hàng có thể yêu cầu hoàn tiền trong bao nhiêu ngày?
+  Answer: Khách hàng có thể yêu cầu hoàn tiền trong vòng 7 ngày làm việc kể từ thời điểm xác nhận đơn hàng [1]...
+  Faithful: 5 | Relevant: 5 | Recall: 5 | Complete: 5
+
+[q03] Ai phải phê duyệt để cấp quyền Level 3?
+  Answer: Để cấp quyền Level 3, yêu cầu phải được phê duyệt bởi Line Manager, IT Admin và IT Security [1]. 
+
+D...
+  Faithful: 5 | Relevant: 5 | Recall: 5 | Complete: 5
+
+[q04] Sản phẩm kỹ thuật số có được hoàn tiền không?
+  Answer: Sản phẩm kỹ thuật số không được hoàn tiền. Cụ thể, các sản phẩm thuộc danh mục hàng kỹ thuật số như ...
+  Faithful: 5 | Relevant: 5 | Recall: 5 | Complete: 5
+
+[q05] Tài khoản bị khóa sau bao nhiêu lần đăng nhập sai?
+  Answer: Tài khoản bị khóa sau 5 lần đăng nhập sai liên tiếp. Để mở khóa, bạn có thể liên hệ IT Helpdesk hoặc...
+  Faithful: 5 | Relevant: 5 | Recall: 5 | Complete: 5
+
+[q06] Escalation trong sự cố P1 diễn ra như thế nào?
+  Answer: Escalation trong sự cố P1 diễn ra theo quy trình sau:
+
+1. On-call engineer nhận alert hoặc ticket và...
+  Faithful: 5 | Relevant: 5 | Recall: 5 | Complete: 5
+
+[q07] Approval Matrix để cấp quyền hệ thống là tài liệu nào?
+  Answer: Tôi xin lỗi, thông tin này không có trong tài liệu nội bộ....
+  Faithful: 1 | Relevant: 1 | Recall: 5 | Complete: 1
+
+[q08] Nhân viên được làm remote tối đa mấy ngày mỗi tuần?
+  Answer: Nhân viên sau probation period có thể làm remote tối đa 2 ngày/tuần, và lịch remote phải được Team L...
+  Faithful: 5 | Relevant: 5 | Recall: 5 | Complete: 5
+
+[q09] ERR-403-AUTH là lỗi gì và cách xử lý?
+  Answer: Tôi xin lỗi, thông tin này không có trong tài liệu nội bộ....
+  Faithful: 1 | Relevant: 1 | Recall: None | Complete: 2
+
+[q10] Nếu cần hoàn tiền khẩn cấp cho khách hàng VIP, quy trình có khác không?
+  Answer: Tôi xin lỗi, thông tin này không có trong tài liệu nội bộ....
+  Faithful: 1 | Relevant: 1 | Recall: 5 | Complete: 1
+
+Average faithfulness: 3.80
+
+Average relevance: 3.80
+
+Average context_recall: 5.00
+
+Average completeness: 3.90
+
+Scorecard lưu tại: /home/namdv/workspace/Lecture-Day-08-09-10/day08/lab/results/scorecard_baseline.md
+
+--- Chạy Variant ---
+
+======================================================================
+Chạy scorecard: variant_hybrid_mmr
+Config: {'retrieval_mode': 'hybrid', 'top_k_search': 10, 'top_k_select': 3, 'use_mmr': True, 'label': 'variant_hybrid_mmr'}
+======================================================================
+
+[q01] SLA xử lý ticket P1 là bao lâu?
+  Answer: SLA xử lý ticket P1 là 4 giờ kể từ khi ticket được tạo [1]. 
+
+Danh sách nguồn đã sử dụng:
+[1] suppor...
+  Faithful: 5 | Relevant: 5 | Recall: 5 | Complete: 3
+
+[q02] Khách hàng có thể yêu cầu hoàn tiền trong bao nhiêu ngày?
+  Answer: Khách hàng có thể yêu cầu hoàn tiền trong vòng 7 ngày làm việc kể từ thời điểm xác nhận đơn hàng, nế...
+  Faithful: 5 | Relevant: 5 | Recall: 5 | Complete: 5
+
+[q03] Ai phải phê duyệt để cấp quyền Level 3?
+  Answer: Để cấp quyền Level 3, cần có sự phê duyệt của Line Manager, IT Admin và IT Security [1]. 
+
+Danh sách...
+  Faithful: 5 | Relevant: 5 | Recall: 5 | Complete: 5
+
+[q04] Sản phẩm kỹ thuật số có được hoàn tiền không?
+  Answer: Sản phẩm kỹ thuật số không được hoàn tiền. Các ngoại lệ không được hoàn tiền bao gồm sản phẩm thuộc ...
+  Faithful: 5 | Relevant: 5 | Recall: 5 | Complete: 5
+
+[q05] Tài khoản bị khóa sau bao nhiêu lần đăng nhập sai?
+  Answer: Tài khoản bị khóa sau 5 lần đăng nhập sai liên tiếp. Để mở khóa, bạn cần liên hệ IT Helpdesk hoặc tự...
+  Faithful: 5 | Relevant: 5 | Recall: 5 | Complete: 5
+
+[q06] Escalation trong sự cố P1 diễn ra như thế nào?
+  Answer: Escalation trong sự cố P1 diễn ra như sau:
+
+1. On-call IT Admin có thể cấp quyền tạm thời (tối đa 24...
+  Faithful: 5 | Relevant: 5 | Recall: 5 | Complete: 2
+
+[q07] Approval Matrix để cấp quyền hệ thống là tài liệu nào?
+  Answer: Tôi xin lỗi, thông tin này không có trong tài liệu nội bộ....
+  Faithful: 1 | Relevant: 1 | Recall: 5 | Complete: 1
+
+[q08] Nhân viên được làm remote tối đa mấy ngày mỗi tuần?
+  Answer: Nhân viên được làm remote tối đa 2 ngày mỗi tuần sau khi hoàn thành probation period, và lịch remote...
+  Faithful: 5 | Relevant: 5 | Recall: 5 | Complete: 5
+
+[q09] ERR-403-AUTH là lỗi gì và cách xử lý?
+  Answer: Tôi xin lỗi, thông tin này không có trong tài liệu nội bộ....
+  Faithful: 5 | Relevant: 1 | Recall: None | Complete: 2
+
+[q10] Nếu cần hoàn tiền khẩn cấp cho khách hàng VIP, quy trình có khác không?
+  Answer: Tôi xin lỗi, thông tin này không có trong tài liệu nội bộ....
+  Faithful: 1 | Relevant: 1 | Recall: 5 | Complete: 1
+
+Average faithfulness: 4.20
+
+Average relevance: 3.80
+
+Average context_recall: 5.00
+
+Average completeness: 3.40
+
+======================================================================
+A/B Comparison: Baseline vs Variant
+======================================================================
+Metric                 Baseline    Variant    Delta
+-------------------------------------------------------
+faithfulness               3.80       4.20    +0.40
+relevance                  3.80       3.80      N/A
+context_recall             5.00       5.00      N/A
+completeness               3.90       3.40    -0.50
+
+Câu    Baseline F/R/Rc/C      Variant F/R/Rc/C       Better?   
+-----------------------------------------------------------------
+q01    5/5/5/5                5/5/5/3                Baseline  
+q02    5/5/5/5                5/5/5/5                Tie       
+q03    5/5/5/5                5/5/5/5                Tie       
+q04    5/5/5/5                5/5/5/5                Tie       
+q05    5/5/5/5                5/5/5/5                Tie       
+q06    5/5/5/5                5/5/5/2                Baseline  
+q07    1/1/5/1                1/1/5/1                Tie       
+q08    5/5/5/5                5/5/5/5                Tie       
+q09    1/1/None/2             5/1/None/2             Variant   
+q10    1/1/5/1                1/1/5/1                Tie       
+
+Kết quả đã lưu vào: /home/namdv/workspace/Lecture-Day-08-09-10/day08/lab/results/ab_comparison.csv
+
+
+Việc cần làm Sprint 4:
+  1. Hoàn thành Sprint 2 + 3 trước
+  2. Chấm điểm thủ công hoặc implement LLM-as-Judge trong score_* functions
+  3. Chạy run_scorecard(BASELINE_CONFIG)
+  4. Chạy run_scorecard(VARIANT_CONFIG)
+  5. Gọi compare_ab() để thấy delta
+  6. Cập nhật docs/tuning-log.md với kết quả và nhận xét
