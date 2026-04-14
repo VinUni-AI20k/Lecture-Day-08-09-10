@@ -1,0 +1,92 @@
+{
+  "task": "SLA xử lý ticket P1 là bao lâu?",
+  "route_reason": "task contains SLA/ticket keywords: [p1, sla, ticket]",
+  "risk_high": false,
+  "needs_tool": false,
+  "hitl_triggered": false,
+  "retrieved_chunks": [
+    {
+      "text": "SLA TICKET - QUY ĐỊNH XỬ LÝ SỰ CỐ\nSource: support/sla-p1-2026.pdf\nDepartment: IT\nEffective Date: 2026-01-15\nAccess: internal",
+      "source": "sla_p1_2026.txt",
+      "score": 0.299,
+      "metadata": {
+        "chunk_idx": 0,
+        "source": "sla_p1_2026.txt"
+      }
+    },
+    {
+      "text": "Ticket P3:\n- Phản hồi ban đầu: 1 ngày làm việc.\n- Xử lý và khắc phục: 5 ngày làm việc.",
+      "source": "sla_p1_2026.txt",
+      "score": 0.2236,
+      "metadata": {
+        "chunk_idx": 9,
+        "source": "sla_p1_2026.txt"
+      }
+    },
+    {
+      "text": "Ticket P2:\n- Phản hồi ban đầu: 2 giờ.\n- Xử lý và khắc phục: 1 ngày làm việc.\n- Escalation: Tự động escalate sau 90 phút không có phản hồi.",
+      "source": "sla_p1_2026.txt",
+      "score": 0.2043,
+      "metadata": {
+        "source": "sla_p1_2026.txt",
+        "chunk_idx": 8
+      }
+    }
+  ],
+  "retrieved_sources": [
+    "sla_p1_2026.txt"
+  ],
+  "policy_result": {},
+  "mcp_tools_used": [],
+  "final_answer": "Không đủ thông tin trong tài liệu nội bộ. Vui lòng liên hệ team phụ trách.  \nNguồn: [1] sla_p1_2026.txt",
+  "sources": [
+    "sla_p1_2026.txt"
+  ],
+  "confidence": 0.3,
+  "history": [
+    "[supervisor] received task: SLA xử lý ticket P1 là bao lâu?",
+    "[supervisor] route=retrieval_worker reason=task contains SLA/ticket keywords: [p1, sla, ticket]",
+    "[retrieval_worker] retrieved 3 chunks from ['sla_p1_2026.txt']",
+    "[synthesis_worker] answer generated, confidence=0.3, sources=['sla_p1_2026.txt']",
+    "[graph] completed in 25590ms"
+  ],
+  "workers_called": [
+    "retrieval_worker",
+    "synthesis_worker"
+  ],
+  "supervisor_route": "retrieval_worker",
+  "latency_ms": 25590,
+  "run_id": "run_20260414_131639",
+  "worker_io_logs": [
+    {
+      "worker": "retrieval_worker",
+      "input": {
+        "task": "SLA xử lý ticket P1 là bao lâu?",
+        "top_k": 3
+      },
+      "output": {
+        "chunks_count": 3,
+        "sources": [
+          "sla_p1_2026.txt"
+        ]
+      },
+      "error": null
+    },
+    {
+      "worker": "synthesis_worker",
+      "input": {
+        "task": "SLA xử lý ticket P1 là bao lâu?",
+        "chunks_count": 3,
+        "has_policy": false
+      },
+      "output": {
+        "answer_length": 103,
+        "sources": [
+          "sla_p1_2026.txt"
+        ],
+        "confidence": 0.3
+      },
+      "error": null
+    }
+  ]
+}
