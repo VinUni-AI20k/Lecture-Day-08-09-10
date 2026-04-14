@@ -131,6 +131,9 @@ def run_grading_questions(questions_file: str = "data/grading_questions.json") -
                     "id": q_id,
                     "question": question_text,
                     "answer": result.get("final_answer", "PIPELINE_ERROR: no answer"),
+                    "question_type": result.get("question_type", "generic_lookup"),
+                    "answer_schema_type": result.get("answer_schema_type", "generic_lookup"),
+                    "answer_schema": result.get("answer_schema", {}),
                     "sources": result.get("retrieved_sources", []),
                     "supervisor_route": result.get("supervisor_route", ""),
                     "route_reason": result.get("route_reason", ""),
@@ -147,6 +150,9 @@ def run_grading_questions(questions_file: str = "data/grading_questions.json") -
                     "id": q_id,
                     "question": question_text,
                     "answer": f"PIPELINE_ERROR: {e}",
+                    "question_type": "error",
+                    "answer_schema_type": "error",
+                    "answer_schema": {"error": str(e)},
                     "sources": [],
                     "supervisor_route": "error",
                     "route_reason": str(e),
@@ -354,7 +360,7 @@ if __name__ == "__main__":
 
     if args.grading:
         # Chạy grading questions
-        log_file = run_grading_questions()
+        log_file = run_grading_questions(args.test_file)
         if log_file:
             print(f"\n✅ Grading log: {log_file}")
             print("   Nộp file này trước 18:00!")

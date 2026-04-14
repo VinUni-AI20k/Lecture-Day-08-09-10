@@ -8,7 +8,7 @@
 # TODO Sprint 2: Cập nhật "actual_implementation" khi đã implement xong.
 
 version: "1.0"
-updated_at: "2026-04-13"
+updated_at: "2026-04-14"
 
 # ─────────────────────────────────────────────
 # Supervisor
@@ -27,6 +27,24 @@ supervisor:
       type: string
       enum: ["retrieval_worker", "policy_tool_worker", "human_review"]
       required: true
+    question_type:
+      type: string
+      required: true
+      enum:
+        [
+          "sla_detail",
+          "sla_action",
+          "access_control",
+          "access_sla_multi_hop",
+          "policy_temporal_scope",
+          "numeric_policy",
+          "policy_exception",
+          "eligibility_policy",
+          "faq_multi_detail",
+          "abstain_missing_info",
+          "generic_lookup",
+        ]
+      description: "Loại câu hỏi ở mức task class để downstream worker render output schema phù hợp"
     route_reason:
       type: string
       required: true
@@ -189,11 +207,43 @@ synthesis_worker:
       type: object
       required: false
       description: "Policy check result từ policy_tool_worker"
+    question_type:
+      type: string
+      required: false
+      default: "generic_lookup"
+      description: "Task class do supervisor gán; synthesis dùng để build answer schema"
   output:
     final_answer:
       type: string
       required: true
       description: "Câu trả lời cuối có citation"
+    answer_schema_type:
+      type: string
+      required: true
+      description: "Schema type thực tế được synthesis dùng cho câu trả lời này"
+    answer_schema:
+      type: object
+      required: true
+      description: "Structured output theo question_type để giảm answer lan man và tăng tính tổng quát"
+      examples:
+        - type: "sla_detail"
+          channels: ["Slack #incident-p1", "incident@company.internal", "PagerDuty"]
+          escalation_target: "Senior Engineer"
+          escalation_window_minutes: 10
+          escalation_deadline_clock: "22:57"
+        - type: "access_control"
+          approver_count: 3
+          approvers: ["Line Manager", "IT Admin", "IT Security"]
+          highest_approver: "IT Security"
+          emergency_override: false
+        - type: "faq_multi_detail"
+          facts:
+            password_rotation_days: 90
+            warning_days_before_expiry: 7
+        - type: "policy_temporal_scope"
+          applicable_policy: "refund_policy_v3"
+          can_confirm_details: false
+          abstain_reason: "Current docs only contain v4."
     sources:
       type: array
       required: true
@@ -215,7 +265,7 @@ synthesis_worker:
     - "Không được dùng kiến thức ngoài context được cung cấp"
   actual_implementation:
     status: "done"
-    notes: "Returns grounded final_answer with citations, abstains when evidence is missing, and sets hitl_triggered when confidence is low."
+    notes: "Returns grounded final_answer plus answer_schema/answer_schema_type based on question_type, abstains when evidence is missing, and sets hitl_triggered when confidence is low."
 
 # ─────────────────────────────────────────────
 # MCP Server
