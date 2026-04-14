@@ -17,6 +17,8 @@ Gọi độc lập để test:
 """
 
 import os
+from dotenv import load_dotenv
+load_dotenv()
 
 WORKER_NAME = "synthesis_worker"
 
@@ -52,13 +54,17 @@ def _call_llm(messages: list) -> str:
 
     # Option B: Gemini
     try:
-        import google.generativeai as genai
-        genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
-        model = genai.GenerativeModel("gemini-1.5-flash")
+        from google import genai
+        from google.genai import types
+        client = genai.Client(api_key=os.getenv("GOOGLE_API_KEY"))
         combined = "\n".join([m["content"] for m in messages])
-        response = model.generate_content(combined)
+        response = client.models.generate_content(
+            model="gemini-3-flash-preview",
+            contents=combined
+        )
         return response.text
-    except Exception:
+    except Exception as e:
+        print(f"Gemini API error: {e}")
         pass
 
     # Fallback: trả về message báo lỗi (không hallucinate)
@@ -113,6 +119,11 @@ def _estimate_confidence(chunks: list, answer: str, policy_result: dict) -> floa
     exception_penalty = 0.05 * len(policy_result.get("exceptions_found", []))
 
     confidence = min(0.95, avg_score - exception_penalty)
+    print(f"Confidence: {confidence}")
+    print(f"Chunks: {chunks}")
+    print(f"Policy result: {policy_result}")
+    print(f"Answer: {answer}")
+    
     return round(max(0.1, confidence), 2)
 
 
