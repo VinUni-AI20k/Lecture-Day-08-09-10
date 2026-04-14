@@ -6,10 +6,10 @@
 |-----|---------|-------|
 | Nguyễn Việt Trung | Tech Lead | trungtomng@gmail.com |
 | Trần Ngô Hồng Hà | Retrieval Owner | bgohonghatran@gmail.com |
-| Hà Việt Khánh | Retrieval Owner | **_ |
+| Hà Việt Khánh | Retrieval Owner | \*\*\_ |
 | Nguyễn Tuấn Kiệt | Eval Owner | junsikkun@gmail.com |
 | Mã Khoa Học | Eval Owner | tunglamle132@gmail.com |
-| Nguyễn Hữu Nam | Documentation Owner | _** |
+| Nguyễn Hữu Nam | Documentation Owner | 26ai.namnh@vinuni.edu.vn |
 
 **Ngày nộp:** 13/04/2026  
 **Repo:** https://github.com/TTrungNg/Nhom13-402-Day-08-09-10  
