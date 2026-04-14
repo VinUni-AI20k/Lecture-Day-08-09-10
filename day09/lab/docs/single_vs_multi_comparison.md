@@ -17,15 +17,14 @@
 
 | Metric | Day 08 (Single Agent) | Day 09 (Multi-Agent) | Delta | Ghi chú |
 |--------|----------------------|---------------------|-------|---------|
-| Avg confidence | ___ | ___ | ___ | |
-| Avg latency (ms) | ___ | ___ | ___ | |
-| Abstain rate (%) | ___ | ___ | ___ | % câu trả về "không đủ info" |
-| Multi-hop accuracy | ___ | ___ | ___ | % câu multi-hop trả lời đúng |
-| Routing visibility | ✗ Không có | ✓ Có route_reason | N/A | |
-| Debug time (estimate) | ___ phút | ___ phút | ___ | Thời gian tìm ra 1 bug |
-| ___________________ | ___ | ___ | ___ | |
+| Avg confidence | 0.568 | 0.55 | -0.018 | Multi-agent thấp hơn nhẹ do có abstain cases |
+| Avg latency (ms) | 2203 | 4378 | +2175ms | Day 09 thêm LLM supervisor + MCP calls |
+| Abstain rate (%) | 10% | 15% | +5% | Day 09 HITL triggered 9/57 câu |
+| Multi-hop accuracy | 6/10 (60%) | N/A | N/A | Day 09 chưa có grading kết quả |
+| Routing visibility | ✗ Không có | ✓ Có route_reason | N/A | Day 09 trace rõ từng bước |
+| Debug time (estimate) | ~15–20 phút | ~5–8 phút | -12 phút | Day 09 có trace + test worker độc lập |
+| MCP usage rate | N/A | 31% (18/57) | N/A | Day 08 không có MCP capability |
 
-> **Lưu ý:** Nếu không có Day 08 kết quả thực tế, ghi "N/A" và giải thích.
 
 ---
 
@@ -35,11 +34,11 @@
 
 | Nhận xét | Day 08 | Day 09 |
 |---------|--------|--------|
-| Accuracy | ___ | ___ |
-| Latency | ___ | ___ |
-| Observation | ___________________ | ___________________ |
+| Accuracy | ~60% | Tương đương | 
+| Latency | 2203ms | 4378ms |
+| Observation | Nhanh, 1 LLM call | Chậm hơn 2x vì thêm supervisor call |
 
-**Kết luận:** Multi-agent có cải thiện không? Tại sao có/không?
+Kết luận: Multi-agent KHÔNG cải thiện với câu đơn giản — latency tăng gấp đôi
 
 _________________
 
@@ -47,11 +46,12 @@ _________________
 
 | Nhận xét | Day 08 | Day 09 |
 |---------|--------|--------|
-| Accuracy | ___ | ___ |
+| Accuracy | 6/10 | N/A (chờ grading) |
 | Routing visible? | ✗ | ✓ |
-| Observation | ___________________ | ___________________ |
+| Observation | Không biết bước nào sai | route_reason giải thích rõ tại sao chọn worker |
 
-**Kết luận:**
+Kết luận: Day 09 route đúng loại câu — policy câu hỏi về hoàn tiền/quyền truy cập
+→ policy_tool_worker (42%), câu tra cứu → retrieval_worker (57%).
 
 _________________
 
@@ -59,11 +59,11 @@ _________________
 
 | Nhận xét | Day 08 | Day 09 |
 |---------|--------|--------|
-| Abstain rate | ___ | ___ |
-| Hallucination cases | ___ | ___ |
-| Observation | ___________________ | ___________________ |
+| Abstain rate | 10% | 15% (HITL triggered) |
+| Hallucination cases | Có | Giảm — synthesis abstain khi chunks rỗng |
+| Observation | Không có cơ chế dừng | HITL 9/57 câu, confidence < 0.4 flag warning |
 
-**Kết luận:**
+Kết luận: Day 09 an toàn hơn — có abstain condition rõ ràng và HITL flag.
 
 _________________
 
@@ -71,14 +71,23 @@ _________________
 
 ## 3. Debuggability Analysis
 
-> Khi pipeline trả lời sai, mất bao lâu để tìm ra nguyên nhân?
+Day 08: ~15–20 phút
+→ Phải đọc toàn bộ pipeline, không có trace, không biết bắt đầu từ đâu
+
+Day 09: ~5–8 phút  
+→ Đọc trace → xem supervisor_route + route_reason
+→ Route sai → sửa supervisor
+→ Retrieval sai → test workers/retrieval.py độc lập
+→ Synthesis sai → test workers/synthesis.py độc lập
+
+Câu debug thực tế: Phát hiện qua trace rằng 9/57 câu trigger HITL —
+xem route_reason xác định supervisor đang flag risk_high cho những câu
+nào, từ đó điều chỉnh ngưỡng risk trong system prompt supervisor.
 
 ### Day 08 — Debug workflow
-```
 Khi answer sai → phải đọc toàn bộ RAG pipeline code → tìm lỗi ở indexing/retrieval/generation
 Không có trace → không biết bắt đầu từ đâu
-Thời gian ước tính: ___ phút
-```
+Thời gian ước tính: 15–20 phút
 
 ### Day 09 — Debug workflow
 ```
@@ -86,12 +95,27 @@ Khi answer sai → đọc trace → xem supervisor_route + route_reason
   → Nếu route sai → sửa supervisor routing logic
   → Nếu retrieval sai → test retrieval_worker độc lập
   → Nếu synthesis sai → test synthesis_worker độc lập
-Thời gian ước tính: ___ phút
+Thời gian ước tính: 5–8 phút
 ```
 
-**Câu cụ thể nhóm đã debug:** _(Mô tả 1 lần debug thực tế trong lab)_
+**Câu cụ thể nhóm đã debug:**
 
-_________________
+Task: "Cần cấp quyền Level 3 để khắc phục P1 khẩn cấp. Quy trình là gì?"
+
+Vấn đề: Pipeline trả về answer thiếu thông tin về emergency bypass.
+
+Quá trình debug qua trace:
+1. Xem supervisor_route → đúng: policy_tool_worker
+2. Xem route_reason → "task contains access/emergency keyword"
+3. Xem mcp_tools_used → phát hiện get_ticket_info trả về error dict
+   vì tool không có trong TOOL_REGISTRY (bị comment out)
+4. Xem retrieved_chunks → chunks từ access_control_sop.txt có điểm score thấp
+5. Kết luận: lỗi ở MCP layer, không phải supervisor hay synthesis
+
+Fix: Gọi trực tiếp check_access_permission thay vì get_ticket_info
+→ answer có đủ thông tin required_approvers và emergency_override.
+
+Thời gian debug: ~6 phút nhờ trace rõ từng bước.
 
 ---
 
@@ -108,6 +132,17 @@ _________________
 
 **Nhận xét:**
 
+Day 09 dễ extend hơn rõ rệt nhờ kiến trúc modular:
+- Thêm MCP tool mới chỉ cần thêm function vào `mcp_server.py` và đăng ký vào
+  `TOOL_REGISTRY` — không động vào logic supervisor hay workers khác.
+- Trong lab, `check_access_permission` được thêm độc lập mà không ảnh hưởng
+  `search_kb` đang chạy.
+- 31% queries (18/57) đã dùng MCP thành công, chứng minh extension hoạt động
+  trong thực tế mà không cần sửa core pipeline.
+
+Day 08 bị tightly coupled — mọi thay đổi đều phải sửa toàn bộ prompt và
+re-test toàn pipeline, không thể isolate từng phần.
+
 _________________
 
 ---
@@ -118,11 +153,14 @@ _________________
 
 | Scenario | Day 08 calls | Day 09 calls |
 |---------|-------------|-------------|
-| Simple query | 1 LLM call | ___ LLM calls |
-| Complex query | 1 LLM call | ___ LLM calls |
-| MCP tool call | N/A | ___ |
+| Simple query | 1 LLM call | 2 LLM calls (supervisor + synthesis) + 1 embedding |
+| Complex query | 1 LLM call | 2 LLM calls + 1 embedding + MCP dispatch |
+| MCP tool call | N/A | 18/57 queries (31%) dùng MCP |
 
-**Nhận xét về cost-benefit:**
+Nhận xét: Day 09 latency cao gấp đôi (2203ms → 4378ms). 
+Cost hợp lý cho câu phức tạp cần routing chính xác và MCP tool.
+Không đáng với câu đơn giản — nên dùng hybrid: keyword match trước,
+LLM supervisor chỉ khi không match rõ.
 
 _________________
 
@@ -132,17 +170,21 @@ _________________
 
 > **Multi-agent tốt hơn single agent ở điểm nào?**
 
-1. ___________________
-2. ___________________
+Multi-agent tốt hơn:
+1. Debuggability — trace rõ từng bước (supervisor_route, route_reason,
+   workers_called), test từng worker độc lập không cần chạy toàn pipeline
+2. Extensibility — thêm MCP tool mới không cần sửa core logic;
+   31% queries đã dùng MCP thành công (18/57)
 
-> **Multi-agent kém hơn hoặc không khác biệt ở điểm nào?**
+Multi-agent kém hơn/không khác biệt:
+1. Latency tăng gấp đôi (2203ms → 4378ms) và confidence giảm nhẹ
+   (0.568 → 0.55) — overhead supervisor không đáng với câu đơn giản
 
-1. ___________________
+Khi nào KHÔNG nên dùng multi-agent:
+Câu hỏi đơn giản, single-document, không cần policy check — single
+agent RAG đủ dùng, nhanh hơn 2x và confidence cao hơn.
 
-> **Khi nào KHÔNG nên dùng multi-agent?**
-
-_________________
-
-> **Nếu tiếp tục phát triển hệ thống này, nhóm sẽ thêm gì?**
-
-_________________
+Nếu tiếp tục phát triển:
+Thêm Evaluator Worker tự đánh giá chất lượng answer trước khi trả về,
+implement HITL thực sự thay vì auto-approve, và dùng hybrid routing
+(keyword match + LLM fallback) để giảm latency với câu đơn giản.
