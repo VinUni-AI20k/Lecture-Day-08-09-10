@@ -106,7 +106,7 @@ def supervisor_node(state: AgentState) -> AgentState:
     policy_keywords = [
         "nghỉ phép", "annual leave", "nghỉ ốm", "thai sản", "làm thêm", "remote", "hr portal",
         "hoàn tiền", "refund", "store credit", "flash sale", "mở seal", "kỹ thuật số",
-        "cấp quyền", "access", "level 1", "level 2", "level 3", "level 4", "thu hồi quyền"
+        "cấp quyền", "access", "level 1", "level 2", "level 3", "level 4", "thu hồi quyền", "emergency"
     ]
     
     it_support_keywords = [
@@ -115,7 +115,6 @@ def supervisor_node(state: AgentState) -> AgentState:
     ]
     
     risk_keywords = [
-        "cấp quyền tạm thời", "ciso", "bảo mật", "khẩn cấp", "emergency", 
         "err-", "không rõ"
     ]
 
