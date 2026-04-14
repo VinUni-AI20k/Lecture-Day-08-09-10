@@ -13,7 +13,7 @@
 - `graph.py` đã wire vào worker thật (`retrieval.run`, `policy_tool.run`, `synthesis.run`).
 - Retrieval đã đồng bộ embedding Vertex (`text-multilingual-embedding-002`) với index Chroma, trả được chunks ổn định.
 
-## 2) Sơ đồ luồng thực thi hiện tại (đã wire worker thật)
+## 2) Sơ đồ luồng thực thi hiện tại
 
 ```mermaid
 flowchart TD

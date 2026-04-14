@@ -341,6 +341,46 @@
   .bridge-arrow { font-size: 26px; color: rgba(46,84,138,0.42); }
   .bridge-workers { display:flex; justify-content:center; gap: 10px; margin-top: 12px; }
   .preview-badge { display:inline-flex; align-items:center; gap: 8px; padding: 8px 12px; border-radius: 999px; background: rgba(13,115,119,0.08); color: var(--teal); font-size: 13px; font-weight: 800; margin-top: 14px; }
+
+  @media print {
+    @page {
+      size: 1280px 720px;
+      margin: 0;
+    }
+    html, body {
+      background: white !important;
+      overflow: visible !important;
+      display: block !important;
+      height: auto !important;
+      width: auto !important;
+    }
+    .presentation {
+      transform: none !important;
+      width: 1280px !important;
+      height: auto !important;
+      position: relative !important;
+      display: block !important;
+      margin: 0 !important;
+      padding: 0 !important;
+    }
+    .slide {
+      position: relative !important;
+      display: flex !important;
+      opacity: 1 !important;
+      visibility: visible !important;
+      pointer-events: auto !important;
+      page-break-after: always !important;
+      break-after: page !important;
+      z-index: 1 !important;
+      width: 1280px !important;
+      height: 720px !important;
+      left: 0 !important;
+      top: 0 !important;
+    }
+    .slide-badge, .slide-counter, .nav-hint, .notes-hint, .notes-panel {
+      display: none !important;
+    }
+  }
 </style>
 </head>
 <body>

@@ -1,5 +1,9 @@
 {
+<<<<<<< HEAD
+  "generated_at": "2026-04-14T15:21:20.157398",
+=======
   "generated_at": "2026-04-14T16:59:38.432972",
+>>>>>>> NhatVi
   "day08_single_agent": {
     "total_questions": 15,
     "avg_confidence": 0.0,
@@ -8,6 +12,29 @@
     "multi_hop_accuracy": "?"
   },
   "day09_multi_agent": {
+<<<<<<< HEAD
+    "total_traces": 24,
+    "routing_distribution": {
+      "policy_tool_worker": "13/24 (54%)",
+      "retrieval_worker": "11/24 (45%)"
+    },
+    "avg_confidence": 0.697,
+    "avg_latency_ms": 6204,
+    "mcp_usage_rate": "13/24 (54%)",
+    "hitl_rate": "1/24 (4%)",
+    "top_sources": [
+      [
+        "support/sla-p1-2026.pdf",
+        9
+      ],
+      [
+        "it/access-control-sop.md",
+        3
+      ],
+      [
+        "hr/leave-policy-2026.pdf",
+        2
+=======
     "total_traces": 15,
     "routing_distribution": {
       "retrieval_worker": "10/15 (66%)",
@@ -25,16 +52,20 @@
       [
         "it/access-control-sop.md",
         5
+>>>>>>> NhatVi
       ],
       [
         "support/helpdesk-faq.md",
         2
       ],
       [
+<<<<<<< HEAD
+=======
         "hr/leave-policy-2026.pdf",
         2
       ],
       [
+>>>>>>> NhatVi
         "policy/refund-v4.pdf",
         1
       ]
@@ -42,8 +73,15 @@
   },
   "analysis": {
     "routing_visibility": "Day 09 có route_reason cho từng câu → dễ debug hơn Day 08",
+<<<<<<< HEAD
+    "latency_delta": null,
+    "latency_delta_note": "Không tính được delta latency từ artifact hiện tại vì Day 08 avg_latency_ms = 0, không phải baseline hợp lệ để so sánh.",
+    "accuracy_delta": null,
+    "accuracy_delta_note": "Không tính được delta accuracy từ artifact hiện tại vì chưa có số grading/baseline accuracy hoàn chỉnh cho Day 08 và Day 09.",
+=======
     "latency_delta": "TODO: Điền delta latency thực tế",
     "accuracy_delta": "TODO: Điền delta accuracy thực tế từ grading",
+>>>>>>> NhatVi
     "debuggability": "Multi-agent: có thể test từng worker độc lập. Single-agent: không thể.",
     "mcp_benefit": "Day 09 có thể extend capability qua MCP không cần sửa core. Day 08 phải hard-code."
   }

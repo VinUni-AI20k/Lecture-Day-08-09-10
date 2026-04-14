@@ -17,9 +17,12 @@ Gọi độc lập để test:
 """
 
 import os
+<<<<<<< HEAD
+=======
 import re
 import sys
 from datetime import datetime, timedelta
+>>>>>>> NhatVi
 
 WORKER_NAME = "synthesis_worker"
 
@@ -31,12 +34,28 @@ Quy tắc nghiêm ngặt:
 3. Trích dẫn nguồn cuối mỗi câu quan trọng: [tên_file].
 4. Trả lời súc tích, có cấu trúc. Không dài dòng.
 5. Nếu có exceptions/ngoại lệ → nêu rõ ràng trước khi kết luận.
+<<<<<<< HEAD
+6. QUAN TRỌNG: KHÔNG đề cập con số, ngày, thời gian, tên người hoặc tên hệ thống cụ thể nếu chúng không xuất hiện trực tiếp trong context. Thà bỏ qua còn hơn là đoán sai.
+=======
+>>>>>>> NhatVi
 """
 
 
 def _call_llm(messages: list) -> str:
     """
     Gọi LLM để tổng hợp câu trả lời.
+<<<<<<< HEAD
+    TODO Sprint 2: Implement với OpenAI hoặc Gemini.
+    """
+    # Option A: OpenAI
+    try:
+        from openai import OpenAI
+        client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=messages,
+            temperature=0,  # 0 = fully deterministic, grounded
+=======
     Ưu tiên Gemini trên Vertex AI, sau đó mới fallback.
     """
     # Option A: Gemini on Vertex AI (ưu tiên)
@@ -79,12 +98,33 @@ def _call_llm(messages: list) -> str:
             model="gpt-4o-mini",
             messages=messages,
             temperature=0.1,
+>>>>>>> NhatVi
             max_tokens=500,
         )
         return response.choices[0].message.content
     except Exception:
         pass
 
+<<<<<<< HEAD
+    # Option B: Gemini
+    try:
+        import google.generativeai as genai
+        genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
+        model = genai.GenerativeModel("gemini-1.5-flash")
+        combined = "\n".join([m["content"] for m in messages])
+        response = model.generate_content(combined)
+        return response.text
+    except Exception:
+        pass
+
+    # Fallback: trả về message báo lỗi (không hallucinate)
+    return "[SYNTHESIS ERROR] Không thể gọi LLM. Kiểm tra API key trong .env."
+
+
+def _build_context(chunks: list, policy_result: dict, mcp_tools_used: list = None) -> str:
+    """Xây dựng context string từ chunks, policy result, và MCP tool outputs."""
+    import json
+=======
     # Fallback: để caller xử lý deterministic synthesis.
     return ""
 
@@ -204,6 +244,7 @@ def _rule_based_answer(task: str, chunks: list, policy_result: dict, mcp_tools_u
 
 def _build_context(chunks: list, policy_result: dict) -> str:
     """Xây dựng context string từ chunks và policy result."""
+>>>>>>> NhatVi
     parts = []
 
     if chunks:
@@ -219,6 +260,21 @@ def _build_context(chunks: list, policy_result: dict) -> str:
         for ex in policy_result["exceptions_found"]:
             parts.append(f"- {ex.get('rule', '')}")
 
+<<<<<<< HEAD
+    # Include MCP tool outputs so synthesis can cite live data (ticket status, access rules)
+    if mcp_tools_used:
+        tool_parts = []
+        for call in mcp_tools_used:
+            tool = call.get("tool", "")
+            output = call.get("output")
+            if output and not output.get("error") and tool != "search_kb":
+                tool_parts.append(f"Tool: {tool}\nResult: {json.dumps(output, ensure_ascii=False, indent=2)}")
+        if tool_parts:
+            parts.append("\n=== MCP TOOL RESULTS ===")
+            parts.extend(tool_parts)
+
+=======
+>>>>>>> NhatVi
     if not parts:
         return "(Không có context)"
 
@@ -240,11 +296,22 @@ def _estimate_confidence(chunks: list, answer: str, policy_result: dict) -> floa
     if "Không đủ thông tin" in answer or "không có trong tài liệu" in answer.lower():
         return 0.3  # Abstain → moderate-low
 
+<<<<<<< HEAD
+    # Hybrid RRF scores are small floats (e.g. 0.008); dense cosine scores are 0-1.
+    # Normalise by capping at 1.0 before averaging.
+    raw_scores = [min(c.get("score", 0), 1.0) for c in chunks]
+    # If all scores are very small (BM25-dominant), scale up relative to max
+    max_score = max(raw_scores) if raw_scores else 0
+    if max_score < 0.1 and max_score > 0:
+        raw_scores = [s / max_score for s in raw_scores]
+    avg_score = sum(raw_scores) / len(raw_scores) if raw_scores else 0
+=======
     # Weighted average của chunk scores
     if chunks:
         avg_score = sum(c.get("score", 0) for c in chunks) / len(chunks)
     else:
         avg_score = 0
+>>>>>>> NhatVi
 
     # Penalty nếu có exceptions (phức tạp hơn)
     exception_penalty = 0.05 * len(policy_result.get("exceptions_found", []))
@@ -253,14 +320,24 @@ def _estimate_confidence(chunks: list, answer: str, policy_result: dict) -> floa
     return round(max(0.1, confidence), 2)
 
 
+<<<<<<< HEAD
+def synthesize(task: str, chunks: list, policy_result: dict, mcp_tools_used: list = None) -> dict:
+    """
+    Tổng hợp câu trả lời từ chunks, policy context, và MCP tool outputs.
+=======
 def synthesize(task: str, chunks: list, policy_result: dict, mcp_tools_used: list) -> dict:
     """
     Tổng hợp câu trả lời từ chunks và policy context.
+>>>>>>> NhatVi
 
     Returns:
         {"answer": str, "sources": list, "confidence": float}
     """
+<<<<<<< HEAD
+    context = _build_context(chunks, policy_result, mcp_tools_used=mcp_tools_used)
+=======
     context = _build_context(chunks, policy_result)
+>>>>>>> NhatVi
 
     # Build messages
     messages = [
@@ -275,11 +352,15 @@ Hãy trả lời câu hỏi dựa vào tài liệu trên."""
         }
     ]
 
+<<<<<<< HEAD
+    answer = _call_llm(messages)
+=======
     answer = _rule_based_answer(task, chunks, policy_result, mcp_tools_used)
     if not answer:
         answer = _call_llm(messages)
     if not answer:
         answer = _fallback_answer(task, chunks, policy_result)
+>>>>>>> NhatVi
     sources = list({c.get("source", "unknown") for c in chunks})
     confidence = _estimate_confidence(chunks, answer, policy_result)
 
@@ -309,13 +390,21 @@ def run(state: dict) -> dict:
             "task": task,
             "chunks_count": len(chunks),
             "has_policy": bool(policy_result),
+<<<<<<< HEAD
+            "mcp_tools_count": len(mcp_tools_used),
+=======
+>>>>>>> NhatVi
         },
         "output": None,
         "error": None,
     }
 
     try:
+<<<<<<< HEAD
+        result = synthesize(task, chunks, policy_result, mcp_tools_used=mcp_tools_used)
+=======
         result = synthesize(task, chunks, policy_result, mcp_tools_used)
+>>>>>>> NhatVi
         state["final_answer"] = result["answer"]
         state["sources"] = result["sources"]
         state["confidence"] = result["confidence"]
@@ -345,8 +434,11 @@ def run(state: dict) -> dict:
 # ─────────────────────────────────────────────
 
 if __name__ == "__main__":
+<<<<<<< HEAD
+=======
     if hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+>>>>>>> NhatVi
     print("=" * 50)
     print("Synthesis Worker — Standalone Test")
     print("=" * 50)
@@ -387,4 +479,8 @@ if __name__ == "__main__":
     print(f"\nAnswer:\n{result2['final_answer']}")
     print(f"Confidence: {result2['confidence']}")
 
+<<<<<<< HEAD
+    print("\n✅ synthesis_worker test done.")
+=======
     print("\n[OK] synthesis_worker test done.")
+>>>>>>> NhatVi
