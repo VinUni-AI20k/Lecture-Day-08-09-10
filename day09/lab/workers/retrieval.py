@@ -15,8 +15,10 @@ Gọi độc lập để test:
     python workers/retrieval.py
 """
 
+import hashlib
 import os
-import sys
+from pathlib import Path
+from typing import Callable, List
 
 # ─────────────────────────────────────────────
 # Worker Contract (xem contracts/worker_contracts.yaml)
@@ -26,39 +28,57 @@ import sys
 
 WORKER_NAME = "retrieval_worker"
 DEFAULT_TOP_K = 3
+COLLECTION_NAME = "day09_docs"
+CHROMA_DB_PATH = str(Path(__file__).resolve().parents[1] / "chroma_db")
 
 
-def _get_embedding_fn():
+def _get_embedding_fn() -> Callable[[str], List[float]]:
     """
     Trả về embedding function.
     TODO Sprint 1: Implement dùng OpenAI hoặc Sentence Transformers.
     """
     # Option A: Sentence Transformers (offline, không cần API key)
-    # try:
-    #     from sentence_transformers import SentenceTransformer
-    #     model = SentenceTransformer("all-MiniLM-L6-v2")
-    #     def embed(text: str) -> list:
-    #         return model.encode([text])[0].tolist()
-    #     return embed
-    # except ImportError:
-    #     pass
-
-    # Option B: OpenAI (cần API key)
     try:
-        from openai import OpenAI
-        client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-        def embed(text: str) -> list:
-            resp = client.embeddings.create(input=text, model="text-embedding-3-small")
-            return resp.data[0].embedding
+        from sentence_transformers import SentenceTransformer
+
+        model = SentenceTransformer("all-MiniLM-L6-v2")
+
+        def embed(text: str) -> List[float]:
+            return model.encode(text, normalize_embeddings=True).tolist()
+
         return embed
-    except ImportError:
+    except Exception:
         pass
 
-    # Fallback: random embeddings cho test (KHÔNG dùng production)
+    # Option B: OpenAI (chỉ dùng khi có API key)
+    api_key = os.getenv("OPENAI_API_KEY")
+    if api_key:
+        try:
+            from openai import OpenAI
+
+            client = OpenAI(api_key=api_key)
+
+            def embed(text: str) -> List[float]:
+                resp = client.embeddings.create(
+                    input=text,
+                    model="text-embedding-3-small",
+                )
+                return list(resp.data[0].embedding)
+
+            return embed
+        except Exception:
+            pass
+
+    # Fallback: pseudo-random embedding cho test local (KHÔNG dùng production)
     import random
-    def embed(text: str) -> list:
-        return [random.random() for _ in range(384)]
-    print("⚠️  WARNING: Using random embeddings (test only). Install sentence-transformers.")
+
+    def embed(text: str) -> List[float]:
+        digest = hashlib.sha256(text.encode("utf-8")).hexdigest()
+        seed = int(digest[:8], 16)
+        rng = random.Random(seed)
+        return [rng.random() for _ in range(384)]
+
+    print("⚠️  WARNING: Using pseudo-random embeddings (test only). Install sentence-transformers or set OPENAI_API_KEY.")
     return embed
 
 
@@ -68,16 +88,23 @@ def _get_collection():
     TODO Sprint 2: Đảm bảo collection đã được build từ Step 3 trong README.
     """
     import chromadb
-    client = chromadb.PersistentClient(path="./chroma_db")
+
+    client = chromadb.PersistentClient(path=CHROMA_DB_PATH)
     try:
-        collection = client.get_collection("day09_docs")
+        collection = client.get_collection(COLLECTION_NAME)
     except Exception:
         # Auto-create nếu chưa có
         collection = client.get_or_create_collection(
-            "day09_docs",
+            COLLECTION_NAME,
             metadata={"hnsw:space": "cosine"}
         )
-        print(f"⚠️  Collection 'day09_docs' chưa có data. Chạy index script trong README trước.")
+
+    try:
+        if collection.count() == 0:
+            print("⚠️  Collection 'day09_docs' đang rỗng. Chạy index script trong README trước.")
+    except Exception:
+        pass
+
     return collection
 
 
@@ -93,29 +120,57 @@ def retrieve_dense(query: str, top_k: int = DEFAULT_TOP_K) -> list:
     Returns:
         list of {"text": str, "source": str, "score": float, "metadata": dict}
     """
-    # TODO: Implement dense retrieval
+    query = (query or "").strip()
+    if not query:
+        return []
+
+    try:
+        top_k = max(1, int(top_k))
+    except (TypeError, ValueError):
+        top_k = DEFAULT_TOP_K
+
     embed = _get_embedding_fn()
-    query_embedding = embed(query)
+
+    try:
+        query_embedding = embed(query)
+    except Exception as e:
+        print(f"⚠️  Embedding failed: {e}")
+        return []
 
     try:
         collection = _get_collection()
+        n_docs = collection.count()
+        if n_docs == 0:
+            return []
+
         results = collection.query(
             query_embeddings=[query_embedding],
-            n_results=top_k,
+            n_results=min(top_k, n_docs),
             include=["documents", "distances", "metadatas"]
         )
 
+        docs = results.get("documents", [[]])
+        dists = results.get("distances", [[]])
+        metas = results.get("metadatas", [[]])
+
+        docs_row = docs[0] if docs else []
+        dists_row = dists[0] if dists else []
+        metas_row = metas[0] if metas else []
+
         chunks = []
-        for i, (doc, dist, meta) in enumerate(zip(
-            results["documents"][0],
-            results["distances"][0],
-            results["metadatas"][0]
-        )):
+        for doc, dist, meta in zip(docs_row, dists_row, metas_row):
+            if not doc:
+                continue
+
+            metadata = meta if isinstance(meta, dict) else {}
+            raw_score = 1.0 - float(dist) if dist is not None else 0.0
+            score = round(max(0.0, min(1.0, raw_score)), 4)
+
             chunks.append({
                 "text": doc,
-                "source": meta.get("source", "unknown"),
-                "score": round(1 - dist, 4),  # cosine similarity
-                "metadata": meta,
+                "source": metadata.get("source", "unknown"),
+                "score": score,
+                "metadata": metadata,
             })
         return chunks
 
@@ -136,7 +191,12 @@ def run(state: dict) -> dict:
         Updated AgentState với retrieved_chunks và retrieved_sources
     """
     task = state.get("task", "")
-    top_k = state.get("retrieval_top_k", DEFAULT_TOP_K)
+    top_k = state.get("retrieval_top_k", state.get("top_k", DEFAULT_TOP_K))
+
+    try:
+        top_k = max(1, int(top_k))
+    except (TypeError, ValueError):
+        top_k = DEFAULT_TOP_K
 
     state.setdefault("workers_called", [])
     state.setdefault("history", [])
@@ -151,27 +211,36 @@ def run(state: dict) -> dict:
         "error": None,
     }
 
-    try:
-        chunks = retrieve_dense(task, top_k=top_k)
-
-        sources = list({c["source"] for c in chunks})
-
-        state["retrieved_chunks"] = chunks
-        state["retrieved_sources"] = sources
-
-        worker_io["output"] = {
-            "chunks_count": len(chunks),
-            "sources": sources,
-        }
-        state["history"].append(
-            f"[{WORKER_NAME}] retrieved {len(chunks)} chunks from {sources}"
-        )
-
-    except Exception as e:
-        worker_io["error"] = {"code": "RETRIEVAL_FAILED", "reason": str(e)}
+    if not str(task).strip():
         state["retrieved_chunks"] = []
         state["retrieved_sources"] = []
-        state["history"].append(f"[{WORKER_NAME}] ERROR: {e}")
+        worker_io["output"] = {
+            "chunks_count": 0,
+            "sources": [],
+        }
+        state["history"].append(f"[{WORKER_NAME}] empty task → skip retrieval")
+    else:
+        try:
+            chunks = retrieve_dense(task, top_k=top_k)
+
+            sources = sorted({c.get("source", "unknown") for c in chunks})
+
+            state["retrieved_chunks"] = chunks
+            state["retrieved_sources"] = sources
+
+            worker_io["output"] = {
+                "chunks_count": len(chunks),
+                "sources": sources,
+            }
+            state["history"].append(
+                f"[{WORKER_NAME}] retrieved {len(chunks)} chunks from {sources}"
+            )
+
+        except Exception as e:
+            worker_io["error"] = {"code": "RETRIEVAL_FAILED", "reason": str(e)}
+            state["retrieved_chunks"] = []
+            state["retrieved_sources"] = []
+            state["history"].append(f"[{WORKER_NAME}] ERROR: {e}")
 
     # Ghi worker IO vào state để trace
     state.setdefault("worker_io_logs", []).append(worker_io)
