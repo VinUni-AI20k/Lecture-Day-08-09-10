@@ -106,13 +106,8 @@ def _get_collection():
         # Auto-create nếu chưa có
         collection = client.get_or_create_collection(
             collection_name,
-        # Auto-create nếu chưa có
-        collection = client.get_or_create_collection(
-            collection_name,
             metadata={"hnsw:space": "cosine"}
         )
-        print(f"⚠️  Collection '{collection_name}' chưa có data. Chạy index script trong README trước.")
-    return collection
         print(f"⚠️  Collection '{collection_name}' chưa có data. Chạy index script trong README trước.")
     return collection
 

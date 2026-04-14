@@ -33,7 +33,7 @@ WORKER_NAME = "policy_tool_worker"
 # MCP Client — Sprint 3: Thay bằng real MCP call
 # ─────────────────────────────────────────────
 
-def _call_mcp_tool(tool_name: str, tool_input: dict, retry: int = 1) -> dict:
+
 def _call_mcp_tool(tool_name: str, tool_input: dict, retry: int = 1) -> dict:
     """
     Gọi MCP tool.
