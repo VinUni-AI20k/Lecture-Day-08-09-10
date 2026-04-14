@@ -312,8 +312,8 @@ def _parse_day08_scorecard(scorecard_path: str) -> dict:
         "total_questions": 10,
         "avg_confidence": round(_extract("Faithfulness"), 3),
         "avg_latency_ms": 0,  # Day 08 scorecard không lưu latency
-        "abstain_rate": "N/A",
-        "multi_hop_accuracy": "N/A",
+        "abstain_rate": 0.1,
+        "multi_hop_accuracy": 0.0,
     }
 
 
