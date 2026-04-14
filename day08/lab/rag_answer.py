@@ -44,8 +44,8 @@ def _env_int(name: str, default: int, lo: int = 1, hi: int = 64) -> int:
 # =============================================================================
 
 # Có thể ghi đè bằng .env: TOP_K_SEARCH, TOP_K_SELECT, RRF_K
-TOP_K_SEARCH = _env_int("TOP_K_SEARCH", 10, 1, 48)  # pool trước rerank / cắt top list
-TOP_K_SELECT = _env_int("TOP_K_SELECT", 3, 1, 12)     # số chunk vào prompt
+TOP_K_SEARCH = _env_int("TOP_K_SEARCH", 20, 1, 48)  # pool trước rerank / cắt top list
+TOP_K_SELECT = _env_int("TOP_K_SELECT", 8, 1, 24)     # số chunk vào prompt
 
 LLM_MODEL = os.getenv("LLM_MODEL", "gpt-4o-mini")
 LLM_PROVIDER = os.getenv("LLM_PROVIDER", "openai").lower()
@@ -63,9 +63,9 @@ ABSTAIN_ANSWER = "Không đủ dữ liệu trong tài liệu để trả lời."
 # Ngưỡng score tối thiểu để coi context là "đủ mạnh".
 # Dense/Hybrid score = 1 - cosine_distance (0..1); BM25 raw score có thể > 1.
 # Nếu max score trong top-k < ngưỡng → context quá yếu → abstain trước khi gọi LLM.
-# Mặc định 0.15 (thực nghiệm): dưới ngưỡng này gần như không có nội dung liên quan.
+# Mặc định 0.05: giảm false-positive abstain cho câu cross-doc / scope questions.
 WEAK_CONTEXT_SCORE_THRESHOLD = float(
-    os.getenv("WEAK_CONTEXT_SCORE_THRESHOLD", "0.15")
+    os.getenv("WEAK_CONTEXT_SCORE_THRESHOLD", "0.05")
 )
 
 # Cache BM25 corpus (reload sau khi build_index)
@@ -345,14 +345,12 @@ def build_context_block(chunks: List[Dict[str, Any]]) -> str:
         meta = chunk.get("metadata", {})
         source = meta.get("source", "unknown")
         section = meta.get("section", "")
-        score = chunk.get("score", 0)
         text = chunk.get("text", "")
 
-        header = f"[{i}] {source}"
+        header = f"--- Snippet [{i}] from: {source}"
         if section:
-            header += f" | {section}"
-        if score is not None:
-            header += f" | score={float(score):.4f}"
+            header += f" § {section}"
+        header += " ---"
 
         context_parts.append(f"{header}\n{text}")
 
@@ -371,14 +369,20 @@ def build_grounded_prompt(query: str, context_block: str) -> str:
     prompt = f"""You are an internal CS/IT policy assistant. Follow these rules strictly:
 
 1) Use ONLY information from the numbered context snippets below. Do NOT use any outside knowledge.
-2) **Never invent specifics.** Do NOT fabricate numbers, dates, names, thresholds, or procedures that are not explicitly stated in the snippets — even if they seem plausible. If a detail is missing, treat it as absent.
-3) **Same-or-different / comparison questions:** If the context defines two or more separate categories with distinct headings or numbered items, contrast them and cite [n]. Do NOT abstain when those definitions appear in any snippet.
-4) **Abstain** when no snippet contains facts needed to address the question. Then reply exactly:
+2) **Never invent specifics.** Do NOT fabricate numbers, dates, names, thresholds, or procedures that are not explicitly stated in the snippets — even if they seem plausible.
+3) **Stay focused but complete.** Answer exactly what the question asks — include ALL details relevant to the question (approvers, deadlines, requirements, contact channels, conditions) but do NOT add tangential information not asked about (e.g., do not list version history changes beyond the one being asked about).
+4) **Scope and applicability questions:** If a snippet defines a scope (e.g., "applies to all employees, contractors, and third-party vendors"), combine that scope with relevant detail sections. Do NOT abstain when scope + detail together answer the question.
+5) **Abstain** ONLY when genuinely no snippet contains any relevant fact. Then reply exactly:
     "{ABSTAIN_ANSWER}"
-   (For English questions use: "Insufficient information in the documents to answer.")
-   Also abstain for any sub-part of a question whose answer is not in the snippets — do not answer the missing part with guesses.
-5) Every factual claim MUST be supported by a bracket reference [1], [2], … matching snippet numbers. Answers without citations are not allowed when context is available.
-6) Be concise and factual. Use the same language as the user's question (Vietnamese or English).
+   Before abstaining, re-check ALL snippets for indirect evidence (scope declarations, general rules).
+6) **Citation rules (critical):**
+   - Every factual claim MUST have a bracket reference [n] matching the snippet number it comes from.
+   - Each fact must cite the SPECIFIC snippet that contains it — do NOT attribute all facts to [1].
+   - When facts come from DIFFERENT snippets, cite EACH separately (e.g., "VPN is required [2] and max 2 devices [5]").
+   - Cross-document questions: if information spans multiple documents/snippets, you MUST cite all relevant snippet numbers.
+7) **Include all actionable details** from the snippets: URLs, phone extensions (ext.), portal names, hotline numbers, email addresses, and specific procedures. For process/procedure questions, also mention relevant contact channels from the context.
+8) When citing important policies, mention the source document name or section (e.g., "theo Điều 5 của chính sách hoàn tiền [1]") so the citation is traceable.
+9) Be concise and factual. Use the same language as the user's question (Vietnamese or English).
 
 Question: {query}
 
@@ -777,11 +781,11 @@ def rag_answer_impl(
         return out
 
     # --- Hardened abstain: kiểm tra context quá yếu trước khi gọi LLM ---
-    # Nếu toàn bộ chunk đều có score thấp hơn ngưỡng, không đủ bằng chứng → abstain.
-    # Áp dụng cho dense/hybrid (score 0..1). BM25 raw score thường > 1 khi có hit,
-    # nên ngưỡng 0.15 sẽ không phát sinh false-positive với BM25.
+    # Chỉ áp dụng cho dense mode (cosine score 0..1).
+    # Hybrid (RRF) và sparse (BM25) có scale khác nên bỏ qua check này.
     max_score = max((float(c.get("score", 0.0)) for c in candidates), default=0.0)
-    if max_score < WEAK_CONTEXT_SCORE_THRESHOLD:
+    _apply_weak_check = retrieval_mode == "dense"
+    if _apply_weak_check and max_score < WEAK_CONTEXT_SCORE_THRESHOLD:
         weak_detail = (
             f"Max chunk score {max_score:.4f} < ngưỡng {WEAK_CONTEXT_SCORE_THRESHOLD} "
             f"— context quá yếu, không đủ bằng chứng. Abstain sớm để tránh hallucination."
@@ -1026,9 +1030,10 @@ def rag_answer_stream(
             yield {"event": "done", "data": done_data}
             return
 
-        # ── Hardened abstain: kiểm tra context quá yếu trước khi gọi LLM ──
+        # ── Hardened abstain: chỉ áp dụng cho dense mode ──
         max_score = max((float(c.get("score", 0.0)) for c in candidates), default=0.0)
-        if max_score < WEAK_CONTEXT_SCORE_THRESHOLD:
+        _apply_weak = retrieval_mode == "dense"
+        if _apply_weak and max_score < WEAK_CONTEXT_SCORE_THRESHOLD:
             weak_step = {
                 "step": 4, "name": "Context check", "emoji": "4️⃣",
                 "detail": (
