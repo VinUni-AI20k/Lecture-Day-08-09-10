@@ -125,7 +125,7 @@ Khả năng Module hóa (Modularity). Chẳng hạn lúc thay đổi luật củ
 
 | Thành viên | Phần đã làm | Sprint |
 |------------|-------------|--------|
-|  | Supervisor graph.py, routing logic, state management | 1 |
+| Trương Quang Lộc | Supervisor graph.py, routing logic, state management | 1 |
 | Vũ Đức Minh | retrieval.py, policy_tool.py, synthesis.py, contracts | 2 |
 | Nguyễn Thị Ngọc | FastAPI mcp_api.py, MCP integration, Temporal Scoping | 3 |
 | Nguyễn Việt Quang | Trace log, eval_trace.py, so sánh & Báo cáo | 4 |
