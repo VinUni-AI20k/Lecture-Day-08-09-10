@@ -81,6 +81,39 @@ def _get_collection():
     return collection
 
 
+def _fallback_doc_search(query: str, top_k: int = DEFAULT_TOP_K) -> list:
+    """
+    Simple fallback search over local docs if ChromaDB is unavailable.
+    """
+    docs_dir = "./data/docs"
+    if not os.path.isdir(docs_dir):
+        return []
+
+    query_tokens = [token for token in query.lower().split() if len(token) > 3]
+    hits = []
+    for fname in os.listdir(docs_dir):
+        path = os.path.join(docs_dir, fname)
+        if not os.path.isfile(path):
+            continue
+        try:
+            with open(path, encoding="utf-8", errors="ignore") as f:
+                text = f.read().strip()
+        except Exception:
+            continue
+        score = sum(text.lower().count(token) for token in query_tokens)
+        if score > 0:
+            hits.append({
+                "text": text,
+                "source": fname,
+                "score": float(score) / max(1, len(query_tokens)),
+                "metadata": {"source": fname},
+            })
+    if not hits:
+        return []
+    hits.sort(key=lambda item: item["score"], reverse=True)
+    return hits[:top_k]
+
+
 def retrieve_dense(query: str, top_k: int = DEFAULT_TOP_K) -> list:
     """
     Dense retrieval: embed query → query ChromaDB → trả về top_k chunks.
@@ -117,12 +150,16 @@ def retrieve_dense(query: str, top_k: int = DEFAULT_TOP_K) -> list:
                 "score": round(1 - dist, 4),  # cosine similarity
                 "metadata": meta,
             })
+        if not chunks:
+            fallback = _fallback_doc_search(query, top_k=top_k)
+            if fallback:
+                return fallback
         return chunks
 
     except Exception as e:
         print(f"⚠️  ChromaDB query failed: {e}")
-        # Fallback: return empty (abstain)
-        return []
+        fallback = _fallback_doc_search(query, top_k=top_k)
+        return fallback
 
 
 def run(state: dict) -> dict:

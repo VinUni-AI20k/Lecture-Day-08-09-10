@@ -207,6 +207,14 @@ def tool_get_ticket_info(ticket_id: str) -> dict:
     }
 
 
+def search_kb(query: str, top_k: int = 3) -> dict:
+    return tool_search_kb(query, top_k=top_k)
+
+
+def get_ticket_info(ticket_id: str) -> dict:
+    return tool_get_ticket_info(ticket_id)
+
+
 # Mock access control rules
 ACCESS_RULES = {
     1: {
