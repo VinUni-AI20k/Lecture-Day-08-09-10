@@ -4,7 +4,7 @@
 **Thành viên:**
 | Tên | Vai trò | Email |
 |-----|---------|-------|
-|  | Supervisor Owner | vuducminhvn2003@gmail.com |
+| Trương Quang Lộc | Supervisor Owner | vuducminhvn2003@gmail.com |
 | Vũ Đức Minh| Worker Owner | vuducminhvn2003@gmail.com  |
 | Nguyễn Thị Ngọc | MCP Owner & Integration | ngocntit@gmail.com |
 | Nguyễn Việt Quang | Trace & Docs Owner | nguyenvietquang.1601@gmail.com |
