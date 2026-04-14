@@ -129,7 +129,7 @@ Hoàn thành File retrieval
 
 **Bằng chứng trước/sau:**
 
-> Không có log để trace
+> Từ File Retrieval chưa hoàn chỉnh -> Hoàn chỉnh -> Xem file Retrieval
 
 ---
 
