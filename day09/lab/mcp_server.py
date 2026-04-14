@@ -132,19 +132,67 @@ TOOL_SCHEMAS = {
 # Tool Implementations
 # ─────────────────────────────────────────────
 
+_embedding_model = None
+
+def _get_embedding_model():
+    global _embedding_model
+    if _embedding_model is None:
+        try:
+            from sentence_transformers import SentenceTransformer
+            _embedding_model = SentenceTransformer("all-MiniLM-L6-v2")
+        except ImportError:
+            pass
+    return _embedding_model
+
+
+
 def tool_search_kb(query: str, top_k: int = 3) -> dict:
     """
     Tìm kiếm Knowledge Base bằng semantic search.
-
-    TODO Sprint 3: Kết nối với ChromaDB thực.
-    Hiện tại: Delegate sang retrieval worker.
+    Kết nối với ChromaDB thực.
     """
     try:
-        # Tái dùng retrieval logic từ workers/retrieval.py
-        import sys
-        sys.path.insert(0, os.path.dirname(__file__))
-        from workers.retrieval import retrieve_dense
-        chunks = retrieve_dense(query, top_k=top_k)
+        import os
+        import chromadb
+        from dotenv import load_dotenv
+        
+        load_dotenv()
+        
+        # Kết nối tới ChromaDB
+        db_path = os.getenv("CHROMA_DB_PATH")
+        client = chromadb.PersistentClient(path=db_path)
+        
+        collection_name = os.getenv("CHROMA_COLLECTION")
+        collection = client.get_collection(collection_name)
+        
+        # Sinh vector embedding cho query
+        model = _get_embedding_model()
+        if model is None:
+            raise RuntimeError("sentence-transformers chưa được cài đặt.")
+            
+        query_embedding = model.encode([query])[0].tolist()
+        
+        # Truy vấn tìm kiếm trên tập documents
+        results = collection.query(
+            query_embeddings=[query_embedding],
+            n_results=top_k,
+            include=["documents", "distances", "metadatas"]
+        )
+        
+        chunks = []
+        if results and results.get("documents") and len(results["documents"][0]) > 0:
+            for doc, dist, meta in zip(
+                results["documents"][0],
+                results["distances"][0],
+                results["metadatas"][0]
+            ):
+                chunks.append({
+                    "text": doc,
+                    "source": meta.get("source", "unknown") if meta else "unknown",
+                    "score": round(1 - dist, 4) if dist is not None else 0.0,
+                    "metadata": meta or {},
+                })
+        
         sources = list({c["source"] for c in chunks})
         return {
             "chunks": chunks,
@@ -152,7 +200,7 @@ def tool_search_kb(query: str, top_k: int = 3) -> dict:
             "total_found": len(chunks),
         }
     except Exception as e:
-        # Fallback: return mock data nếu ChromaDB chưa setup
+        # Fallback: return mock data nếu ChromaDB chưa setup hoặc có lỗi
         return {
             "chunks": [
                 {
