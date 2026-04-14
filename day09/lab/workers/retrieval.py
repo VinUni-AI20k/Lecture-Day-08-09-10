@@ -17,7 +17,11 @@ Gọi độc lập để test:
 
 import os
 import sys
+import chromadb
+from openai import OpenAI
+from dotenv import load_dotenv
 
+load_dotenv()
 # ─────────────────────────────────────────────
 # Worker Contract (xem contracts/worker_contracts.yaml)
 # Input:  {"task": str, "top_k": int = 3}
@@ -34,18 +38,17 @@ def _get_embedding_fn():
     TODO Sprint 1: Implement dùng OpenAI hoặc Sentence Transformers.
     """
     # Option A: Sentence Transformers (offline, không cần API key)
-    try:
-        from sentence_transformers import SentenceTransformer
-        model = SentenceTransformer("all-MiniLM-L6-v2")
-        def embed(text: str) -> list:
-            return model.encode([text])[0].tolist()
-        return embed
-    except ImportError:
-        pass
+    # try:
+    #     from sentence_transformers import SentenceTransformer
+    #     model = SentenceTransformer("all-MiniLM-L6-v2")
+    #     def embed(text: str) -> list:
+    #         return model.encode([text])[0].tolist()
+    #     return embed
+    # except ImportError:
+    #     pass
 
     # Option B: OpenAI (cần API key)
     try:
-        from openai import OpenAI
         client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
         def embed(text: str) -> list:
             resp = client.embeddings.create(input=text, model="text-embedding-3-small")
@@ -54,12 +57,12 @@ def _get_embedding_fn():
     except ImportError:
         pass
 
-    # Fallback: random embeddings cho test (KHÔNG dùng production)
-    import random
-    def embed(text: str) -> list:
-        return [random.random() for _ in range(384)]
-    print("⚠️  WARNING: Using random embeddings (test only). Install sentence-transformers.")
-    return embed
+    # # Fallback: random embeddings cho test (KHÔNG dùng production)
+    # import random
+    # def embed(text: str) -> list:
+    #     return [random.random() for _ in range(384)]
+    # print("⚠️  WARNING: Using random embeddings (test only). Install sentence-transformers.")
+    # return embed
 
 
 def _get_collection():
@@ -67,7 +70,6 @@ def _get_collection():
     Kết nối ChromaDB collection.
     TODO Sprint 2: Đảm bảo collection đã được build từ Step 3 trong README.
     """
-    import chromadb
     client = chromadb.PersistentClient(path="./chroma_db")
     try:
         collection = client.get_collection("day09_docs")
@@ -114,7 +116,7 @@ def retrieve_dense(query: str, top_k: int = DEFAULT_TOP_K) -> list:
             chunks.append({
                 "text": doc,
                 "source": meta.get("source", "unknown"),
-                "score": round(1 - dist, 4),  # cosine similarity
+                "score": 1 - dist,  # cosine similarity
                 "metadata": meta,
             })
         return chunks
