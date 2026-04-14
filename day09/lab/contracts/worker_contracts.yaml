@@ -97,7 +97,7 @@ retrieval_worker:
     - "Stateless: không đọc hoặc ghi state ngoài những gì được khai báo ở trên"
   actual_implementation:
     status: "done"
-    notes: "Đã tích hợp ChromaDB và sentence-transformers với top_k=5."
+    notes: "Embedding fallback chain: SentenceTransformer all-MiniLM-L6-v2 → OpenAI → random. Sliding window 300w/50 overlap. ChromaDB persistent collection day09_docs."
 
 # ─────────────────────────────────────────────
 # Policy Tool Worker
@@ -167,7 +167,7 @@ policy_tool_worker:
     - "Không được tự bịa policy rules không có trong tài liệu"
   actual_implementation:
     status: "done"
-    notes: "Đã tích hợp MCP tools: search_kb, get_ticket_info, check_access_permission, create_ticket."
+    notes: "Rule-based exception detection (flash_sale, digital_product, activated_product) + LLM hybrid fallback. MCP integration qua dispatch_tool()."
 
 # ─────────────────────────────────────────────
 # Synthesis Worker
@@ -215,7 +215,7 @@ synthesis_worker:
     - "Không được dùng kiến thức ngoài context được cung cấp"
   actual_implementation:
     status: "done"
-    notes: "Grounding output dựa trên evidence-only, kèm citation [source_name]."
+    notes: "gpt-4o-mini primary, Gemini fallback. HITL_THRESHOLD=0.4, early abstain khi retrieved_chunks=[]. Strict evidence-only grounding."
 
 # ─────────────────────────────────────────────
 # MCP Server
@@ -271,4 +271,4 @@ mcp_server:
     - "Không được raise exception ra ngoài dispatch_tool()"
   actual_implementation:
     status: "done"
-    notes: "Mock server hoàn thiện với đầy đủ schemas và dispatch_tool API."
+    notes: "4 mock tools: search_kb, get_ticket_info, check_access_permission, create_ticket. TOOL_REGISTRY + dispatch_tool() pattern."
