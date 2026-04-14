@@ -17,6 +17,7 @@ Gọi độc lập để test:
 """
 
 import os
+import re
 
 WORKER_NAME = "synthesis_worker"
 
@@ -29,6 +30,97 @@ Quy tắc nghiêm ngặt:
 4. Trả lời súc tích, có cấu trúc. Không dài dòng.
 5. Nếu có exceptions/ngoại lệ → nêu rõ ràng trước khi kết luận.
 """
+
+
+def _extract_task_from_messages(messages: list) -> str:
+    user_message = messages[-1]["content"] if messages else ""
+    match = re.search(r"Câu hỏi:\s*(.+?)(?:\n\n|$)", user_message, flags=re.DOTALL)
+    return match.group(1).strip() if match else ""
+
+
+def _normalize(text: str) -> str:
+    cleaned = re.sub(r"^\W+", "", text)
+    cleaned = re.sub(r"\s+", " ", cleaned)
+    return cleaned.strip()
+
+
+def _sentence_split(text: str) -> list:
+    cleaned = text.replace("\r", " ").replace("\n", " ")
+    parts = re.split(r"(?<=[\.\?!])\s+|\s+-\s+", cleaned)
+    return [_normalize(part) for part in parts if _normalize(part)]
+
+
+def _task_keywords(task: str) -> set:
+    return set(re.findall(r"[a-z0-9_]+", task.lower()))
+
+
+def _top_relevant_snippets(task: str, chunks: list, limit: int = 3) -> list:
+    keywords = _task_keywords(task)
+    candidates = []
+
+    for chunk in chunks:
+        source = chunk.get("source", "unknown")
+        score = float(chunk.get("score", 0) or 0)
+        seen = set()
+        for sentence in _sentence_split(chunk.get("text", "")):
+            lowered = sentence.lower()
+            overlap = len(keywords & set(re.findall(r"[a-z0-9_]+", lowered)))
+            if overlap == 0:
+                continue
+            if sentence.lower().startswith(("source:", "department:", "effective date:", "access:")):
+                continue
+            if any(marker in sentence.lower() for marker in [" source:", " department:", " effective date:", " access:"]):
+                continue
+            if sentence.startswith(("===", "Section ", "Phần ")):
+                continue
+            if re.fullmatch(r"[A-Z0-9\s\-]+", sentence):
+                continue
+            if sentence in seen:
+                continue
+            seen.add(sentence)
+            candidates.append((overlap, score, source, sentence))
+
+    candidates.sort(key=lambda item: (item[0], item[1], len(item[3])), reverse=True)
+
+    chosen = []
+    used_sentences = set()
+    for _, _, source, sentence in candidates:
+        if sentence in used_sentences:
+            continue
+        used_sentences.add(sentence)
+        chosen.append(f"- {sentence} [{source}]")
+        if len(chosen) >= limit:
+            break
+    return chosen
+
+
+def _fallback_grounded_answer(task: str, chunks: list, policy_result: dict) -> str:
+    if policy_result.get("policy_version_note"):
+        source = policy_result.get("source", ["policy_refund_v4.txt"])[0]
+        return (
+            "Không đủ thông tin trong tài liệu nội bộ để khẳng định chi tiết của policy phiên bản cũ. "
+            f"{policy_result['policy_version_note']} [{source}]"
+        )
+
+    if policy_result.get("exceptions_found"):
+        lines = []
+        for exception in policy_result["exceptions_found"]:
+            lines.append(f"- Ngoại lệ áp dụng: {exception.get('rule', '')} [{exception.get('source', 'unknown')}]")
+
+        if policy_result.get("required_approvers"):
+            approvers = ", ".join(policy_result["required_approvers"])
+            lines.append(f"- Chuỗi phê duyệt cần có: {approvers} [access_control_sop.txt]")
+        if policy_result.get("emergency_override"):
+            lines.append("- Trường hợp khẩn cấp được phép cấp quyền tạm thời theo SOP [access_control_sop.txt]")
+
+        lines.extend(_top_relevant_snippets(task, chunks, limit=2))
+        return "\n".join(lines[:4])
+
+    snippet_lines = _top_relevant_snippets(task, chunks, limit=4)
+    if snippet_lines:
+        return "\n".join(snippet_lines)
+
+    return "Không đủ thông tin trong tài liệu nội bộ để trả lời câu hỏi này."
 
 
 def _call_llm(messages: list) -> str:
@@ -61,71 +153,7 @@ def _call_llm(messages: list) -> str:
     except Exception:
         pass
 
-    # Fallback: deterministic grounded answer for local lab mode
-    import re
-
-    user_message = messages[-1]["content"] if messages else ""
-    lines = [line.strip() for line in user_message.splitlines() if line.strip()]
-
-    if any("POLICY EXCEPTIONS" in line for line in lines):
-        exception_lines = [line for line in lines if line.startswith("- ")]
-        if exception_lines:
-            return "The request matches policy exceptions or restrictions:\n" + "\n".join(exception_lines)
-
-    if any("VERSION NOTE" in line for line in lines):
-        version_note_lines = []
-        capture = False
-        for line in lines:
-            if "VERSION NOTE" in line:
-                capture = True
-                continue
-            if capture:
-                version_note_lines.append(line)
-        if version_note_lines:
-            return (
-                "This case depends on an earlier policy version that is not included in the current internal documents. "
-                + " ".join(version_note_lines)
-            )
-
-    cited_answers = []
-    current_source = None
-    current_text = []
-    task_match = re.search(r"Câu hỏi:\s*(.+?)(?:\n\n|$)", user_message, flags=re.DOTALL)
-    task_text = task_match.group(1).lower() if task_match else ""
-    task_tokens = set(re.findall(r"[a-z0-9_]+", task_text))
-
-    for line in lines:
-        if line.startswith("[") and "] Nguồn:" in line:
-            if current_source and current_text:
-                combined_text = " ".join(current_text)
-                cited_answers.append((current_source, combined_text))
-            source_text = line.split("Nguồn:", 1)[1]
-            current_source = source_text.split("(", 1)[0].strip()
-            current_text = []
-            continue
-
-        if current_source:
-            if line.lower().startswith("hãy trả lời câu hỏi") or line.lower().startswith("hay tra loi cau hoi"):
-                continue
-            current_text.append(line)
-
-    if current_source and current_text:
-        cited_answers.append((current_source, " ".join(current_text)))
-
-    scored_lines = []
-    for source, text in cited_answers:
-        text_tokens = set(re.findall(r"[a-z0-9_]+", text.lower()))
-        overlap = len(task_tokens & text_tokens)
-        if overlap == 0:
-            continue
-        scored_lines.append((overlap, f"- {text} [{source}]"))
-
-    scored_lines.sort(key=lambda item: item[0], reverse=True)
-
-    if scored_lines:
-        return "\n".join(line for _, line in scored_lines[:4])
-
-    return "Khong du thong tin trong tai lieu noi bo de tra loi cau hoi nay."
+    return "__USE_DETERMINISTIC_FALLBACK__"
 
 
 def _build_context(chunks: list, policy_result: dict) -> str:
@@ -209,6 +237,8 @@ Hãy trả lời câu hỏi dựa vào tài liệu trên."""
     ]
 
     answer = _call_llm(messages)
+    if answer == "__USE_DETERMINISTIC_FALLBACK__":
+        answer = _fallback_grounded_answer(task, chunks, policy_result)
     sources = list({c.get("source", "unknown") for c in chunks})
     confidence = _estimate_confidence(chunks, answer, policy_result)
 
@@ -247,6 +277,8 @@ def run(state: dict) -> dict:
         state["final_answer"] = result["answer"]
         state["sources"] = result["sources"]
         state["confidence"] = result["confidence"]
+        if result["confidence"] < 0.4:
+            state["hitl_triggered"] = True
 
         worker_io["output"] = {
             "answer_length": len(result["answer"]),
@@ -273,6 +305,14 @@ def run(state: dict) -> dict:
 # ————————————————————————————————————————————————
 
 if __name__ == "__main__":
+    try:
+        import sys
+
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+        sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
+
     print("=" * 50)
     print("Synthesis Worker — Standalone Test")
     print("=" * 50)

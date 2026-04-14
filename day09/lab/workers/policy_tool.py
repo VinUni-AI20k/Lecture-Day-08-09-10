@@ -16,6 +16,8 @@ Gọi độc lập để test:
     python workers/policy_tool.py
 """
 
+import asyncio
+import json
 import os
 import sys
 from typing import Optional
@@ -29,25 +31,58 @@ WORKER_NAME = "policy_tool_worker"
 
 def _call_mcp_tool(tool_name: str, tool_input: dict) -> dict:
     """
-    Gọi MCP tool.
-
-    Sprint 3 TODO: Implement bằng cách import mcp_server hoặc gọi HTTP.
-
-    Hiện tại: Import trực tiếp từ mcp_server.py (trong-process mock).
+    Call the real MCP server over stdio and normalize the tool result for tracing.
     """
     from datetime import datetime
+    from mcp import ClientSession
+    from mcp.client.stdio import StdioServerParameters, stdio_client
 
-    try:
-        # TODO Sprint 3: Thay bằng real MCP client nếu dùng HTTP server
-        from mcp_server import dispatch_tool
-        result = dispatch_tool(tool_name, tool_input)
+    async def _call() -> dict:
+        base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        server_path = os.path.join(base_dir, "mcp_server.py")
+        server_params = StdioServerParameters(
+            command=sys.executable,
+            args=[server_path, "--stdio-server"],
+            cwd=base_dir,
+            env=dict(os.environ),
+            encoding="utf-8",
+            encoding_error_handler="replace",
+        )
+
+        async with stdio_client(server_params) as (read_stream, write_stream):
+            async with ClientSession(read_stream, write_stream) as session:
+                await session.initialize()
+                result = await session.call_tool(tool_name, tool_input)
+
+        output = result.structuredContent
+        if isinstance(output, dict) and isinstance(output.get("result"), str):
+            try:
+                output = json.loads(output["result"])
+            except Exception:
+                output = {"text": output["result"]}
+
+        if output is None:
+            text_parts = []
+            for item in result.content:
+                text_value = getattr(item, "text", None)
+                if text_value is not None:
+                    text_parts.append(text_value)
+            if text_parts:
+                try:
+                    output = json.loads("\n".join(text_parts))
+                except Exception:
+                    output = {"text": "\n".join(text_parts)}
+
         return {
             "tool": tool_name,
             "input": tool_input,
-            "output": result,
-            "error": None if not (isinstance(result, dict) and result.get("error")) else {"code": "MCP_TOOL_ERROR", "reason": str(result.get("error"))},
+            "output": output,
+            "error": None if not result.isError else {"code": "MCP_TOOL_ERROR", "reason": str(output)},
             "timestamp": datetime.now().isoformat(),
         }
+
+    try:
+        return asyncio.run(_call())
     except Exception as e:
         return {
             "tool": tool_name,
@@ -182,6 +217,8 @@ def run(state: dict) -> dict:
     state.setdefault("workers_called", [])
     state.setdefault("history", [])
     state.setdefault("mcp_tools_used", [])
+    state.setdefault("mcp_tool_called", [])
+    state.setdefault("mcp_result", [])
 
     state["workers_called"].append(WORKER_NAME)
 
@@ -201,11 +238,17 @@ def run(state: dict) -> dict:
         if not chunks and needs_tool:
             mcp_result = _call_mcp_tool("search_kb", {"query": task, "top_k": 3})
             state["mcp_tools_used"].append(mcp_result)
+            state["mcp_tool_called"].append("search_kb")
+            state["mcp_result"].append(mcp_result.get("output"))
             state["history"].append(f"[{WORKER_NAME}] called MCP search_kb")
 
             if mcp_result.get("output") and mcp_result["output"].get("chunks"):
                 chunks = mcp_result["output"]["chunks"]
                 state["retrieved_chunks"] = chunks
+                state["retrieved_sources"] = mcp_result["output"].get(
+                    "sources",
+                    list({chunk.get("source", "unknown") for chunk in chunks if chunk}),
+                )
 
         # Step 2: Phân tích policy
         policy_result = analyze_policy(task, chunks)
@@ -228,6 +271,8 @@ def run(state: dict) -> dict:
                 },
             )
             state["mcp_tools_used"].append(access_mcp_result)
+            state["mcp_tool_called"].append("check_access_permission")
+            state["mcp_result"].append(access_mcp_result.get("output"))
             state["history"].append(f"[{WORKER_NAME}] called MCP check_access_permission")
 
             if access_mcp_result.get("output") and not access_mcp_result["output"].get("error"):
@@ -261,6 +306,8 @@ def run(state: dict) -> dict:
         if needs_tool and any(kw in task.lower() for kw in ["ticket", "p1", "jira"]):
             mcp_result = _call_mcp_tool("get_ticket_info", {"ticket_id": "P1-LATEST"})
             state["mcp_tools_used"].append(mcp_result)
+            state["mcp_tool_called"].append("get_ticket_info")
+            state["mcp_result"].append(mcp_result.get("output"))
             state["history"].append(f"[{WORKER_NAME}] called MCP get_ticket_info")
 
         worker_io["output"] = {
@@ -287,6 +334,12 @@ def run(state: dict) -> dict:
 # ————————————————————————————————————————————————
 
 if __name__ == "__main__":
+    try:
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+        sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
+
     print("=" * 50)
     print("Policy Tool Worker — Standalone Test")
     print("=" * 50)
