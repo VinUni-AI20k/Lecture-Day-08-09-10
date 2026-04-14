@@ -15,9 +15,13 @@ day08/lab/.venv
 day09/lab/.env
 day09/lab/venv
 day09/lab/.venv
+day09/lab/chroma_db/
+day09/lab/__pycache__/
+day09/lab/workers/__pycache__/
 
 day10/lab/.env
 day10/lab/venv
 day10/lab/.venv
 
 *__pycache__
+*.pyc

@@ -20,6 +20,7 @@ import asyncio
 import json
 import os
 import sys
+from datetime import datetime
 from typing import Optional
 
 WORKER_NAME = "policy_tool_worker"
@@ -33,11 +34,10 @@ def _call_mcp_tool(tool_name: str, tool_input: dict) -> dict:
     """
     Call the real MCP server over stdio and normalize the tool result for tracing.
     """
-    from datetime import datetime
-    from mcp import ClientSession
-    from mcp.client.stdio import StdioServerParameters, stdio_client
-
     async def _call() -> dict:
+        from mcp import ClientSession
+        from mcp.client.stdio import StdioServerParameters, stdio_client
+
         base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         server_path = os.path.join(base_dir, "mcp_server.py")
         # Spin up the local MCP server as a subprocess so this worker stays decoupled from server internals.
@@ -79,6 +79,7 @@ def _call_mcp_tool(tool_name: str, tool_input: dict) -> dict:
             "input": tool_input,
             "output": output,
             "error": None if not result.isError else {"code": "MCP_TOOL_ERROR", "reason": str(output)},
+            "transport": "stdio_mcp",
             "timestamp": datetime.now().isoformat(),
         }
 
@@ -86,13 +87,30 @@ def _call_mcp_tool(tool_name: str, tool_input: dict) -> dict:
         # asyncio.run keeps the public worker API synchronous for the graph.
         return asyncio.run(_call())
     except Exception as e:
-        return {
-            "tool": tool_name,
-            "input": tool_input,
-            "output": None,
-            "error": {"code": "MCP_CALL_FAILED", "reason": str(e)},
-            "timestamp": datetime.now().isoformat(),
-        }
+        try:
+            from mcp_server import dispatch_tool
+
+            output = dispatch_tool(tool_name, tool_input)
+            return {
+                "tool": tool_name,
+                "input": tool_input,
+                "output": output,
+                "error": output.get("error") if isinstance(output, dict) and output.get("error") else None,
+                "transport": "local_dispatch_fallback",
+                "timestamp": datetime.now().isoformat(),
+            }
+        except Exception as fallback_error:
+            return {
+                "tool": tool_name,
+                "input": tool_input,
+                "output": None,
+                "error": {
+                    "code": "MCP_CALL_FAILED",
+                    "reason": f"stdio_error={e}; fallback_error={fallback_error}",
+                },
+                "transport": "failed",
+                "timestamp": datetime.now().isoformat(),
+            }
 
 
 # ————————————————————————————————————————————————
@@ -117,13 +135,27 @@ def analyze_policy(task: str, chunks: list) -> dict:
     import re
 
     task_lower = task.lower()
-    context_text = " ".join([c.get("text", "") for c in chunks]).lower()
+
+    def has_phrase(phrase: str) -> bool:
+        return phrase in task_lower
+
+    def has_negated_phrase(phrase: str) -> bool:
+        return any(
+            marker in task_lower
+            for marker in [
+                f"không phải {phrase}",
+                f"khong phai {phrase}",
+                f"không phải là {phrase}",
+                f"khong phai la {phrase}",
+                f"not {phrase}",
+            ]
+        )
 
     # Start with cheap, explainable rules before reaching for an LLM classifier.
     exceptions_found = []
 
     # Exception 1: Flash Sale
-    if "flash sale" in task_lower or "flash sale" in context_text:
+    if has_phrase("flash sale") and not has_negated_phrase("flash sale"):
         exceptions_found.append({
             "type": "flash_sale_exception",
             "rule": "Orders purchased under Flash Sale promotions are not refundable.",
@@ -131,7 +163,7 @@ def analyze_policy(task: str, chunks: list) -> dict:
         })
 
     # Exception 2: Digital product
-    if any(kw in task_lower for kw in ["license key", "license", "subscription", "digital product"]):
+    if any(has_phrase(kw) and not has_negated_phrase(kw) for kw in ["license key", "license", "subscription", "digital product", "kỹ thuật số", "ky thuat so"]):
         exceptions_found.append({
             "type": "digital_product_exception",
             "rule": "Digital products such as license keys and subscriptions are not refundable.",
@@ -139,7 +171,7 @@ def analyze_policy(task: str, chunks: list) -> dict:
         })
 
     # Exception 3: Activated product
-    if any(kw in task_lower for kw in ["đã kích hoạt", "da kich hoat", "activated", "đã đăng ký", "da dang ky"]):
+    if any(has_phrase(kw) and not has_negated_phrase(kw) for kw in ["đã kích hoạt", "da kich hoat", "activated", "đã đăng ký", "da dang ky"]):
         exceptions_found.append({
             "type": "activated_exception",
             "rule": "Activated or account-registered products are not refundable.",
@@ -153,8 +185,13 @@ def analyze_policy(task: str, chunks: list) -> dict:
     policy_name = "refund_policy_v4"
     policy_version_note = ""
     order_dates = re.findall(r"(\d{2})/(\d{2})/(\d{4})", task)
+    cutoff_date = datetime.strptime("01/02/2026", "%d/%m/%Y").date()
     for day_text, month_text, year_text in order_dates:
-        if f"{day_text}/{month_text}/{year_text}" < "01/02/2026":
+        try:
+            order_date = datetime.strptime(f"{day_text}/{month_text}/{year_text}", "%d/%m/%Y").date()
+        except ValueError:
+            continue
+        if order_date < cutoff_date:
             policy_version_note = (
                 "Order date is before 01/02/2026, so refund policy v3 applies. "
                 "The current document set only contains v4, so the answer should abstain from claiming v3 details."
@@ -283,6 +320,8 @@ def run(state: dict) -> dict:
                     "policy_applies": bool(access_output.get("can_grant", False)),
                     "source": list(set(policy_result.get("source", []) + ["access_control_sop.txt"])),
                     "required_approvers": access_output.get("required_approvers", []),
+                    "approver_count": access_output.get("approver_count", len(access_output.get("required_approvers", []))),
+                    "highest_approver": (access_output.get("required_approvers", []) or [None])[-1],
                     "emergency_override": access_output.get("emergency_override", False),
                     "rule": (
                         "Temporary emergency access can be granted only when the SOP explicitly allows emergency override."

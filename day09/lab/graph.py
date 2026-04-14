@@ -7,6 +7,7 @@ modules in workers/.
 
 import json
 import os
+import re
 import sys
 import time
 import unicodedata
@@ -30,6 +31,7 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 class AgentState(TypedDict, total=False):
     # Shared state passed through supervisor, workers, and trace export.
     task: str
+    question_type: str
     route_reason: str
     risk_high: bool
     needs_tool: bool
@@ -41,6 +43,8 @@ class AgentState(TypedDict, total=False):
     mcp_tool_called: list
     mcp_result: list
     final_answer: str
+    answer_schema_type: str
+    answer_schema: dict
     sources: list
     confidence: float
     history: list
@@ -65,6 +69,7 @@ def make_initial_state(task: str) -> AgentState:
     now = datetime.now()
     return {
         "task": task,
+        "question_type": "generic_lookup",
         "route_reason": "",
         "risk_high": False,
         "needs_tool": False,
@@ -76,6 +81,8 @@ def make_initial_state(task: str) -> AgentState:
         "mcp_tool_called": [],
         "mcp_result": [],
         "final_answer": "",
+        "answer_schema_type": "generic_lookup",
+        "answer_schema": {},
         "sources": [],
         "confidence": 0.0,
         "history": [f"Run started at {now.isoformat()}"],
@@ -87,6 +94,54 @@ def make_initial_state(task: str) -> AgentState:
         "run_id": f"run_{now.strftime('%Y%m%d_%H%M%S_%f')}",
         "timestamp": now.isoformat(),
     }
+
+
+def _infer_question_type(task_normalized: str) -> str:
+    # Question types are coarse-grained task classes, not per-question hacks.
+    def has_negated_phrase(phrase: str) -> bool:
+        return any(
+            marker in task_normalized
+            for marker in [
+                f"khong phai {phrase}",
+                f"khong phai la {phrase}",
+                f"not {phrase}",
+            ]
+        )
+
+    if any(keyword in task_normalized for keyword in ["muc phat", "tai chinh cu the", "khong co trong tai lieu"]):
+        return "abstain_missing_info"
+
+    if any(keyword in task_normalized for keyword in ["cap quyen", "access", "level 2", "level 3", "level 4"]):
+        if any(keyword in task_normalized for keyword in ["p1", "sla", "incident", "2am", "thong bao"]):
+            return "access_sla_multi_hop"
+        return "access_control"
+
+    if any(keyword in task_normalized for keyword in ["hoan tien", "refund", "policy", "flash sale", "store credit"]):
+        if re.search(r"\b\d{2}/\d{2}/\d{4}\b", task_normalized):
+            return "policy_temporal_scope"
+        if "store credit" in task_normalized:
+            return "numeric_policy"
+        if any(
+            keyword in task_normalized and not has_negated_phrase(keyword)
+            for keyword in ["flash sale", "license", "subscription", "ky thuat so", "kich hoat"]
+        ):
+            return "policy_exception"
+        return "eligibility_policy"
+
+    if any(keyword in task_normalized for keyword in ["probation", "remote", "duoc chap thuan khong", "dieu kien de duoc"]):
+        return "eligibility_policy"
+
+    if any(keyword in task_normalized for keyword in ["mat khau", "password"]):
+        return "faq_multi_detail"
+
+    if any(keyword in task_normalized for keyword in ["p1", "sla", "ticket", "escalation", "pagerduty", "incident"]):
+        if any(keyword in task_normalized for keyword in ["ai nhan", "kenh nao", "deadline", "may gio"]):
+            return "sla_detail"
+        if any(keyword in task_normalized for keyword in ["lam gi tiep theo", "he thong se lam gi", "khong phan hoi sau"]):
+            return "sla_action"
+        return "sla_detail"
+
+    return "generic_lookup"
 
 
 def supervisor_node(state: AgentState) -> AgentState:
@@ -163,12 +218,15 @@ def supervisor_node(state: AgentState) -> AgentState:
         route_reasons.append("risk_high flagged")
 
     route_reason = " | ".join(route_reasons)
+    question_type = _infer_question_type(task_normalized)
     state["supervisor_route"] = route
+    state["question_type"] = question_type
     state["route_reason"] = route_reason
     state["risk_high"] = risk_high
     state["needs_tool"] = needs_tool
     state["history"].append(
-        f"[supervisor] route={route} needs_tool={needs_tool} risk_high={risk_high} reason={route_reason}"
+        f"[supervisor] route={route} question_type={question_type} needs_tool={needs_tool} "
+        f"risk_high={risk_high} reason={route_reason}"
     )
     return state
 

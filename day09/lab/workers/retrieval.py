@@ -28,6 +28,63 @@ import unicodedata
 
 WORKER_NAME = "retrieval_worker"
 DEFAULT_TOP_K = 3
+LAB_DIR = os.path.dirname(os.path.dirname(__file__))
+DOCS_DIR = os.path.join(LAB_DIR, "data", "docs")
+CHROMA_DIR = os.path.join(LAB_DIR, "chroma_db")
+_EMBEDDING_FN = None
+STOPWORDS = {
+    "ai", "anh", "chi", "cho", "co", "cua", "da", "de", "duoc", "hay", "he", "khi",
+    "khong", "la", "lam", "luc", "mot", "nay", "nao", "ngay", "nguoi", "nhan", "sau",
+    "so", "tai", "the", "theo", "thi", "thoi", "toi", "tra", "trong", "tu", "va",
+    "vi", "vien", "voi", "yeu", "cau", "dung", "gì", "gi", "bao", "nhieu", "qua",
+    "kenh", "dau", "tien", "may", "gio",
+}
+
+
+def _normalize(text: str) -> str:
+    normalized = unicodedata.normalize("NFKD", text or "")
+    normalized = "".join(char for char in normalized if not unicodedata.combining(char))
+    return normalized.lower()
+
+
+def _tokenize(text: str) -> list:
+    return re.findall(r"[a-z0-9_]+", _normalize(text))
+
+
+def _keyword_tokens(text: str) -> set:
+    return {
+        token for token in _tokenize(text)
+        if token not in STOPWORDS and (len(token) > 2 or token.isdigit())
+    }
+
+
+def _query_profile(query: str) -> dict:
+    normalized_query = _normalize(query)
+    profile = {
+        "normalized": normalized_query,
+        "tokens": _keyword_tokens(query),
+        "numbers": {token for token in _tokenize(query) if token.isdigit()},
+        "preferred_sources": set(),
+        "required_phrases": [],
+        "asks_for_channels": any(term in normalized_query for term in ["thong bao", "kenh", "pagerduty", "slack", "email"]),
+        "asks_for_timing": any(term in normalized_query for term in ["bao", "deadline", "may gio", "muc", "sau bao nhieu", "khi nao"]),
+    }
+
+    if any(term in normalized_query for term in ["p1", "sla", "incident", "pagerduty", "senior engineer", "escalation"]):
+        profile["preferred_sources"].add("sla_p1_2026.txt")
+    if any(term in normalized_query for term in ["mat khau", "password", "helpdesk", "canh bao truoc"]):
+        profile["preferred_sources"].add("it_helpdesk_faq.txt")
+    if any(term in normalized_query for term in ["probation", "remote", "team lead"]):
+        profile["preferred_sources"].add("hr_leave_policy.txt")
+    if any(term in normalized_query for term in ["level 2", "level 3", "access", "it security", "contractor"]):
+        profile["preferred_sources"].add("access_control_sop.txt")
+    if any(term in normalized_query for term in ["refund", "hoan tien", "flash sale", "store credit"]):
+        profile["preferred_sources"].add("policy_refund_v4.txt")
+
+    if any(term in normalized_query for term in ["muc phat", "tai chinh"]):
+        profile["required_phrases"] = ["muc phat", "tai chinh"]
+
+    return profile
 
 
 def _get_embedding_fn():
@@ -35,15 +92,23 @@ def _get_embedding_fn():
     Trả về embedding function.
     TODO Sprint 1: Implement dùng OpenAI hoặc Sentence Transformers.
     """
+    global _EMBEDDING_FN
+    if _EMBEDDING_FN is not None:
+        return _EMBEDDING_FN
+
     # Option A: Sentence Transformers (offline, không cần API key)
     try:
         from sentence_transformers import SentenceTransformer
-        model = SentenceTransformer("all-MiniLM-L6-v2", local_files_only=True)
+        try:
+            model = SentenceTransformer("all-MiniLM-L6-v2", local_files_only=True)
+        except Exception:
+            model = SentenceTransformer("all-MiniLM-L6-v2", local_files_only=False)
 
         def embed(text: str) -> list:
             return model.encode([text])[0].tolist()
 
-        return embed
+        _EMBEDDING_FN = embed
+        return _EMBEDDING_FN
     except Exception:
         pass
 
@@ -56,7 +121,8 @@ def _get_embedding_fn():
             resp = client.embeddings.create(input=text, model="text-embedding-3-small")
             return resp.data[0].embedding
 
-        return embed
+        _EMBEDDING_FN = embed
+        return _EMBEDDING_FN
     except Exception:
         pass
 
@@ -66,8 +132,9 @@ def _get_embedding_fn():
     def embed(text: str) -> list:
         return [random.random() for _ in range(384)]
 
-    print("⚠️  WARNING: Using random embeddings (test only). Install sentence-transformers.")
-    return embed
+    print("WARNING: Using random embeddings (test only). Install sentence-transformers.")
+    _EMBEDDING_FN = embed
+    return _EMBEDDING_FN
 
 
 def _get_collection():
@@ -78,7 +145,7 @@ def _get_collection():
     import chromadb
 
     # Keep the worker self-contained: it opens the local persistent DB directly.
-    client = chromadb.PersistentClient(path="./chroma_db")
+    client = chromadb.PersistentClient(path=CHROMA_DIR)
     try:
         collection = client.get_collection("day09_docs")
     except Exception:
@@ -103,6 +170,9 @@ def retrieve_dense(query: str, top_k: int = DEFAULT_TOP_K) -> list:
     Returns:
         list of {"text": str, "source": str, "score": float, "metadata": dict}
     """
+    query_profile = _query_profile(query)
+    dense_chunks = []
+
     try:
         collection = _get_collection()
 
@@ -135,29 +205,20 @@ def retrieve_dense(query: str, top_k: int = DEFAULT_TOP_K) -> list:
                         "score": round(max(0.0, min(1.0, 1 - float(dist))), 4),
                         "metadata": metadata,
                     })
-                return chunks
+                dense_chunks = chunks
     except Exception as e:
-        print(f"⚠️  ChromaDB query failed: {e}", file=sys.stderr)
+        print(f"WARNING: ChromaDB query failed: {e}", file=sys.stderr)
 
-    # Fallback lexical retrieval on local docs so worker can still run independently
-    # when ChromaDB has not been indexed yet.
-    def normalize(text: str) -> str:
-        normalized = unicodedata.normalize("NFKD", text)
-        normalized = "".join(char for char in normalized if not unicodedata.combining(char))
-        return normalized.lower()
-
-    def tokenize(text: str) -> list:
-        return re.findall(r"[a-z0-9_]+", normalize(text))
-
-    docs_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "docs")
-    if not os.path.isdir(docs_dir):
+    # Always run a lexical pass on the small local corpus as a safety net.
+    # This keeps retrieval grounded even when Chroma metadata is stale or sources are missing.
+    if not os.path.isdir(DOCS_DIR):
         return []
 
-    query_tokens = set(tokenize(query))
+    query_tokens = query_profile["tokens"]
     fallback_chunks = []
 
-    for fname in sorted(os.listdir(docs_dir)):
-        file_path = os.path.join(docs_dir, fname)
+    for fname in sorted(os.listdir(DOCS_DIR)):
+        file_path = os.path.join(DOCS_DIR, fname)
         if not os.path.isfile(file_path):
             continue
 
@@ -166,7 +227,7 @@ def retrieve_dense(query: str, top_k: int = DEFAULT_TOP_K) -> list:
 
         sections = [section.strip() for section in re.split(r"\n(?=== )", content.replace("\r\n", "\n")) if section.strip()]
         for section_index, section_text in enumerate(sections, start=1):
-            section_tokens = set(tokenize(section_text))
+            section_tokens = _keyword_tokens(section_text)
             if not section_tokens:
                 continue
 
@@ -176,9 +237,12 @@ def retrieve_dense(query: str, top_k: int = DEFAULT_TOP_K) -> list:
 
             # Small boosts help simple keyword routing questions surface the right section faster.
             score = overlap / max(len(query_tokens), 1)
-            normalized_query = normalize(query)
-            normalized_section = normalize(section_text)
-            normalized_source = normalize(fname)
+            normalized_query = query_profile["normalized"]
+            normalized_section = _normalize(section_text)
+            normalized_source = _normalize(fname)
+
+            if fname in query_profile["preferred_sources"]:
+                score += 0.35
 
             if "flash sale" in normalized_query and "flash sale" in normalized_section:
                 score += 0.2
@@ -192,6 +256,22 @@ def retrieve_dense(query: str, top_k: int = DEFAULT_TOP_K) -> list:
                 score += 0.15
             if "level 3" in normalized_query and "level 3" in normalized_section:
                 score += 0.15
+            if "mat khau" in normalized_query and "mat khau" in normalized_section:
+                score += 0.3
+            if "probation" in normalized_query and "probation" in normalized_section:
+                score += 0.3
+            if "remote" in normalized_query and "remote" in normalized_section:
+                score += 0.25
+            if "senior engineer" in normalized_query and "senior engineer" in normalized_section:
+                score += 0.25
+            if query_profile["asks_for_channels"] and any(
+                term in normalized_section for term in ["slack", "email", "pagerduty", "alert", "on-call"]
+            ):
+                score += 0.25
+            if query_profile["asks_for_timing"] and re.search(r"\b\d+\s*(phut|gio|ngay|tuan)\b", normalized_section):
+                score += 0.2
+            if query_profile["numbers"] and query_profile["numbers"] & set(re.findall(r"\b\d+\b", normalized_section)):
+                score += 0.25
             if "refund" in normalized_query and "refund" in normalized_source:
                 score += 0.1
             if "access" in normalized_query and "access" in normalized_source:
@@ -210,19 +290,40 @@ def retrieve_dense(query: str, top_k: int = DEFAULT_TOP_K) -> list:
                 },
             })
 
-    fallback_chunks.sort(key=lambda chunk: chunk["score"], reverse=True)
-    return fallback_chunks[:top_k]
+    candidates = fallback_chunks
+    if dense_chunks and all(chunk.get("source") != "unknown" for chunk in dense_chunks):
+        candidates = dense_chunks + fallback_chunks
+
+    if query_profile["required_phrases"]:
+        candidates = [
+            chunk for chunk in candidates
+            if any(phrase in _normalize(chunk.get("text", "")) for phrase in query_profile["required_phrases"])
+        ]
+
+    deduped = {}
+    for chunk in candidates:
+        source = chunk.get("source", "unknown")
+        text = re.sub(r"\s+", " ", chunk.get("text", "")).strip()
+        if not text:
+            continue
+        key = (source, text)
+        existing = deduped.get(key)
+        source_bonus = 0.05 if source in query_profile["preferred_sources"] else 0.0
+        candidate_score = round(min(1.0, float(chunk.get("score", 0) or 0) + source_bonus), 4)
+        if existing is None or candidate_score > existing["score"]:
+            deduped[key] = {
+                **chunk,
+                "score": candidate_score,
+            }
+
+    merged_chunks = sorted(deduped.values(), key=lambda chunk: chunk["score"], reverse=True)
+    return merged_chunks[: max(top_k * 2, 6)]
 
 
 def _extract_relevant_sentences(query: str, chunks: list, max_sentences: int = 3) -> list:
     # Compress long retrieved sections into the most answer-worthy evidence sentences.
-    def normalize(text: str) -> str:
-        normalized = unicodedata.normalize("NFKD", text)
-        normalized = "".join(char for char in normalized if not unicodedata.combining(char))
-        return normalized.lower()
-
-    query_tokens = set(re.findall(r"[a-z0-9_]+", normalize(query)))
-    asks_for_timing = any(token in query_tokens for token in ["bao", "lau", "khi", "nao", "deadline"])
+    profile = _query_profile(query)
+    query_tokens = profile["tokens"]
     candidates = []
 
     for chunk in chunks:
@@ -243,11 +344,27 @@ def _extract_relevant_sentences(query: str, chunks: list, max_sentences: int = 3
                 continue
             if re.fullmatch(r"[A-Z0-9\s\-]+", sentence):
                 continue
-            normalized_sentence = normalize(sentence)
-            sentence_tokens = set(re.findall(r"[a-z0-9_]+", normalized_sentence))
+            normalized_sentence = _normalize(sentence)
+            sentence_tokens = _keyword_tokens(sentence)
             overlap = len(query_tokens & sentence_tokens)
-            if asks_for_timing and re.search(r"\b\d+\s*(phut|gio|ngay|tuan)\b", normalized_sentence):
+            if profile["asks_for_timing"] and re.search(r"\b\d+\s*(phut|gio|ngay|tuan)\b", normalized_sentence):
                 overlap += 2
+            if profile["asks_for_channels"] and any(
+                term in normalized_sentence for term in ["slack", "email", "pagerduty", "alert", "on-call"]
+            ):
+                overlap += 2
+            if profile["asks_for_channels"] and "slack" in normalized_sentence and "email" in normalized_sentence:
+                overlap += 3
+            if profile["asks_for_channels"] and "pagerduty" in normalized_sentence:
+                overlap += 3
+            if "probation" in profile["normalized"] and "probation" in normalized_sentence:
+                overlap += 2
+            if "team lead" in profile["normalized"] and "team lead" in normalized_sentence:
+                overlap += 2
+            if profile["numbers"] and profile["numbers"] & set(re.findall(r"\b\d+\b", normalized_sentence)):
+                overlap += 2
+            if source in profile["preferred_sources"]:
+                overlap += 1
             if overlap == 0:
                 continue
             if "===" in sentence or normalized_sentence.startswith(("phan ", "section ")):
@@ -263,7 +380,8 @@ def _extract_relevant_sentences(query: str, chunks: list, max_sentences: int = 3
         if key in seen:
             continue
         seen.add(key)
-        selected.append({"text": sentence, "source": source, "score": 1.0})
+        sentence_score = round(min(1.0, max(0.1, chunk_score + 0.05)), 4)
+        selected.append({"text": sentence, "source": source, "score": sentence_score})
         if len(selected) >= max_sentences:
             break
     return selected
@@ -297,7 +415,7 @@ def run(state: dict) -> dict:
 
     try:
         chunks = retrieve_dense(task, top_k=top_k)
-        focused_chunks = _extract_relevant_sentences(task, chunks, max_sentences=top_k)
+        focused_chunks = _extract_relevant_sentences(task, chunks, max_sentences=max(top_k, 4))
         if focused_chunks:
             chunks = focused_chunks
 
