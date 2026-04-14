@@ -128,7 +128,7 @@ retrieval_worker:
 policy_tool_worker:
   name: policy_tool_worker
   file: workers/policy_tool.py
-  description: "Kiểm tra policy và xử lý exceptions. Có thể gọi MCP tools khi cần."
+  description: "Kiểm tra policy theo domain refund hoặc access/security. Có thể gọi MCP tools khi cần."
   input:
     task:
       type: string
@@ -142,17 +142,25 @@ policy_tool_worker:
       required: false
       default: false
       description: "True → worker được phép gọi MCP tools"
+    risk_high:
+      type: boolean
+      required: false
+      default: false
+      description: "Flag từ supervisor để worker biết query có rủi ro cao"
   output:
     policy_result:
       type: object
       required: true
       properties:
+        domain:
+          type: string
+          example: "refund | access | incident_access | unknown"
         policy_applies:
           type: boolean
           description: "True nếu policy cho phép, False nếu bị chặn"
         policy_name:
           type: string
-          example: "refund_policy_v4"
+          example: "refund_policy_v4 | access_control_sop | incident_access_composite"
         exceptions_found:
           type: array
           description: "Danh sách exceptions tìm thấy"
@@ -168,6 +176,12 @@ policy_tool_worker:
         policy_version_note:
           type: string
           description: "Note về version nếu có vấn đề temporal scoping"
+        explanation:
+          type: string
+          description: "Giải thích ngắn về cách worker kết luận"
+        tool_findings:
+          type: object
+          description: "Dữ liệu quan trọng tổng hợp từ MCP tools, ví dụ approvers, emergency override, ticket summary"
     mcp_tools_used:
       type: array
       description: "Danh sách MCP tool calls thực hiện"
@@ -184,8 +198,10 @@ policy_tool_worker:
     code: "POLICY_CHECK_FAILED"
     reason: string
   constraints:
-    - "Phải detect exception cases: flash_sale, digital_product, activated_product"
+    - "Phải hỗ trợ ít nhất 2 domain chính: refund và access/security"
+    - "Phải detect exception cases: flash_sale, digital_product, activated_product cho refund domain"
     - "Phải ghi tên MCP tool đã gọi vào mcp_tools_used"
+    - "Nếu domain là access/security và parse được access level thì nên gọi check_access_permission"
     - "Không được tự bịa policy rules không có trong tài liệu"
   actual_implementation:
     status: "TODO Sprint 2"
