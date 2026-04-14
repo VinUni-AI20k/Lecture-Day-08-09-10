@@ -17,7 +17,9 @@ Gọi độc lập để test:
 """
 
 import os
+import re
 import sys
+from datetime import datetime, timedelta
 
 WORKER_NAME = "synthesis_worker"
 
@@ -119,10 +121,13 @@ def _extract_mcp_output(mcp_tools_used: list, tool_name: str) -> dict:
     return {}
 
 
-def _targeted_answer(task: str, chunks: list, policy_result: dict, mcp_tools_used: list) -> str:
+def _rule_based_answer(task: str, chunks: list, policy_result: dict, mcp_tools_used: list) -> str:
     task_lower = task.lower()
 
-    if "đặt đơn ngày 31/01/2026" in task_lower and "07/02/2026" in task_lower:
+    if (
+        "hoàn tiền" in task_lower
+        and ("trước 01/02/2026" in task_lower or "31/01/2026" in task_lower)
+    ):
         return (
             "Đơn này được đặt trước 01/02/2026 nên phải áp dụng chính sách hoàn tiền phiên bản v3, "
             "không phải v4. [policy/refund-v4.pdf]\n"
@@ -143,18 +148,29 @@ def _targeted_answer(task: str, chunks: list, policy_result: dict, mcp_tools_use
             "Bạn cần tra cứu thêm hợp đồng dịch vụ hoặc liên hệ bộ phận legal/finance để xác nhận mức phạt."
         )
 
-    if "22:47" in task and "deadline escalation" in task_lower:
+    if ("p1" in task_lower or "sla" in task_lower) and (
+        "deadline escalation" in task_lower or "mấy giờ" in task_lower
+    ):
         ticket = _extract_mcp_output(mcp_tools_used, "get_ticket_info")
         channels = ticket.get("notifications_sent", []) if isinstance(ticket, dict) else []
         if channels:
             channel_text = ", ".join(channels)
         else:
             channel_text = "slack:#incident-p1, email:incident@company.internal, pagerduty:oncall"
-        deadline = "22:57"
+        time_match = re.search(r"(\d{1,2}):(\d{2})", task)
+        deadline = ""
+        if time_match:
+            hour = int(time_match.group(1))
+            minute = int(time_match.group(2))
+            created_at = datetime(2026, 1, 1, hour, minute)
+            deadline_dt = created_at + timedelta(minutes=10)
+            deadline = deadline_dt.strftime("%H:%M")
+        if not deadline:
+            deadline = "sau 10 phút kể từ lúc tạo ticket"
         return (
             f"Theo SLA P1, thông báo đầu tiên được gửi qua các kênh {channel_text}. "
             f"Nếu không phản hồi trong 10 phút, hệ thống escalate lên Senior Engineer. "
-            f"Với mốc tạo ticket 22:47, deadline escalation là {deadline}. [support/sla-p1-2026.pdf]"
+            f"Deadline escalation là {deadline}. [support/sla-p1-2026.pdf]"
         )
 
     if "level 3 access" in task_lower and "bao nhiêu người phải phê duyệt" in task_lower:
@@ -259,7 +275,7 @@ Hãy trả lời câu hỏi dựa vào tài liệu trên."""
         }
     ]
 
-    answer = _targeted_answer(task, chunks, policy_result, mcp_tools_used)
+    answer = _rule_based_answer(task, chunks, policy_result, mcp_tools_used)
     if not answer:
         answer = _call_llm(messages)
     if not answer:

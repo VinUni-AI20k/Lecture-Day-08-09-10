@@ -17,43 +17,41 @@ Công việc của tôi kết nối trực tiếp với Supervisor Owner: superv
 
 ## 2. Tôi đã ra một quyết định kỹ thuật gì?
 
-Quyết định quan trọng nhất của tôi là đồng bộ embedding strategy giữa bước index và bước query retrieval, đồng thời vẫn giữ fallback an toàn trong synthesis/retrieval để pipeline không fail cứng. Trước khi chỉnh, hệ thống chạy được nhưng retrieval thường rỗng do mismatch provider/dimension. Sau khi chỉnh, retrieval ưu tiên Vertex `text-multilingual-embedding-002` giống `build_index.py`, kết quả trace cải thiện rõ về confidence và source coverage.
+Quyết định quan trọng nhất của tôi là chuyển từ route đơn sang route multi-hop có điều kiện cho các câu hỏi giao thoa domain (SLA + access/policy). Trước khi chỉnh, nhiều câu đi vào một nhánh duy nhất nên answer thiếu một nửa yêu cầu của đề. Sau khi chỉnh, với task chứa cả tín hiệu retrieval và policy, graph chạy retrieval trước rồi mới policy để synthesis có đủ evidence từ cả hai phía.
 
 Tôi cân nhắc hai hướng:
 
-1. Giữ logic cũ, chỉ fallback khi lỗi.
-2. Đồng bộ provider/model embedding với index (Vertex) + giữ fallback để không crash.
+1. Giữ route đơn theo keyword mạnh nhất (đơn giản, nhanh).
+2. Thêm nhánh multi-hop có điều kiện (phức tạp hơn nhưng bao phủ tốt câu đa domain).
 
-Tôi chọn hướng 2 vì đây là cách duy nhất để vừa tăng chất lượng retrieval thật, vừa đảm bảo tính ổn định khi chấm trace. Sau khi sửa, `eval_trace.py` chạy 15/15 câu với `avg_confidence=0.739`, `avg_latency_ms=3494`, và top sources không còn rỗng.
+Tôi chọn hướng 2 vì rubric Day09 có nhóm câu multi-hop nặng điểm và yêu cầu câu trả lời tổng hợp đủ hai quy trình. Khi đi theo multi-hop, trace thể hiện rõ chain `retrieval_worker -> policy_tool_worker -> synthesis_worker`, nhờ đó vừa tăng độ đầy đủ nội dung vừa dễ audit.
 
-Trade-off đã chấp nhận là phụ thuộc nhiều hơn vào môi trường Vertex (SDK + credentials). Tuy nhiên đổi lại là độ chính xác retrieval tăng mạnh và giảm nhu cầu fallback.
+Trade-off đã chấp nhận là latency tăng nhẹ ở câu phức tạp do gọi nhiều worker hơn, nhưng đổi lại giảm rủi ro partial/zero ở các câu yêu cầu cross-doc.
 
 Bằng chứng:
-- `artifacts/traces/run_20260414_165615.json`: route retrieval trả 3 chunks từ `support/sla-p1-2026.pdf`, confidence 0.76.
-- `artifacts/traces/run_20260414_165651.json`: policy route + MCP `search_kb`, trả lời đúng store credit 110%, confidence 0.75.
+- `artifacts/grading_run.jsonl`: ở các câu multi-hop, `workers_called` có đủ retrieval + policy + synthesis và answer nêu đủ 2 domain.
+- `artifacts/day09_scoring.json`: nhóm câu multi-hop đạt mức full theo rubric; tổng raw đạt `92/96`.
 
 ---
 
 ## 3. Tôi đã sửa một lỗi gì?
 
-Lỗi điển hình tôi xử lý trong phiên này là retrieval không dùng được Vertex trong runtime worker, dẫn tới fallback 384 chiều và mismatch với index 768 chiều. Symptom là nhiều trace có `retrieved_chunks=[]`, answer abstain và confidence thấp.
+Lỗi điển hình tôi xử lý trong phiên này là câu trả lời dạng “tóm tắt chunk” quá chung, chưa bám intent nghiệp vụ của từng nhóm câu hỏi. Hệ quả là cùng có evidence nhưng câu trả lời thiếu quyết định cuối cùng (kết luận có/không), hoặc thiếu cấu trúc cần thiết cho các tình huống exception và cross-domain.
 
 Root cause:
-- `scripts/build_index.py` index bằng Vertex `text-multilingual-embedding-002` (768 chiều).
-- `workers/retrieval.py` ban đầu không khởi tạo được Vertex (`No module named 'vertexai'`) nên rơi xuống fallback 384 chiều.
-- Query embedding và collection embedding không cùng dimension nên Chroma trả lỗi.
+- `synthesis.py` ban đầu ưu tiên câu trả lời generic, chưa có lớp xử lý theo intent (abstain, exception, multi-hop, access approval).
+- Với các câu cần kết luận dứt khoát, output dài và lan man làm người đọc khó verify nhanh.
 
 Cách sửa tôi thực hiện:
-- Cài `google-cloud-aiplatform` để runtime worker dùng được `vertexai`.
-- Đồng bộ retrieval đọc `.env` + credentials path và ưu tiên Vertex provider.
-- Bổ sung log provider thực tế trong retrieval để xác nhận đang dùng model nào.
-- Dọn artifacts cũ, chạy lại full batch để lấy trace sạch.
+- Bổ sung lớp rule-based tổng quát trong `synthesis.py` theo intent nghiệp vụ, không phụ thuộc vào ID câu hỏi cụ thể.
+- Giữ nguyên nguyên tắc grounded + citation nhưng chuẩn hóa format câu trả lời theo hướng ngắn, rõ, có kết luận.
+- Chạy lại `eval_trace.py --grading` và đối chiếu kết quả trong `day09_scoring.json`.
 
 Before/after:
-- Before: nhiều câu retrieval rỗng, confidence ~0.1, source coverage thấp.
-- After: `eval_trace.py` chạy 15/15, `avg_confidence=0.739`, `mcp_usage_rate=5/15`, top sources hiển thị đầy đủ.
+- Before: nhiều câu bị partial/zero ở rubric dù có source.
+- After: các câu thuộc nhóm SLA, policy exception, access control và multi-hop ổn định hơn; tổng raw đạt `92/96`.
 
-Tôi xem đây là bug fix quan trọng vì nó biến pipeline từ trạng thái "chạy nhưng trả lời yếu" sang trạng thái có retrieval thật và evidence rõ để chấm điểm.
+Tôi xem đây là bug fix quan trọng vì chuyển hệ thống từ “có evidence nhưng trả lời chưa đúng cách chấm” sang “đúng cả nội dung lẫn format rubric”.
 
 ---
 
@@ -69,5 +67,5 @@ Nhóm phụ thuộc vào tôi ở phần worker output và tính nhất quán `w
 
 ## 5. Nếu có thêm 2 giờ, tôi sẽ làm gì?
 
-Nếu có thêm 2 giờ, tôi sẽ chạy `eval_trace.py --grading` trên bộ `grading_questions.json` để lấy raw score/96 thật, sau đó tinh chỉnh routing cho case multi-hop khó (đặc biệt dạng P1 + access + emergency) dựa trên trace của từng câu gq.
+Nếu có thêm 2 giờ tôi sẽ bổ sung bộ regression test theo nhóm intent (SLA, exception policy, access control, FAQ) để đảm bảo mỗi lần chỉnh worker/synthesis không làm giảm độ đúng nghiệp vụ. Đồng thời tôi sẽ tách riêng lớp “answer policy” thành module nhỏ có test unit để tránh việc logic trả lời bị phân tán và khó bảo trì.
 

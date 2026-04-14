@@ -1,13 +1,13 @@
 # Báo Cáo Nhóm — Lab Day 09: Multi-Agent Orchestration
 
-**Tên nhóm:** Day09-Lab-Team  
+**Tên nhóm:** 04
 **Thành viên:**
 | Tên | Vai trò | Email |
 |-----|---------|-------|
-| ___ | Supervisor Owner | ___ |
+| 2A202600064 Hoàng Đinh Duy Anh | Supervisor Owner | dduyanhhoang@gmail.com |
 | 2A202600497 Trần Nhật Vĩ | Worker Owner | vitrannhat@gmail.com |
-| ___ | MCP Owner | ___ |
-| ___ | Trace & Docs Owner | ___ |
+| 2A202600312 Trần Thanh Phong | MCP Owner | ___ |
+| 2A202600486 Nguyễn Tiến Huy Hoàng | Trace & Docs Owner | hoang.nth17@gmail.com |
 
 **Ngày nộp:** 2026-04-14  
 **Repo:** `day09/lab`  
@@ -25,11 +25,11 @@
 
 ## Checklist nộp nhanh (theo rubric Group 60)
 
-- [ ] Nêu rõ kiến trúc + routing logic + MCP tools đã dùng.
-- [ ] Có số liệu grading (raw/96) và nhận xét gq07 + gq09.
-- [ ] Có ít nhất 2 metric so sánh Day08 vs Day09 với nguồn dữ liệu.
-- [ ] Có bảng phân công khớp thực tế code/trace.
-- [ ] Không có claim vượt quá hiện trạng code chạy.
+- [x] Nêu rõ kiến trúc + routing logic + MCP tools đã dùng.
+- [x] Có số liệu grading (raw/96) và nhận xét gq07 + gq09.
+- [x] Có ít nhất 2 metric so sánh Day08 vs Day09 với nguồn dữ liệu.
+- [x] Có bảng phân công khớp thực tế code/trace.
+- [x] Không có claim vượt quá hiện trạng code chạy.
 
 ---
 
@@ -45,7 +45,7 @@ Nhóm triển khai kiến trúc Supervisor-Worker bằng Python thuần trong `g
 **Routing logic cốt lõi:**
 > Mô tả logic supervisor dùng để quyết định route (keyword matching, LLM classifier, rule-based, v.v.)
 
-Routing đang dùng rule-based keyword: câu SLA/P1/ticket/escalation ưu tiên `retrieval_worker`; câu refund/access/license ưu tiên `policy_tool_worker` và bật `needs_tool=True`; câu có tín hiệu rủi ro (`emergency`, `err-`) gắn `risk_high`. Mô hình này giúp trace dễ đọc, nhưng hiện còn điểm yếu ở câu multi-hop vì chưa có dual-route chain chính thức.
+Routing đang dùng rule-based keyword: câu SLA/P1/ticket/escalation ưu tiên `retrieval_worker`; câu refund/access/license ưu tiên `policy_tool_worker` và bật `needs_tool=True`; câu có tín hiệu rủi ro (`emergency`, `err-`) gắn `risk_high`. Với case multi-hop, graph hiện đã chạy nhánh retrieval trước policy để tổng hợp đủ evidence đa domain (thấy rõ ở `gq09`).
 
 **MCP tools đã tích hợp:**
 > Liệt kê tools đã implement và 1 ví dụ trace có gọi MCP tool.
