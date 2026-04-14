@@ -7,18 +7,16 @@
 
 **Điểm tổng 100:** Nhóm 60 (Sprint 20 + Docs 10 + Grading 30) — Cá nhân 40 (Report 30 + Code contribution 10) — Bonus ≤ +5.
 
----
-
 ## 1. Phân vai nhóm (6 người)
 
-| #   | Vai trò                          | Thành viên | File/Deliverable phụ trách                                                              |
-| --- | -------------------------------- | ---------- | --------------------------------------------------------------------------------------- |
-| 1   | **Team Lead + Supervisor Owner** | **Phúc**   | `graph.py` (supervisor_node, route_decision, build_graph)                               |
-| 2   | Retrieval Engineer               | ****\_**** | `workers/retrieval.py` + build ChromaDB index từ 5 docs                                 |
-| 3   | Policy + MCP Engineer            | ****\_**** | `workers/policy_tool.py` + `mcp_server.py`                                              |
-| 4   | Synthesis Engineer               | ****\_**** | `workers/synthesis.py` (LLM, confidence, abstain)                                       |
-| 5   | Evaluation Engineer              | ****\_**** | `eval_trace.py` + `artifacts/grading_run.jsonl` + `docs/single_vs_multi_comparison.md`  |
-| 6   | Docs + QA                        | ****\_**** | `docs/system_architecture.md` + `docs/routing_decisions.md` + `reports/group_report.md` |
+| #   | Vai trò                          | Thành viên     | File/Deliverable phụ trách                                                              |
+| --- | -------------------------------- | -------------- | --------------------------------------------------------------------------------------- |
+| 1   | **Team Lead + Supervisor Owner** | **Phúc**       | `graph.py` (supervisor_node, route_decision, build_graph)                               |
+| 2   | Retrieval Engineer               | \***\*\_\*\*** | `workers/retrieval.py` + build ChromaDB index từ 5 docs                                 |
+| 3   | Policy + MCP Engineer            | \***\*\_\*\*** | `workers/policy_tool.py` + `mcp_server.py`                                              |
+| 4   | Synthesis Engineer               | \***\*\_\*\*** | `workers/synthesis.py` (LLM, confidence, abstain)                                       |
+| 5   | Evaluation Engineer              | \***\*\_\*\*** | `eval_trace.py` + `artifacts/grading_run.jsonl` + `docs/single_vs_multi_comparison.md`  |
+| 6   | Docs + QA                        | \***\*\_\*\*** | `docs/system_architecture.md` + `docs/routing_decisions.md` + `reports/group_report.md` |
 
 > **Quy tắc:** mỗi người chỉ sửa file của mình. Tránh merge conflict trên `graph.py` — chỉ Phúc sửa file này. Các thay đổi liên quan routing gửi qua Phúc.
 
@@ -103,7 +101,7 @@
 
 | Thời gian   | Hoạt động                                                                                                                        | Người      |
 | ----------- | -------------------------------------------------------------------------------------------------------------------------------- | ---------- |
-| 17:00       | Nhận 10 grading questions → `data/grading_questions.json`                                                                        | TV5        |
+| 17:00       | Nhận 10 grading questions →`data/grading_questions.json`                                                                         | TV5        |
 | 17:05       | Start `python eval_trace.py --grading`                                                                                           | TV5        |
 | 17:05–17:40 | Monitor log: route đúng? confidence hợp lý? hallucination?                                                                       | Phúc + TV4 |
 | 17:40–17:50 | QA `grading_run.jsonl`: 10 dòng, đủ 11 field/dòng, `route_reason` ≠ unknown, confidence ∈ [0,1], gq07 abstain, gq09 có ≥2 worker | Phúc + TV6 |
@@ -192,8 +190,7 @@ Mỗi thành viên viết `reports/individual/[ten].md` gồm 5 mục:
 
 **Bonus (≤+5) nếu rảnh:**
 
-- Real MCP HTTP server (không mock class): +2
-- Confidence scoring thật (không hard-coded): +1
+- Real MCP HTTP server (không mock class): +2Confidence scoring thật (không hard-coded): +1
 - gq09 Full + trace đúng 2 worker: +2
 
 ---
