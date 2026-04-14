@@ -49,12 +49,12 @@ BASELINE_CONFIG = {
 # Cấu hình variant (Sprint 3 — điều chỉnh theo lựa chọn của nhóm)
 # TODO Sprint 4: Cập nhật VARIANT_CONFIG theo variant nhóm đã implement
 VARIANT_CONFIG = {
-    "retrieval_mode": "hybrid",   # Hoặc "dense" nếu chỉ đổi rerank
-    # Pool rộng hơn → RRF + cross-encoder lọc nhiễu tốt hơn; thêm 1 chunk vào prompt cho câu nhiều ý.
-    "top_k_search": 15,
-    "top_k_select": 4,
-    "use_rerank": True,           # Hoặc False nếu variant là hybrid không rerank
-    "label": "variant_hybrid_rerank",
+    # A/B single-variable: chỉ đổi retrieval_mode dense -> hybrid
+    "retrieval_mode": "hybrid",
+    "top_k_search": 10,
+    "top_k_select": 3,
+    "use_rerank": False,
+    "label": "variant_hybrid_only",
 }
 
 
@@ -768,7 +768,7 @@ if __name__ == "__main__":
 
     variant_results: List[Dict[str, Any]] = []
 
-    print("\n--- Chạy Variant (hybrid + rerank) ---")
+    print("\n--- Chạy Variant (hybrid only) ---")
     try:
         variant_results = run_scorecard(
             config=VARIANT_CONFIG,
