@@ -17,6 +17,9 @@ Gọi độc lập để test:
 
 import os
 import sys
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # ─────────────────────────────────────────────
 # Worker Contract (xem contracts/worker_contracts.yaml)
