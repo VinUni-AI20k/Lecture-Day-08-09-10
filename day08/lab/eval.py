@@ -43,13 +43,26 @@ BASELINE_CONFIG = {
     "label": "baseline_dense",
 }
 
-# Cấu hình variant (Sprint 3)
+# Cấu hình variant cũ (hybrid — không cải thiện được, xem grading_report.md)
 VARIANT_CONFIG = {
     "retrieval_mode": "hybrid",
     "top_k_search": 10,
     "top_k_select": 3,
     "use_rerank": False,
     "label": "variant_hybrid",
+}
+
+# Variant C: Dense + prompt v2 + top_k_select=5
+# Mục tiêu: tăng Completeness (2.70→) và sửa Abstain (gq07)
+# Lý do chọn: Context Recall đã = 5.0 → bottleneck là generation, không phải retrieval
+# A/B rule: chỉ đổi 2 biến cùng nhóm (prompt + select_k) so với baseline
+VARIANT_C_CONFIG = {
+    "retrieval_mode": "dense",
+    "top_k_search": 10,
+    "top_k_select": 5,
+    "use_rerank": False,
+    "prompt_version": "v2",
+    "label": "variant_dense_v2",
 }
 
 
@@ -67,7 +80,15 @@ def score_faithfulness(
     
     Sử dụng LLM-as-Judge để chấm tự động.
     """
-    if not chunks_used or answer in ["Tôi không biết.", "Tôi không biết"]:
+    abstain_phrases = [
+        "tôi không biết",
+        "không có trong tài liệu",
+        "không đủ dữ liệu",
+        "không có thông tin",
+        "thông tin này không có",
+    ]
+    is_abstain = not chunks_used or any(p in answer.lower() for p in abstain_phrases)
+    if is_abstain:
         # Abstain case - faithfulness = 5 (không bịa)
         return {
             "score": 5,
@@ -367,6 +388,7 @@ def run_scorecard(
                 top_k_search=config.get("top_k_search", 10),
                 top_k_select=config.get("top_k_select", 3),
                 use_rerank=config.get("use_rerank", False),
+                prompt_version=config.get("prompt_version", "v1"),
                 verbose=False,
             )
             answer = result["answer"]
@@ -626,14 +648,14 @@ if __name__ == "__main__":
         print("Pipeline chưa implement. Hoàn thành Sprint 2 trước.")
         baseline_results = []
 
-    # --- Chạy Variant ---
-    print("\n--- Chạy Variant ---")
+    # --- Chạy Variant C (dense + prompt_v2 + top_k=5) ---
+    print("\n--- Chạy Variant C: dense + prompt_v2 + top_k_select=5 ---")
     variant_results = run_scorecard(
-        config=VARIANT_CONFIG,
+        config=VARIANT_C_CONFIG,
         test_questions=test_questions,
         verbose=True,
     )
-    variant_md = generate_scorecard_summary(variant_results, VARIANT_CONFIG["label"])
+    variant_md = generate_scorecard_summary(variant_results, VARIANT_C_CONFIG["label"])
     (RESULTS_DIR / "scorecard_variant.md").write_text(variant_md, encoding="utf-8")
 
     # --- A/B Comparison ---

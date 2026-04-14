@@ -242,24 +242,16 @@ def analyze_policy(task: str, chunks: list) -> dict:
     # ── Layer 1: Rule-based exception detection ──────────────────────────
     exceptions_found = []
 
-    # Exception 1: Flash Sale
+    # ⚠️ PRIORITY CHECK: Flash Sale exception FIRST (overrides everything)
+    # Flash Sale KHÔNG được hoàn tiền - exception này override mọi điều kiện khác
     if "flash sale" in task_lower or "flash sale" in context_text:
-        # Kiểm tra nếu đồng thời là lỗi nhà sản xuất
-        is_manufacturer_defect = any(kw in task_lower for kw in [
-            "lỗi nhà sản xuất", "lỗi sản xuất", "manufacturer", "defect"
-        ])
-        if is_manufacturer_defect:
-            exceptions_found.append({
-                "type": "flash_sale_manufacturer_defect",
-                "rule": "Flash Sale + lỗi nhà sản xuất trong 7 ngày → CÓ THỂ được hoàn tiền (cần xét thêm).",
-                "source": "policy_refund_v4.txt",
-            })
-        else:
-            exceptions_found.append({
-                "type": "flash_sale_exception",
-                "rule": "Đơn hàng Flash Sale không được hoàn tiền (Điều 3, chính sách v4).",
-                "source": "policy_refund_v4.txt",
-            })
+        exceptions_found.append({
+            "type": "flash_sale_no_refund",
+            "rule": "Flash Sale KHÔNG được hoàn tiền - exception override tất cả điều kiện khác (Điều 3, chính sách v4).",
+            "source": "policy_refund_v4.txt",
+        })
+        # Flash Sale = NO REFUND, không cần check thêm
+        policy_applies = False
 
     # Exception 2: Digital product
     if any(kw in task_lower for kw in ["license key", "license", "subscription", "kỹ thuật số", "digital"]):
@@ -288,14 +280,17 @@ def analyze_policy(task: str, chunks: list) -> dict:
         policy_version_note = (
             f"Đơn hàng ngày {date_in_task} đặt trước 01/02/2026 → "
             "áp dụng chính sách hoàn tiền v3 (tài liệu v3 không có trong KB hiện tại). "
-            "Cần liên hệ bộ phận CS để tra cứu policy v3."
+            "KHÔNG THỂ xác nhận theo policy v4. Cần liên hệ bộ phận CS để tra cứu policy v3."
         )
-    elif any(kw in task_lower for kw in ["trước 01/02", "trước tháng 2", "tháng 1/2026"]):
+        # Temporal scoping issue → should abstain
+        policy_applies = False
+    elif any(kw in task_lower for kw in ["trước 01/02", "trước tháng 2", "tháng 1/2026", "31/01/2026"]):
         policy_version_note = (
             "Câu hỏi liên quan đến đơn hàng trước 01/02/2026. "
             "Policy v4 chỉ áp dụng từ 01/02/2026. "
-            "Với đơn cũ hơn cần tra cứu policy v3."
+            "Với đơn cũ hơn cần tra cứu policy v3 (không có trong tài liệu hiện tại)."
         )
+        policy_applies = False
 
     # ── Layer 2: LLM-based deep analysis ──────────────────────────────────
     llm_result = _llm_analyze_policy(task, chunks)

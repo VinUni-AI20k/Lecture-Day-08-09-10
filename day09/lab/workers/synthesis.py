@@ -171,7 +171,7 @@ def synthesize(task: str, chunks: list, policy_result: dict) -> dict:
     """
     context = _build_context(chunks, policy_result)
 
-    # Build messages
+    # Build messages with multi-detail extraction emphasis
     messages = [
         {"role": "system", "content": SYSTEM_PROMPT},
         {
@@ -179,6 +179,11 @@ def synthesize(task: str, chunks: list, policy_result: dict) -> dict:
             "content": f"""Câu hỏi: {task}
 
 {context}
+
+QUAN TRỌNG: 
+- Nếu câu hỏi yêu cầu NHIỀU thông tin (ví dụ: "ai nhận thông báo và qua kênh nào", "các bước", "điều kiện"), hãy liệt kê TẤT CẢ các thông tin tìm thấy trong context.
+- KHÔNG bỏ sót bất kỳ chi tiết nào được nêu trong tài liệu.
+- Nếu có nhiều kênh/người/bước → liệt kê đầy đủ.
 
 Hãy trả lời câu hỏi dựa vào tài liệu trên."""
         }

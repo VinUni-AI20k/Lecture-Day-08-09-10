@@ -37,6 +37,7 @@ class AgentState(TypedDict):
     route_reason: str                   # Lý do route sang worker nào
     risk_high: bool                     # True → cần HITL hoặc human_review
     needs_tool: bool                    # True → cần gọi external tool qua MCP
+    needs_multi_workers: bool           # True → cần gọi nhiều workers (multi-hop)
     hitl_triggered: bool                # True → đã pause cho human review
 
     # Worker outputs
@@ -65,6 +66,7 @@ def make_initial_state(task: str) -> AgentState:
         "route_reason": "",
         "risk_high": False,
         "needs_tool": False,
+        "needs_multi_workers": False,
         "hitl_triggered": False,
         "retrieved_chunks": [],
         "retrieved_sources": [],
@@ -116,14 +118,36 @@ def supervisor_node(state: AgentState) -> AgentState:
     
     error_code_pattern = "err-"
 
+    # Multi-keyword detection for multi-hop queries
+    has_policy_keywords = any(kw in task for kw in policy_keywords)
+    has_sla_keywords = any(kw in task for kw in sla_keywords)
+    has_risk_keywords = any(kw in task for kw in risk_keywords)
+    
+    needs_multi_workers = has_policy_keywords and has_sla_keywords
+
     # Priority 1: Check for error codes + risk → human review
-    if error_code_pattern in task and any(kw in task for kw in risk_keywords):
+    if error_code_pattern in task and has_risk_keywords:
         route = "human_review"
         route_reason = "unknown error code with risk_high context → human review required"
         risk_high = True
     
-    # Priority 2: Policy/access control questions → policy_tool_worker + MCP enabled
-    elif any(kw in task for kw in policy_keywords):
+    # Priority 2: Multi-hop queries (policy + SLA) → policy_tool_worker first, then retrieval
+    elif needs_multi_workers:
+        route = "policy_tool_worker"
+        matched_policy = [kw for kw in policy_keywords if kw in task]
+        matched_sla = [kw for kw in sla_keywords if kw in task]
+        route_reason = (
+            f"multi-hop query detected: policy keywords ({', '.join(matched_policy[:2])}) "
+            f"+ SLA keywords ({', '.join(matched_sla[:2])}) "
+            "| needs_multi_workers=True → will call both policy_tool + retrieval"
+        )
+        needs_tool = True
+        if has_risk_keywords:
+            risk_high = True
+            route_reason += " | risk_high: emergency context"
+    
+    # Priority 3: Policy/access control questions → policy_tool_worker + MCP enabled
+    elif has_policy_keywords:
         route = "policy_tool_worker"
         matched_keywords = [kw for kw in policy_keywords if kw in task]
         route_reason = (
@@ -133,12 +157,12 @@ def supervisor_node(state: AgentState) -> AgentState:
         needs_tool = True
 
         # Check if also high risk
-        if any(kw in task for kw in risk_keywords):
+        if has_risk_keywords:
             risk_high = True
             route_reason += " | risk_high: emergency context detected"
 
-    # Priority 3: SLA/ticket questions → retrieval_worker (no MCP needed)
-    elif any(kw in task for kw in sla_keywords):
+    # Priority 4: SLA/ticket questions → retrieval_worker (no MCP needed)
+    elif has_sla_keywords:
         route = "retrieval_worker"
         matched_keywords = [kw for kw in sla_keywords if kw in task]
         route_reason = (
@@ -147,11 +171,11 @@ def supervisor_node(state: AgentState) -> AgentState:
         )
 
         # Check if also high risk
-        if any(kw in task for kw in risk_keywords):
+        if has_risk_keywords:
             risk_high = True
             route_reason += " | risk_high: time-sensitive SLA query"
 
-    # Priority 4: Default → retrieval_worker (no MCP needed)
+    # Priority 5: Default → retrieval_worker (no MCP needed)
     else:
         route = "retrieval_worker"
         route_reason = "default route: general knowledge retrieval | MCP disabled"
@@ -164,7 +188,13 @@ def supervisor_node(state: AgentState) -> AgentState:
     state["route_reason"] = route_reason
     state["needs_tool"] = needs_tool
     state["risk_high"] = risk_high
+    state["needs_multi_workers"] = needs_multi_workers
     state["history"].append(f"[supervisor] route={route} reason={route_reason}")
+    
+    if needs_multi_workers:
+        state["history"].append(
+            f"[supervisor] multi-hop detected: will call policy_tool_worker → retrieval_worker → synthesis"
+        )
 
     return state
 
@@ -226,10 +256,15 @@ def retrieval_worker_node(state: AgentState) -> AgentState:
 
 
 def policy_tool_worker_node(state: AgentState) -> AgentState:
-    """Wrapper gọi policy/tool worker."""
-    # Policy worker may need retrieval context first
-    if not state.get("retrieved_chunks"):
+    """
+    Wrapper gọi policy/tool worker.
+    Nếu needs_multi_workers=True, gọi retrieval_worker trước để lấy context.
+    """
+    # Multi-worker routing: gọi retrieval trước nếu chưa có chunks
+    if state.get("needs_multi_workers") and not state.get("retrieved_chunks"):
+        state["history"].append("[policy_tool_worker] multi-hop: calling retrieval_worker first")
         state = retrieval_run(state)
+    
     return policy_tool_run(state)
 
 

@@ -81,5 +81,3 @@ Ví dụ trace có MCP: `run_20260414_145911.json` — task "Cần cấp quyền
 
 ---
 
-*File này lưu tại: `reports/group_report.md`*  
-*Commit sau 18:00 được phép theo SCORING.md*

@@ -450,6 +450,36 @@ Answer:"""
     return prompt
 
 
+def build_grounded_prompt_v2(query: str, context_block: str) -> str:
+    """
+    Variant C prompt — cải thiện 3 điểm yếu từ grading_report:
+    1. Completeness: liệt kê ĐẦY ĐỦ điều kiện/ngoại lệ, không dừng ở cái đầu tiên
+    2. Abstain: nếu thông tin KHÔNG có trong context, nói rõ thay vì đoán
+    3. Relevance cross-doc: khi câu hỏi liên quan đến emergency/khẩn cấp,
+       ưu tiên section emergency/escalation trong context
+    """
+    return f"""Bạn là trợ lý tra cứu tài liệu nội bộ. Chỉ trả lời từ context được cung cấp.
+
+QUY TẮC BẮT BUỘC:
+1. EVIDENCE-ONLY: Chỉ dùng thông tin trong context. Tuyệt đối không dùng kiến thức chung.
+2. ABSTAIN — quan trọng: Nếu thông tin cụ thể KHÔNG xuất hiện trong bất kỳ chunk nào,
+   trả lời: "Thông tin này không có trong tài liệu hiện có." Không đoán, không ước tính.
+3. COMPLETENESS: Khi câu hỏi hỏi về điều kiện, ngoại lệ, yêu cầu hoặc quy trình:
+   - Liệt kê TẤT CẢ các mục liên quan tìm thấy trong context (không bỏ sót)
+   - Nếu thông tin nằm ở nhiều chunk, tổng hợp cả hai
+4. CITATION: Gắn số nguồn [1], [2]... cho mỗi thông tin quan trọng
+5. EMERGENCY/KHẨN CẤP: Nếu câu hỏi đề cập "khẩn cấp", "emergency", "tạm thời" hoặc
+   ngoài giờ hành chính, tìm và ưu tiên các section emergency/escalation trong context
+6. NGÔN NGỮ: Trả lời bằng tiếng Việt
+
+Câu hỏi: {query}
+
+Context:
+{context_block}
+
+Câu trả lời:"""
+
+
 def call_llm(prompt: str) -> str:
     """
     Gọi LLM để sinh câu trả lời.
@@ -530,6 +560,7 @@ def rag_answer(
     top_k_search: int = TOP_K_SEARCH,
     top_k_select: int = TOP_K_SELECT,
     use_rerank: bool = False,
+    prompt_version: str = "v1",
     verbose: bool = False,
 ) -> Dict[str, Any]:
     """
@@ -569,6 +600,7 @@ def rag_answer(
         "top_k_search": top_k_search,
         "top_k_select": top_k_select,
         "use_rerank": use_rerank,
+        "prompt_version": prompt_version,
     }
 
     # --- Bước 1: Retrieve ---
@@ -605,9 +637,25 @@ def rag_answer(
     if verbose:
         print(f"[RAG] After select: {len(candidates)} chunks")
 
+    # --- Bước 2b: Low-score abstain guard (v2 only) ---
+    # Nếu chunk tốt nhất có score < 0.35 → thông tin không liên quan, abstain luôn
+    if prompt_version == "v2":
+        top_score = max((c.get("score", 0) for c in candidates), default=0)
+        if top_score < 0.35:
+            return {
+                "query": query,
+                "answer": "Thông tin này không có trong tài liệu hiện có.",
+                "sources": [],
+                "chunks_used": candidates,
+                "config": config,
+            }
+
     # --- Bước 3: Build context và prompt ---
     context_block = build_context_block(candidates)
-    prompt = build_grounded_prompt(query, context_block)
+    if prompt_version == "v2":
+        prompt = build_grounded_prompt_v2(query, context_block)
+    else:
+        prompt = build_grounded_prompt(query, context_block)
 
     if verbose:
         print(f"\n[RAG] Prompt:\n{prompt[:500]}...\n")

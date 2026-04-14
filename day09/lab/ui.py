@@ -20,6 +20,12 @@ st.set_page_config(
 st.title("🤖 Multi-Agent Pipeline — Day 09")
 st.caption("Supervisor-Worker · MCP · Trace & Observability")
 
+# ── Graph visualization (always visible) ─────────────────────────────────────
+graph_img = os.path.join(os.path.dirname(__file__), "artifacts", "graph_visualization.png")
+if os.path.exists(graph_img):
+    with st.expander("🗺 Pipeline Graph", expanded=False):
+        st.image(graph_img, caption="Supervisor-Worker Graph (LangGraph)", use_container_width=True)
+
 # ── Load pipeline (cached) ────────────────────────────────────────────────────
 @st.cache_resource(show_spinner="Loading pipeline...")
 def load_pipeline():
@@ -76,6 +82,10 @@ if run_btn and question.strip():
         "human_review":        "🔴",
     }
     badge = route_colors.get(route, "⚪")
+
+    # HITL banner
+    if result.get("hitl_triggered"):
+        st.warning("⚠️ **HITL TRIGGERED** — Unknown error code + high risk context. Human review required before proceeding.")
 
     # ── Row 1: Answer + Metadata ──────────────────────────────────────────────
     col1, col2 = st.columns([2, 1])
