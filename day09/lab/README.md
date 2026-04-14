@@ -46,7 +46,8 @@ lab/
 │   ├── policy_tool.py     # Sprint 2: Policy/Tool Worker — kiểm tra policy + MCP tools
 │   └── synthesis.py       # Sprint 2: Synthesis Worker — tổng hợp answer có citation
 │
-├── mcp_server.py          # Sprint 3: Mock MCP Server (search_kb, get_ticket_info, v.v.)
+├── mcp_server.py          # Sprint 3: MCP Server (HTTP + in-process dispatch)
+├── mcp_config.json        # MCP endpoint + tool registry for the lab
 ├── eval_trace.py          # Sprint 4: Đọc trace, tính metrics, so sánh single vs multi
 │
 ├── contracts/
@@ -68,7 +69,8 @@ lab/
 ├── docs/
 │   ├── system_architecture.md       # Template: mô tả kiến trúc multi-agent
 │   ├── routing_decisions.md         # Template: ghi lại quyết định routing
-│   └── single_vs_multi_comparison.md # Template: so sánh Day 08 vs Day 09
+│   ├── single_vs_multi_comparison.md # Template: so sánh Day 08 vs Day 09
+│   └── commit_plan.md               # Kế hoạch commit / push an toàn
 │
 ├── reports/
 │   ├── group_report.md              # Báo cáo nhóm (template)
@@ -91,8 +93,12 @@ pip install -r requirements.txt
 ### 2. Tạo file .env
 ```bash
 cp .env.example .env
-# Điền OPENAI_API_KEY hoặc GOOGLE_API_KEY
+# Điền GROQ_API_KEY để chạy synthesis
+# (tuỳ chọn) điền OPENAI_API_KEY nếu muốn bật OpenAI embeddings cho retrieval
 ```
+
+> Nếu bạn muốn demo MCP HTTP, giữ `MCP_SERVER_MODE=http` và chạy `mcp_server.py`.
+> Nếu chỉ cần test nhanh không qua network, đổi sang `mock-only` hoặc `hybrid`.
 
 ### 3. Build index từ Day 08 (nếu chưa có)
 ```bash

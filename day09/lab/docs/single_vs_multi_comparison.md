@@ -1,148 +1,118 @@
 # Single Agent vs Multi-Agent Comparison — Lab Day 09
 
-**Nhóm:** ___________  
-**Ngày:** ___________
+**Nhóm:** 2A202600292-TranDangQuangHuy  
+**Ngày cập nhật:** 2026-04-14
 
-> **Hướng dẫn:** So sánh Day 08 (single-agent RAG) với Day 09 (supervisor-worker).
-> Phải có **số liệu thực tế** từ trace — không ghi ước đoán.
-> Chạy cùng test questions cho cả hai nếu có thể.
-
----
-
-## 1. Metrics Comparison
-
-> Điền vào bảng sau. Lấy số liệu từ:
-> - Day 08: chạy `python eval.py` từ Day 08 lab
-> - Day 09: chạy `python eval_trace.py` từ lab này
-
-| Metric | Day 08 (Single Agent) | Day 09 (Multi-Agent) | Delta | Ghi chú |
-|--------|----------------------|---------------------|-------|---------|
-| Avg confidence | ___ | ___ | ___ | |
-| Avg latency (ms) | ___ | ___ | ___ | |
-| Abstain rate (%) | ___ | ___ | ___ | % câu trả về "không đủ info" |
-| Multi-hop accuracy | ___ | ___ | ___ | % câu multi-hop trả lời đúng |
-| Routing visibility | ✗ Không có | ✓ Có route_reason | N/A | |
-| Debug time (estimate) | ___ phút | ___ phút | ___ | Thời gian tìm ra 1 bug |
-| ___________________ | ___ | ___ | ___ | |
-
-> **Lưu ý:** Nếu không có Day 08 kết quả thực tế, ghi "N/A" và giải thích.
+**Nguồn dữ liệu dùng để điền:**
+- Day08 baseline (test questions): `../../day08/lab/results/ab_comparison.csv` (`config_label=baseline_dense`)
+- Day08 test schema: `../../day08/lab/data/test_questions.json`
+- Day09 pre-pass run: `artifacts/runs/sprint4_test_20260414_115500_summary.json`
+- Day09 confidence-pass run: `artifacts/runs/sprint4_test_confpass_20260414_1218_summary.json`
+- Day09 route-pass run: `artifacts/runs/sprint4_test_routepass3_20260414_summary.json`
+- Day09 latency-optimized run (latest): `artifacts/runs/sprint4_test_latencyopt_20260414_summary.json`
+- Cross-day bridge report: `artifacts/cross_day_metrics.json`
 
 ---
 
-## 2. Phân tích theo loại câu hỏi
+## 1. Aligned Metrics (Day08 -> Day09 latest latency-optimized run)
 
-### 2.1 Câu hỏi đơn giản (single-document)
+> Ghi chú: Day08 không có confidence 0-1 gốc. Nhóm dùng bridge script (`eval_cross_day.py`) để quy đổi metric 1-5 sang confidence-like 0-1, đồng thời tính thêm metric còn thiếu.
 
-| Nhận xét | Day 08 | Day 09 |
-|---------|--------|--------|
-| Accuracy | ___ | ___ |
-| Latency | ___ | ___ |
-| Observation | ___________________ | ___________________ |
-
-**Kết luận:** Multi-agent có cải thiện không? Tại sao có/không?
-
-_________________
-
-### 2.2 Câu hỏi multi-hop (cross-document)
-
-| Nhận xét | Day 08 | Day 09 |
-|---------|--------|--------|
-| Accuracy | ___ | ___ |
-| Routing visible? | ✗ | ✓ |
-| Observation | ___________________ | ___________________ |
-
-**Kết luận:**
-
-_________________
-
-### 2.3 Câu hỏi cần abstain
-
-| Nhận xét | Day 08 | Day 09 |
-|---------|--------|--------|
-| Abstain rate | ___ | ___ |
-| Hallucination cases | ___ | ___ |
-| Observation | ___________________ | ___________________ |
-
-**Kết luận:**
-
-_________________
+| Metric | Day08 (Single Agent) | Day09 (Multi-Agent, latest) | Delta (Day09 - Day08) | Nhận xét |
+|--------|----------------------|----------------------------------|------------------------|----------|
+| Avg confidence | 0.754 (converted) | 0.851 | +0.097 | Day09 vẫn cao hơn Day08 sau các pass |
+| Avg latency (ms) | 3977.624 | 1078.467 | -2899.157 | Latency giảm mạnh sau pass tối ưu policy-path |
+| Answered rate (%) | 100.0 | 100.0 | 0.0 | Cả hai đều không fail pipeline |
+| Abstain rate (%) | 30.0 | 6.67 | -23.33 | Day09 ít abstain hơn (cần theo dõi hallucination side-effect) |
+| Citation rate (%) | 20.0 | 93.33 | +73.33 | Day09 enforce citation tốt hơn rõ rệt |
+| Source recall rate (%) | 100.0 | 100.0 | 0.0 | Tương đương theo test set hiện có |
+| Numeric consistency (%) | 64.58 | 63.78 | -0.80 | Gần tương đương, Day09 thấp nhẹ |
+| MCP usage (%) | 0.0 | 40.0 | +40.0 | Route policy nhiều hơn nên MCP usage tăng |
+| HITL rate (%) | 0.0 (estimated) | 6.67 | +6.67 | Chỉ còn 1 case low-confidence (`q09`) |
+| Route accuracy (%) | N/A | 100.0 | N/A | Day08 không có route trace để đối chiếu |
 
 ---
 
-## 3. Debuggability Analysis
+## 2. Missing-Metric Tests (Implemented for both Day08/Day09)
 
-> Khi pipeline trả lời sai, mất bao lâu để tìm ra nguyên nhân?
+### 2.1 Day08 (from `cross_day_metrics.json`)
 
-### Day 08 — Debug workflow
-```
-Khi answer sai → phải đọc toàn bộ RAG pipeline code → tìm lỗi ở indexing/retrieval/generation
-Không có trace → không biết bắt đầu từ đâu
-Thời gian ước tính: ___ phút
-```
+| Test | Applicable | Passed / Total | Pass rate |
+|------|------------|----------------|-----------|
+| abstain_behavior | Yes | 0 / 1 | 0.0% |
+| citation_presence | Yes | 2 / 9 | 22.22% |
+| source_coverage_full | Yes | 9 / 9 | 100.0% |
+| numeric_fidelity | Yes | 4 / 8 | 50.0% |
+| multi_hop_support | No | 0 / 0 | N/A |
+| route_correctness | No | 0 / 0 | N/A |
 
-### Day 09 — Debug workflow
-```
-Khi answer sai → đọc trace → xem supervisor_route + route_reason
-  → Nếu route sai → sửa supervisor routing logic
-  → Nếu retrieval sai → test retrieval_worker độc lập
-  → Nếu synthesis sai → test synthesis_worker độc lập
-Thời gian ước tính: ___ phút
-```
+### 2.2 Day09 (latest route-pass)
 
-**Câu cụ thể nhóm đã debug:** _(Mô tả 1 lần debug thực tế trong lab)_
+| Test | Applicable | Passed / Total | Pass rate |
+|------|------------|----------------|-----------|
+| abstain_behavior | Yes | 1 / 1 | 100.0% |
+| citation_presence | Yes | 14 / 14 | 100.0% |
+| source_coverage_full | Yes | 14 / 14 | 100.0% |
+| numeric_fidelity | Yes | 6 / 15 | 40.0% |
+| multi_hop_support | Yes | 3 / 3 | 100.0% |
+| route_correctness | Yes | 15 / 15 | 100.0% |
 
-_________________
-
----
-
-## 4. Extensibility Analysis
-
-> Dễ extend thêm capability không?
-
-| Scenario | Day 08 | Day 09 |
-|---------|--------|--------|
-| Thêm 1 tool/API mới | Phải sửa toàn prompt | Thêm MCP tool + route rule |
-| Thêm 1 domain mới | Phải retrain/re-prompt | Thêm 1 worker mới |
-| Thay đổi retrieval strategy | Sửa trực tiếp trong pipeline | Sửa retrieval_worker độc lập |
-| A/B test một phần | Khó — phải clone toàn pipeline | Dễ — swap worker |
-
-**Nhận xét:**
-
-_________________
+**Ý nghĩa:**
+- Day09 vượt mạnh ở citation/source/multi-hop support observability.
+- Numeric fidelity vẫn là vùng cần cải thiện thêm cho cả hai hệ (đặc biệt Day09 chỉ 40% theo test heuristic).
 
 ---
 
-## 5. Cost & Latency Trade-off
+## 3. Iteration Timeline (Day09)
 
-> Multi-agent thường tốn nhiều LLM calls hơn. Nhóm đo được gì?
+### 3.1 Thay đổi kỹ thuật đã áp dụng
 
-| Scenario | Day 08 calls | Day 09 calls |
-|---------|-------------|-------------|
-| Simple query | 1 LLM call | ___ LLM calls |
-| Complex query | 1 LLM call | ___ LLM calls |
-| MCP tool call | N/A | ___ |
+1. `workers/retrieval.py`
+   - Tokenization có stopword filtering để giảm overlap nhiễu.
+   - Blend dense similarity + lexical score (`0.7 * dense + 0.3 * lexical`).
+   - Lọc chunk điểm quá thấp (`score < 0.22`) để tránh kéo confidence xuống.
+   - Local fallback có hint-doc selection theo intent (refund/SLA/access/HR/helpdesk).
 
-**Nhận xét về cost-benefit:**
+2. `workers/synthesis.py`
+   - Confidence estimator dùng top-evidence weighting (`top1/top2`) thay vì trung bình toàn chunk.
+   - Thêm bonus cho citation/policy signals.
+   - Hiệu chỉnh confidence riêng cho abstain answers.
 
-_________________
+### 3.2 Kết quả đo được theo từng run
+
+| Metric | Pre-pass (11:55) | Confidence-pass (12:18) | Route-pass (12:32) | Latency-opt (12:41) |
+|--------|-------------------|--------------------------|--------------------|---------------------|
+| Avg confidence | 0.295 | 0.837 | 0.851 | 0.851 |
+| HITL rate (%) | 86.67 | 6.67 | 6.67 | 6.67 |
+| Avg latency (ms) | 2721.33 | 2705.67 | 4026.53 | 1078.47 |
+| Route accuracy (%) | 73.33 | 73.33 | 100.0 | 100.0 |
+| MCP usage (%) | 33.33 | 33.33 | 40.0 | 40.0 |
+
+**Kết luận ngắn:**
+- Confidence-pass giải quyết nút thắt confidence/HITL.
+- Route-pass xử lý triệt để route accuracy (15/15).
+- Latency-opt giữ nguyên quality và giảm latency mạnh (trung bình 1078.47 ms).
 
 ---
 
-## 6. Kết luận
+## 4. Phân tích theo loại câu hỏi
 
-> **Multi-agent tốt hơn single agent ở điểm nào?**
+### 4.1 Câu hỏi single-worker
+- Route accuracy proxy vẫn cao ở nhóm câu đơn giản.
+- Confidence tăng rõ sau pass tuning do retrieval score ít bị dilution.
 
-1. ___________________
-2. ___________________
+### 4.2 Câu hỏi multi-hop
+- `multi_hop_support` đạt 100% theo test heuristic (3/3).
+- `route_correctness` đã lên 100% sau route-pass (đặc biệt sửa đúng `q13`, `q15`).
 
-> **Multi-agent kém hơn hoặc không khác biệt ở điểm nào?**
+### 4.3 Câu hỏi abstain
+- Day09 giữ đúng hành vi abstain cho case thiếu context (`q09`), với confidence thấp tương ứng (0.10).
 
-1. ___________________
+---
 
-> **Khi nào KHÔNG nên dùng multi-agent?**
+## 5. Kết luận
 
-_________________
-
-> **Nếu tiếp tục phát triển hệ thống này, nhóm sẽ thêm gì?**
-
-_________________
+1. Việc bridge Day08 -> Day09 giúp so sánh trên cùng hệ metric có thể đo được thay vì để N/A.
+2. Bộ missing-metric tests đã chạy cho cả Day08 và Day09, chỉ ra rõ vùng mạnh/yếu.
+3. Sau route-pass + latency-opt, Day09 đạt route accuracy 100% và cải thiện mạnh latency.
+4. Ưu tiên tiếp theo: nâng numeric fidelity.

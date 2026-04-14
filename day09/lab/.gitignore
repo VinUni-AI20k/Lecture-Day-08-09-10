@@ -1,0 +1,27 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+
+# Environment
+.env
+.env.local
+
+# OS
+.DS_Store
+
+# IDE
+.vscode/
+data/grading_questions.json
+.idea/
+.omx/
+.venv/
+src_w_solution/
+
+# ChromaDB files
+chroma.sqlite3
+chroma_db/
+
+# Grading questions (không public trước 17:00)
+data/grading_questions.json
