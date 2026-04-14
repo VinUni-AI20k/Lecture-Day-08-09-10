@@ -4,7 +4,7 @@
 **Thành viên:**
 | Tên | Vai trò | Email |
 |-----|---------|-------|
-| Nguyễn Thị Thùy Trang | Tech Lead | ___ |
+| Nguyễn Thị Thùy Trang | Tech Lead | nuyenthuytrang372004@gmail.com |
 | Trần Việt Phương | Retrieval Owner | phuong251202@gmail.com |
 | Lê Đức Anh | Retrieval Owner | ducanh198369@gmail.com |
 | Phạm Hoàng Tiến Mạnh | Eval Owner |  |
