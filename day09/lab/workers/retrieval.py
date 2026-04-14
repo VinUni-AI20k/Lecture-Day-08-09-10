@@ -218,6 +218,27 @@ def retrieve_dense(query: str, top_k: int = DEFAULT_TOP_K) -> list:
         return []
 
 
+def _extract_sub_queries(task: str) -> list:
+    """
+    Detect multi-topic questions and generate focused sub-queries.
+    Returns list of additional sub-queries (empty if no decomposition needed).
+    Only triggers for questions spanning multiple distinct subtopics where a
+    single embedding would miss one of the relevant chunks.
+    """
+    t = task.lower()
+    sub_queries = []
+
+    # HR leave: question mentions BOTH nghỉ phép năm AND nghỉ ốm/giấy tờ
+    # → needs both the procedure chunk ("báo trước 3 ngày") AND sick-leave chunk
+    has_annual = "nghỉ phép năm" in t or ("nghỉ phép" in t and "báo trước" in t)
+    has_sick = "nghỉ ốm" in t or ("giấy tờ" in t and ("nghỉ" in t or "ốm" in t))
+    if has_annual and has_sick:
+        sub_queries.append("quy trình xin nghỉ phép năm báo trước bao nhiêu ngày HR Portal")
+        sub_queries.append("nghỉ ốm giấy tờ y tế bao nhiêu ngày liên tiếp")
+
+    return sub_queries
+
+
 def run(state: dict) -> dict:
     """
     Worker entry point — gọi từ graph.py.
@@ -261,6 +282,21 @@ def run(state: dict) -> dict:
         try:
             chunks = retrieve_dense(task, top_k=top_k)
 
+            # Multi-query expansion for multi-topic questions
+            sub_queries = _extract_sub_queries(task)
+            if sub_queries:
+                seen_texts = {c["text"] for c in chunks}
+                for sq in sub_queries:
+                    sq_chunks = retrieve_dense(sq, top_k=3)
+                    for c in sq_chunks:
+                        if c["text"] not in seen_texts:
+                            seen_texts.add(c["text"])
+                            chunks.append(c)
+                state["history"].append(
+                    f"[{WORKER_NAME}] multi-query: +{len(sub_queries)} sub-queries, "
+                    f"total {len(chunks)} chunks after merge"
+                )
+
             sources = sorted({c.get("source", "unknown") for c in chunks})
 
             state["retrieved_chunks"] = chunks
@@ -269,6 +305,7 @@ def run(state: dict) -> dict:
             worker_io["output"] = {
                 "chunks_count": len(chunks),
                 "sources": sources,
+                "sub_queries": sub_queries if sub_queries else None,
             }
             state["history"].append(
                 f"[{WORKER_NAME}] retrieved {len(chunks)} chunks from {sources}"

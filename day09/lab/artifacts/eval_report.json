@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-04-14T17:03:13.093437",
+  "generated_at": "2026-04-14T17:43:53.840506",
   "day08_single_agent": {
     "source": "F:\\VinUni\\Lecture-Day-08-09-10\\day08\\lab\\results\\grading_auto.json",
     "grading_total_raw": 83.0,
@@ -13,45 +13,45 @@
     }
   },
   "day09_multi_agent": {
-    "total_traces": 63,
+    "total_traces": 99,
     "routing_distribution": {
-      "retrieval_worker": "33/63 (52%)",
-      "policy_tool_worker": "18/63 (28%)",
-      "multi_hop": "12/63 (19%)"
+      "retrieval_worker": "53/99 (53%)",
+      "policy_tool_worker": "28/99 (28%)",
+      "multi_hop": "18/99 (18%)"
     },
-    "avg_confidence": 0.584,
-    "avg_latency_ms": 7021,
-    "mcp_usage_rate": "30/63 (47%)",
-    "hitl_rate": "0/63 (0%)",
+    "avg_confidence": 0.595,
+    "avg_latency_ms": 6734,
+    "mcp_usage_rate": "46/99 (46%)",
+    "hitl_rate": "0/99 (0%)",
     "top_sources": [
       [
         "access_control_sop.txt",
-        44
+        74
       ],
       [
         "it_helpdesk_faq.txt",
-        40
+        68
       ],
       [
         "policy_refund_v4.txt",
-        29
+        51
       ],
       [
         "sla_p1_2026.txt",
-        25
+        41
       ],
       [
         "hr_leave_policy.txt",
-        14
+        24
       ]
     ]
   },
   "analysis": {
     "routing_visibility": "Day 09 có supervisor_route + route_reason trong trace — không có trong Day 08 single-agent RAG.",
-    "latency_delta": "Day 09 avg_latency_ms ≈ 7021 (multi) — đo từ artifacts/traces; Day 08 không log cùng format.",
+    "latency_delta": "Day 09 avg_latency_ms ≈ 6734 (multi) — đo từ artifacts/traces; Day 08 không log cùng format.",
     "accuracy_delta": "So khớp grading: dùng grading_total_raw / projected_30 từ Day 08 vs chạy --grading Day 09.",
     "debuggability": "Multi-agent: test từng worker + MCP; single-agent: debug monolithic rag_answer.",
     "mcp_benefit": "Day 09 có MCP tools (search_kb, get_ticket_info) trong policy path; Day 08 không có MCP boundary.",
-    "avg_confidence_day09": 0.584
+    "avg_confidence_day09": 0.595
   }
 }
