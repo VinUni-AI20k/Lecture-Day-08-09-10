@@ -20,6 +20,14 @@ import os
 import sys
 from typing import Optional
 
+# load_dotenv = lambda: None  # Placeholder nếu chưa dùng dotenv package
+# try:
+#     from dotenv import load_dotenv as _load_dotenv
+#     load_dotenv = _load_dotenv
+# except ImportError:
+#     pass
+# load_dotenv()
+
 WORKER_NAME = "policy_tool_worker"
 
 
@@ -117,11 +125,12 @@ def analyze_policy(task: str, chunks: list) -> dict:
 
     # Lấy provider để quyết định logic phân tích (nếu cần)
     provider = os.getenv("LLM_PROVIDER", "openai").lower()
+    # TODO Sprint 2: Gọi LLM để phân tích phức tạp hơn
     if provider == "gemini":
         # Thực hiện gọi Google Gemini API tại đây
         from google import generativeai as genai
         genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
-        client = genai.GenerativeModel("gemini-1.5-pro")
+        client = genai.GenerativeModel("gemini-1.5-flash")
         response = client.generate_content(
             f"Task: {task}\n\nContext:\n" + "\n".join([c['text'] for c in chunks])
         )

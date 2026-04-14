@@ -30,36 +30,46 @@ Quy tắc nghiêm ngặt:
 5. Nếu có exceptions/ngoại lệ → nêu rõ ràng trước khi kết luận.
 """
 
+load_dotenv = lambda: None  # Placeholder nếu chưa dùng dotenv package
+try:
+    from dotenv import load_dotenv as _load_dotenv
+    load_dotenv = _load_dotenv
+except ImportError:
+    pass
+load_dotenv()
+
 
 def _call_llm(messages: list) -> str:
     """
     Gọi LLM để tổng hợp câu trả lời.
     TODO Sprint 2: Implement với OpenAI hoặc Gemini.
     """
-    # Option A: OpenAI
-    try:
-        from openai import OpenAI
-        client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-        response = client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=messages,
-            temperature=0.1,  # Low temperature để grounded
-            max_tokens=500,
-        )
-        return response.choices[0].message.content
-    except Exception:
-        pass
-
-    # Option B: Gemini
-    try:
-        import google.generativeai as genai
-        genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
-        model = genai.GenerativeModel("gemini-1.5-flash")
-        combined = "\n".join([m["content"] for m in messages])
-        response = model.generate_content(combined)
-        return response.text
-    except Exception:
-        pass
+    provider = os.getenv("LLM_PROVIDER", "openai").lower()
+    if provider == "openai":
+        # Option A: OpenAI
+        try:
+            from openai import OpenAI
+            client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+            response = client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=messages,
+                temperature=0.1,  # Low temperature để grounded
+                max_tokens=500,
+            )
+            return response.choices[0].message.content
+        except Exception:
+            pass
+    elif provider == "gemini":
+        # Option B: Gemini
+        try:
+            import google.generativeai as genai
+            genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
+            model = genai.GenerativeModel("gemini-1.5-flash")
+            combined = "\n".join([m["content"] for m in messages])
+            response = model.generate_content(combined)
+            return response.text
+        except Exception:
+            pass
 
     # Fallback: trả về message báo lỗi (không hallucinate)
     return "[SYNTHESIS ERROR] Không thể gọi LLM. Kiểm tra API key trong .env."
@@ -97,6 +107,39 @@ def _estimate_confidence(chunks: list, answer: str, policy_result: dict) -> floa
 
     TODO Sprint 2: Có thể dùng LLM-as-Judge để tính confidence chính xác hơn.
     """
+    provider = os.getenv("LLM_PROVIDER", "openai").lower()
+    # Dùng LLM để đánh giá confidence nếu có thể (Option A hoặc B)
+    if provider == "gemini":
+        # Option B: Gemini - dùng LLM để đánh giá confidence
+        try:
+            import google.generativeai as genai
+            genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
+            model = genai.GenerativeModel("gemini-1.5-flash")
+            eval_prompt = f"""Dựa vào câu trả lời sau và tài liệu được cung cấp, đánh giá mức độ tin cậy của câu trả lời trên thang điểm 0.0 (rất không tin cậy) đến 1.0 (rất tin cậy). Câu trả lời: "{answer}"."""
+            response = model.generate_content(eval_prompt)
+            confidence_str = response.text.strip()
+            confidence = float(confidence_str)
+            return round(max(0.1, min(0.95, confidence)), 2)
+        except Exception:
+            pass
+    elif provider == "openai":
+        # Option A: OpenAI - dùng LLM để đánh giá confidence
+        try:
+            from openai import OpenAI
+            client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+            eval_prompt = f"""Dựa vào câu trả lời sau và tài liệu được cung cấp, đánh giá mức độ tin cậy của câu trả lời trên thang điểm 0.0 (rất không tin cậy) đến 1.0 (rất tin cậy). Câu trả lời: "{answer}"."""
+            response = client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[{"role": "system", "content": SYSTEM_PROMPT}, {"role": "user", "content": eval_prompt}],
+                temperature=0.1,  # Low temperature để grounded
+                max_tokens=500,
+            )
+            confidence_str = response.choices[0].message.content.strip()
+            confidence = float(confidence_str)
+            return round(max(0.1, min(0.95, confidence)), 2)
+        except Exception:
+            pass
+    # Fallback: heuristic đơn giản nếu không gọi được LLM
     if not chunks:
         return 0.1  # Không có evidence → low confidence
 
