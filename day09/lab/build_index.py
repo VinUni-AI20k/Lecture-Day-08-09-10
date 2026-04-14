@@ -36,7 +36,7 @@ def build_index():
     print("=" * 50)
 
     # Load embedding model
-    print("\n📦 Loading embedding model (all-MiniLM-L6-v2)...")
+    print("\n[*] Loading embedding model (all-MiniLM-L6-v2)...")
     model = SentenceTransformer("all-MiniLM-L6-v2")
 
     # Create ChromaDB client
@@ -45,7 +45,7 @@ def build_index():
     # Delete old collection if exists
     try:
         client.delete_collection(COLLECTION_NAME)
-        print(f"🗑️  Deleted old collection '{COLLECTION_NAME}'")
+        print(f"[*] Deleted old collection '{COLLECTION_NAME}'")
     except Exception:
         pass
 
@@ -61,7 +61,7 @@ def build_index():
     all_metadatas = []
 
     doc_files = sorted(os.listdir(DOCS_DIR))
-    print(f"\n📄 Found {len(doc_files)} documents in {DOCS_DIR}")
+    print(f"\n[*] Found {len(doc_files)} documents in {DOCS_DIR}")
 
     for fname in doc_files:
         if not fname.endswith(".txt"):
@@ -71,7 +71,7 @@ def build_index():
             content = f.read()
 
         chunks = chunk_text(content)
-        print(f"  • {fname}: {len(content)} chars → {len(chunks)} chunks")
+        print(f"  - {fname}: {len(content)} chars -> {len(chunks)} chunks")
 
         for i, chunk in enumerate(chunks):
             doc_id = f"{fname}__chunk_{i:03d}"
@@ -94,17 +94,17 @@ def build_index():
         metadatas=all_metadatas,
     )
 
-    print(f"\n✅ Indexed {len(all_ids)} chunks into '{COLLECTION_NAME}'")
-    print(f"   ChromaDB path: {CHROMA_PATH}")
+    print(f"\n[OK] Indexed {len(all_ids)} chunks into '{COLLECTION_NAME}'")
+    print(f"     ChromaDB path: {CHROMA_PATH}")
 
     # Verify
-    print(f"\n🔍 Verification: collection has {collection.count()} documents")
+    print(f"\n[*] Verification: collection has {collection.count()} documents")
     test_query = "SLA ticket P1"
     test_emb = model.encode(test_query).tolist()
     results = collection.query(query_embeddings=[test_emb], n_results=2)
-    print(f"   Test query: '{test_query}'")
+    print(f"    Test query: '{test_query}'")
     for doc, meta, dist in zip(results["documents"][0], results["metadatas"][0], results["distances"][0]):
-        print(f"   [{1-dist:.3f}] {meta['source']}: {doc[:80]}...")
+        print(f"    [{1-dist:.3f}] {meta['source']}: {doc[:80].encode('ascii', 'replace').decode()}...")
 
 
 if __name__ == "__main__":

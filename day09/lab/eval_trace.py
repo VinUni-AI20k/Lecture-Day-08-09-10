@@ -405,6 +405,56 @@ def save_eval_report(comparison: dict) -> str:
 
 
 # ─────────────────────────────────────────────
+# 5b. Auto-update single_vs_multi_comparison.md
+# ─────────────────────────────────────────────
+
+def update_comparison_doc(metrics: dict):
+    """
+    Tự động cập nhật docs/single_vs_multi_comparison.md
+    với số liệu thực từ trace — thay thế '(từ trace)'.
+    """
+    doc_path = "docs/single_vs_multi_comparison.md"
+    if not os.path.exists(doc_path):
+        print(f"⚠️  {doc_path} không tồn tại, bỏ qua auto-update.")
+        return
+
+    with open(doc_path, encoding="utf-8") as f:
+        content = f.read()
+
+    # Lấy metrics
+    avg_conf = metrics.get("avg_confidence", "N/A")
+    lat = metrics.get("latency", {})
+    avg_lat = lat.get("mean_ms", "N/A")
+    hitl_rate = metrics.get("hitl_rate", "N/A")
+    mcp_rate = metrics.get("mcp_usage_rate", "N/A")
+    routing_acc = metrics.get("routing_accuracy", {})
+    acc_pct = routing_acc.get("accuracy_pct", "N/A")
+
+    # Thay placeholder
+    content = content.replace(
+        "| Avg confidence | ~0.72 | (từ trace) |",
+        f"| Avg confidence | ~0.72 | {avg_conf} |"
+    )
+    content = content.replace(
+        "| Avg latency (ms) | ~2800 | (từ trace) |",
+        f"| Avg latency (ms) | ~2800 | {avg_lat} |"
+    )
+    content = content.replace(
+        "| Abstain rate (%) | ~5% | (từ trace) |",
+        f"| Abstain rate (%) | ~5% | {hitl_rate} |"
+    )
+    content = content.replace(
+        "| Multi-hop accuracy | ~30% | (từ trace) |",
+        f"| Multi-hop accuracy | ~30% | routing {acc_pct}% |"
+    )
+
+    with open(doc_path, "w", encoding="utf-8") as f:
+        f.write(content)
+
+    print(f"📝 Auto-updated {doc_path} with real metrics.")
+
+
+# ─────────────────────────────────────────────
 # 6. CLI Entry Point
 # ─────────────────────────────────────────────
 
@@ -463,9 +513,11 @@ if __name__ == "__main__":
         metrics = analyze_traces()
         print_metrics(metrics)
 
+        # Tự động cập nhật comparison doc với số liệu thực
+        update_comparison_doc(metrics)
+
         # Lưu báo cáo
         comparison = compare_single_vs_multi()
         report_file = save_eval_report(comparison)
         print(f"\n📄 Eval report → {report_file}")
-        print("\n✅ Sprint 4 complete!")
-        print("   Next: Điền docs/ templates và viết reports/")
+        print("\n✅ Sprint 4 complete! Tất cả output đã sẵn sàng để commit.")
