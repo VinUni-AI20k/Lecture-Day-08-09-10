@@ -16,7 +16,9 @@ Gọi độc lập để test:
     python workers/policy_tool.py
 """
 
+import os
 import re
+import sys
 from datetime import date
 
 POLICY_SOURCE_FILE = "policy_refund_v4.txt"
@@ -57,6 +59,21 @@ TEMPORAL_V3_HINT_KEYWORDS = (
     "ap dung chinh sach v3",
 )
 TICKET_LOOKUP_KEYWORDS = ("ticket", "p1", "jira")
+ACCESS_PERMISSION_KEYWORDS = (
+    "cấp quyền",
+    "cap quyen",
+    "access",
+    "access level",
+    "level 1",
+    "level 2",
+    "level 3",
+    "admin access",
+    "elevated access",
+    "contractor",
+)
+EMERGENCY_HINT_KEYWORDS = ("emergency", "khẩn cấp", "khan cap", "2am", "urgent")
+CREATE_TICKET_KEYWORDS = ("tạo ticket", "tao ticket", "create ticket", "open ticket", "mở ticket", "mo ticket")
+P1_PRIORITY_KEYWORDS = ("p1", "sev1", "critical", "khẩn cấp", "khan cap")
 
 WORKER_NAME = "policy_tool_worker"
 
@@ -160,6 +177,51 @@ def _resolve_policy_version(task_text: str, context_text: str) -> tuple[str, str
     return "refund_policy_v4", ""
 
 
+def _infer_access_level(task_text: str) -> int:
+    """Infer requested access level from task text."""
+    if "level 3" in task_text or "admin access" in task_text:
+        return 3
+    if "level 2" in task_text or "elevated access" in task_text:
+        return 2
+    return 1
+
+
+def _infer_requester_role(task_text: str) -> str:
+    """Infer requester role for access permission checks."""
+    if "contractor" in task_text:
+        return "contractor"
+    if "intern" in task_text:
+        return "intern"
+    if "vendor" in task_text:
+        return "vendor"
+    return "employee"
+
+
+def _infer_ticket_priority(task_text: str) -> str:
+    """Infer ticket priority from incident hints."""
+    if _contains_any(task_text, P1_PRIORITY_KEYWORDS):
+        return "P1"
+    if "p2" in task_text:
+        return "P2"
+    if "p3" in task_text:
+        return "P3"
+    return "P4"
+
+
+def _build_ticket_payload(task: str, task_text: str) -> dict:
+    """Build MCP create_ticket payload from current task."""
+    title_raw = " ".join(task.split()) if isinstance(task, str) else ""
+    if not title_raw:
+        title_raw = "Auto-generated support ticket"
+
+    title = title_raw[:80] + ("..." if len(title_raw) > 80 else "")
+    return {
+        "priority": _infer_ticket_priority(task_text),
+        "title": title,
+        "description": title_raw[:200],
+    }
+
+
 # ─────────────────────────────────────────────
 # MCP Client — Sprint 3: Thay bằng real MCP call
 # ─────────────────────────────────────────────
@@ -176,13 +238,28 @@ def _call_mcp_tool(tool_name: str, tool_input: dict) -> dict:
 
     try:
         # TODO Sprint 3: Thay bằng real MCP client nếu dùng HTTP server
-        from mcp_server import dispatch_tool
+        try:
+            from mcp_server import dispatch_tool
+        except ModuleNotFoundError:
+            lab_root = os.path.dirname(os.path.dirname(__file__))
+            if lab_root not in sys.path:
+                sys.path.insert(0, lab_root)
+            from mcp_server import dispatch_tool
+
         result = dispatch_tool(tool_name, tool_input)
+
+        tool_error = None
+        if isinstance(result, dict) and result.get("error"):
+            tool_error = {
+                "code": "MCP_TOOL_ERROR",
+                "reason": str(result.get("error")),
+            }
+
         return {
             "tool": tool_name,
             "input": tool_input,
             "output": result,
-            "error": None,
+            "error": tool_error,
             "timestamp": datetime.now().isoformat(),
         }
     except Exception as e:
@@ -193,6 +270,20 @@ def _call_mcp_tool(tool_name: str, tool_input: dict) -> dict:
             "error": {"code": "MCP_CALL_FAILED", "reason": str(e)},
             "timestamp": datetime.now().isoformat(),
         }
+
+
+def _record_mcp_call(state: dict, tool_name: str, tool_input: dict) -> dict:
+    """Call MCP tool, append trace entry, and log concise history."""
+    call_result = _call_mcp_tool(tool_name, tool_input)
+    state["mcp_tools_used"].append(call_result)
+
+    if call_result.get("error"):
+        reason = call_result["error"].get("reason", "unknown error")
+        state["history"].append(f"[{WORKER_NAME}] MCP {tool_name} failed: {reason}")
+    else:
+        state["history"].append(f"[{WORKER_NAME}] called MCP {tool_name}")
+
+    return call_result
 
 
 # ─────────────────────────────────────────────
@@ -320,13 +411,13 @@ def run(state: dict) -> dict:
     try:
         # Step 1: Nếu chưa có chunks, gọi MCP search_kb
         if not chunks and needs_tool:
-            mcp_result = _call_mcp_tool("search_kb", {"query": task, "top_k": 3})
-            state["mcp_tools_used"].append(mcp_result)
-            state["history"].append(f"[{WORKER_NAME}] called MCP search_kb")
+            mcp_result = _record_mcp_call(state, "search_kb", {"query": task, "top_k": 3})
+            mcp_output = mcp_result.get("output", {})
 
-            if mcp_result.get("output") and mcp_result["output"].get("chunks"):
-                chunks = mcp_result["output"]["chunks"]
+            if isinstance(mcp_output, dict) and mcp_output.get("chunks"):
+                chunks = mcp_output["chunks"]
                 state["retrieved_chunks"] = chunks
+                state["retrieved_sources"] = _collect_sources(chunks)
 
         # Step 2: Phân tích policy
         policy_result = analyze_policy(task, chunks)
@@ -334,19 +425,39 @@ def run(state: dict) -> dict:
 
         # Step 3: Nếu cần thêm info từ MCP (e.g., ticket status), gọi get_ticket_info
         if needs_tool and _contains_any(task_lower, TICKET_LOOKUP_KEYWORDS):
-            mcp_result = _call_mcp_tool("get_ticket_info", {"ticket_id": "P1-LATEST"})
-            state["mcp_tools_used"].append(mcp_result)
-            state["history"].append(f"[{WORKER_NAME}] called MCP get_ticket_info")
+            _record_mcp_call(state, "get_ticket_info", {"ticket_id": "P1-LATEST"})
+
+        # Step 4: Access policy check qua MCP
+        if needs_tool and _contains_any(task_lower, ACCESS_PERMISSION_KEYWORDS):
+            access_input = {
+                "access_level": _infer_access_level(task_lower),
+                "requester_role": _infer_requester_role(task_lower),
+                "is_emergency": _contains_any(task_lower, EMERGENCY_HINT_KEYWORDS),
+            }
+            _record_mcp_call(state, "check_access_permission", access_input)
+
+        # Step 5: Create ticket theo explicit intent
+        if needs_tool and _contains_any(task_lower, CREATE_TICKET_KEYWORDS):
+            create_ticket_input = _build_ticket_payload(task, task_lower)
+            _record_mcp_call(state, "create_ticket", create_ticket_input)
+
+        mcp_calls = state.get("mcp_tools_used", [])
+        called_tools = [call.get("tool", "unknown") for call in mcp_calls]
+        error_tools = [call.get("tool", "unknown") for call in mcp_calls if call.get("error")]
 
         worker_io["output"] = {
             "policy_applies": policy_result["policy_applies"],
             "exceptions_count": len(policy_result.get("exceptions_found", [])),
-            "mcp_calls": len(state["mcp_tools_used"]),
+            "mcp_calls": len(mcp_calls),
+            "mcp_tools": called_tools,
+            "mcp_error_tools": error_tools,
         }
         state["history"].append(
             f"[{WORKER_NAME}] policy_applies={policy_result['policy_applies']}, "
             f"exceptions={len(policy_result.get('exceptions_found', []))}"
         )
+        if called_tools:
+            state["history"].append(f"[{WORKER_NAME}] tools_used={called_tools}")
 
     except Exception as e:
         worker_io["error"] = {"code": "POLICY_CHECK_FAILED", "reason": str(e)}
@@ -409,6 +520,13 @@ if __name__ == "__main__":
                 {"text": "Chính sách có hiệu lực từ 01/02/2026. Đơn trước ngày hiệu lực áp dụng policy v3.", "source": "policy_refund_v4.txt", "score": 0.84}
             ],
         },
+        {
+            "task": "Contractor cần Level 3 access emergency cho ticket P1, hãy tạo ticket hỗ trợ.",
+            "needs_tool": True,
+            "retrieved_chunks": [
+                {"text": "Level 3 cần Line Manager, IT Admin và IT Security phê duyệt.", "source": "access_control_sop.txt", "score": 0.9}
+            ],
+        },
     ]
 
     for tc in test_cases:
@@ -422,6 +540,11 @@ if __name__ == "__main__":
                 print(f"  exception: {ex['type']} — {ex['rule'][:60]}...")
         if pr.get("policy_version_note"):
             print(f"  temporal_note: {pr['policy_version_note'][:90]}...")
+        if result.get("mcp_tools_used"):
+            print(f"  tools_called: {[call.get('tool') for call in result['mcp_tools_used']]}")
+            for call in result["mcp_tools_used"]:
+                if call.get("error"):
+                    print(f"  tool_error[{call.get('tool')}]: {call['error'].get('reason')}")
         print(f"  MCP calls: {len(result.get('mcp_tools_used', []))}")
 
     print("\n✅ policy_tool_worker test done.")
