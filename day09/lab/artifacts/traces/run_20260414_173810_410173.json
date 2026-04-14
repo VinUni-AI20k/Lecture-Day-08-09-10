@@ -3,42 +3,42 @@
   "route_reason": "SLA/ticket/escalation signal detected | risk_high flagged",
   "risk_high": true,
   "needs_tool": false,
-  "hitl_triggered": true,
+  "hitl_triggered": false,
   "retrieved_chunks": [
     {
-      "text": "Bước 4: Finance Team xử lý trong 3-5 ngày làm việc và thông báo kết quả cho khách hàng.",
-      "source": "unknown",
+      "text": "Thông báo stakeholder: Ngay khi nhận ticket, update mỗi 30 phút cho đến khi resolve.",
+      "source": "sla_p1_2026.txt",
       "score": 1.0
     },
     {
-      "text": "Thời gian xử lý: 1 ngày làm việc.",
-      "source": "unknown",
+      "text": "v2026.1 (2026-01-15): Cập nhật SLA P1 resolution từ 6 giờ xuống 4 giờ.",
+      "source": "sla_p1_2026.txt",
       "score": 1.0
     },
     {
-      "text": "Thời gian xử lý: 2 ngày làm việc.",
-      "source": "unknown",
+      "text": "Xử lý và khắc phục: Theo sprint cycle (thông thường 2-4 tuần).",
+      "source": "sla_p1_2026.txt",
       "score": 1.0
     }
   ],
   "retrieved_sources": [
-    "unknown"
+    "sla_p1_2026.txt"
   ],
   "policy_result": {},
   "mcp_tools_used": [],
   "mcp_tool_called": [],
   "mcp_result": [],
-  "final_answer": "Không đủ thông tin trong tài liệu nội bộ để trả lời câu hỏi này.",
+  "final_answer": "- v2026.1 (2026-01-15): Cập nhật SLA P1 resolution từ 6 giờ xuống 4 giờ. [sla_p1_2026.txt]\n- Thông báo stakeholder: Ngay khi nhận ticket, update mỗi 30 phút cho đến khi resolve. [sla_p1_2026.txt]",
   "sources": [
-    "unknown"
+    "sla_p1_2026.txt"
   ],
-  "confidence": 0.3,
+  "confidence": 0.95,
   "history": [
-    "Run started at 2026-04-14T17:21:52.177969",
+    "Run started at 2026-04-14T17:38:10.410173",
     "[supervisor] received task: SLA xu ly ticket P1 la bao lau?",
     "[supervisor] route=retrieval_worker needs_tool=False risk_high=True reason=SLA/ticket/escalation signal detected | risk_high flagged",
-    "[retrieval_worker] retrieved 3 chunks from ['unknown']",
-    "[synthesis_worker] answer generated, confidence=0.3, sources=['unknown']"
+    "[retrieval_worker] retrieved 3 chunks from ['sla_p1_2026.txt']",
+    "[synthesis_worker] answer generated, confidence=0.95, sources=['sla_p1_2026.txt']"
   ],
   "workers_called": [
     "retrieval_worker",
@@ -54,7 +54,7 @@
       "output": {
         "chunks_count": 3,
         "sources": [
-          "unknown"
+          "sla_p1_2026.txt"
         ]
       },
       "error": null
@@ -67,18 +67,18 @@
         "has_policy": false
       },
       "output": {
-        "answer_length": 64,
+        "answer_length": 195,
         "sources": [
-          "unknown"
+          "sla_p1_2026.txt"
         ],
-        "confidence": 0.3
+        "confidence": 0.95
       },
       "error": null
     }
   ],
   "supervisor_route": "retrieval_worker",
   "retrieval_top_k": 3,
-  "latency_ms": 13196,
-  "run_id": "run_20260414_172152_177969",
-  "timestamp": "2026-04-14T17:21:52.177969"
+  "latency_ms": 26513,
+  "run_id": "run_20260414_173810_410173",
+  "timestamp": "2026-04-14T17:38:10.410173"
 }
