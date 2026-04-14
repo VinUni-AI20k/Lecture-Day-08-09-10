@@ -1,74 +1,88 @@
-# Báo cáo cá nhân — Quách Ngọc Quang
+# Báo Cáo Cá Nhân — Lab Day 09: Multi-Agent Orchestration
 
-## Vai trò
-Supervisor Owner — Sprint 1: graph.py, routing logic, state management, 
-kết nối workers.
+**Họ và tên:** Quách Ngọc Quang
+**Vai trò trong nhóm:** Supervisor Owner — Sprint 1
+**Ngày nộp:** 2026-04-14
+**Độ dài yêu cầu:** 500–800 từ
 
-## Nhiệm vụ chính
-- [x] Thiết kế AgentState schema (15+ fields cho trace đầy đủ)
-- [x] Implement supervisor_node() với routing logic 3-tier
-- [x] Viết _needs_policy_check() phân biệt tra cứu vs exception check
-- [x] Kết nối 3 real workers với try/except fallback
-- [x] Thiết kế graph flow: retrieval-first cho policy path
+---
 
-## 1 quyết định kỹ thuật — Keyword-based vs LLM classifier
+## 1. Tôi phụ trách phần nào?
 
-**Quyết định**: Dùng keyword-based routing (3-tier: human_review → 
-policy_check → retrieval) thay vì LLM classifier.
+**Module/file tôi chịu trách nhiệm:**
+- File chính: `graph.py`
+- Functions tôi implement: `supervisor_node()`, `_needs_policy_check()`
+- Nhiệm vụ quản lý: Routing logic, state management, và kết nối các workers.
 
-**Lý do**:
-- Latency: Routing keyword ~ 0ms, LLM call ~ 500-2000ms. Với 15 câu hỏi,
-  tiết kiệm 7-30 giây tổng.
-- Deterministic: Cùng input luôn cho cùng route → dễ debug, dễ test.
-- Đủ tốt: 15/15 test questions route đúng với logic 3-tier.
+**Cách công việc của tôi kết nối với phần của thành viên khác:**
+Tôi xây dựng bộ não điều phối (Supervisor) của toàn bộ hệ thống Multi-Agent dựa trên cấu trúc `AgentState` (với hơn 15 fields đảm bảo trace đầy đủ). Pipeline nhận câu hỏi, thực hiện routing thông qua node `supervisor_node()` và phân phối công việc đến 3 real workers. Tôi triển khai cơ chế try/except fallback để đảm bảo bắt các lỗi từ worker an toàn. Flow của tôi (retrieval-first path cho policy) là bước trung tâm, tạo nguồn context trước khi gọi qua worker/MCP, sau đó gửi output về hệ thống evaluation của Long để đánh giá.
 
-**Trade-off nhận thấy**: Keyword matching không xử lý được câu hỏi 
-ambiguous (VD: "hoàn tiền" vừa có thể là tra cứu, vừa có thể là check 
-exception). Giải quyết bằng hàm _needs_policy_check() kiểm tra có 
-exception signal đi kèm không.
+**Bằng chứng:** Code logic trong tệp `graph.py` thể hiện thiết kế state, luồng 3-tier routing và hàm phụ trợ phân tách lý thuyết/tác vụ ngoại lệ của `_needs_policy_check()`.
 
-**Evidence từ trace**: 
-`"route_reason": "policy check required: refund_exception_check"` cho các exception queries và `"route_reason": "refund policy information lookup (no exception check needed)"` cho general retrieval lookup.
+---
 
-## 1 lỗi đã sửa — Route sai cho "hoàn tiền đơn giản"
+## 2. Tôi đã ra một quyết định kỹ thuật gì?
 
-**Lỗi**: Lỗi ban đầu route sai với "hoàn tiền" đơn lẻ. Bất cứ câu hỏi nào chứa Keyword "hoàn tiền" ("Khách hàng có thể yêu cầu hoàn tiền trong bao nhiêu ngày?") đều bị route sai sang policy_tool.
+**Quyết định:** Sử dụng keyword-based routing (3-tier logic: human_review → policy_check → retrieval) thay vì sử dụng LLM classifier để route.
 
-**Nguyên nhân gốc**: Routing logic ban đầu dùng flat keyword list — bất kỳ 
-câu nào chứa "hoàn tiền" đều đi policy. Nhưng một số câu chỉ hỏi thông tin, 
-không cần check exception.
+**Các lựa chọn thay thế:**
+- **Cách 1 (LLM classifier):** Dùng LLM prompt để phân loại câu hỏi → tốn API cost và làm tăng 500-2000ms latency.
+- **Cách 2 (Keyword-based routing):** Xây dựng bộ quy tắc từ khóa (If-else/Regex) → độ trễ xấp xỉ ~0ms, luồng chay deterministic, dễ dàng kiểm tra debug.
 
-**Cách sửa**: Tách logic thành 2 mức:
-- "hoàn tiền" đơn lẻ → retrieval_worker (tra cứu)
-- "hoàn tiền" + exception signal (flash sale, license, store credit, 
-  được không?, temporal date) → policy_tool_worker
+Tôi chọn **Cách 2** vì chi phí thời gian được tối ưu nhất. Keyword-based tiết kiệm khoảng 7-30 giây tổng thời gian thực thi trên toàn tập test. Mô hình 3-tier này cho ra kết quả đáp ứng được 15/15 test questions định sẵn.
 
-**Trước sửa**: route=policy_tool_worker, reason="task contains 
-policy/access keyword"
-**Sau sửa**: route=retrieval_worker, reason="refund policy information 
-lookup (no exception check needed)"
+**Trade-off đã chấp nhận:** Keyword matching khó xử lý hiệu quả với các câu nhập nhằng (ví dụ: "hoàn tiền" đôi khi chỉ tra cứu, đôi khi yêu cầu check exception lớn). Tôi giảm thiểu rủi ro này bằng hàm `_needs_policy_check()` nhằm lọc exception signals bắt buộc.
 
-## Tự đánh giá
+**Bằng chứng từ trace/code:**
+Log ghi nhận: `"route_reason": "policy check required: refund_exception_check"` ở các truy vấn ngoại lệ, và `"route_reason": "refund policy information lookup (no exception check needed)"` đối với truy vấn thông tin thuần túy.
 
-**Làm tốt**: Routing logic cover được 15/15 test questions. Route reason 
-chi tiết, traceability cao. Flow retrieval-first giúp policy worker có 
-context tốt hơn.
+---
 
-**Yếu**: Chưa implement hybrid routing (keyword + LLM fallback) cho 
-trường hợp ambiguous. Risk detection chỉ dựa keyword, chưa dùng 
-confidence threshold.
+## 3. Tôi đã sửa một lỗi gì?
 
-**Nhóm phụ thuộc vào mình ở**: Routing accuracy ảnh hưởng trực tiếp đến 
-kết quả grading (20% điểm/câu bị trừ nếu thiếu route_reason). Flow 
-orchestration quyết định thứ tự gọi workers.
+**Lỗi:** Hệ thống route sai cho câu hỏi có từ khóa "hoàn tiền" dạng tra cứu (ví dụ: "Khách hàng có thể yêu cầu hoàn tiền trong bao nhiêu ngày?"). Mọi câu có chứa keyword này bị mặc định route sang `policy_tool_worker`.
 
-## Nếu có 2h thêm
+**Symptom:** Các câu hỏi không dính dáng đến kiểm tra exception nhưng vẫn bị tốn lượt gọi policy check, làm giảm hiệu suất hoặc tạo ra logic kỳ lạ thay vì chuyển tiếp sang tra cứu RAG thuần túy.
 
-Implement **hybrid routing**: Dùng LLM classifier (GPT-4o-mini) cho câu 
-hỏi mà keyword matching confidence thấp (<2 signal matches). Cụ thể:
-- Thêm `_routing_confidence()` đếm số signal matches
-- Nếu ≤ 1 match → gọi LLM phân loại (retrieval/policy/abstain)
-- Nếu ≥ 2 match → dùng keyword (nhanh, deterministic)
+**Root cause:** Logic routing ban đầu tôi phát triển là một cấu trúc thư mục từ khóa phẳng (flat keyword list), nhận diện "hoàn tiền" là lập tức đẩy sang luồng policy check.
 
-Evidence cần thêm: So sánh latency và accuracy giữa pure keyword vs 
-hybrid trên 15 câu test.
+**Cách sửa:** Tách logic kiểm tra từ khóa ra thành 2 điều kiện chi tiết:
+- "hoàn tiền" một cách độc lập hoặc đơn lẻ → trả luôn về `retrieval_worker` (nhằm mục đích tra cứu).
+- "hoàn tiền" tích hợp kèm theo exception signal (thuộc nhóm `flash sale`, `license`, `store credit`, `được không?`, `temporal date`) → mới route sang `policy_tool_worker`.
+
+**Bằng chứng trước/sau:**
+- Trước khi sửa: Nhận output `route=policy_tool_worker`, `reason="task contains policy/access keyword"`
+- Sau sửa đổi: Nhận đúng output `route=retrieval_worker`, `reason="refund policy information lookup (no exception check needed)"`
+
+---
+
+## 4. Tôi tự đánh giá đóng góp của mình
+
+**Tôi làm tốt nhất ở điểm nào?**
+Routing logic thiết kế ra đã cover hoàn hảo 15/15 test questions định sẵn. Thông báo route reason tôi thiết lập rất chi tiết cung cấp tính traceability cực cao, giúp mọi thành viên debug luồng đi. Phương châm retrieval-first ở luồng policy đảm bảo policy worker có bối cảnh tốt và câu trả lời chính xác hơn.
+
+**Tôi làm chưa tốt hoặc còn yếu ở điểm nào?**
+Tôi chưa triển khai được chế độ hybrid routing kết hợp keyword fallback bằng LLM cho các trường hợp câu hỏi input từ end-user thực sự nhập nhằng (ambiguous cases). Nhỡ user không dùng từ khoá mồi, hệ thống sẽ rối. Risk detection hiện chỉ dùng "cứng" theo keyword thay vì `confidence threshold` cụ thể.
+
+**Nhóm phụ thuộc vào tôi ở đâu?**
+Sự chuẩn xác (accuracy) của quá trình routing ảnh hưởng một cách sống còn lên kết quả tự động chấm grading (Luật chơi trừ 20% điểm cho 1 câu lỗi / thiếu route_reason). Supervisor orchestration là nơi điều hướng dòng chảy toàn bộ workers trong pipeline.
+
+**Phần tôi phụ thuộc vào thành viên khác:**
+Tôi phụ thuộc vào tính hoàn thiện của các workers do nhóm Dev (Tuấn, Hải, Dũng) xây dựng để try/catch đảm bảo chạy fallback và không block luồng xử lý. Phần test case phụ thuộc các metrics thống kê do Long làm tại Trace/Eval.
+
+---
+
+## 5. Nếu có thêm 2 giờ, tôi sẽ làm gì?
+
+Tôi sẽ implement thêm chế độ **hybrid routing** (Kết hợp keyword và LLM classifier cấp tốc chạy GPT-4o-mini) dành cho các câu hỏi mà keyword matching chỉ định tuyến được điểm confidence thấp (< 2 signal matches).
+
+Cách thực thi cụ thể:
+- Thêm đoạn hàm `_routing_confidence()` phục vụ việc đếm tổng số signal matches.
+- Logic rẽ nhánh: Nếu `< 2 match` → route qua LLM nhờ LLM phân loại (kết quả thành retrieval/policy/abstain) để giải bài toán ngữ nghĩa nhập nhằng.
+- Nếu `≥ 2 match` → tiếp tục cho đi nhánh quy chuẩn Keyword đã dựng (bảo đảm Nhanh, Không Token, Deterministic).
+
+Sau cùng, tôi sẽ in ra so sánh metric đánh giá độ trễ thực thi latency/accuracy cho mọi người nhìn thấy trên tập 15 test questions để quyết định.
+
+---
+
+*File: reports/individual/2A202600285_QuachNgocQuang.md*
