@@ -338,5 +338,10 @@ CLAUDE.md
 docs/breakdown.md
 
 # Generated runtime artifacts
+# Local vector DB / indexes recreated by the indexing script; never commit.
 chroma_db/
+chroma_db/**
+
+# Runtime tracing output; generated locally and should remain untracked.
 artifacts/traces/
+artifacts/traces/**
