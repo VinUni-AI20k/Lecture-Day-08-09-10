@@ -1,0 +1,12 @@
+[
+  {
+    "id": "test_mcp_1",
+    "question": "SLA xử lý ticket P1 là bao lâu?",
+    "category": "SLA"
+  },
+  {
+    "id": "test_mcp_2",
+    "question": "Tôi muốn hoàn tiền Flash Sale cho đơn hàng mới nhận hôm nay, có được không?",
+    "category": "Policy"
+  }
+]

@@ -138,7 +138,7 @@ class HttpTransport(MCPTransport):
         3. Run workers:       python graph.py (workers auto-use HTTP)
     """
 
-    def __init__(self, base_url: Optional[str] = None, timeout: int = 30):
+    def __init__(self, base_url: Optional[str] = None, timeout: int = 60):
         self.base_url = (base_url or os.getenv("MCP_SERVER_URL", "http://localhost:8000")).rstrip("/")
         self.timeout = timeout
 

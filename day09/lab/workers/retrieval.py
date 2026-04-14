@@ -36,57 +36,39 @@ CHROMA_PATH = os.getenv("CHROMA_DB_PATH", "./chroma_db")
 CHROMA_COLLECTION = os.getenv("CHROMA_COLLECTION", "day09_docs")
 
 
+_embedding_model = None
+
 def _get_embedding_fn():
     """
-    Trả về embedding function.
-    TODO Sprint 1: Implement dùng OpenAI hoặc Sentence Transformers.
+    Trả về embedding function sử dụng SentenceTransformer (Lazy Loading).
     """
-    # Option A: Sentence Transformers (offline, không cần API key)
-    try:
+    global _embedding_model
+    if _embedding_model is None:
         from sentence_transformers import SentenceTransformer
-        model = SentenceTransformer("all-MiniLM-L6-v2")
-        def embed(text: str) -> list:
-            return model.encode([text])[0].tolist()
-        return embed
-    except ImportError:
-        pass
-
-    # Option B: OpenAI (cần API key)
-    try:
-        from openai import OpenAI
-        client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-        def embed(text: str) -> list:
-            resp = client.embeddings.create(input=text, model="text-embedding-3-small")
-            return resp.data[0].embedding
-        return embed
-    except ImportError:
-        pass
-
-    # Fallback: random embeddings cho test (KHÔNG dùng production)
-    import random
+        print("[Retrieval] Loading SentenceTransformer model ('all-MiniLM-L6-v2')...", flush=True)
+        _embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
+        print("[Retrieval] Model loaded successfully.", flush=True)
+    
     def embed(text: str) -> list:
-        return [random.random() for _ in range(384)]
-    print("⚠️  WARNING: Using random embeddings (test only). Install sentence-transformers.")
+        return _embedding_model.encode(text).tolist()
     return embed
 
 
 def _get_collection():
     """
-    Kết nối ChromaDB collection.
-    TODO Sprint 2: Đảm bảo collection đã được build từ Step 3 trong README.
+    Kết nối ChromaDB PersistentClient thật.
     """
     import chromadb
+    print(f"[Retrieval] Connecting to ChromaDB at {CHROMA_PATH}...", flush=True)
     client = chromadb.PersistentClient(path=CHROMA_PATH)
     try:
         collection = client.get_collection(CHROMA_COLLECTION)
-    except Exception:
+        print(f"[Retrieval] Collection '{CHROMA_COLLECTION}' found.", flush=True)
+    except Exception as e:
+        print(f"[Retrieval] Collection not found, creating new: {e}", flush=True)
         collection = client.get_or_create_collection(
             CHROMA_COLLECTION,
             metadata={"hnsw:space": "cosine"},
-        )
-        print(
-            f"[WARN] Collection '{CHROMA_COLLECTION}' rỗng. "
-            "Chạy index script trong README trước khi dùng."
         )
     return collection
 
@@ -94,27 +76,29 @@ def _get_collection():
 def retrieve_dense(query: str, top_k: int = DEFAULT_TOP_K) -> list:
     """
     Dense retrieval: embed query → query ChromaDB → trả về top_k chunks.
-
-    TODO Sprint 2: Implement phần này.
-    - Dùng _get_embedding_fn() để embed query
-    - Query collection với n_results=top_k
-    - Format result thành list of dict
-
-    Returns:
-        list of {"text": str, "source": str, "score": float, "metadata": dict}
     """
-    # TODO: Implement dense retrieval
-    embed = _get_embedding_fn()
-    query_embedding = embed(query)
+    print(f"[Retrieval] Starting retrieve_dense for query: '{query[:30]}...'", flush=True)
+    
+    # 1. Get embedding function
+    embed_fn = _get_embedding_fn()
+    print("[Retrieval] Embedding function initialized.", flush=True)
+    
+    # 2. Embed query
+    query_vector = embed_fn(query)
+    print(f"[Retrieval] Query embedded. Vector size: {len(query_vector)}", flush=True)
+    
+    # 3. Get collection and query
+    collection = _get_collection()
+    print(f"[Retrieval] Querying ChromaDB collection: {CHROMA_COLLECTION}...", flush=True)
+    
+    results = collection.query(
+        query_embeddings=[query_vector],
+        n_results=top_k,
+        include=["documents", "metadatas", "distances"]
+    )
+    print(f"[Retrieval] ChromaDB query complete. Found {len(results.get('ids', [[]])[0])} results.")
 
     try:
-        collection = _get_collection()
-        results = collection.query(
-            query_embeddings=[query_embedding],
-            n_results=top_k,
-            include=["documents", "distances", "metadatas"]
-        )
-
         chunks = []
         for i, (doc, dist, meta) in enumerate(zip(
             results["documents"][0],

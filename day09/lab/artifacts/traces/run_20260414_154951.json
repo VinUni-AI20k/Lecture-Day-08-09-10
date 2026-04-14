@@ -1,0 +1,73 @@
+{
+  "task": "SLA xử lý ticket P1 là bao lâu?",
+  "route_reason": "task contains SLA/ticket keywords: [p1, sla, ticket]",
+  "risk_high": false,
+  "needs_tool": false,
+  "hitl_triggered": false,
+  "retrieved_chunks": [
+    {
+      "text": "[MOCK] Đây là nội dung giả vì ChromaDB đang bị lock.",
+      "source": "mock_test.txt",
+      "score": 0.9,
+      "metadata": {
+        "source": "mock_test.txt"
+      }
+    }
+  ],
+  "retrieved_sources": [
+    "mock_test.txt"
+  ],
+  "policy_result": {},
+  "mcp_tools_used": [],
+  "final_answer": "Không đủ thông tin trong tài liệu nội bộ. Đề xuất liên hệ team phụ trách.  \nNguồn: [1] mock_test.txt",
+  "sources": [
+    "mock_test.txt"
+  ],
+  "confidence": 0.3,
+  "history": [
+    "[supervisor] received task: SLA xử lý ticket P1 là bao lâu?",
+    "[supervisor] route=retrieval_worker reason=task contains SLA/ticket keywords: [p1, sla, ticket]",
+    "[retrieval_worker] retrieved 1 chunks from ['mock_test.txt']",
+    "[synthesis_worker] answer generated, confidence=0.3, sources=['mock_test.txt']",
+    "[graph] completed in 4324ms"
+  ],
+  "workers_called": [
+    "retrieval_worker",
+    "synthesis_worker"
+  ],
+  "worker_io_logs": [
+    {
+      "worker": "retrieval_worker",
+      "input": {
+        "task": "SLA xử lý ticket P1 là bao lâu?",
+        "top_k": 3
+      },
+      "output": {
+        "chunks_count": 1,
+        "sources": [
+          "mock_test.txt"
+        ]
+      },
+      "error": null
+    },
+    {
+      "worker": "synthesis_worker",
+      "input": {
+        "task": "SLA xử lý ticket P1 là bao lâu?",
+        "chunks_count": 1,
+        "has_policy": false
+      },
+      "output": {
+        "answer_length": 100,
+        "sources": [
+          "mock_test.txt"
+        ],
+        "confidence": 0.3
+      },
+      "error": null
+    }
+  ],
+  "supervisor_route": "retrieval_worker",
+  "latency_ms": 4324,
+  "run_id": "run_20260414_154951"
+}

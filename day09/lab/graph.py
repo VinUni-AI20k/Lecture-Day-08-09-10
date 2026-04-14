@@ -45,6 +45,7 @@ class AgentState(TypedDict):
     # Trace & history
     history: list                       # Lịch sử các bước đã qua
     workers_called: list                # Danh sách workers đã được gọi
+    worker_io_logs: list                # Log chi tiết của từng worker (input/output)
     supervisor_route: str               # Worker được chọn bởi supervisor
     latency_ms: Optional[int]           # Thời gian xử lý (ms)
     run_id: str                         # ID của run này
@@ -67,6 +68,7 @@ def make_initial_state(task: str) -> AgentState:
         "confidence": 0.0,
         "history": [],
         "workers_called": [],
+        "worker_io_logs": [],
         "supervisor_route": "",
         "latency_ms": None,
         "run_id": f"run_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
