@@ -16,7 +16,9 @@ Gọi độc lập để test:
 """
 
 import os
+import re
 import sys
+import unicodedata
 
 # ————————————————————————————————————————————————
 # Worker Contract (xem contracts/worker_contracts.yaml)
@@ -133,13 +135,10 @@ def retrieve_dense(query: str, top_k: int = DEFAULT_TOP_K) -> list:
                     })
                 return chunks
     except Exception as e:
-        print(f"⚠️  ChromaDB query failed: {e}")
+        print(f"⚠️  ChromaDB query failed: {e}", file=sys.stderr)
 
     # Fallback lexical retrieval on local docs so worker can still run independently
     # when ChromaDB has not been indexed yet.
-    import re
-    import unicodedata
-
     def normalize(text: str) -> str:
         normalized = unicodedata.normalize("NFKD", text)
         normalized = "".join(char for char in normalized if not unicodedata.combining(char))
@@ -212,6 +211,60 @@ def retrieve_dense(query: str, top_k: int = DEFAULT_TOP_K) -> list:
     return fallback_chunks[:top_k]
 
 
+def _extract_relevant_sentences(query: str, chunks: list, max_sentences: int = 3) -> list:
+    def normalize(text: str) -> str:
+        normalized = unicodedata.normalize("NFKD", text)
+        normalized = "".join(char for char in normalized if not unicodedata.combining(char))
+        return normalized.lower()
+
+    query_tokens = set(re.findall(r"[a-z0-9_]+", normalize(query)))
+    asks_for_timing = any(token in query_tokens for token in ["bao", "lau", "khi", "nao", "deadline"])
+    candidates = []
+
+    for chunk in chunks:
+        source = chunk.get("source", "unknown")
+        chunk_score = float(chunk.get("score", 0) or 0)
+        text = chunk.get("text", "")
+        sentences = re.split(r"(?<=[\.\?!])\s+|\n+", text)
+        for sentence in sentences:
+            sentence = sentence.strip(" -\t")
+            if len(sentence) < 20:
+                continue
+            sentence = re.sub(r"^\W+", "", sentence).strip()
+            sentence = re.sub(r"\s+", " ", sentence)
+            sentence_lower = sentence.lower()
+            if sentence_lower.startswith(("source:", "department:", "effective date:", "access:")):
+                continue
+            if any(marker in sentence_lower for marker in [" source:", " department:", " effective date:", " access:"]):
+                continue
+            if re.fullmatch(r"[A-Z0-9\s\-]+", sentence):
+                continue
+            normalized_sentence = normalize(sentence)
+            sentence_tokens = set(re.findall(r"[a-z0-9_]+", normalized_sentence))
+            overlap = len(query_tokens & sentence_tokens)
+            if asks_for_timing and re.search(r"\b\d+\s*(phut|gio|ngay|tuan)\b", normalized_sentence):
+                overlap += 2
+            if overlap == 0:
+                continue
+            if "===" in sentence or normalized_sentence.startswith(("phan ", "section ")):
+                continue
+            candidates.append((overlap, chunk_score, source, sentence))
+
+    candidates.sort(key=lambda item: (item[0], item[1], len(item[3])), reverse=True)
+
+    selected = []
+    seen = set()
+    for _, _, source, sentence in candidates:
+        key = (source, sentence)
+        if key in seen:
+            continue
+        seen.add(key)
+        selected.append({"text": sentence, "source": source, "score": 1.0})
+        if len(selected) >= max_sentences:
+            break
+    return selected
+
+
 def run(state: dict) -> dict:
     """
     Worker entry point — gọi từ graph.py.
@@ -223,7 +276,7 @@ def run(state: dict) -> dict:
         Updated AgentState với retrieved_chunks và retrieved_sources
     """
     task = state.get("task", "")
-    top_k = state.get("retrieval_top_k", DEFAULT_TOP_K)
+    top_k = state.get("top_k", state.get("retrieval_top_k", DEFAULT_TOP_K))
 
     state.setdefault("workers_called", [])
     state.setdefault("history", [])
@@ -240,6 +293,9 @@ def run(state: dict) -> dict:
 
     try:
         chunks = retrieve_dense(task, top_k=top_k)
+        focused_chunks = _extract_relevant_sentences(task, chunks, max_sentences=top_k)
+        if focused_chunks:
+            chunks = focused_chunks
 
         sources = list({c["source"] for c in chunks})
 
@@ -271,6 +327,12 @@ def run(state: dict) -> dict:
 # ————————————————————————————————————————————————
 
 if __name__ == "__main__":
+    try:
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+        sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
+
     print("=" * 50)
     print("Retrieval Worker — Standalone Test")
     print("=" * 50)

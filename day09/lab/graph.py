@@ -37,6 +37,8 @@ class AgentState(TypedDict, total=False):
     retrieved_sources: list
     policy_result: dict
     mcp_tools_used: list
+    mcp_tool_called: list
+    mcp_result: list
     final_answer: str
     sources: list
     confidence: float
@@ -68,6 +70,8 @@ def make_initial_state(task: str) -> AgentState:
         "retrieved_sources": [],
         "policy_result": {},
         "mcp_tools_used": [],
+        "mcp_tool_called": [],
+        "mcp_result": [],
         "final_answer": "",
         "sources": [],
         "confidence": 0.0,
@@ -174,6 +178,13 @@ def route_decision(state: AgentState) -> Literal["retrieval", "policy", "human"]
 
 
 def human_review_node(state: AgentState) -> AgentState:
+    """
+    HITL node: pause và chờ human approval.
+    Trong lab này, implement dưới dạng placeholder (in ra warning).
+
+    TODO Sprint 3 (optional): Implement actual HITL với interrupt_before hoặc
+    breakpoint nếu dùng LangGraph.
+    """
     state.setdefault("workers_called", [])
     state.setdefault("history", [])
     state["hitl_triggered"] = True

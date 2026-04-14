@@ -96,8 +96,8 @@ retrieval_worker:
     - "Score phải là float trong khoảng [0, 1]"
     - "Stateless: không đọc hoặc ghi state ngoài những gì được khai báo ở trên"
   actual_implementation:
-    status: "TODO Sprint 2"  # Update to "done" khi xong
-    notes: ""
+    status: "done"
+    notes: "Supports both top_k and retrieval_top_k in state; returns retrieved_chunks, retrieved_sources, and worker_io_logs."
 
 # ─────────────────────────────────────────────
 # Policy Tool Worker
@@ -166,8 +166,8 @@ policy_tool_worker:
     - "Phải ghi tên MCP tool đã gọi vào mcp_tools_used"
     - "Không được tự bịa policy rules không có trong tài liệu"
   actual_implementation:
-    status: "TODO Sprint 2"
-    notes: ""
+    status: "done"
+    notes: "Handles flash sale, digital product, activated product, temporal policy note, and records MCP calls plus retrieved_sources."
 
 # ─────────────────────────────────────────────
 # Synthesis Worker
@@ -214,8 +214,8 @@ synthesis_worker:
     - "confidence < 0.4 → khuyến khích set hitl_triggered=True"
     - "Không được dùng kiến thức ngoài context được cung cấp"
   actual_implementation:
-    status: "TODO Sprint 2"
-    notes: ""
+    status: "done"
+    notes: "Returns grounded final_answer with citations, abstains when evidence is missing, and sets hitl_triggered when confidence is low."
 
 # ─────────────────────────────────────────────
 # MCP Server
@@ -270,5 +270,5 @@ mcp_server:
     - "list_tools() phải trả về đúng format MCP tool schema"
     - "Không được raise exception ra ngoài dispatch_tool()"
   actual_implementation:
-    status: "TODO Sprint 3"
-    notes: ""
+    status: "done"
+    notes: "Implements a real FastMCP stdio server with MCP tools; the policy worker calls it through an MCP client and traces mcp_tool_called plus mcp_result."
