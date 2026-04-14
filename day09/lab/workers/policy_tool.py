@@ -34,6 +34,7 @@ WORKER_NAME = "policy_tool_worker"
 # ─────────────────────────────────────────────
 
 def _call_mcp_tool(tool_name: str, tool_input: dict, retry: int = 1) -> dict:
+def _call_mcp_tool(tool_name: str, tool_input: dict, retry: int = 1) -> dict:
     """
     Gọi MCP tool.
 
@@ -90,6 +91,9 @@ def analyze_policy(task: str, chunks: list) -> dict:
     Returns:
         dict with: policy_applies, policy_name, exceptions_found, source, rule, explanation
     """
+    from dotenv import load_dotenv
+    load_dotenv()
+
     from dotenv import load_dotenv
     load_dotenv()
 
@@ -167,6 +171,27 @@ def analyze_policy(task: str, chunks: list) -> dict:
         # Fallback: giữ rule-based explanation nếu LLM fail
         explanation += f" (LLM analysis skipped: {e})"
 
+    # TODO Sprint 2: Gọi LLM để phân tích phức tạp hơn
+    explanation = "Analyzed via rule-based policy check."
+    try:
+        from google import genai
+        from google.genai import types
+        client = genai.Client(api_key=os.getenv("GOOGLE_API_KEY"))
+        prompt = (
+            "Bạn là policy analyst. Dựa vào context, xác định policy áp dụng và các exceptions.\n\n"
+            f"Task: {task}\n\nContext:\n" + "\n".join([c.get('text', '') for c in chunks])
+        )
+        response = client.models.generate_content(
+            model="gemini-2.5-flash",
+            contents=prompt,
+        )
+        analysis = response.text
+        if analysis:
+            explanation = analysis
+    except Exception as e:
+        # Fallback: giữ rule-based explanation nếu LLM fail
+        explanation += f" (LLM analysis skipped: {e})"
+
     sources = list({c.get("source", "unknown") for c in chunks if c})
 
     return {
@@ -175,6 +200,7 @@ def analyze_policy(task: str, chunks: list) -> dict:
         "exceptions_found": exceptions_found,
         "source": sources,
         "policy_version_note": policy_version_note,
+        "explanation": explanation,
         "explanation": explanation,
     }
 

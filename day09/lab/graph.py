@@ -206,6 +206,11 @@ def human_review_node(state: AgentState) -> AgentState:
 
     return state
 
+def post_policy_route(state: AgentState) -> str:
+    """Quyết định bước tiếp theo sau khi Policy Tool chạy xong."""
+    if not state.get("retrieved_chunks"):
+        return "retrieval_worker"
+    return "synthesis_worker"
 
 # ─────────────────────────────────────────────
 # 5. Import Workers
@@ -284,22 +289,31 @@ def build_graph():
 # 7. Public API
 # ─────────────────────────────────────────────
 
-_graph = build_graph()
+# ─────────────────────────────────────────────
+# 7. Public API
+# ─────────────────────────────────────────────
 
+# Đổi tên biến cho chuẩn với LangGraph (tùy chọn)
+_app = build_graph()
 
 def run_graph(task: str) -> AgentState:
     """
     Entry point: nhận câu hỏi, trả về AgentState với full trace.
-
-    Args:
-        task: Câu hỏi từ user
-
-    Returns:
-        AgentState với final_answer, trace, routing info, v.v.
     """
-    state = make_initial_state(task)
-    result = _graph(state)
-    return result
+    import time
+    start = time.time()
+    
+    # Khởi tạo state ban đầu
+    initial_state = make_initial_state(task)
+    
+    # SỬA Ở ĐÂY: Dùng .invoke() thay vì gọi trực tiếp
+    final_state = _app.invoke(initial_state)
+    
+    # Cập nhật thời gian chạy
+    final_state["latency_ms"] = int((time.time() - start) * 1000)
+    final_state["history"].append(f"[graph] completed in {final_state['latency_ms']}ms")
+    
+    return final_state
 
 
 def save_trace(state: AgentState, output_dir: str = "./artifacts/traces") -> str:

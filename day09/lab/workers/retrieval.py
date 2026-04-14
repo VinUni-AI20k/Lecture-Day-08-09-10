@@ -22,6 +22,11 @@ from dotenv import load_dotenv
 
 # Đọc .env từ thư mục cha (day09/lab/) dù chạy từ đâu
 load_dotenv(dotenv_path=Path(__file__).resolve().parent.parent / ".env")
+from pathlib import Path
+from dotenv import load_dotenv
+
+# Đọc .env từ thư mục cha (day09/lab/) dù chạy từ đâu
+load_dotenv(dotenv_path=Path(__file__).resolve().parent.parent / ".env")
 
 # ─────────────────────────────────────────────
 # Worker Contract (xem contracts/worker_contracts.yaml)
@@ -86,16 +91,28 @@ def _get_collection():
     if not os.path.isabs(chroma_path):
         chroma_path = str(Path(__file__).resolve().parent.parent / chroma_path.lstrip("./"))
     collection_name = os.getenv("CHROMA_COLLECTION", "day09_docs")
+    # Resolve path từ env, fallback về thư mục cha của workers/ (day09/lab/)
+    chroma_path = os.getenv("CHROMA_DB_PATH", "./chroma_db")
+    if not os.path.isabs(chroma_path):
+        chroma_path = str(Path(__file__).resolve().parent.parent / chroma_path.lstrip("./"))
+    collection_name = os.getenv("CHROMA_COLLECTION", "day09_docs")
 
     client = chromadb.PersistentClient(path=chroma_path)
+    client = chromadb.PersistentClient(path=chroma_path)
     try:
+        collection = client.get_collection(collection_name)
         collection = client.get_collection(collection_name)
     except Exception:
         # Auto-create nếu chưa có
         collection = client.get_or_create_collection(
             collection_name,
+        # Auto-create nếu chưa có
+        collection = client.get_or_create_collection(
+            collection_name,
             metadata={"hnsw:space": "cosine"}
         )
+        print(f"⚠️  Collection '{collection_name}' chưa có data. Chạy index script trong README trước.")
+    return collection
         print(f"⚠️  Collection '{collection_name}' chưa có data. Chạy index script trong README trước.")
     return collection
 
