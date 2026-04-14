@@ -5,7 +5,8 @@
 .venv/
 # Grading questions — không public trước 17:00
 day08/lab/data/grading_questions.json
-.vscode/
+day09/lab/data/grading_questions.json
+day10/lab/data/grading_questions.json
 
 __pycache__/
 *.pyc
