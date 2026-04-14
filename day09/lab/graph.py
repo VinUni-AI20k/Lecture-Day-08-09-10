@@ -40,6 +40,8 @@ class AgentState(TypedDict):
     retrieved_sources: list             # Danh sách nguồn tài liệu
     policy_result: dict                 # Output từ policy_tool_worker
     mcp_tools_used: list                # Danh sách MCP tools đã gọi
+    mcp_tool_called: bool               # True nếu policy worker đã gọi MCP
+    mcp_result: list                    # Kết quả các MCP calls
 
     # Final output
     final_answer: str                   # Câu trả lời tổng hợp
@@ -66,6 +68,8 @@ def make_initial_state(task: str) -> AgentState:
         "retrieved_sources": [],
         "policy_result": {},
         "mcp_tools_used": [],
+        "mcp_tool_called": False,
+        "mcp_result": [],
         "final_answer": "",
         "sources": [],
         "confidence": 0.0,
@@ -136,7 +140,9 @@ def supervisor_node(state: AgentState) -> AgentState:
         needs_tool = True
         if any(kw in task for kw in emergency_keywords):
             risk_high = True
-            route_reason += " | có yếu tố emergency → cần HITL sau policy check"
+            route_reason += " | có yếu tố emergency → cần HITL sau policy check và có thể gọi MCP check_access_permission/get_ticket_info"
+        else:
+            route_reason += " | có thể cần MCP search_kb/get_ticket_info nếu context nội bộ chưa đủ"
 
     # Priority 3: IT support/SLA queries.
     elif any(kw in task for kw in it_support_keywords):
@@ -318,6 +324,11 @@ if __name__ == "__main__":
         "SLA xử lý ticket P1 là bao lâu?",
         "Khách hàng Flash Sale yêu cầu hoàn tiền vì sản phẩm lỗi — được không?",
         "Cần cấp quyền Level 3 để khắc phục P1 khẩn cấp. Quy trình là gì?",
+        "Tài khoản bị khóa sau bao nhiêu lần đăng nhập sai?",
+        "Khách hàng đặt đơn ngày 31/01/2026 và yêu cầu hoàn tiền ngày 07/02/2026. Sản phẩm lỗi nhà sản xuất, chưa kích hoạt, không phải Flash Sale. Được hoàn tiền không?",
+        "Ticket P1 không được phản hồi sau 10 phút. Hệ thống tự động làm gì?",
+        "Ticket P1 lúc 2am. Cần cấp Level 2 access tạm thời cho contractor để thực hiện emergency fix. Đồng thời cần notify stakeholders theo SLA. Nêu đủ cả hai quy trình.",
+        "Nhân viên vừa vào thử việc (trong probation period) muốn làm remote vì lý do cá nhân. Điều kiện là gì?",
     ]
 
     for query in test_queries:

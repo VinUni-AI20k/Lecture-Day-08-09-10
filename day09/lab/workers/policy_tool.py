@@ -200,6 +200,8 @@ def run(state: dict) -> dict:
     state.setdefault("workers_called", [])
     state.setdefault("history", [])
     state.setdefault("mcp_tools_used", [])
+    state.setdefault("mcp_result", [])
+    state.setdefault("mcp_tool_called", False)
 
     state["workers_called"].append(WORKER_NAME)
 
@@ -215,24 +217,48 @@ def run(state: dict) -> dict:
     }
 
     try:
-        # Step 1: Nếu chưa có chunks, gọi MCP search_kb
+        task_lower = task.lower()
+        is_ticket_task = any(kw in task_lower for kw in ["ticket", "p1", "jira", "escalation"])
+        is_access_task = any(kw in task_lower for kw in ["access", "cấp quyền", "cap quyen", "level 1", "level 2", "level 3", "level 4"])
+
+        # Step 1: Nếu chưa có chunks, gọi MCP search_kb để mở rộng evidence
         if not chunks and needs_tool:
             mcp_result = _call_mcp_tool("search_kb", {"query": task, "top_k": 3})
             state["mcp_tools_used"].append(mcp_result)
+            state["mcp_result"].append(mcp_result)
+            state["mcp_tool_called"] = True
             state["history"].append(f"[{WORKER_NAME}] called MCP search_kb")
 
             if mcp_result.get("output") and mcp_result["output"].get("chunks"):
                 chunks = mcp_result["output"]["chunks"]
                 state["retrieved_chunks"] = chunks
 
+        # Step 1b: Với access requests, gọi thêm access permission tool để lấy approvers.
+        if needs_tool and is_access_task:
+            access_level = 3 if "level 3" in task_lower else 2 if "level 2" in task_lower else 1
+            mcp_result = _call_mcp_tool(
+                "check_access_permission",
+                {
+                    "access_level": access_level,
+                    "requester_role": "contractor" if "contractor" in task_lower else "employee",
+                    "is_emergency": "emergency" in task_lower or "khẩn cấp" in task_lower,
+                },
+            )
+            state["mcp_tools_used"].append(mcp_result)
+            state["mcp_result"].append(mcp_result)
+            state["mcp_tool_called"] = True
+            state["history"].append(f"[{WORKER_NAME}] called MCP check_access_permission")
+
         # Step 2: Phân tích policy
         policy_result = analyze_policy(task, chunks)
         state["policy_result"] = policy_result
 
         # Step 3: Nếu cần thêm info từ MCP (e.g., ticket status), gọi get_ticket_info
-        if needs_tool and any(kw in task.lower() for kw in ["ticket", "p1", "jira"]):
+        if needs_tool and is_ticket_task:
             mcp_result = _call_mcp_tool("get_ticket_info", {"ticket_id": "P1-LATEST"})
             state["mcp_tools_used"].append(mcp_result)
+            state["mcp_result"].append(mcp_result)
+            state["mcp_tool_called"] = True
             state["history"].append(f"[{WORKER_NAME}] called MCP get_ticket_info")
 
         worker_io["output"] = {
