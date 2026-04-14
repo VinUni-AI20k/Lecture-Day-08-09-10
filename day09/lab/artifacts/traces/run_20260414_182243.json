@@ -1,0 +1,78 @@
+{
+  "task": "SLA xử lý ticket P1 là bao lâu?",
+  "route_reason": "Task hỏi về hệ thống IT/SLA → ưu tiên retrieval_worker để lấy evidence",
+  "risk_high": false,
+  "needs_tool": false,
+  "hitl_triggered": true,
+  "retrieved_chunks": [
+    {
+      "text": "Ticket system: Jira (project IT-SUPPORT)\nSlack channel: #incident-p1, #incident-p2\nPagerDuty: Tự động nhắn on-call khi P1 ticket mới\nHotline on-call: ext. 9999 (24/7)",
+      "source": "support/sla-p1-2026.pdf",
+      "score": 0.2433,
+      "metadata": {
+        "effective_date": "2026-01-15",
+        "source": "support/sla-p1-2026.pdf",
+        "access": "internal",
+        "department": "IT",
+        "section": "Phần 4: Công cụ và kênh liên lạc"
+      }
+    },
+    {
+      "text": "Ticket system: Jira (project IT-ACCESS)\nIAM system: Okta\nAudit log: Splunk\nEmail: it-access@company.internal",
+      "source": "it/access-control-sop.md",
+      "score": 0.2359,
+      "metadata": {
+        "department": "IT Security",
+        "source": "it/access-control-sop.md",
+        "access": "internal",
+        "section": "Section 7: Công cụ liên quan",
+        "effective_date": "2026-01-01"
+      }
+    },
+    {
+      "text": "Bước 1: Khách hàng gửi yêu cầu qua hệ thống ticket nội bộ với category \"Refund Request\".\nBước 2: CS Agent xem xét trong vòng 1 ngày làm việc và xác nhận điều kiện đủ điều kiện.\nBước 3: Nếu đủ điều kiện, chuyển yêu cầu sang Finance Team để xử lý hoàn tiền.\nBước 4: Finance Team xử lý trong 3-5 ngày làm việc và thông báo kết quả cho khách hàng.",
+      "source": "policy/refund-v4.pdf",
+      "score": 0.1827,
+      "metadata": {
+        "department": "CS",
+        "source": "policy/refund-v4.pdf",
+        "effective_date": "2026-02-01",
+        "section": "Điều 4: Quy trình xử lý yêu cầu hoàn tiền",
+        "access": "internal"
+      }
+    }
+  ],
+  "retrieved_sources": [
+    "it/access-control-sop.md",
+    "policy/refund-v4.pdf",
+    "support/sla-p1-2026.pdf"
+  ],
+  "policy_result": {},
+  "mcp_tools_used": [],
+  "mcp_tool_called": false,
+  "mcp_result": [],
+  "final_answer": "Thông tin trong tài liệu nội bộ:\n- Ticket system: Jira (project IT-SUPPORT) Slack channel: #incident-p1, #incident-p2 PagerDuty: Tự động nhắn on-call khi P1 ticket mới Hotline on-call: ext. 9999 (24/7) [support/sla-p1-2026.pdf]\n- Ticket system: Jira (project IT-ACCESS) IAM system: Okta Audit log: Splunk Email: it-access@company.internal [it/access-control-sop.md]",
+  "sources": [
+    "it/access-control-sop.md",
+    "policy/refund-v4.pdf",
+    "support/sla-p1-2026.pdf"
+  ],
+  "confidence": 0.22,
+  "history": [
+    "[supervisor] received task: SLA xử lý ticket P1 là bao lâu?",
+    "[supervisor] route=retrieval_worker reason=Task hỏi về hệ thống IT/SLA → ưu tiên retrieval_worker để lấy evidence",
+    "[retrieval_worker] retrieved 3 chunks from ['it/access-control-sop.md', 'policy/refund-v4.pdf', 'support/sla-p1-2026.pdf']",
+    "[synthesis_worker] answer generated, confidence=0.22, sources=['it/access-control-sop.md', 'policy/refund-v4.pdf', 'support/sla-p1-2026.pdf']",
+    "[synthesis_worker] low confidence detected → hitl_triggered=True",
+    "[graph] completed in 22268ms"
+  ],
+  "workers_called": [
+    "retrieval_worker",
+    "synthesis_worker"
+  ],
+  "supervisor_route": "retrieval_worker",
+  "latency_ms": 22268,
+  "run_id": "run_20260414_182243",
+  "timestamp": "2026-04-14T18:23:05.323734",
+  "question_id": "q01"
+}

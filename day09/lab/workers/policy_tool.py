@@ -33,7 +33,6 @@ WORKER_NAME = "policy_tool_worker"
 # MCP Client — Sprint 3: Thay bằng real MCP call
 # ─────────────────────────────────────────────
 
-
 def _call_mcp_tool(tool_name: str, tool_input: dict, retry: int = 1) -> dict:
     """
     Gọi MCP tool.
@@ -43,6 +42,7 @@ def _call_mcp_tool(tool_name: str, tool_input: dict, retry: int = 1) -> dict:
     Hiện tại: Import trực tiếp từ mcp_server.py (trong-process mock).
     """
     from datetime import datetime
+
     last_error = None
     for attempt in range(retry + 1):
         try:
@@ -52,12 +52,12 @@ def _call_mcp_tool(tool_name: str, tool_input: dict, retry: int = 1) -> dict:
             result = dispatch_tool(tool_name, tool_input)
 
             return {
-            "tool": tool_name,
-            "input": tool_input,
-            "output": result,
-            "error": None,
-            "timestamp": datetime.now().isoformat(),
-        }
+                "tool": tool_name,
+                "input": tool_input,
+                "output": result,
+                "error": None,
+                "timestamp": datetime.now().isoformat(),
+            }
         except Exception as e:
             last_error = e
             if attempt < retry:
@@ -76,6 +76,7 @@ def _call_mcp_tool(tool_name: str, tool_input: dict, retry: int = 1) -> dict:
 # Policy Analysis Logic
 # ─────────────────────────────────────────────
 
+
 def analyze_policy(task: str, chunks: list) -> dict:
     """
     Phân tích policy dựa trên context chunks.
@@ -92,9 +93,7 @@ def analyze_policy(task: str, chunks: list) -> dict:
         dict with: policy_applies, policy_name, exceptions_found, source, rule, explanation
     """
     from dotenv import load_dotenv
-    load_dotenv()
 
-    from dotenv import load_dotenv
     load_dotenv()
 
     task_lower = task.lower()
@@ -105,27 +104,36 @@ def analyze_policy(task: str, chunks: list) -> dict:
 
     # Exception 1: Flash Sale
     if "flash sale" in task_lower or "flash sale" in context_text:
-        exceptions_found.append({
-            "type": "flash_sale_exception",
-            "rule": "Đơn hàng Flash Sale không được hoàn tiền (Điều 3, chính sách v4).",
-            "source": "policy_refund_v4.txt",
-        })
+        exceptions_found.append(
+            {
+                "type": "flash_sale_exception",
+                "rule": "Đơn hàng Flash Sale không được hoàn tiền (Điều 3, chính sách v4).",
+                "source": "policy_refund_v4.txt",
+            }
+        )
 
     # Exception 2: Digital product
-    if any(kw in task_lower for kw in ["license key", "license", "subscription", "kỹ thuật số"]):
-        exceptions_found.append({
-            "type": "digital_product_exception",
-            "rule": "Sản phẩm kỹ thuật số (license key, subscription) không được hoàn tiền (Điều 3).",
-            "source": "policy_refund_v4.txt",
-        })
+    if any(
+        kw in task_lower
+        for kw in ["license key", "license", "subscription", "kỹ thuật số"]
+    ):
+        exceptions_found.append(
+            {
+                "type": "digital_product_exception",
+                "rule": "Sản phẩm kỹ thuật số (license key, subscription) không được hoàn tiền (Điều 3).",
+                "source": "policy_refund_v4.txt",
+            }
+        )
 
     # Exception 3: Activated product
     if any(kw in task_lower for kw in ["đã kích hoạt", "đã đăng ký", "đã sử dụng"]):
-        exceptions_found.append({
-            "type": "activated_exception",
-            "rule": "Sản phẩm đã kích hoạt hoặc đăng ký tài khoản không được hoàn tiền (Điều 3).",
-            "source": "policy_refund_v4.txt",
-        })
+        exceptions_found.append(
+            {
+                "type": "activated_exception",
+                "rule": "Sản phẩm đã kích hoạt hoặc đăng ký tài khoản không được hoàn tiền (Điều 3).",
+                "source": "policy_refund_v4.txt",
+            }
+        )
 
     # Determine policy_applies
     policy_applies = len(exceptions_found) == 0
@@ -137,60 +145,28 @@ def analyze_policy(task: str, chunks: list) -> dict:
     if "31/01" in task_lower or "30/01" in task_lower or "trước 01/02" in task_lower:
         policy_version_note = "Đơn hàng đặt trước 01/02/2026 áp dụng chính sách v3 (không có trong tài liệu hiện tại)."
 
-    # TODO Sprint 2: Gọi LLM để phân tích phức tạp hơn
-    # Ví dụ:
-    # from openai import OpenAI
-    # client = OpenAI()
-    # response = client.chat.completions.create(
-    #     model="gpt-4o-mini",
-    #     messages=[
-    #         {"role": "system", "content": "Bạn là policy analyst. Dựa vào context, xác định policy áp dụng và các exceptions."},
-    #         {"role": "user", "content": f"Task: {task}\n\nContext:\n" + "\n".join([c['text'] for c in chunks])}
-    #     ]
-    # )
-    # analysis = response.choices[0].message.content
-
-    # TODO Sprint 2: Gọi LLM để phân tích phức tạp hơn
+    # Optional: LLM-based explanation (Gemini)
     explanation = "Analyzed via rule-based policy check."
-    try:
-        from google import genai
-        from google.genai import types
-        client = genai.Client(api_key=os.getenv("GOOGLE_API_KEY"))
-        prompt = (
-            "Bạn là policy analyst. Dựa vào context, xác định policy áp dụng và các exceptions.\n\n"
-            f"Task: {task}\n\nContext:\n" + "\n".join([c.get('text', '') for c in chunks])
-        )
-        response = client.models.generate_content(
-            model="gemini-2.5-flash",
-            contents=prompt,
-        )
-        analysis = response.text
-        if analysis:
-            explanation = analysis
-    except Exception as e:
-        # Fallback: giữ rule-based explanation nếu LLM fail
-        explanation += f" (LLM analysis skipped: {e})"
+    gemini_key = os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY")
+    if gemini_key:
+        try:
+            from google import genai
 
-    # TODO Sprint 2: Gọi LLM để phân tích phức tạp hơn
-    explanation = "Analyzed via rule-based policy check."
-    try:
-        from google import genai
-        from google.genai import types
-        client = genai.Client(api_key=os.getenv("GOOGLE_API_KEY"))
-        prompt = (
-            "Bạn là policy analyst. Dựa vào context, xác định policy áp dụng và các exceptions.\n\n"
-            f"Task: {task}\n\nContext:\n" + "\n".join([c.get('text', '') for c in chunks])
-        )
-        response = client.models.generate_content(
-            model="gemini-2.5-flash",
-            contents=prompt,
-        )
-        analysis = response.text
-        if analysis:
-            explanation = analysis
-    except Exception as e:
-        # Fallback: giữ rule-based explanation nếu LLM fail
-        explanation += f" (LLM analysis skipped: {e})"
+            client = genai.Client(api_key=gemini_key)
+            prompt = (
+                "Bạn là policy analyst. Dựa vào context, xác định policy áp dụng và các exceptions.\n\n"
+                f"Task: {task}\n\nContext:\n"
+                + "\n".join([c.get("text", "") for c in chunks])
+            )
+            response = client.models.generate_content(
+                model="gemini-2.5-flash",
+                contents=prompt,
+            )
+            analysis = response.text
+            if analysis:
+                explanation = analysis
+        except Exception as e:
+            explanation += f" (LLM analysis skipped: {e})"
 
     sources = list({c.get("source", "unknown") for c in chunks if c})
 
@@ -201,13 +177,13 @@ def analyze_policy(task: str, chunks: list) -> dict:
         "source": sources,
         "policy_version_note": policy_version_note,
         "explanation": explanation,
-        "explanation": explanation,
     }
 
 
 # ─────────────────────────────────────────────
 # Worker Entry Point
 # ─────────────────────────────────────────────
+
 
 def run(state: dict) -> dict:
     """
@@ -244,8 +220,21 @@ def run(state: dict) -> dict:
 
     try:
         task_lower = task.lower()
-        is_ticket_task = any(kw in task_lower for kw in ["ticket", "p1", "jira", "escalation"])
-        is_access_task = any(kw in task_lower for kw in ["access", "cấp quyền", "cap quyen", "level 1", "level 2", "level 3", "level 4"])
+        is_ticket_task = any(
+            kw in task_lower for kw in ["ticket", "p1", "jira", "escalation"]
+        )
+        is_access_task = any(
+            kw in task_lower
+            for kw in [
+                "access",
+                "cấp quyền",
+                "cap quyen",
+                "level 1",
+                "level 2",
+                "level 3",
+                "level 4",
+            ]
+        )
 
         # Step 1: Nếu chưa có chunks, gọi MCP search_kb để mở rộng evidence
         if not chunks and needs_tool:
@@ -261,19 +250,26 @@ def run(state: dict) -> dict:
 
         # Step 1b: Với access requests, gọi thêm access permission tool để lấy approvers.
         if needs_tool and is_access_task:
-            access_level = 3 if "level 3" in task_lower else 2 if "level 2" in task_lower else 1
+            access_level = (
+                3 if "level 3" in task_lower else 2 if "level 2" in task_lower else 1
+            )
             mcp_result = _call_mcp_tool(
                 "check_access_permission",
                 {
                     "access_level": access_level,
-                    "requester_role": "contractor" if "contractor" in task_lower else "employee",
-                    "is_emergency": "emergency" in task_lower or "khẩn cấp" in task_lower,
+                    "requester_role": (
+                        "contractor" if "contractor" in task_lower else "employee"
+                    ),
+                    "is_emergency": "emergency" in task_lower
+                    or "khẩn cấp" in task_lower,
                 },
             )
             state["mcp_tools_used"].append(mcp_result)
             state["mcp_result"].append(mcp_result)
             state["mcp_tool_called"] = True
-            state["history"].append(f"[{WORKER_NAME}] called MCP check_access_permission")
+            state["history"].append(
+                f"[{WORKER_NAME}] called MCP check_access_permission"
+            )
 
         # Step 2: Phân tích policy
         policy_result = analyze_policy(task, chunks)
@@ -319,19 +315,31 @@ if __name__ == "__main__":
         {
             "task": "Khách hàng Flash Sale yêu cầu hoàn tiền vì sản phẩm lỗi — được không?",
             "retrieved_chunks": [
-                {"text": "Ngoại lệ: Đơn hàng Flash Sale không được hoàn tiền.", "source": "policy_refund_v4.txt", "score": 0.9}
+                {
+                    "text": "Ngoại lệ: Đơn hàng Flash Sale không được hoàn tiền.",
+                    "source": "policy_refund_v4.txt",
+                    "score": 0.9,
+                }
             ],
         },
         {
             "task": "Khách hàng muốn hoàn tiền license key đã kích hoạt.",
             "retrieved_chunks": [
-                {"text": "Sản phẩm kỹ thuật số (license key, subscription) không được hoàn tiền.", "source": "policy_refund_v4.txt", "score": 0.88}
+                {
+                    "text": "Sản phẩm kỹ thuật số (license key, subscription) không được hoàn tiền.",
+                    "source": "policy_refund_v4.txt",
+                    "score": 0.88,
+                }
             ],
         },
         {
             "task": "Khách hàng yêu cầu hoàn tiền trong 5 ngày, sản phẩm lỗi, chưa kích hoạt.",
             "retrieved_chunks": [
-                {"text": "Yêu cầu trong 7 ngày làm việc, sản phẩm lỗi nhà sản xuất, chưa dùng.", "source": "policy_refund_v4.txt", "score": 0.85}
+                {
+                    "text": "Yêu cầu trong 7 ngày làm việc, sản phẩm lỗi nhà sản xuất, chưa dùng.",
+                    "source": "policy_refund_v4.txt",
+                    "score": 0.85,
+                }
             ],
         },
     ]
