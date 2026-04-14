@@ -129,85 +129,6 @@ TOOL_SCHEMAS = {
 }
 
 
-# ─────────────────────────────────────────────
-# Tool Implementations
-# ─────────────────────────────────────────────
-
-def tool_search_kb(query: str, top_k: int = 3) -> dict:
-    """
-    Tìm kiếm Knowledge Base bằng semantic search.
-
-    TODO Sprint 3: Kết nối với ChromaDB thực.
-    Hiện tại: Delegate sang retrieval worker.
-    """
-    try:
-        # Tái dùng retrieval logic từ workers/retrieval.py
-        import sys
-        sys.path.insert(0, os.path.dirname(__file__))
-        from workers.retrieval import retrieve_dense
-        chunks = retrieve_dense(query, top_k=top_k)
-        sources = list({c["source"] for c in chunks})
-        return {
-            "chunks": chunks,
-            "sources": sources,
-            "total_found": len(chunks),
-        }
-    except Exception as e:
-        # Fallback: return mock data nếu ChromaDB chưa setup
-        return {
-            "chunks": [
-                {
-                    "text": f"[MOCK] Không thể query ChromaDB: {e}. Kết quả giả lập.",
-                    "source": "mock_data",
-                    "score": 0.5,
-                }
-            ],
-            "sources": ["mock_data"],
-            "total_found": 1,
-        }
-
-
-# Mock ticket database
-MOCK_TICKETS = {
-    "P1-LATEST": {
-        "ticket_id": "IT-9847",
-        "priority": "P1",
-        "title": "API Gateway down — toàn bộ người dùng không đăng nhập được",
-        "status": "in_progress",
-        "assignee": "nguyen.van.a@company.internal",
-        "created_at": "2026-04-13T22:47:00",
-        "sla_deadline": "2026-04-14T02:47:00",
-        "escalated": True,
-        "escalated_to": "senior_engineer_team",
-        "notifications_sent": ["slack:#incident-p1", "email:incident@company.internal", "pagerduty:oncall"],
-    },
-    "IT-1234": {
-        "ticket_id": "IT-1234",
-        "priority": "P2",
-        "title": "Feature login chậm cho một số user",
-        "status": "open",
-        "assignee": None,
-        "created_at": "2026-04-13T09:15:00",
-        "sla_deadline": "2026-04-14T09:15:00",
-        "escalated": False,
-    },
-}
-
-
-def tool_get_ticket_info(ticket_id: str) -> dict:
-    """
-    Tra cứu thông tin ticket (mock data).
-    """
-    ticket = MOCK_TICKETS.get(ticket_id.upper())
-    if ticket:
-        return ticket
-    # Không tìm thấy
-    return {
-        "error": f"Ticket '{ticket_id}' không tìm thấy trong hệ thống.",
-        "available_mock_ids": list(MOCK_TICKETS.keys()),
-    }
-
-
 # Mock access control rules
 ACCESS_RULES = {
     1: {
@@ -218,114 +139,194 @@ ACCESS_RULES = {
     2: {
         "required_approvers": ["Line Manager", "IT Admin"],
         "emergency_can_bypass": True,
-        "emergency_bypass_note": "Level 2 có thể cấp tạm thời với approval đồng thời của Line Manager và IT Admin on-call.",
+        "emergency_bypass_note": "Level 2 can be granted temporarily with approval from Line Manager and IT Admin on-call.",
         "note": "Elevated access",
     },
     3: {
         "required_approvers": ["Line Manager", "IT Admin", "IT Security"],
         "emergency_can_bypass": False,
-        "note": "Admin access — không có emergency bypass",
+        "note": "Admin access — no emergency bypass",
     },
 }
 
 
-def tool_check_access_permission(access_level: int, requester_role: str, is_emergency: bool = False) -> dict:
-    """
-    Kiểm tra điều kiện cấp quyền theo Access Control SOP.
-    """
-    rule = ACCESS_RULES.get(access_level)
-    if not rule:
-        return {"error": f"Access level {access_level} không hợp lệ. Levels: 1, 2, 3."}
+# ─────────────────────────────────────────────
+# MCP Server Implementation
+# ─────────────────────────────────────────────
 
-    can_grant = True
-    notes = []
+class MCPServer:
+    """
+    Mock MCP Server providing internal tools for the AI Agent.
+    Following the Model Context Protocol (MCP) design patterns.
+    """
 
-    if is_emergency and rule.get("emergency_can_bypass"):
-        notes.append(rule.get("emergency_bypass_note", ""))
+    def __init__(self):
+        self.tool_schemas = TOOL_SCHEMAS
+        self.tickets = {
+            "P1-LATEST": {
+                "ticket_id": "IT-9847",
+                "priority": "P1",
+                "title": "API Gateway down — toàn bộ người dùng không đăng nhập được",
+                "status": "in_progress",
+                "assignee": "nguyen.van.a@company.internal",
+                "created_at": "2026-04-13T22:47:00",
+                "sla_deadline": "2026-04-14T02:47:00",
+                "escalated": True,
+                "escalated_to": "senior_engineer_team",
+                "notifications_sent": ["slack:#incident-p1", "email:incident@company.internal", "pagerduty:oncall"],
+            },
+            "IT-1234": {
+                "ticket_id": "IT-1234",
+                "priority": "P2",
+                "title": "Feature login chậm cho một số user",
+                "status": "open",
+                "assignee": "tran.thi.b@company.internal",
+                "created_at": "2026-04-13T09:15:00",
+                "sla_deadline": "2026-04-14T09:15:00",
+                "escalated": False,
+            },
+            "IT-5678": {
+                "ticket_id": "IT-5678",
+                "priority": "P3",
+                "title": "Cần cập nhật plugin Slack cho Jira",
+                "status": "resolved",
+                "assignee": "le.van.c@company.internal",
+                "created_at": "2026-04-10T14:20:00",
+                "sla_deadline": "2026-04-12T14:20:00",
+                "escalated": False,
+            },
+        }
+        self.access_rules = ACCESS_RULES
+
+    def search_kb(self, query: str, top_k: int = 3) -> dict:
+        """
+        Search Knowledge Base using ChromaDB (via retrieval worker).
+        """
+        try:
+            # Reusing retrieval logic from workers/retrieval.py for consistency
+            import sys
+            sys.path.insert(0, os.path.dirname(__file__))
+            from workers.retrieval import retrieve_dense
+            
+            chunks = retrieve_dense(query, top_k=top_k)
+            sources = list({c["source"] for c in chunks})
+            
+            return {
+                "chunks": chunks,
+                "sources": sources,
+                "total_found": len(chunks),
+                "timestamp": datetime.now().isoformat()
+            }
+        except Exception as e:
+            return {
+                "error": f"Failed to query Knowledge Base: {str(e)}",
+                "chunks": [],
+                "sources": [],
+                "total_found": 0
+            }
+
+    def get_ticket_info(self, ticket_id: str) -> dict:
+        """
+        Lookup ticket information from mock database.
+        """
+        ticket_id = ticket_id.upper()
+        # Handle special keyword if agent looks for the most critical one
+        if ticket_id in ["P1", "LATEST-P1", "URGENT"]:
+            ticket_id = "P1-LATEST"
+            
+        ticket = self.tickets.get(ticket_id)
+        if ticket:
+            return {
+                **ticket,
+                "queried_at": datetime.now().isoformat(),
+                "status_code": 200
+            }
+        
+        return {
+            "error": f"Ticket '{ticket_id}' not found.",
+            "available_ids": list(self.tickets.keys()),
+            "status_code": 404
+        }
+
+    def check_access_permission(self, access_level: int, requester_role: str, is_emergency: bool = False) -> dict:
+        """
+        Check access permission conditions based on Access Control SOP.
+        """
+        rule = self.access_rules.get(access_level)
+        if not rule:
+            return {"error": f"Invalid access level {access_level}. Valids: 1, 2, 3."}
+
         can_grant = True
-    elif is_emergency and not rule.get("emergency_can_bypass"):
-        notes.append(f"Level {access_level} KHÔNG có emergency bypass. Phải follow quy trình chuẩn.")
+        notes = []
 
-    return {
-        "access_level": access_level,
-        "can_grant": can_grant,
-        "required_approvers": rule["required_approvers"],
-        "approver_count": len(rule["required_approvers"]),
-        "emergency_override": is_emergency and rule.get("emergency_can_bypass", False),
-        "notes": notes,
-        "source": "access_control_sop.txt",
-    }
+        if is_emergency and rule.get("emergency_can_bypass"):
+            notes.append(rule.get("emergency_bypass_note", "Emergency bypass granted."))
+            can_grant = True
+        elif is_emergency and not rule.get("emergency_can_bypass"):
+            notes.append(f"Level {access_level} does NOT allow emergency bypass. Standard process required.")
+            can_grant = False if access_level == 3 else True # Simplify: Level 3 is strict
 
+        return {
+            "access_level": access_level,
+            "can_grant": can_grant,
+            "required_approvers": rule["required_approvers"],
+            "emergency_override": is_emergency and rule.get("emergency_can_bypass", False),
+            "notes": notes,
+            "source": "access_control_sop.txt",
+        }
 
-def tool_create_ticket(priority: str, title: str, description: str = "") -> dict:
-    """
-    Tạo ticket mới (MOCK — in log, không tạo thật).
-    """
-    mock_id = f"IT-{9900 + hash(title) % 99}"
-    ticket = {
-        "ticket_id": mock_id,
-        "priority": priority,
-        "title": title,
-        "description": description[:200],
-        "status": "open",
-        "created_at": datetime.now().isoformat(),
-        "url": f"https://jira.company.internal/browse/{mock_id}",
-        "note": "MOCK ticket — không tồn tại trong hệ thống thật",
-    }
-    print(f"  [MCP create_ticket] MOCK: {mock_id} | {priority} | {title[:50]}")
-    return ticket
+    def create_ticket(self, priority: str, title: str, description: str = "") -> dict:
+        """
+        Create a new ticket (MOCK).
+        """
+        mock_id = f"IT-{1000 + hash(title) % 8999}"
+        ticket = {
+            "ticket_id": mock_id,
+            "priority": priority,
+            "title": title,
+            "description": description[:500],
+            "status": "open",
+            "created_at": datetime.now().isoformat(),
+            "url": f"https://jira.company.internal/browse/{mock_id}",
+            "note": "MOCK ticket created in system.",
+        }
+        return ticket
+
+    def list_tools(self) -> list:
+        return list(self.tool_schemas.values())
+
+    def dispatch(self, tool_name: str, tool_input: dict) -> dict:
+        """
+        MCP Dispatcher: receives tool name and input, returns output.
+        """
+        # Map tool names to methods
+        tool_map = {
+            "search_kb": self.search_kb,
+            "get_ticket_info": self.get_ticket_info,
+            "check_access_permission": self.check_access_permission,
+            "create_ticket": self.create_ticket,
+        }
+
+        if tool_name not in tool_map:
+            return {"error": f"Tool '{tool_name}' not found."}
+
+        try:
+            return tool_map[tool_name](**tool_input)
+        except Exception as e:
+            return {"error": f"Execution error: {str(e)}"}
 
 
 # ─────────────────────────────────────────────
-# Dispatch Layer — MCP server interface
+# Global Instance for simple import
 # ─────────────────────────────────────────────
 
-TOOL_REGISTRY = {
-    "search_kb": tool_search_kb,
-    "get_ticket_info": tool_get_ticket_info,
-    "check_access_permission": tool_check_access_permission,
-    "create_ticket": tool_create_ticket,
-}
+_server = MCPServer()
 
+def list_tools():
+    return _server.list_tools()
 
-def list_tools() -> list:
-    """
-    MCP discovery: trả về danh sách tools có sẵn.
-    Tương đương với `tools/list` trong MCP protocol.
-    """
-    return list(TOOL_SCHEMAS.values())
-
-
-def dispatch_tool(tool_name: str, tool_input: dict) -> dict:
-    """
-    MCP execution: nhận tool_name và input, gọi tool tương ứng.
-    Tương đương với `tools/call` trong MCP protocol.
-
-    Args:
-        tool_name: tên tool (phải có trong TOOL_REGISTRY)
-        tool_input: input dict (phải match với tool's inputSchema)
-
-    Returns:
-        Tool output dict, hoặc error dict nếu thất bại
-    """
-    if tool_name not in TOOL_REGISTRY:
-        return {
-            "error": f"Tool '{tool_name}' không tồn tại. Available: {list(TOOL_REGISTRY.keys())}"
-        }
-
-    tool_fn = TOOL_REGISTRY[tool_name]
-    try:
-        result = tool_fn(**tool_input)
-        return result
-    except TypeError as e:
-        return {
-            "error": f"Invalid input for tool '{tool_name}': {e}",
-            "schema": TOOL_SCHEMAS[tool_name]["inputSchema"],
-        }
-    except Exception as e:
-        return {
-            "error": f"Tool '{tool_name}' execution failed: {e}",
-        }
+def dispatch_tool(tool_name: str, tool_input: dict):
+    return _server.dispatch(tool_name, tool_input)
 
 
 # ─────────────────────────────────────────────
@@ -333,47 +334,47 @@ def dispatch_tool(tool_name: str, tool_input: dict) -> dict:
 # ─────────────────────────────────────────────
 
 if __name__ == "__main__":
-    print("=" * 60)
-    print("MCP Server — Tool Discovery & Test")
-    print("=" * 60)
+    import time
+    
+    print("\n" + "="*60)
+    print("🚀  MOCK MCP SERVER — STANDALONE TEST")
+    print("="*60)
 
     # 1. Discover tools
-    print("\n📋 Available Tools:")
-    for tool in list_tools():
-        print(f"  • {tool['name']}: {tool['description'][:60]}...")
+    print("\n[Discovery] Listing available tools...")
+    tools = list_tools()
+    for t in tools:
+        print(f"  📦 {t['name']:<24} | {t['description'][:60]}...")
 
     # 2. Test search_kb
-    print("\n🔍 Test: search_kb")
-    result = dispatch_tool("search_kb", {"query": "SLA P1 resolution time", "top_k": 2})
-    if result.get("chunks"):
-        for c in result["chunks"]:
-            print(f"  [{c.get('score', '?')}] {c.get('source')}: {c.get('text', '')[:70]}...")
+    print("\n[Tool Call] search_kb: 'SLA P1'...")
+    res = dispatch_tool("search_kb", {"query": "SLA P1 resolution time", "top_k": 2})
+    if "error" in res:
+        print(f"  ❌ Error: {res['error']}")
     else:
-        print(f"  Result: {result}")
+        print(f"  ✅ Found {res['total_found']} chunks.")
+        for i, c in enumerate(res['chunks']):
+            print(f"     [{i+1}] {c.get('source')}: {c.get('text', '')[:80]}...")
 
     # 3. Test get_ticket_info
-    print("\n🎫 Test: get_ticket_info")
+    print("\n[Tool Call] get_ticket_info: 'P1-LATEST'...")
     ticket = dispatch_tool("get_ticket_info", {"ticket_id": "P1-LATEST"})
-    print(f"  Ticket: {ticket.get('ticket_id')} | {ticket.get('priority')} | {ticket.get('status')}")
-    if ticket.get("notifications_sent"):
-        print(f"  Notifications: {ticket['notifications_sent']}")
+    if "error" in ticket:
+        print(f"  ❌ Error: {ticket['error']}")
+    else:
+        print(f"  🎫 Ticket {ticket['ticket_id']} ({ticket['priority']}) - Status: {ticket['status']}")
+        print(f"     Assignee: {ticket['assignee']}")
 
     # 4. Test check_access_permission
-    print("\n🔐 Test: check_access_permission (Level 3, emergency)")
+    print("\n[Tool Call] check_access_permission: Level 3, Emergency...")
     perm = dispatch_tool("check_access_permission", {
-        "access_level": 3,
-        "requester_role": "contractor",
-        "is_emergency": True,
+        "access_level": 3, 
+        "requester_role": "contractor", 
+        "is_emergency": True
     })
-    print(f"  can_grant: {perm.get('can_grant')}")
-    print(f"  required_approvers: {perm.get('required_approvers')}")
-    print(f"  emergency_override: {perm.get('emergency_override')}")
-    print(f"  notes: {perm.get('notes')}")
+    print(f"  🔐 Grant: {perm.get('can_grant')} | Approvers: {perm.get('required_approvers')}")
+    print(f"     Notes: {perm.get('notes')}")
 
-    # 5. Test invalid tool
-    print("\n❌ Test: invalid tool")
-    err = dispatch_tool("nonexistent_tool", {})
-    print(f"  Error: {err.get('error')}")
-
-    print("\n✅ MCP server test done.")
-    print("\nTODO Sprint 3: Implement HTTP server nếu muốn bonus +2.")
+    print("\n" + "="*60)
+    print("✅  MCP SERVER TEST FINISHED")
+    print("="*60 + "\n")
