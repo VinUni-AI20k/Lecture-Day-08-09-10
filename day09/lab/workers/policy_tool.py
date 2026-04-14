@@ -29,31 +29,27 @@ WORKER_NAME = "policy_tool_worker"
 
 def _call_mcp_tool(tool_name: str, tool_input: dict) -> dict:
     """
-    Gọi MCP tool.
-
-    Sprint 3 TODO: Implement bằng cách import mcp_server hoặc gọi HTTP.
-
-    Hiện tại: Import trực tiếp từ mcp_server.py (trong-process mock).
+    Gọi MCP tool và trả về định dạng khớp với tiêu chí SCORING.md.
     """
     from datetime import datetime
-
     try:
-        # TODO Sprint 3: Thay bằng real MCP client nếu dùng HTTP server
         from mcp_server import dispatch_tool
         result = dispatch_tool(tool_name, tool_input)
+        
+        # Format bắt buộc theo SCORING.md: mcp_tool_called và mcp_result
         return {
-            "tool": tool_name,
+            "mcp_tool_called": tool_name,
+            "mcp_result": result,
             "input": tool_input,
-            "output": result,
-            "error": None,
+            "status": "success" if "error" not in result else "failed",
             "timestamp": datetime.now().isoformat(),
         }
     except Exception as e:
         return {
-            "tool": tool_name,
-            "input": tool_input,
-            "output": None,
-            "error": {"code": "MCP_CALL_FAILED", "reason": str(e)},
+            "mcp_tool_called": tool_name,
+            "mcp_result": None,
+            "error": str(e),
+            "status": "error",
             "timestamp": datetime.now().isoformat(),
         }
 
@@ -178,14 +174,14 @@ def run(state: dict) -> dict:
     }
 
     try:
-        # Step 1: Nếu chưa có chunks, gọi MCP search_kb
+        # Step 1: Nếu chưa có chunks và supervisor yêu cầu tool, gọi MCP search_kb
         if not chunks and needs_tool:
-            mcp_result = _call_mcp_tool("search_kb", {"query": task, "top_k": 3})
-            state["mcp_tools_used"].append(mcp_result)
+            mcp_call = _call_mcp_tool("search_kb", {"query": task, "top_k": 3})
+            state["mcp_tools_used"].append(mcp_call)
             state["history"].append(f"[{WORKER_NAME}] called MCP search_kb")
 
-            if mcp_result.get("output") and mcp_result["output"].get("chunks"):
-                chunks = mcp_result["output"]["chunks"]
+            if mcp_call.get("mcp_result") and "chunks" in mcp_call["mcp_result"]:
+                chunks = mcp_call["mcp_result"]["chunks"]
                 state["retrieved_chunks"] = chunks
 
         # Step 2: Phân tích policy
@@ -193,10 +189,20 @@ def run(state: dict) -> dict:
         state["policy_result"] = policy_result
 
         # Step 3: Nếu cần thêm info từ MCP (e.g., ticket status), gọi get_ticket_info
-        if needs_tool and any(kw in task.lower() for kw in ["ticket", "p1", "jira"]):
-            mcp_result = _call_mcp_tool("get_ticket_info", {"ticket_id": "P1-LATEST"})
-            state["mcp_tools_used"].append(mcp_result)
+        if needs_tool and any(kw in task.lower() for kw in ["ticket", "p1", "jira", "it-"]):
+            mcp_call = _call_mcp_tool("get_ticket_info", {"ticket_id": "P1-LATEST"})
+            state["mcp_tools_used"].append(mcp_call)
             state["history"].append(f"[{WORKER_NAME}] called MCP get_ticket_info")
+
+        # Step 4: Nếu người dùng muốn tạo ticket thực tế
+        if needs_tool and any(kw in task.lower() for kw in ["tạo ticket", "mở ticket", "create ticket"]):
+            mcp_call = _call_mcp_tool("create_ticket", {
+                "priority": "P2",
+                "title": task[:50],
+                "description": task
+            })
+            state["mcp_tools_used"].append(mcp_call)
+            state["history"].append(f"[{WORKER_NAME}] called MCP create_ticket (Real Storage)")
 
         worker_io["output"] = {
             "policy_applies": policy_result["policy_applies"],

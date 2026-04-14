@@ -105,10 +105,16 @@ def supervisor_node(state: AgentState) -> AgentState:
     # Ví dụ routing cơ bản — nhóm phát triển thêm:
     policy_keywords = ["hoàn tiền", "refund", "flash sale", "license", "cấp quyền", "access", "level 3"]
     risk_keywords = ["emergency", "khẩn cấp", "2am", "không rõ", "err-"]
+    ticket_keywords = ["ticket", "p1", "jira", "it-", "tạo", "mở"]
 
     if any(kw in task for kw in policy_keywords):
         route = "policy_tool_worker"
-        route_reason = f"task contains policy/access keyword"
+        route_reason = "task requires policy/access check via MCP tools"
+        needs_tool = True
+
+    if any(kw in task for kw in ticket_keywords):
+        route = "policy_tool_worker"
+        route_reason = "task requires ticket management via MCP tools"
         needs_tool = True
 
     if any(kw in task for kw in risk_keywords):
