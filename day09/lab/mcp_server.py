@@ -271,6 +271,7 @@ def tool_create_ticket(priority: str, title: str, description: str = "") -> dict
         "url": f"https://jira.company.internal/browse/{mock_id}",
         "note": "MOCK ticket — không tồn tại trong hệ thống thật",
     }
+    MOCK_TICKETS[mock_id] = ticket 
     print(f"  [MCP create_ticket] MOCK: {mock_id} | {priority} | {title[:50]}")
     return ticket
 
