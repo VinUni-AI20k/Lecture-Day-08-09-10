@@ -1,0 +1,78 @@
+{
+  "task": "ERR-403-AUTH là lỗi gì và cách xử lý?",
+  "route_reason": "Task chứa yếu tố khẩn cấp/ngoại lệ/mã lỗi lạ → điều hướng human review | human approved → retrieval",
+  "risk_high": true,
+  "needs_tool": false,
+  "hitl_triggered": true,
+  "retrieved_chunks": [
+    {
+      "text": "Bước 1: Nhân viên gửi yêu cầu nghỉ phép qua hệ thống HR Portal (https://hr.company.internal) ít nhất 3 ngày làm việc trước ngày nghỉ.\nBước 2: Line Manager phê duyệt hoặc từ chối trong vòng 1 ngày làm việc.\nBước 3: Nhân viên nhận thông báo qua email sau khi được phê duyệt.\n\nTrường hợp khẩn cấp: Có thể gửi yêu cầu muộn hơn nhưng phải được Line Manager đồng ý qua tin nhắn trực tiếp.",
+      "source": "hr/leave-policy-2026.pdf",
+      "score": 0.1621,
+      "metadata": {
+        "department": "HR",
+        "effective_date": "2026-01-01",
+        "access": "internal",
+        "source": "hr/leave-policy-2026.pdf",
+        "section": "Phần 2: Quy trình xin nghỉ phép"
+      }
+    },
+    {
+      "text": "Bước 1: Nhân viên tạo Access Request ticket trên Jira (project IT-ACCESS).\nBước 2: Line Manager phê duyệt yêu cầu trong 1 ngày làm việc.\nBước 3: IT Admin kiểm tra compliance và cấp quyền.\nBước 4: IT Security review với Level 3 và Level 4.\nBước 5: Nhân viên nhận thông báo qua email khi quyền được cấp.",
+      "source": "it/access-control-sop.md",
+      "score": 0.1604,
+      "metadata": {
+        "department": "IT Security",
+        "section": "Section 3: Quy trình yêu cầu cấp quyền",
+        "access": "internal",
+        "source": "it/access-control-sop.md",
+        "effective_date": "2026-01-01"
+      }
+    },
+    {
+      "text": "Email: hr@company.internal\nHotline: ext. 2000\nHR Portal: https://hr.company.internal\nGiờ làm việc: Thứ 2 - Thứ 6, 8:30 - 17:30",
+      "source": "hr/leave-policy-2026.pdf",
+      "score": 0.1488,
+      "metadata": {
+        "source": "hr/leave-policy-2026.pdf",
+        "access": "internal",
+        "section": "Phần 5: Liên hệ HR",
+        "effective_date": "2026-01-01",
+        "department": "HR"
+      }
+    }
+  ],
+  "retrieved_sources": [
+    "it/access-control-sop.md",
+    "hr/leave-policy-2026.pdf"
+  ],
+  "policy_result": {},
+  "mcp_tools_used": [],
+  "mcp_tool_called": false,
+  "mcp_result": [],
+  "final_answer": "Thông tin trong tài liệu nội bộ:\n- Bước 1: Nhân viên gửi yêu cầu nghỉ phép qua hệ thống HR Portal (https://hr.company.internal) ít nhất 3 ngày làm việc trước ngày nghỉ. Bước 2: Line Manager phê duyệt hoặc từ chối trong vòng 1 ngày làm việc. Bước 3: Nhân viên nhận thông báo q... [hr/leave-policy-2026.pdf]\n- Bước 1: Nhân viên tạo Access Request ticket trên Jira (project IT-ACCESS). Bước 2: Line Manager phê duyệt yêu cầu trong 1 ngày làm việc. Bước 3: IT Admin kiểm tra compliance và cấp quyền. Bước 4: IT Security review với Level 3 và Level 4. B... [it/access-control-sop.md]",
+  "sources": [
+    "it/access-control-sop.md",
+    "hr/leave-policy-2026.pdf"
+  ],
+  "confidence": 0.16,
+  "history": [
+    "[supervisor] received task: ERR-403-AUTH là lỗi gì và cách xử lý?",
+    "[supervisor] route=human_review reason=Task chứa yếu tố khẩn cấp/ngoại lệ/mã lỗi lạ → điều hướng human review",
+    "[human_review] HITL triggered — awaiting human input",
+    "[retrieval_worker] retrieved 3 chunks from ['it/access-control-sop.md', 'hr/leave-policy-2026.pdf']",
+    "[synthesis_worker] answer generated, confidence=0.16, sources=['it/access-control-sop.md', 'hr/leave-policy-2026.pdf']",
+    "[synthesis_worker] low confidence detected → hitl_triggered=True",
+    "[graph] completed in 1351ms"
+  ],
+  "workers_called": [
+    "human_review",
+    "retrieval_worker",
+    "synthesis_worker"
+  ],
+  "supervisor_route": "retrieval_worker",
+  "latency_ms": 1351,
+  "run_id": "run_20260414_182319",
+  "timestamp": "2026-04-14T18:23:21.132369",
+  "question_id": "q09"
+}
