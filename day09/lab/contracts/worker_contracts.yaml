@@ -270,5 +270,5 @@ mcp_server:
     - "list_tools() phải trả về đúng format MCP tool schema"
     - "Không được raise exception ra ngoài dispatch_tool()"
   actual_implementation:
-    status: "done"
-    notes: "4 tools implemented. API layer wrapped via FastAPI HTTP Server with fallback to in-process imports. - Nguyen Dong Hung (2A202600392)"
+    status: "TODO Sprint 3"
+    notes: ""
