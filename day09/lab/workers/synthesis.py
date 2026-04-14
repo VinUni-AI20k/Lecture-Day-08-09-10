@@ -33,6 +33,7 @@ Quy tắc nghiêm ngặt:
 
 
 def _extract_task_from_messages(messages: list) -> str:
+    # Helper kept for debugging prompts or future prompt-inspection tooling.
     user_message = messages[-1]["content"] if messages else ""
     match = re.search(r"Câu hỏi:\s*(.+?)(?:\n\n|$)", user_message, flags=re.DOTALL)
     return match.group(1).strip() if match else ""
@@ -45,6 +46,7 @@ def _normalize(text: str) -> str:
 
 
 def _sentence_split(text: str) -> list:
+    # Split noisy document text into answerable sentence-like units.
     cleaned = text.replace("\r", " ").replace("\n", " ")
     parts = re.split(r"(?<=[\.\?!])\s+|\s+-\s+", cleaned)
     return [_normalize(part) for part in parts if _normalize(part)]
@@ -55,6 +57,7 @@ def _task_keywords(task: str) -> set:
 
 
 def _top_relevant_snippets(task: str, chunks: list, limit: int = 3) -> list:
+    # Rank evidence snippets so fallback answers stay grounded and concise.
     keywords = _task_keywords(task)
     candidates = []
 
@@ -95,6 +98,7 @@ def _top_relevant_snippets(task: str, chunks: list, limit: int = 3) -> list:
 
 
 def _fallback_grounded_answer(task: str, chunks: list, policy_result: dict) -> str:
+    # Deterministic fallback keeps the worker usable even without any LLM provider configured.
     if policy_result.get("policy_version_note"):
         source = policy_result.get("source", ["policy_refund_v4.txt"])[0]
         return (
@@ -161,6 +165,7 @@ def _build_context(chunks: list, policy_result: dict) -> str:
     parts = []
 
     if chunks:
+        # Keep source names attached so the generated answer can cite evidence cleanly.
         parts.append("=== TÀI LIỆU THAM KHẢO ===")
         for i, chunk in enumerate(chunks, 1):
             source = chunk.get("source", "unknown")
@@ -201,7 +206,7 @@ def _estimate_confidence(chunks: list, answer: str, policy_result: dict) -> floa
     if policy_result.get("policy_version_note"):
         return 0.35
 
-    # Weighted average của chunk scores
+    # Use retrieval score as a lightweight proxy for answer confidence.
     if chunks:
         avg_score = sum(c.get("score", 0) for c in chunks) / len(chunks)
     else:
@@ -223,7 +228,7 @@ def synthesize(task: str, chunks: list, policy_result: dict) -> dict:
     """
     context = _build_context(chunks, policy_result)
 
-    # Build messages
+    # The synthesis prompt only sees evidence already collected by earlier workers.
     messages = [
         {"role": "system", "content": SYSTEM_PROMPT},
         {
@@ -261,6 +266,7 @@ def run(state: dict) -> dict:
     state.setdefault("history", [])
     state["workers_called"].append(WORKER_NAME)
 
+    # Capture worker-level IO so low-confidence answers are easy to inspect in trace files.
     worker_io = {
         "worker": WORKER_NAME,
         "input": {
@@ -278,6 +284,7 @@ def run(state: dict) -> dict:
         state["sources"] = result["sources"]
         state["confidence"] = result["confidence"]
         if result["confidence"] < 0.4:
+            # Low-confidence outputs are flagged for HITL/reporting even if the pipeline still returns an answer.
             state["hitl_triggered"] = True
 
         worker_io["output"] = {

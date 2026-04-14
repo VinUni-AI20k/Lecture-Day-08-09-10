@@ -28,6 +28,7 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 
 class AgentState(TypedDict, total=False):
+    # Shared state passed through supervisor, workers, and trace export.
     task: str
     route_reason: str
     risk_high: bool
@@ -53,12 +54,14 @@ class AgentState(TypedDict, total=False):
 
 
 def _normalize(text: str) -> str:
+    # Remove Vietnamese accents so keyword routing still works with plain ASCII input.
     normalized = unicodedata.normalize("NFKD", text)
     normalized = "".join(char for char in normalized if not unicodedata.combining(char))
     return normalized.lower()
 
 
 def make_initial_state(task: str) -> AgentState:
+    # Every run starts from the same predictable state shape for easier tracing/debugging.
     now = datetime.now()
     return {
         "task": task,
@@ -87,6 +90,7 @@ def make_initial_state(task: str) -> AgentState:
 
 
 def supervisor_node(state: AgentState) -> AgentState:
+    # Supervisor only decides where the task should go next; workers do the actual work.
     task = state.get("task", "")
     task_normalized = _normalize(task)
     state.setdefault("history", [])
@@ -124,6 +128,7 @@ def supervisor_node(state: AgentState) -> AgentState:
     ]
     risk_keywords = ["emergency", "khan cap", "critical", "p0", "p1", "2am", "ciso"]
 
+    # Convert keyword hits into routing signals the graph can act on.
     has_refund_signal = any(keyword in task_normalized for keyword in refund_keywords)
     has_access_signal = any(keyword in task_normalized for keyword in access_keywords)
     has_retrieval_signal = any(keyword in task_normalized for keyword in retrieval_keywords)
@@ -169,6 +174,7 @@ def supervisor_node(state: AgentState) -> AgentState:
 
 
 def route_decision(state: AgentState) -> Literal["retrieval", "policy", "human"]:
+    # LangGraph edge labels are intentionally short; they map from the verbose worker route above.
     route = state.get("supervisor_route")
     if route == "human_review":
         return "human"
@@ -194,19 +200,23 @@ def human_review_node(state: AgentState) -> AgentState:
 
 
 def retrieval_worker_node(state: AgentState) -> AgentState:
+    # Thin wrapper keeps graph wiring readable and lets the worker stay independently testable.
     return retrieval_run(state)
 
 
 def policy_tool_worker_node(state: AgentState) -> AgentState:
+    # Policy worker is responsible for MCP/tool-assisted checks and exceptions.
     return policy_tool_run(state)
 
 
 def synthesis_worker_node(state: AgentState) -> AgentState:
+    # Final worker turns collected evidence into the answer shown to the user.
     return synthesis_run(state)
 
 
 class _FallbackApp:
     def invoke(self, state: AgentState) -> AgentState:
+        # Simple pure-Python execution path when LangGraph is unavailable.
         state = supervisor_node(state)
         route = route_decision(state)
 
@@ -225,6 +235,8 @@ def build_graph():
     if StateGraph is None:
         return _FallbackApp()
 
+    # Graph shape:
+    # supervisor -> retrieval/policy/human -> synthesis -> END
     workflow = StateGraph(AgentState)
     workflow.add_node("supervisor", supervisor_node)
     workflow.add_node("retrieval", retrieval_worker_node)
@@ -253,6 +265,7 @@ _app = build_graph()
 
 
 def run_graph(task: str) -> AgentState:
+    # Measure end-to-end latency around the whole orchestration run.
     start_time = time.time()
     state = make_initial_state(task)
     final_state = _app.invoke(state)
@@ -261,6 +274,7 @@ def run_graph(task: str) -> AgentState:
 
 
 def save_trace(state: AgentState, output_dir: Optional[str] = None) -> str:
+    # Persist the full final state so reports can inspect routing, worker IO, and answer quality later.
     trace_dir = output_dir or os.path.join(BASE_DIR, "artifacts", "traces")
     os.makedirs(trace_dir, exist_ok=True)
     filename = os.path.join(trace_dir, f"{state['run_id']}.json")

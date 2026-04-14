@@ -40,6 +40,7 @@ def _call_mcp_tool(tool_name: str, tool_input: dict) -> dict:
     async def _call() -> dict:
         base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         server_path = os.path.join(base_dir, "mcp_server.py")
+        # Spin up the local MCP server as a subprocess so this worker stays decoupled from server internals.
         server_params = StdioServerParameters(
             command=sys.executable,
             args=[server_path, "--stdio-server"],
@@ -82,6 +83,7 @@ def _call_mcp_tool(tool_name: str, tool_input: dict) -> dict:
         }
 
     try:
+        # asyncio.run keeps the public worker API synchronous for the graph.
         return asyncio.run(_call())
     except Exception as e:
         return {
@@ -117,7 +119,7 @@ def analyze_policy(task: str, chunks: list) -> dict:
     task_lower = task.lower()
     context_text = " ".join([c.get("text", "") for c in chunks]).lower()
 
-    # --- Rule-based exception detection ---
+    # Start with cheap, explainable rules before reaching for an LLM classifier.
     exceptions_found = []
 
     # Exception 1: Flash Sale
@@ -144,11 +146,10 @@ def analyze_policy(task: str, chunks: list) -> dict:
             "source": "policy_refund_v4.txt",
         })
 
-    # Determine policy_applies
+    # If we hit any hard exception, the normal refund path no longer applies.
     policy_applies = len(exceptions_found) == 0
 
-    # Determine which policy version applies (temporal scoping)
-    # TODO: Check nếu đơn hàng trước 01/02/2026 → v3 applies (không có docs, nên flag cho synthesis)
+    # Temporal scoping matters because old orders may fall under a policy version we do not have.
     policy_name = "refund_policy_v4"
     policy_version_note = ""
     order_dates = re.findall(r"(\d{2})/(\d{2})/(\d{4})", task)
@@ -234,7 +235,7 @@ def run(state: dict) -> dict:
     }
 
     try:
-        # Step 1: Nếu chưa có chunks, gọi MCP search_kb
+        # Step 1: Backfill missing evidence through MCP if supervisor marked this task as tool-worthy.
         if not chunks and needs_tool:
             mcp_result = _call_mcp_tool("search_kb", {"query": task, "top_k": 3})
             state["mcp_tools_used"].append(mcp_result)
@@ -250,10 +251,10 @@ def run(state: dict) -> dict:
                     list({chunk.get("source", "unknown") for chunk in chunks if chunk}),
                 )
 
-        # Step 2: Phân tích policy
+        # Step 2: Run the local rule-based policy analysis on the gathered evidence.
         policy_result = analyze_policy(task, chunks)
 
-        # Access-control augmentation when the task clearly asks for access workflow
+        # Access questions need a second pass because approvals/emergency bypass come from the SOP tool logic.
         if any(kw in task.lower() for kw in ["cấp quyền", "cap quyen", "access", "level 2", "level 3", "level 4", "admin access"]):
             import re
 
@@ -292,6 +293,7 @@ def run(state: dict) -> dict:
                 })
 
                 if is_emergency and not access_output.get("emergency_override", False):
+                    # Make the emergency restriction explicit so synthesis can surface it clearly.
                     policy_result["exceptions_found"] = [{
                         "type": "no_emergency_bypass",
                         "rule": f"Level {access_level} does not support emergency bypass. Standard approval chain still applies.",
@@ -302,7 +304,7 @@ def run(state: dict) -> dict:
 
         state["policy_result"] = policy_result
 
-        # Step 3: Nếu cần thêm info từ MCP (e.g., ticket status), gọi get_ticket_info
+        # Step 3: Optionally enrich the trace with ticket metadata for incident-style tasks.
         if needs_tool and any(kw in task.lower() for kw in ["ticket", "p1", "jira"]):
             mcp_result = _call_mcp_tool("get_ticket_info", {"ticket_id": "P1-LATEST"})
             state["mcp_tools_used"].append(mcp_result)
