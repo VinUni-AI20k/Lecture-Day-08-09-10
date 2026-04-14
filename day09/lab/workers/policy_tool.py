@@ -24,6 +24,9 @@ Sprint 3 changes:
 
 import os
 import re
+"""
+
+import os
 import sys
 from typing import Optional
 
@@ -123,6 +126,38 @@ def _extract_ticket_id(task: str) -> str:
     """
     match = re.search(r"\b(P\d-\w+|IT-\d{3,6})\b", task, re.IGNORECASE)
     return match.group().upper() if match else "P1-LATEST"
+# MCP Client — Sprint 3: Thay bằng real MCP call
+# ─────────────────────────────────────────────
+
+def _call_mcp_tool(tool_name: str, tool_input: dict) -> dict:
+    """
+    Gọi MCP tool.
+
+    Sprint 3 TODO: Implement bằng cách import mcp_server hoặc gọi HTTP.
+
+    Hiện tại: Import trực tiếp từ mcp_server.py (trong-process mock).
+    """
+    from datetime import datetime
+
+    try:
+        # TODO Sprint 3: Thay bằng real MCP client nếu dùng HTTP server
+        from mcp_server import dispatch_tool
+        result = dispatch_tool(tool_name, tool_input)
+        return {
+            "tool": tool_name,
+            "input": tool_input,
+            "output": result,
+            "error": None,
+            "timestamp": datetime.now().isoformat(),
+        }
+    except Exception as e:
+        return {
+            "tool": tool_name,
+            "input": tool_input,
+            "output": None,
+            "error": {"code": "MCP_CALL_FAILED", "reason": str(e)},
+            "timestamp": datetime.now().isoformat(),
+        }
 
 
 # ─────────────────────────────────────────────
@@ -182,6 +217,38 @@ def _detect_refund_exceptions(task: str, chunks: list) -> list:
         })
     if any(kw in t for kw in ["license key", "license", "subscription", "kỹ thuật số", "digital"]):
         exceptions.append({
+def analyze_policy(task: str, chunks: list) -> dict:
+    """
+    Phân tích policy dựa trên context chunks.
+
+    TODO Sprint 2: Implement logic này với LLM call hoặc rule-based check.
+
+    Cần xử lý các exceptions:
+    - Flash Sale → không được hoàn tiền
+    - Digital product / license key / subscription → không được hoàn tiền
+    - Sản phẩm đã kích hoạt → không được hoàn tiền
+    - Đơn hàng trước 01/02/2026 → áp dụng policy v3 (không có trong docs)
+
+    Returns:
+        dict with: policy_applies, policy_name, exceptions_found, source, rule, explanation
+    """
+    task_lower = task.lower()
+    context_text = " ".join([c.get("text", "") for c in chunks]).lower()
+
+    # --- Rule-based exception detection ---
+    exceptions_found = []
+
+    # Exception 1: Flash Sale
+    if "flash sale" in task_lower or "flash sale" in context_text:
+        exceptions_found.append({
+            "type": "flash_sale_exception",
+            "rule": "Đơn hàng Flash Sale không được hoàn tiền (Điều 3, chính sách v4).",
+            "source": "policy_refund_v4.txt",
+        })
+
+    # Exception 2: Digital product
+    if any(kw in task_lower for kw in ["license key", "license", "subscription", "kỹ thuật số"]):
+        exceptions_found.append({
             "type": "digital_product_exception",
             "rule": "Sản phẩm kỹ thuật số (license key, subscription) không được hoàn tiền (Điều 3).",
             "source": "policy_refund_v4.txt",
@@ -273,6 +340,37 @@ def analyze_policy(task: str, chunks: list) -> dict:
     )
     policy_applies = not has_blocking_exception
 
+    # Exception 3: Activated product
+    if any(kw in task_lower for kw in ["đã kích hoạt", "đã đăng ký", "đã sử dụng"]):
+        exceptions_found.append({
+            "type": "activated_exception",
+            "rule": "Sản phẩm đã kích hoạt hoặc đăng ký tài khoản không được hoàn tiền (Điều 3).",
+            "source": "policy_refund_v4.txt",
+        })
+
+    # Determine policy_applies
+    policy_applies = len(exceptions_found) == 0
+
+    # Determine which policy version applies (temporal scoping)
+    # TODO: Check nếu đơn hàng trước 01/02/2026 → v3 applies (không có docs, nên flag cho synthesis)
+    policy_name = "refund_policy_v4"
+    policy_version_note = ""
+    if "31/01" in task_lower or "30/01" in task_lower or "trước 01/02" in task_lower:
+        policy_version_note = "Đơn hàng đặt trước 01/02/2026 áp dụng chính sách v3 (không có trong tài liệu hiện tại)."
+
+    # TODO Sprint 2: Gọi LLM để phân tích phức tạp hơn
+    # Ví dụ:
+    # from openai import OpenAI
+    # client = OpenAI()
+    # response = client.chat.completions.create(
+    #     model="gpt-4o-mini",
+    #     messages=[
+    #         {"role": "system", "content": "Bạn là policy analyst. Dựa vào context, xác định policy áp dụng và các exceptions."},
+    #         {"role": "user", "content": f"Task: {task}\n\nContext:\n" + "\n".join([c['text'] for c in chunks])}
+    #     ]
+    # )
+    # analysis = response.choices[0].message.content
+
     sources = list({c.get("source", "unknown") for c in chunks if c})
 
     return {
@@ -286,6 +384,10 @@ def analyze_policy(task: str, chunks: list) -> dict:
             f"Rule-based policy check trên domain='{domain}'. "
             f"Found {len(exceptions_found)} exception(s)."
         ),
+        "exceptions_found": exceptions_found,
+        "source": sources,
+        "policy_version_note": policy_version_note,
+        "explanation": "Analyzed via rule-based policy check. TODO: upgrade to LLM-based analysis.",
     }
 
 
@@ -352,6 +454,9 @@ def run(state: dict) -> dict:
             state["history"].append(
                 f"[{WORKER_NAME}] called MCP get_ticket_info (ticket_id={ticket_id})"
             )
+            mcp_result = _call_mcp_tool("get_ticket_info", {"ticket_id": "P1-LATEST"})
+            state["mcp_tools_used"].append(mcp_result)
+            state["history"].append(f"[{WORKER_NAME}] called MCP get_ticket_info")
 
         worker_io["output"] = {
             "policy_applies": policy_result["policy_applies"],

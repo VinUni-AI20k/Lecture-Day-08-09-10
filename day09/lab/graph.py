@@ -90,6 +90,11 @@ def supervisor_node(state: AgentState) -> AgentState:
         1. Human review: mã lỗi không rõ (ERR-xxx) và thiếu context
         2. Policy/Tool worker: refund, access control, policy exception questions
         3. Retrieval worker: SLA, ticket, helpdesk, HR, và mặc định
+    1. Route sang worker nào
+    2. Có cần MCP tool không
+    3. Có risk cao cần HITL không
+
+    TODO Sprint 1: Implement routing logic dựa vào task keywords.
     """
     task = state["task"].lower()
     state["history"].append(f"[supervisor] received task: {state['task'][:80]}")
@@ -188,6 +193,37 @@ def supervisor_node(state: AgentState) -> AgentState:
         route_reason += f" | risk_high flagged: [{', '.join(matched_risk[:3])}]"
 
     # ── Persist decisions to state ────────────────────────
+    # --- TODO: Implement routing logic ---
+    # Gợi ý:
+    # - "hoàn tiền", "refund", "flash sale", "license" → policy_tool_worker
+    # - "cấp quyền", "access level", "level 3", "emergency" → policy_tool_worker
+    # - "P1", "escalation", "sla", "ticket" → retrieval_worker
+    # - mã lỗi không rõ (ERR-XXX), không đủ context → human_review
+    # - còn lại → retrieval_worker
+
+    route = "retrieval_worker"         # TODO: thay bằng logic thực
+    route_reason = "default route"    # TODO: thay bằng lý do thực
+    needs_tool = False
+    risk_high = False
+
+    # Ví dụ routing cơ bản — nhóm phát triển thêm:
+    policy_keywords = ["hoàn tiền", "refund", "flash sale", "license", "cấp quyền", "access", "level 3"]
+    risk_keywords = ["emergency", "khẩn cấp", "2am", "không rõ", "err-"]
+
+    if any(kw in task for kw in policy_keywords):
+        route = "policy_tool_worker"
+        route_reason = f"task contains policy/access keyword"
+        needs_tool = True
+
+    if any(kw in task for kw in risk_keywords):
+        risk_high = True
+        route_reason += " | risk_high flagged"
+
+    # Human review override
+    if risk_high and "err-" in task:
+        route = "human_review"
+        route_reason = "unknown error code + risk_high → human review"
+
     state["supervisor_route"] = route
     state["route_reason"] = route_reason
     state["needs_tool"] = needs_tool
@@ -261,6 +297,58 @@ def policy_tool_worker_node(state: AgentState) -> AgentState:
 def synthesis_worker_node(state: AgentState) -> AgentState:
     """Wrapper gọi synthesis worker (Sprint 2)."""
     return synthesis_run(state)
+# TODO Sprint 2: Uncomment sau khi implement workers
+# from workers.retrieval import run as retrieval_run
+# from workers.policy_tool import run as policy_tool_run
+# from workers.synthesis import run as synthesis_run
+
+
+def retrieval_worker_node(state: AgentState) -> AgentState:
+    """Wrapper gọi retrieval worker."""
+    # TODO Sprint 2: Thay bằng retrieval_run(state)
+    state["workers_called"].append("retrieval_worker")
+    state["history"].append("[retrieval_worker] called")
+
+    # Placeholder output để test graph chạy được
+    state["retrieved_chunks"] = [
+        {"text": "SLA P1: phản hồi 15 phút, xử lý 4 giờ.", "source": "sla_p1_2026.txt", "score": 0.92}
+    ]
+    state["retrieved_sources"] = ["sla_p1_2026.txt"]
+    state["history"].append(f"[retrieval_worker] retrieved {len(state['retrieved_chunks'])} chunks")
+    return state
+
+
+def policy_tool_worker_node(state: AgentState) -> AgentState:
+    """Wrapper gọi policy/tool worker."""
+    # TODO Sprint 2: Thay bằng policy_tool_run(state)
+    state["workers_called"].append("policy_tool_worker")
+    state["history"].append("[policy_tool_worker] called")
+
+    # Placeholder output
+    state["policy_result"] = {
+        "policy_applies": True,
+        "policy_name": "refund_policy_v4",
+        "exceptions_found": [],
+        "source": "policy_refund_v4.txt",
+    }
+    state["history"].append("[policy_tool_worker] policy check complete")
+    return state
+
+
+def synthesis_worker_node(state: AgentState) -> AgentState:
+    """Wrapper gọi synthesis worker."""
+    # TODO Sprint 2: Thay bằng synthesis_run(state)
+    state["workers_called"].append("synthesis_worker")
+    state["history"].append("[synthesis_worker] called")
+
+    # Placeholder output
+    chunks = state.get("retrieved_chunks", [])
+    sources = state.get("retrieved_sources", [])
+    state["final_answer"] = f"[PLACEHOLDER] Câu trả lời được tổng hợp từ {len(chunks)} chunks."
+    state["sources"] = sources
+    state["confidence"] = 0.75
+    state["history"].append(f"[synthesis_worker] answer generated, confidence={state['confidence']}")
+    return state
 
 
 # ─────────────────────────────────────────────
@@ -356,6 +444,8 @@ if __name__ == "__main__":
     print("=" * 60)
     print("Day 09 Lab -- Supervisor-Worker Graph")
     print("=" * 60)
+    print("Day 09 Lab — Supervisor-Worker Graph")
+    print("=" * 60)
 
     test_queries = [
         "SLA xử lý ticket P1 là bao lâu?",
@@ -365,6 +455,7 @@ if __name__ == "__main__":
 
     for query in test_queries:
         print(f"\n>> Query: {query}")
+        print(f"\n▶ Query: {query}")
         result = run_graph(query)
         print(f"  Route   : {result['supervisor_route']}")
         print(f"  Reason  : {result['route_reason']}")
@@ -377,3 +468,12 @@ if __name__ == "__main__":
         print(f"  Trace   : {trace_file}")
 
     print("\n[OK] graph.py Sprint 2 wired -- real workers active.")
+        print(f"  Answer  : {result['final_answer'][:100]}...")
+        print(f"  Confidence: {result['confidence']}")
+        print(f"  Latency : {result['latency_ms']}ms")
+
+        # Lưu trace
+        trace_file = save_trace(result)
+        print(f"  Trace saved → {trace_file}")
+
+    print("\n✅ graph.py test complete. Implement TODO sections in Sprint 1 & 2.")

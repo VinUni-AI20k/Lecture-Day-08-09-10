@@ -37,6 +37,16 @@ Quy tắc nghiêm ngặt (grounded answering):
 5. Trả lời súc tích, có cấu trúc (bullet nếu nhiều ý). Không lặp câu hỏi.
 6. Nếu "POLICY EXCEPTIONS" xuất hiện → nêu rõ exception TRƯỚC khi kết luận policy_applies.
 7. Nếu có "policy_version_note" → nhắc rõ vấn đề temporal scoping và đề xuất xác nhận với team liên quan.
+WORKER_NAME = "synthesis_worker"
+
+SYSTEM_PROMPT = """Bạn là trợ lý IT Helpdesk nội bộ.
+
+Quy tắc nghiêm ngặt:
+1. CHỈ trả lời dựa vào context được cung cấp. KHÔNG dùng kiến thức ngoài.
+2. Nếu context không đủ để trả lời → nói rõ "Không đủ thông tin trong tài liệu nội bộ".
+3. Trích dẫn nguồn cuối mỗi câu quan trọng: [tên_file].
+4. Trả lời súc tích, có cấu trúc. Không dài dòng.
+5. Nếu có exceptions/ngoại lệ → nêu rõ ràng trước khi kết luận.
 """
 
 
@@ -71,6 +81,37 @@ def _call_llm(messages: list) -> str:
 
     err_str = "; ".join(errors) if errors else "no LLM provider configured in .env"
     return f"[SYNTHESIS ERROR] Không thể gọi LLM ({err_str})."
+    """
+    Gọi LLM để tổng hợp câu trả lời.
+    TODO Sprint 2: Implement với OpenAI hoặc Gemini.
+    """
+    # Option A: OpenAI
+    try:
+        from openai import OpenAI
+        client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=messages,
+            temperature=0.1,  # Low temperature để grounded
+            max_tokens=500,
+        )
+        return response.choices[0].message.content
+    except Exception:
+        pass
+
+    # Option B: Gemini
+    try:
+        import google.generativeai as genai
+        genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
+        model = genai.GenerativeModel("gemini-1.5-flash")
+        combined = "\n".join([m["content"] for m in messages])
+        response = model.generate_content(combined)
+        return response.text
+    except Exception:
+        pass
+
+    # Fallback: trả về message báo lỗi (không hallucinate)
+    return "[SYNTHESIS ERROR] Không thể gọi LLM. Kiểm tra API key trong .env."
 
 
 def _build_context(chunks: list, policy_result: dict) -> str:
@@ -101,6 +142,13 @@ def _build_context(chunks: list, policy_result: dict) -> str:
 
     if not parts:
         return "(Không có tài liệu tham khảo — hãy abstain theo quy tắc 2.)"
+    if policy_result and policy_result.get("exceptions_found"):
+        parts.append("\n=== POLICY EXCEPTIONS ===")
+        for ex in policy_result["exceptions_found"]:
+            parts.append(f"- {ex.get('rule', '')}")
+
+    if not parts:
+        return "(Không có context)"
 
     return "\n\n".join(parts)
 
@@ -142,6 +190,30 @@ def _estimate_confidence(chunks: list, answer: str, policy_result: dict) -> floa
         base -= 0.1
 
     return round(max(0.1, min(0.95, base)), 2)
+    Ước tính confidence dựa vào:
+    - Số lượng và quality của chunks
+    - Có exceptions không
+    - Answer có abstain không
+
+    TODO Sprint 2: Có thể dùng LLM-as-Judge để tính confidence chính xác hơn.
+    """
+    if not chunks:
+        return 0.1  # Không có evidence → low confidence
+
+    if "Không đủ thông tin" in answer or "không có trong tài liệu" in answer.lower():
+        return 0.3  # Abstain → moderate-low
+
+    # Weighted average của chunk scores
+    if chunks:
+        avg_score = sum(c.get("score", 0) for c in chunks) / len(chunks)
+    else:
+        avg_score = 0
+
+    # Penalty nếu có exceptions (phức tạp hơn)
+    exception_penalty = 0.05 * len(policy_result.get("exceptions_found", []))
+
+    confidence = min(0.95, avg_score - exception_penalty)
+    return round(max(0.1, confidence), 2)
 
 
 def synthesize(task: str, chunks: list, policy_result: dict) -> dict:
@@ -176,6 +248,19 @@ def synthesize(task: str, chunks: list, policy_result: dict) -> dict:
     messages = [
         {"role": "system", "content": SYSTEM_PROMPT},
         {"role": "user", "content": user_prompt},
+    context = _build_context(chunks, policy_result)
+
+    # Build messages
+    messages = [
+        {"role": "system", "content": SYSTEM_PROMPT},
+        {
+            "role": "user",
+            "content": f"""Câu hỏi: {task}
+
+{context}
+
+Hãy trả lời câu hỏi dựa vào tài liệu trên."""
+        }
     ]
 
     answer = _call_llm(messages)

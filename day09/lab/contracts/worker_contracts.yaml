@@ -102,6 +102,8 @@ retrieval_worker:
       (all-MiniLM-L6-v2). top_k đọc từ env RETRIEVAL_TOP_K, default 3.
       Score = 1 - cosine_distance (ChromaDB trả về distance). Khi query lỗi
       → retrieved_chunks=[] (abstain-safe, không fake chunks).
+    status: "TODO Sprint 2"  # Update to "done" khi xong
+    notes: ""
 
 # ─────────────────────────────────────────────
 # Policy Tool Worker
@@ -179,6 +181,8 @@ policy_tool_worker:
         - access_control: no_emergency_bypass_level3, emergency_bypass_level2
       Temporal scoping (v3 vs v4) được flag qua policy_version_note.
       MCP integration (search_kb, get_ticket_info) là hook cho Sprint 3.
+    status: "TODO Sprint 2"
+    notes: ""
 
 # ─────────────────────────────────────────────
 # Synthesis Worker
@@ -233,6 +237,8 @@ synthesis_worker:
       gọi LLM, tránh hallucinate). Confidence tính từ max/avg cosine
       score + boost khi có citation + penalty cho exceptions và
       policy_version_note (không hard-code).
+    status: "TODO Sprint 2"
+    notes: ""
 
 # ─────────────────────────────────────────────
 # MCP Server
