@@ -31,49 +31,42 @@ WORKER_NAME = "policy_tool_worker"
 # ─────────────────────────────────────────────
 
 # Configure your actual MCP Server URL here
-MCP_SERVER_URL = os.getenv("MCP_SERVER_URL", "http://localhost:8000/api/mcp/dispatch")
 
 def _call_mcp_tool(tool_name: str, tool_input: dict) -> dict:
     """
-    Gọi MCP tool thông qua HTTP request tới MCP Server.
+    Gọi MCP tool thông qua import trực tiếp (Option Standard trong Sprint 3).
     """
+    from datetime import datetime
     try:
-        payload = {
-            "tool": tool_name,
-            "parameters": tool_input
-        }
+        # Import hàm dispatch_tool từ file mcp_server.py của project
+        from mcp_server import dispatch_tool
         
-        response = requests.post(
-            MCP_SERVER_URL, 
-            json=payload, 
-            headers={"Content-Type": "application/json"},
-            timeout=10.0 
-        )
+        result = dispatch_tool(tool_name, tool_input)
         
-        response.raise_for_status()
-        result = response.json()
+        # Nếu mcp_server trả về lỗi nội bộ
+        if isinstance(result, dict) and "error" in result:
+            return {
+                "tool": tool_name,
+                "input": tool_input,
+                "output": None,
+                "error": {"code": "MCP_TOOL_ERROR", "reason": result["error"]},
+                "timestamp": datetime.now().isoformat(),
+            }
 
         return {
             "tool": tool_name,
             "input": tool_input,
-            "output": result.get("data"), 
+            "output": result, 
             "error": None,
             "timestamp": datetime.now().isoformat(),
         }
 
-    except requests.exceptions.RequestException as e:
-        error_details = str(e)
-        if hasattr(e, 'response') and e.response is not None:
-            try:
-                error_details = e.response.json().get("error", str(e))
-            except json.JSONDecodeError:
-                error_details = e.response.text
-
+    except ImportError:
         return {
             "tool": tool_name,
             "input": tool_input,
             "output": None,
-            "error": {"code": "MCP_NETWORK_FAILED", "reason": error_details},
+            "error": {"code": "MCP_IMPORT_FAILED", "reason": "Không tìm thấy file mcp_server.py. Hãy đảm bảo nó nằm cùng thư mục hoặc trong PYTHONPATH."},
             "timestamp": datetime.now().isoformat(),
         }
     except Exception as e:
@@ -84,7 +77,6 @@ def _call_mcp_tool(tool_name: str, tool_input: dict) -> dict:
             "error": {"code": "MCP_SYSTEM_ERROR", "reason": str(e)},
             "timestamp": datetime.now().isoformat(),
         }
-
 
 # ─────────────────────────────────────────────
 # Policy Analysis Logic
