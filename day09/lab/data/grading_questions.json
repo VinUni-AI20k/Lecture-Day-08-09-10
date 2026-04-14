@@ -1,235 +1,114 @@
 [
   {
     "id": "gq01",
-    "question": "SLA xử lý ticket P1 đã thay đổi như thế nào so với phiên bản trước?",
-    "expected_answer": "Phiên bản hiện tại (v2026.1, có hiệu lực từ 2026-01-15) đã cập nhật SLA P1 resolution từ 6 giờ xuống còn 4 giờ. Phiên bản trước (v2025.3) không thay đổi SLA này.",
-    "expected_sources": ["support/sla-p1-2026.pdf"],
-    "difficulty": "hard",
-    "category": "SLA",
-    "rag_skill_tested": "Freshness & version reasoning",
+    "question": "Ticket P1 được tạo lúc 22:47. Đúng theo SLA, ai nhận thông báo đầu tiên và qua kênh nào? Deadline escalation là mấy giờ?",
     "grading_criteria": [
-      "Nêu đúng giá trị hiện tại: 4 giờ",
-      "Nêu đúng giá trị cũ: 6 giờ",
-      "Có citation về phiên bản (v2026.1) hoặc effective_date",
-      "KHÔNG bịa thêm thông tin về phiên bản khác"
-    ],
-    "failure_modes": [
-      "Chỉ trả lời '4 giờ' mà không đề cập lịch sử thay đổi",
-      "Lẫn lộn 6 giờ là giá trị hiện tại (retrieve chunk cũ không có metadata)",
-      "Không có citation về version/effective_date"
+      "Nêu đúng kênh thông báo: Slack #incident-p1 VÀ email incident@company.internal VÀ PagerDuty",
+      "Nêu đúng thời gian escalation: 10 phút sau khi tạo ticket = 22:57",
+      "Nêu đúng đối tượng escalation: Senior Engineer"
     ],
     "points": 10,
-    "note": "Kiểm tra freshness filtering và khả năng tổng hợp thông tin version history từ cùng một document"
+    "skill": "SLA detail retrieval — multi-detail extraction"
   },
   {
     "id": "gq02",
-    "question": "Khi làm việc remote, tôi phải dùng VPN và được kết nối trên tối đa bao nhiêu thiết bị?",
-    "expected_answer": "Khi làm việc remote và truy cập hệ thống nội bộ, VPN là bắt buộc (theo HR Leave Policy). Phần mềm VPN là Cisco AnyConnect và mỗi tài khoản được kết nối VPN trên tối đa 2 thiết bị cùng lúc (theo IT Helpdesk FAQ).",
-    "expected_sources": [
-      "hr/leave-policy-2026.pdf",
-      "support/helpdesk-faq.md"
-    ],
-    "difficulty": "hard",
-    "category": "Cross-Document",
-    "rag_skill_tested": "Multi-document synthesis",
+    "question": "Khách hàng đặt đơn ngày 31/01/2026 và gửi yêu cầu hoàn tiền ngày 07/02/2026 vì lỗi nhà sản xuất. Sản phẩm chưa kích hoạt, không phải Flash Sale, không phải kỹ thuật số. Chính sách nào áp dụng và có được hoàn tiền không?",
     "grading_criteria": [
-      "Xác nhận VPN là bắt buộc khi remote (từ hr_leave_policy)",
-      "Nêu đúng giới hạn 2 thiết bị (từ it_helpdesk_faq)",
-      "Có citation từ ÍT NHẤT 2 nguồn khác nhau",
-      "Câu trả lời tổng hợp cả hai thông tin, không chỉ một"
-    ],
-    "failure_modes": [
-      "Chỉ trả lời từ một document, bỏ qua document còn lại",
-      "Không có citation hoặc chỉ cite một nguồn",
-      "Trả lời thiếu số lượng thiết bị (2 thiết bị)",
-      "Trả lời thiếu tên phần mềm VPN (Cisco AnyConnect)"
+      "Nhận ra rằng đơn đặt trước 01/02/2026 áp dụng chính sách phiên bản 3 (không phải v4)",
+      "Nêu rõ rằng tài liệu hiện có chỉ có chính sách v4 — không thể confirm theo v3",
+      "KHÔNG tự bịa nội dung của chính sách v3"
     ],
     "points": 10,
-    "note": "Câu hỏi cross-document điển hình — retriever phải lấy được chunk từ ít nhất 2 file khác nhau"
+    "skill": "Temporal policy scoping — abstain khi thiếu version history"
   },
   {
     "id": "gq03",
-    "question": "Đơn hàng mua trong chương trình Flash Sale và đã kích hoạt sản phẩm có được hoàn tiền không?",
-    "expected_answer": "Không được hoàn tiền. Đơn hàng rơi vào hai ngoại lệ cùng lúc: (1) đơn hàng áp dụng mã giảm giá chương trình Flash Sale và (2) sản phẩm đã được kích hoạt — cả hai đều thuộc danh sách ngoại lệ không được hoàn tiền theo Điều 3 của chính sách.",
-    "expected_sources": ["policy/refund-v4.pdf"],
-    "difficulty": "hard",
-    "category": "Refund",
-    "rag_skill_tested": "Exception chain retrieval & completeness",
+    "question": "Engineer cần Level 3 access để khắc phục P1 đang active. Bao nhiêu người phải phê duyệt? Ai là người phê duyệt cuối cùng (người phê duyệt có thẩm quyền cao nhất)?",
     "grading_criteria": [
-      "Kết luận rõ ràng: KHÔNG được hoàn tiền",
-      "Nêu đúng ngoại lệ Flash Sale",
-      "Nêu đúng ngoại lệ sản phẩm đã kích hoạt",
-      "Đề cập ít nhất 2 trong số các ngoại lệ (không chỉ một)",
-      "Có citation về Điều 3 hoặc policy/refund-v4.pdf"
-    ],
-    "failure_modes": [
-      "Chỉ nêu 1 ngoại lệ, bỏ qua ngoại lệ còn lại (completeness thấp)",
-      "Kết luận 'có thể hoàn tiền nếu đáp ứng điều kiện' — không nhận ra đây là câu hỏi về ngoại lệ",
-      "Chunk bị cắt giữa Điều 3 nên không thấy hết danh sách ngoại lệ"
+      "Nêu đúng số người phê duyệt: 3 người",
+      "Nêu đúng tên 3 người: Line Manager, IT Admin, IT Security",
+      "Nêu đúng người cuối cùng/cao nhất: IT Security"
     ],
     "points": 10,
-    "note": "Kiểm tra completeness metric — pipeline phải retrieve được toàn bộ Điều 3 ngoại lệ, không chỉ một phần"
+    "skill": "Multi-section access control retrieval"
   },
   {
     "id": "gq04",
-    "question": "Nếu chọn nhận store credit thay vì hoàn tiền, tôi được bao nhiêu phần trăm so với số tiền gốc?",
-    "expected_answer": "Khách hàng có thể chọn nhận store credit (credit nội bộ) thay thế với giá trị 110% so với số tiền hoàn gốc. Đây là tùy chọn, không phải bắt buộc.",
-    "expected_sources": ["policy/refund-v4.pdf"],
-    "difficulty": "medium",
-    "category": "Refund",
-    "rag_skill_tested": "Specific numeric fact retrieval",
+    "question": "Khi khách hàng chọn nhận store credit thay vì hoàn tiền, họ nhận được bao nhiêu phần trăm so với số tiền gốc cần hoàn?",
     "grading_criteria": [
       "Nêu đúng con số: 110%",
-      "Nêu rõ đây là TÙY CHỌN (không phải bắt buộc)",
-      "Có citation về policy/refund-v4.pdf hoặc Điều 5"
+      "Giải thích đúng: thêm 10% bonus so với hoàn tiền gốc"
     ],
-    "failure_modes": [
-      "Bịa ra con số khác (100%, 120%, ...)",
-      "Không nêu được con số cụ thể mà chỉ nói 'có thể nhận store credit'",
-      "Nói store credit là bắt buộc thay vì tùy chọn"
-    ],
-    "points": 8,
-    "note": "Kiểm tra faithfulness — con số 110% nằm trong một câu duy nhất, dễ bị bỏ qua nếu chunk bị cắt"
+    "points": 6,
+    "skill": "Specific numeric fact extraction"
   },
   {
     "id": "gq05",
-    "question": "Contractor từ bên ngoài công ty có thể được cấp quyền Admin Access không? Nếu có, cần bao nhiêu ngày và có yêu cầu đặc biệt gì?",
-    "expected_answer": "Có. Theo Access Control SOP, quy trình áp dụng cho tất cả nhân viên, contractor và third-party vendor. Admin Access (Level 4) cần phê duyệt từ IT Manager và CISO, thời gian xử lý 5 ngày làm việc, và có yêu cầu thêm: training bắt buộc về security policy.",
-    "expected_sources": ["it/access-control-sop.md"],
-    "difficulty": "hard",
-    "category": "Access Control",
-    "rag_skill_tested": "Scope identification + multi-detail retrieval",
+    "question": "Ticket P1 được tạo và on-call engineer không phản hồi sau 10 phút. Theo đúng SLA, hệ thống sẽ làm gì tiếp theo?",
     "grading_criteria": [
-      "Xác nhận contractor ĐƯỢC cấp quyền (phạm vi áp dụng từ Section 1)",
-      "Nêu đúng approver: IT Manager + CISO",
-      "Nêu đúng thời gian: 5 ngày làm việc",
-      "Nêu yêu cầu training bắt buộc về security policy",
-      "Không lẫn lộn với Level 3 (IT Manager thay vì CISO)"
+      "Nêu đúng hành động: tự động escalate",
+      "Nêu đúng đối tượng: Senior Engineer",
+      "Không nêu sai thời gian hoặc đối tượng escalation"
     ],
-    "failure_modes": [
-      "Nói contractor không được cấp quyền (không index được Section 1)",
-      "Lẫn lộn Level 3 và Level 4 approvers",
-      "Bỏ qua yêu cầu training bắt buộc",
-      "Không nêu được thời gian xử lý 5 ngày"
-    ],
-    "points": 10,
-    "note": "Kiểm tra multi-chunk reasoning — thông tin nằm ở hai section khác nhau (Section 1: scope, Section 2: Level 4 detail)"
+    "points": 8,
+    "skill": "SLA escalation rule — triggered condition"
   },
   {
     "id": "gq06",
-    "question": "Lúc 2 giờ sáng xảy ra sự cố P1, on-call engineer cần cấp quyền tạm thời cho một engineer xử lý incident. Quy trình cụ thể như thế nào và quyền này tồn tại bao lâu?",
-    "expected_answer": "On-call IT Admin có thể cấp quyền tạm thời (tối đa 24 giờ) sau khi được Tech Lead phê duyệt bằng lời. Sau 24 giờ, phải có ticket chính thức hoặc quyền bị thu hồi tự động. Mọi quyền tạm thời phải được ghi log vào hệ thống Security Audit. Liên hệ on-call qua hotline ext. 9999 (24/7) theo SLA P1.",
-    "expected_sources": [
-      "it/access-control-sop.md",
-      "support/sla-p1-2026.pdf"
-    ],
-    "difficulty": "hard",
-    "category": "Cross-Document",
-    "rag_skill_tested": "Emergency path + cross-document multi-hop",
+    "question": "Một nhân viên mới đang trong probation period muốn làm remote vì lý do cá nhân. Yêu cầu này có được chấp thuận không? Điều kiện để được làm remote là gì?",
     "grading_criteria": [
-      "Nêu đúng: on-call IT Admin cấp quyền tạm thời",
-      "Nêu đúng: cần Tech Lead phê duyệt bằng lời",
-      "Nêu đúng: quyền tồn tại tối đa 24 giờ",
-      "Nêu yêu cầu ghi log vào Security Audit",
-      "BONUS: Đề cập hotline on-call ext. 9999 từ SLA P1"
+      "Kết luận đúng: nhân viên trong probation period KHÔNG được làm remote",
+      "Nêu điều kiện đúng: phải qua probation period mới được phép",
+      "Nêu giới hạn đúng: tối đa 2 ngày/tuần và cần Team Lead phê duyệt"
     ],
-    "failure_modes": [
-      "Chỉ describe quy trình thông thường (không phải emergency escalation)",
-      "Bỏ qua giới hạn 24 giờ",
-      "Không đề cập yêu cầu log Security Audit",
-      "Không tìm được cross-document link giữa SLA P1 emergency và Access Control emergency path"
-    ],
-    "points": 12,
-    "note": "Câu hỏi khó nhất — cần tổng hợp từ Section 4 (emergency escalation) của access_control_sop VÀ Section 4 (on-call process) của sla_p1_2026"
+    "points": 8,
+    "skill": "HR policy — eligibility condition with negative case"
   },
   {
     "id": "gq07",
-    "question": "Công ty sẽ phạt bao nhiêu nếu team IT vi phạm cam kết SLA P1?",
-    "expected_answer": "Tài liệu hiện có không quy định mức phạt hay hình thức xử lý khi vi phạm SLA P1. Tài liệu sla-p1-2026.pdf chỉ mô tả quy trình xử lý và SLA target, không có điều khoản về penalty.",
-    "expected_sources": [],
-    "difficulty": "medium",
-    "category": "Insufficient Context",
-    "rag_skill_tested": "Abstain behavior — hallucination resistance",
+    "question": "Mức phạt tài chính cụ thể khi đội IT vi phạm SLA P1 resolution time (không resolve trong 4 giờ) là bao nhiêu?",
     "grading_criteria": [
-      "KHÔNG bịa ra mức phạt hay con số cụ thể",
-      "Nêu rõ thông tin này không có trong tài liệu hiện có",
-      "KHÔNG nói 'theo chính sách công ty, mức phạt là...' mà không có nguồn",
-      "Tùy chọn: gợi ý liên hệ bộ phận có thẩm quyền"
-    ],
-    "failure_modes": [
-      "Bịa ra mức phạt (hallucination nghiêm trọng nhất)",
-      "Trả lời mơ hồ kiểu 'tùy theo mức độ nghiêm trọng' mà không nói rõ thiếu context",
-      "Trả lời từ model knowledge thay vì từ retrieved context"
+      "Nêu rõ ràng rằng thông tin này KHÔNG có trong tài liệu SLA hiện có",
+      "KHÔNG bịa ra bất kỳ con số phạt nào",
+      "Có thể gợi ý liên hệ bộ phận liên quan để tra cứu"
     ],
     "points": 10,
-    "note": "Hallucination bait điển hình — pipeline tốt phải abstain thay vì suy diễn từ general knowledge về SLA penalties"
+    "skill": "Anti-hallucination / abstain — thông tin không có trong tài liệu"
   },
   {
     "id": "gq08",
-    "question": "Nhân viên phải báo trước bao nhiêu ngày để xin nghỉ phép năm? Con số này có giống với số ngày cần giấy tờ khi nghỉ ốm không?",
-    "expected_answer": "Nghỉ phép năm cần báo trước ít nhất 3 ngày làm việc qua HR Portal. Nghỉ ốm cũng liên quan đến mốc 3 ngày: nếu nghỉ TRÊN 3 ngày liên tiếp thì cần giấy tờ y tế từ bệnh viện. Hai con số '3 ngày' này áp dụng cho hai tình huống khác nhau.",
-    "expected_sources": ["hr/leave-policy-2026.pdf"],
-    "difficulty": "hard",
-    "category": "HR Policy",
-    "rag_skill_tested": "Disambiguation — same number, different contexts",
+    "question": "Theo quy định IT nội bộ, nhân viên phải đổi mật khẩu sau bao nhiêu ngày? Và hệ thống cảnh báo trước bao nhiêu ngày?",
     "grading_criteria": [
-      "Nêu đúng: nghỉ phép năm báo trước 3 ngày làm việc",
-      "Nêu đúng: nghỉ ốm TRÊNn 3 ngày cần giấy tờ y tế",
-      "Phân biệt rõ hai ngữ cảnh khác nhau của cùng con số '3 ngày'",
-      "Không lẫn lộn hai quy định"
+      "Nêu đúng chu kỳ đổi mật khẩu (số ngày cụ thể)",
+      "Nêu đúng số ngày cảnh báo trước",
+      "Cite đúng nguồn: it_helpdesk_faq.txt"
     ],
-    "failure_modes": [
-      "Lẫn lộn '3 ngày' nghỉ phép với '3 ngày' nghỉ ốm",
-      "Chỉ trả lời một trong hai quy định, bỏ sót cái còn lại",
-      "Retrieve sai chunk (ví dụ: access revoke sau khi chuyển bộ phận cũng là '3 ngày')"
-    ],
-    "points": 10,
-    "note": "Kiểm tra disambiguation — '3 ngày' xuất hiện 3 lần trong corpus với 3 ngữ cảnh khác nhau. Pipeline yếu sẽ bị nhầm lẫn hoặc thiếu completeness"
+    "points": 8,
+    "skill": "Multi-detail FAQ retrieval"
   },
   {
     "id": "gq09",
-    "question": "Mật khẩu tài khoản công ty cần đổi định kỳ không? Nếu có, hệ thống sẽ nhắc nhở trước bao nhiêu ngày và đổi qua đâu?",
-    "expected_answer": "Có. Mật khẩu phải được thay đổi mỗi 90 ngày. Hệ thống sẽ nhắc nhở 7 ngày trước khi hết hạn. Để đổi mật khẩu, truy cập https://sso.company.internal/reset hoặc liên hệ Helpdesk qua ext. 9000.",
-    "expected_sources": ["support/helpdesk-faq.md"],
-    "difficulty": "medium",
-    "category": "IT Helpdesk",
-    "rag_skill_tested": "Multi-detail extraction from FAQ format",
+    "question": "Sự cố P1 xảy ra lúc 2am. Đồng thời cần cấp Level 2 access tạm thời cho contractor để thực hiện emergency fix. Hãy nêu đầy đủ: (1) các bước SLA P1 notification phải làm ngay, và (2) điều kiện để cấp Level 2 emergency access.",
     "grading_criteria": [
-      "Xác nhận mật khẩu cần đổi định kỳ",
-      "Nêu đúng chu kỳ: 90 ngày",
-      "Nêu đúng thời gian nhắc nhở: 7 ngày trước",
-      "Cung cấp ít nhất một kênh để đổi (SSO portal hoặc Helpdesk ext. 9000)"
+      "SLA P1: nêu đủ 3 kênh notification (Slack #incident-p1, email incident@company.internal, PagerDuty)",
+      "SLA P1: nêu đúng escalation deadline nếu không phản hồi (10 phút → Senior Engineer)",
+      "Level 2 access: nêu đúng rằng Level 2 CÓ emergency bypass",
+      "Level 2 access: nêu đúng điều kiện emergency bypass: approval đồng thời của Line Manager VÀ IT Admin on-call",
+      "Level 2 access: nêu đúng rằng KHÔNG cần IT Security cho Level 2 emergency (khác Level 3)"
     ],
-    "failure_modes": [
-      "Nêu chu kỳ sai (30 ngày, 60 ngày — guess từ model knowledge)",
-      "Nêu thời gian nhắc nhở sai",
-      "Bỏ qua thông tin về kênh đổi mật khẩu",
-      "Trả lời từ general IT knowledge thay vì từ retrieved context"
-    ],
-    "points": 8,
-    "note": "Kiểm tra khả năng extract nhiều chi tiết từ một câu hỏi multi-part trong FAQ format. Số 90 ngày dễ bị model guess sai từ prior knowledge"
+    "points": 16,
+    "skill": "Cross-doc multi-hop — SLA + Access Control, 2 tài liệu"
   },
   {
     "id": "gq10",
-    "question": "Chính sách hoàn tiền hiện tại áp dụng cho đơn hàng đặt trước ngày 01/02/2026 không?",
-    "expected_answer": "Không. Chính sách hoàn tiền phiên bản 4 có hiệu lực từ ngày 01/02/2026 và chỉ áp dụng cho các đơn hàng được đặt kể từ ngày đó. Các đơn hàng đặt trước ngày này sẽ áp dụng theo chính sách hoàn tiền phiên bản 3.",
-    "expected_sources": ["policy/refund-v4.pdf"],
-    "difficulty": "hard",
-    "category": "Refund",
-    "rag_skill_tested": "Temporal scoping & metadata-aware retrieval",
+    "question": "Khách hàng mua sản phẩm trong chương trình Flash Sale, nhưng phát hiện sản phẩm bị lỗi từ nhà sản xuất và yêu cầu hoàn tiền trong vòng 5 ngày. Có được hoàn tiền không? Giải thích theo đúng chính sách.",
     "grading_criteria": [
-      "Kết luận rõ ràng: KHÔNG áp dụng cho đơn hàng trước 2026-02-01",
-      "Nêu đúng effective_date: 01/02/2026",
-      "Đề cập chính sách phiên bản 3 áp dụng cho đơn cũ",
-      "Có citation về effective_date (từ metadata hoặc Điều 1)"
-    ],
-    "failure_modes": [
-      "Nói 'có áp dụng' mà không kiểm tra điều kiện effective_date",
-      "Không đề cập phiên bản 3 cho đơn cũ",
-      "Trả lời mơ hồ không có kết luận rõ ràng",
-      "Pipeline không dùng effective_date metadata để lọc → retrieve nhầm điều khoản phiên bản cũ"
+      "Kết luận đúng: KHÔNG được hoàn tiền",
+      "Nêu đúng lý do: đơn Flash Sale là ngoại lệ không được hoàn tiền theo Điều 3 chính sách v4",
+      "Không bị đánh lừa bởi 'lỗi nhà sản xuất' — exception Flash Sale override điều kiện lỗi",
+      "Cite đúng nguồn: policy_refund_v4.txt"
     ],
     "points": 10,
-    "note": "Kiểm tra temporal reasoning — pipeline phải hiểu effective_date trong metadata và áp dụng vào ngữ cảnh câu hỏi. Đây là failure mode 'stale document' điển hình từ slide"
+    "skill": "Policy exception completeness — exception override normal condition"
   }
 ]
