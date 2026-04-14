@@ -332,3 +332,7 @@ cython_debug/
 #.idea/
 
 vinai053-37cad4a3b18c.json
+
+# Local planning notes — not for remote
+CLAUDE.md
+docs/breakdown.md
