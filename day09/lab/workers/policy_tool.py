@@ -18,7 +18,16 @@ Gọi độc lập để test:
 
 POLICY_SOURCE_FILE = "policy_refund_v4.txt"
 
-FLASH_SALE_KEYWORDS = ("flash sale",)
+FLASH_SALE_KEYWORDS = (
+    "flash sale",
+    "flashsale",
+    "khuyến mãi flash sale",
+    "khuyen mai flash sale",
+)
+FLASH_SALE_HINT_KEYWORDS = (
+    "mã giảm giá đặc biệt",
+    "ma giam gia dac biet",
+)
 DIGITAL_PRODUCT_KEYWORDS = ("license key", "license", "subscription", "kỹ thuật số")
 ACTIVATED_PRODUCT_KEYWORDS = ("đã kích hoạt", "đã đăng ký", "đã sử dụng")
 TEMPORAL_V3_HINT_KEYWORDS = ("31/01", "30/01", "trước 01/02")
@@ -66,6 +75,16 @@ def _make_exception(exception_type: str, rule: str) -> dict:
         "rule": rule,
         "source": POLICY_SOURCE_FILE,
     }
+
+
+def _is_flash_sale_case(task_text: str, context_text: str) -> bool:
+    """Detect Flash Sale exception using direct mention or policy hint phrases."""
+    if _contains_any(task_text, FLASH_SALE_KEYWORDS) or _contains_any(context_text, FLASH_SALE_KEYWORDS):
+        return True
+
+    task_has_flash_sale_hint = _contains_any(task_text, FLASH_SALE_HINT_KEYWORDS)
+    context_confirms_flash_sale = _contains_any(context_text, FLASH_SALE_KEYWORDS)
+    return task_has_flash_sale_hint and context_confirms_flash_sale
 
 
 # ─────────────────────────────────────────────
@@ -129,7 +148,7 @@ def analyze_policy(task: str, chunks: list) -> dict:
     exceptions_found = []
 
     # Exception 1: Flash Sale
-    if _contains_any(task_lower, FLASH_SALE_KEYWORDS) or _contains_any(context_text, FLASH_SALE_KEYWORDS):
+    if _is_flash_sale_case(task_lower, context_text):
         exceptions_found.append(
             _make_exception(
                 "flash_sale_exception",
@@ -280,6 +299,12 @@ if __name__ == "__main__":
             "task": "Khách hàng Flash Sale yêu cầu hoàn tiền vì sản phẩm lỗi — được không?",
             "retrieved_chunks": [
                 {"text": "Ngoại lệ: Đơn hàng Flash Sale không được hoàn tiền.", "source": "policy_refund_v4.txt", "score": 0.9}
+            ],
+        },
+        {
+            "task": "Đơn này dùng mã giảm giá đặc biệt, có hoàn tiền được không?",
+            "retrieved_chunks": [
+                {"text": "Đơn hàng đã áp dụng mã giảm giá đặc biệt theo chương trình khuyến mãi Flash Sale.", "source": "policy_refund_v4.txt", "score": 0.9}
             ],
         },
         {
