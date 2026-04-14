@@ -1,5 +1,6 @@
 """
 graph.py — Supervisor Orchestrator
+<<<<<<< HEAD
 Sprint 1: Implement AgentState, supervisor_node, route_decision và kết nối graph.
 
 Kiến trúc:
@@ -7,10 +8,14 @@ Kiến trúc:
 
 Chạy thử:
     python graph.py
+=======
+Input -> Supervisor -> [retrieval_worker | policy_tool_worker | human_review] -> synthesis -> Output
+>>>>>>> NhatVi
 """
 
 import json
 import os
+<<<<<<< HEAD
 import re
 from datetime import datetime
 from typing import TypedDict, Literal, Optional
@@ -53,6 +58,39 @@ class AgentState(TypedDict):
 
 def make_initial_state(task: str) -> AgentState:
     """Khởi tạo state cho một run mới."""
+=======
+import sys
+import time
+from datetime import datetime
+from typing import Literal, Optional, TypedDict
+
+from workers.policy_tool import run as policy_tool_run
+from workers.retrieval import run as retrieval_run
+from workers.synthesis import run as synthesis_run
+
+
+class AgentState(TypedDict):
+    task: str
+    route_reason: str
+    risk_high: bool
+    needs_tool: bool
+    hitl_triggered: bool
+    retrieved_chunks: list
+    retrieved_sources: list
+    policy_result: dict
+    mcp_tools_used: list
+    final_answer: str
+    sources: list
+    confidence: float
+    history: list
+    workers_called: list
+    supervisor_route: str
+    latency_ms: Optional[int]
+    run_id: str
+
+
+def make_initial_state(task: str) -> AgentState:
+>>>>>>> NhatVi
     return {
         "task": task,
         "route_reason": "",
@@ -74,6 +112,7 @@ def make_initial_state(task: str) -> AgentState:
     }
 
 
+<<<<<<< HEAD
 # ─────────────────────────────────────────────
 # 2. Supervisor Node — quyết định route
 # ─────────────────────────────────────────────
@@ -125,12 +164,52 @@ def supervisor_node(state: AgentState) -> AgentState:
     # Append MCP signal so route_reason is self-documenting in grading log
     if needs_tool:
         route_reason += " | MCP tools planned"
+=======
+def supervisor_node(state: AgentState) -> AgentState:
+    task = state["task"].lower()
+    state["history"].append(f"[supervisor] received task: {state['task'][:80]}")
+
+    route = "retrieval_worker"
+    route_reason = "default -> retrieval_worker"
+    needs_tool = False
+    risk_high = False
+
+    retrieval_keywords = ["p1", "sla", "ticket", "escalation", "sự cố", "incident"]
+    policy_keywords = [
+        "hoàn tiền", "refund", "flash sale", "license", "subscription",
+        "cấp quyền", "access", "level 2", "level 3", "quyền truy cập",
+    ]
+    risk_keywords = ["emergency", "khẩn cấp", "2am", "không rõ", "err-"]
+
+    has_retrieval_signal = any(kw in task for kw in retrieval_keywords)
+    has_policy_signal = any(kw in task for kw in policy_keywords)
+
+    if has_policy_signal:
+        route = "policy_tool_worker"
+        route_reason = "task contains policy/access keyword -> policy_tool_worker + MCP allowed"
+        needs_tool = True
+        if has_retrieval_signal:
+            route_reason += " | multi-hop retrieval+policy"
+    elif has_retrieval_signal:
+        route = "retrieval_worker"
+        route_reason = "task contains retrieval keyword (P1/SLA/ticket/escalation)"
+
+    if any(kw in task for kw in risk_keywords):
+        risk_high = True
+        route_reason += " | risk_high flagged"
+
+    if "err-" in task and risk_high:
+        route = "human_review"
+        route_reason = "unknown error code + risk_high -> human_review"
+        needs_tool = False
+>>>>>>> NhatVi
 
     state["supervisor_route"] = route
     state["route_reason"] = route_reason
     state["needs_tool"] = needs_tool
     state["risk_high"] = risk_high
     state["history"].append(f"[supervisor] route={route} reason={route_reason}")
+<<<<<<< HEAD
 
     return state
 
@@ -144,10 +223,17 @@ def route_decision(state: AgentState) -> Literal["retrieval_worker", "policy_too
     Trả về tên worker tiếp theo dựa vào supervisor_route trong state.
     Đây là conditional edge của graph.
     """
+=======
+    return state
+
+
+def route_decision(state: AgentState) -> Literal["retrieval_worker", "policy_tool_worker", "human_review"]:
+>>>>>>> NhatVi
     route = state.get("supervisor_route", "retrieval_worker")
     return route  # type: ignore
 
 
+<<<<<<< HEAD
 # ─────────────────────────────────────────────
 # 4. Human Review Node — HITL placeholder
 # ─────────────────────────────────────────────
@@ -188,15 +274,31 @@ from workers.synthesis import run as synthesis_run
 
 def retrieval_worker_node(state: AgentState) -> AgentState:
     """Wrapper gọi retrieval worker (hybrid dense+BM25 via RRF)."""
+=======
+def human_review_node(state: AgentState) -> AgentState:
+    state["hitl_triggered"] = True
+    state["workers_called"].append("human_review")
+    state["history"].append("[human_review] HITL triggered; auto-approve in lab mode")
+    state["supervisor_route"] = "retrieval_worker"
+    state["route_reason"] += " | human approved -> retrieval"
+    return state
+
+
+def retrieval_worker_node(state: AgentState) -> AgentState:
+>>>>>>> NhatVi
     return retrieval_run(state)
 
 
 def policy_tool_worker_node(state: AgentState) -> AgentState:
+<<<<<<< HEAD
     """Wrapper gọi policy/tool worker (rule-based exception check + MCP)."""
+=======
+>>>>>>> NhatVi
     return policy_tool_run(state)
 
 
 def synthesis_worker_node(state: AgentState) -> AgentState:
+<<<<<<< HEAD
     """Wrapper gọi synthesis worker (grounded LLM call, temperature=0)."""
     return synthesis_run(state)
 
@@ -224,10 +326,20 @@ def build_graph():
         state = supervisor_node(state)
 
         # Step 2: Route to appropriate worker
+=======
+    return synthesis_run(state)
+
+
+def build_graph():
+    def run(state: AgentState) -> AgentState:
+        start = time.time()
+        state = supervisor_node(state)
+>>>>>>> NhatVi
         route = route_decision(state)
 
         if route == "human_review":
             state = human_review_node(state)
+<<<<<<< HEAD
             # After human approval, continue with retrieval
             state = retrieval_worker_node(state)
         elif route == "policy_tool_worker":
@@ -242,6 +354,26 @@ def build_graph():
         # Step 3: Always synthesize
         state = synthesis_worker_node(state)
 
+=======
+            state = retrieval_worker_node(state)
+        elif route == "policy_tool_worker":
+            task_lower = state.get("task", "").lower()
+            retrieval_keywords = ["p1", "sla", "ticket", "escalation", "sự cố", "incident"]
+            needs_retrieval_first = any(kw in task_lower for kw in retrieval_keywords)
+
+            # Multi-hop case: lấy evidence retrieval trước để policy + synthesis có đủ 2 domain.
+            if needs_retrieval_first:
+                state = retrieval_worker_node(state)
+                state["history"].append("[graph] multi-hop: retrieval before policy")
+
+            state = policy_tool_worker_node(state)
+            if not state.get("retrieved_chunks"):
+                state = retrieval_worker_node(state)
+        else:
+            state = retrieval_worker_node(state)
+
+        state = synthesis_worker_node(state)
+>>>>>>> NhatVi
         state["latency_ms"] = int((time.time() - start) * 1000)
         state["history"].append(f"[graph] completed in {state['latency_ms']}ms")
         return state
@@ -249,6 +381,7 @@ def build_graph():
     return run
 
 
+<<<<<<< HEAD
 # ─────────────────────────────────────────────
 # 7. Public API
 # ─────────────────────────────────────────────
@@ -275,6 +408,17 @@ def run_graph(task: str, **state_overrides) -> AgentState:
 
 def save_trace(state: AgentState, output_dir: str = "./artifacts/traces") -> str:
     """Lưu trace ra file JSON."""
+=======
+_graph = build_graph()
+
+
+def run_graph(task: str) -> AgentState:
+    state = make_initial_state(task)
+    return _graph(state)
+
+
+def save_trace(state: AgentState, output_dir: str = "./artifacts/traces") -> str:
+>>>>>>> NhatVi
     os.makedirs(output_dir, exist_ok=True)
     filename = f"{output_dir}/{state['run_id']}.json"
     with open(filename, "w", encoding="utf-8") as f:
@@ -282,11 +426,17 @@ def save_trace(state: AgentState, output_dir: str = "./artifacts/traces") -> str
     return filename
 
 
+<<<<<<< HEAD
 # ─────────────────────────────────────────────
 # 8. Manual Test
 # ─────────────────────────────────────────────
 
 if __name__ == "__main__":
+=======
+if __name__ == "__main__":
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+>>>>>>> NhatVi
     print("=" * 60)
     print("Day 09 Lab — Supervisor-Worker Graph")
     print("=" * 60)
@@ -298,7 +448,11 @@ if __name__ == "__main__":
     ]
 
     for query in test_queries:
+<<<<<<< HEAD
         print(f"\n▶ Query: {query}")
+=======
+        print(f"\n> Query: {query}")
+>>>>>>> NhatVi
         result = run_graph(query)
         print(f"  Route   : {result['supervisor_route']}")
         print(f"  Reason  : {result['route_reason']}")
@@ -306,9 +460,15 @@ if __name__ == "__main__":
         print(f"  Answer  : {result['final_answer'][:100]}...")
         print(f"  Confidence: {result['confidence']}")
         print(f"  Latency : {result['latency_ms']}ms")
+<<<<<<< HEAD
 
         # Lưu trace
         trace_file = save_trace(result)
         print(f"  Trace saved → {trace_file}")
 
     print("\n✅ graph.py test complete. Implement TODO sections in Sprint 1 & 2.")
+=======
+        print(f"  Trace saved -> {save_trace(result)}")
+
+    print("\n[OK] graph.py test complete.")
+>>>>>>> NhatVi

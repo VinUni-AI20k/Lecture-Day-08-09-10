@@ -96,8 +96,13 @@ retrieval_worker:
     - "Score phải là float trong khoảng [0, 1]"
     - "Stateless: không đọc hoặc ghi state ngoài những gì được khai báo ở trên"
   actual_implementation:
+<<<<<<< HEAD
     status: "TODO Sprint 2"  # Update to "done" khi xong
     notes: ""
+=======
+    status: "done"
+    notes: "retrieve_dense + run(state) implemented, returns chunks/sources/worker_io_logs."
+>>>>>>> NhatVi
 
 # ─────────────────────────────────────────────
 # Policy Tool Worker
@@ -166,8 +171,13 @@ policy_tool_worker:
     - "Phải ghi tên MCP tool đã gọi vào mcp_tools_used"
     - "Không được tự bịa policy rules không có trong tài liệu"
   actual_implementation:
+<<<<<<< HEAD
     status: "TODO Sprint 2"
     notes: ""
+=======
+    status: "done"
+    notes: "rule-based policy exceptions + MCP tool calls (search_kb/get_ticket_info/check_access_permission)."
+>>>>>>> NhatVi
 
 # ─────────────────────────────────────────────
 # Synthesis Worker
@@ -214,8 +224,13 @@ synthesis_worker:
     - "confidence < 0.4 → khuyến khích set hitl_triggered=True"
     - "Không được dùng kiến thức ngoài context được cung cấp"
   actual_implementation:
+<<<<<<< HEAD
     status: "TODO Sprint 2"
     notes: ""
+=======
+    status: "done"
+    notes: "LLM synthesis with deterministic fallback, returns final_answer/sources/confidence."
+>>>>>>> NhatVi
 
 # ─────────────────────────────────────────────
 # MCP Server
@@ -270,5 +285,10 @@ mcp_server:
     - "list_tools() phải trả về đúng format MCP tool schema"
     - "Không được raise exception ra ngoài dispatch_tool()"
   actual_implementation:
+<<<<<<< HEAD
     status: "TODO Sprint 3"
     notes: ""
+=======
+    status: "done"
+    notes: "Mock MCP dispatch/list implemented with 4 tools and error-safe dispatch."
+>>>>>>> NhatVi

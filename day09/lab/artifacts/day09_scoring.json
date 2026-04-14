@@ -1,0 +1,108 @@
+{
+  "rubric": "day09_scoring_md",
+  "raw_total": 92.0,
+  "raw_max": 96,
+  "group_score_30": 28.75,
+  "details": [
+    {
+      "id": "gq01",
+      "points": 10,
+      "score": 10.0,
+      "band": "full",
+      "criteria_met": "3/3",
+      "hallucination": false,
+      "trace_penalty": 0.0,
+      "notes": "parse_error: {\n  \"criteria_met_count\": 3,\n  \"criteria_total\":"
+    },
+    {
+      "id": "gq02",
+      "points": 10,
+      "score": 10.0,
+      "band": "full",
+      "criteria_met": "3/3",
+      "hallucination": false,
+      "trace_penalty": 0.0,
+      "notes": "All criteria are met. The answer correctly identifies the applicable policy version, states the limitation of available information, and explicitly avoids inventing details for v3."
+    },
+    {
+      "id": "gq03",
+      "points": 10,
+      "score": 10.0,
+      "band": "full",
+      "criteria_met": "3/3",
+      "hallucination": false,
+      "trace_penalty": 0.0,
+      "notes": "All three criteria are explicitly met by the answer."
+    },
+    {
+      "id": "gq04",
+      "points": 6,
+      "score": 6.0,
+      "band": "full",
+      "criteria_met": "2/2",
+      "hallucination": false,
+      "trace_penalty": 0.0,
+      "notes": "Answer explicitly states 110% and explains it as a 10% bonus."
+    },
+    {
+      "id": "gq05",
+      "points": 8,
+      "score": 8.0,
+      "band": "full",
+      "criteria_met": "3/3",
+      "hallucination": false,
+      "trace_penalty": 0.0,
+      "notes": "parse_error: \n{\n  \"criteria_met_count\": 3,\n  \"criteria_total\": 3,\n  \"hallucination\": false,\n  \"notes\": \"All criteria met. The answer "
+    },
+    {
+      "id": "gq06",
+      "points": 8,
+      "score": 8.0,
+      "band": "full",
+      "criteria_met": "3/3",
+      "hallucination": false,
+      "trace_penalty": 0.0,
+      "notes": "parse_error: {\n  \"criteria_met_count\": 3,\n  \"criteria"
+    },
+    {
+      "id": "gq07",
+      "points": 10,
+      "score": 10.0,
+      "band": "full",
+      "criteria_met": "3/3",
+      "hallucination": false,
+      "trace_penalty": 0.0,
+      "notes": "parse_error: \n{\n  \"criteria_met_count\": 3,\n  \"criteria_total\": 3,\n  \"hallucination\":"
+    },
+    {
+      "id": "gq08",
+      "points": 8,
+      "score": 4.0,
+      "band": "partial",
+      "criteria_met": "2/3",
+      "hallucination": false,
+      "trace_penalty": 0.0,
+      "notes": "parse_error: {\n  \"criteria_met_count\": 2,\n  \""
+    },
+    {
+      "id": "gq09",
+      "points": 16,
+      "score": 16.0,
+      "band": "full",
+      "criteria_met": "5/5",
+      "hallucination": false,
+      "trace_penalty": 0.0,
+      "notes": "All criteria are explicitly met by the answer."
+    },
+    {
+      "id": "gq10",
+      "points": 10,
+      "score": 10.0,
+      "band": "full",
+      "criteria_met": "4/4",
+      "hallucination": false,
+      "trace_penalty": 0.0,
+      "notes": "All criteria are met. The answer correctly concludes, provides the specific reason from the policy, addresses the 'manufacturer defect' nuance, and cites the correct source."
+    }
+  ]
+}

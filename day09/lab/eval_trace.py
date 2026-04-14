@@ -25,6 +25,12 @@ from typing import Optional
 sys.path.insert(0, os.path.dirname(__file__))
 from graph import run_graph, save_trace
 
+<<<<<<< HEAD
+=======
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+
+>>>>>>> NhatVi
 
 # ─────────────────────────────────────────────
 # 1. Run Pipeline on Test Questions
@@ -185,7 +191,11 @@ def analyze_traces(traces_dir: str = "artifacts/traces") -> dict:
 
     traces = []
     for fname in trace_files:
+<<<<<<< HEAD
         with open(os.path.join(traces_dir, fname)) as f:
+=======
+        with open(os.path.join(traces_dir, fname), encoding="utf-8") as f:
+>>>>>>> NhatVi
             traces.append(json.load(f))
 
     # Compute metrics
@@ -260,7 +270,11 @@ def compare_single_vs_multi(
     }
 
     if day08_results_file and os.path.exists(day08_results_file):
+<<<<<<< HEAD
         with open(day08_results_file) as f:
+=======
+        with open(day08_results_file, encoding="utf-8") as f:
+>>>>>>> NhatVi
             day08_baseline = json.load(f)
 
     comparison = {

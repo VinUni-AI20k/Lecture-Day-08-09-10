@@ -17,7 +17,10 @@ Gọi độc lập để test:
 """
 
 import os
+<<<<<<< HEAD
 import re
+=======
+>>>>>>> NhatVi
 import sys
 from typing import Optional
 
@@ -180,9 +183,14 @@ def run(state: dict) -> dict:
 
     try:
         # Step 1: Nếu chưa có chunks, gọi MCP search_kb
+<<<<<<< HEAD
         top_k = state.get("retrieval_top_k", 3)
         if not chunks and needs_tool:
             mcp_result = _call_mcp_tool("search_kb", {"query": task, "top_k": top_k})
+=======
+        if not chunks and needs_tool:
+            mcp_result = _call_mcp_tool("search_kb", {"query": task, "top_k": 3})
+>>>>>>> NhatVi
             state["mcp_tools_used"].append(mcp_result)
             state["history"].append(f"[{WORKER_NAME}] called MCP search_kb")
 
@@ -194,12 +202,17 @@ def run(state: dict) -> dict:
         policy_result = analyze_policy(task, chunks)
         state["policy_result"] = policy_result
 
+<<<<<<< HEAD
         # Step 3: If task involves a P1 ticket, fetch live ticket context
+=======
+        # Step 3: Nếu cần thêm info từ MCP (e.g., ticket status), gọi get_ticket_info
+>>>>>>> NhatVi
         if needs_tool and any(kw in task.lower() for kw in ["ticket", "p1", "jira"]):
             mcp_result = _call_mcp_tool("get_ticket_info", {"ticket_id": "P1-LATEST"})
             state["mcp_tools_used"].append(mcp_result)
             state["history"].append(f"[{WORKER_NAME}] called MCP get_ticket_info")
 
+<<<<<<< HEAD
         # Step 4: If task mentions "Level N" access in an emergency context, check permission rules
         task_lower = task.lower()
         level_match = re.search(r'level\s*(\d+)', task_lower)
@@ -216,6 +229,21 @@ def run(state: dict) -> dict:
             state["history"].append(
                 f"[{WORKER_NAME}] called MCP check_access_permission level={level} role={role} emergency=True"
             )
+=======
+        # Step 4: Access-control questions -> check_access_permission
+        if needs_tool and any(kw in task.lower() for kw in ["access", "cấp quyền", "level 2", "level 3"]):
+            access_level = 3 if "level 3" in task.lower() else 2 if "level 2" in task.lower() else 1
+            mcp_result = _call_mcp_tool(
+                "check_access_permission",
+                {
+                    "access_level": access_level,
+                    "requester_role": "contractor" if "contractor" in task.lower() else "employee",
+                    "is_emergency": "emergency" in task.lower() or "khẩn cấp" in task.lower(),
+                },
+            )
+            state["mcp_tools_used"].append(mcp_result)
+            state["history"].append(f"[{WORKER_NAME}] called MCP check_access_permission")
+>>>>>>> NhatVi
 
         worker_io["output"] = {
             "policy_applies": policy_result["policy_applies"],
@@ -241,6 +269,11 @@ def run(state: dict) -> dict:
 # ─────────────────────────────────────────────
 
 if __name__ == "__main__":
+<<<<<<< HEAD
+=======
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+>>>>>>> NhatVi
     print("=" * 50)
     print("Policy Tool Worker — Standalone Test")
     print("=" * 50)
@@ -267,7 +300,11 @@ if __name__ == "__main__":
     ]
 
     for tc in test_cases:
+<<<<<<< HEAD
         print(f"\n▶ Task: {tc['task'][:70]}...")
+=======
+        print(f"\n> Task: {tc['task'][:70]}...")
+>>>>>>> NhatVi
         result = run(tc.copy())
         pr = result.get("policy_result", {})
         print(f"  policy_applies: {pr.get('policy_applies')}")
@@ -276,4 +313,8 @@ if __name__ == "__main__":
                 print(f"  exception: {ex['type']} — {ex['rule'][:60]}...")
         print(f"  MCP calls: {len(result.get('mcp_tools_used', []))}")
 
+<<<<<<< HEAD
     print("\n✅ policy_tool_worker test done.")
+=======
+    print("\n[OK] policy_tool_worker test done.")
+>>>>>>> NhatVi

@@ -20,10 +20,13 @@ import sys
 from pathlib import Path
 
 from dotenv import load_dotenv
+<<<<<<< HEAD
 load_dotenv()
 
 import vertexai
 from vertexai.language_models import TextEmbeddingModel
+=======
+>>>>>>> NhatVi
 
 # ─────────────────────────────────────────────
 # Worker Contract (xem contracts/worker_contracts.yaml)
@@ -33,6 +36,7 @@ from vertexai.language_models import TextEmbeddingModel
 
 WORKER_NAME = "retrieval_worker"
 DEFAULT_TOP_K = 3
+<<<<<<< HEAD
 CHROMA_DB_PATH = os.getenv("CHROMA_DB_PATH", "./chroma_db")
 COLLECTION_NAME = os.getenv("CHROMA_COLLECTION", "day09_docs")
 
@@ -52,10 +56,15 @@ def _init_vertex():
         project=os.getenv("VERTEX_PROJECT", "vinai053"),
         location=os.getenv("VERTEX_LOCATION", "us-central1"),
     )
+=======
+
+load_dotenv()
+>>>>>>> NhatVi
 
 
 def _get_embedding_fn():
     """
+<<<<<<< HEAD
     Returns Vertex AI text-multilingual-embedding-002 embed function.
     Falls back to OpenAI text-embedding-3-small if Vertex unavailable.
     """
@@ -75,10 +84,87 @@ def _get_embedding_fn():
     def embed(text: str) -> list:
         resp = client.embeddings.create(input=text, model="text-embedding-3-small")
         return resp.data[0].embedding
+=======
+    Trả về embedding function.
+    Ưu tiên dùng cùng provider/model với scripts/build_index.py (Vertex AI).
+    """
+    # Option A: Vertex AI text-multilingual-embedding-002 (khớp build_index.py)
+    try:
+        import vertexai
+        from vertexai.language_models import TextEmbeddingModel
+
+        creds_file = os.getenv("GOOGLE_APPLICATION_CREDENTIALS", "")
+        if creds_file:
+            creds_path = Path(__file__).parent.parent / creds_file
+            if creds_path.exists():
+                os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = str(creds_path)
+
+        project = os.getenv("VERTEX_PROJECT") or os.getenv("GOOGLE_CLOUD_PROJECT", "vinai053")
+        location = os.getenv("VERTEX_LOCATION") or os.getenv("GOOGLE_CLOUD_LOCATION", "us-central1")
+        model_name = os.getenv("VERTEX_EMBEDDING_MODEL", "text-multilingual-embedding-002")
+
+        if project:
+            vertexai.init(project=project, location=location)
+            model = TextEmbeddingModel.from_pretrained(model_name)
+            print(f"[retrieval] embedding provider=vertex model={model_name}")
+
+            def embed(text: str) -> list:
+                return model.get_embeddings([text])[0].values
+
+            return embed
+    except Exception as e:
+        print(f"⚠️  Vertex embedding unavailable: {e}")
+
+    # Option B: OpenAI
+    openai_key = os.getenv("OPENAI_API_KEY")
+    if openai_key:
+        try:
+            from openai import OpenAI
+            client = OpenAI(api_key=openai_key)
+            print("[retrieval] embedding provider=openai model=text-embedding-3-small")
+
+            def embed(text: str) -> list:
+                resp = client.embeddings.create(input=text, model="text-embedding-3-small")
+                return resp.data[0].embedding
+
+            return embed
+        except ImportError:
+            pass
+
+    # Option C: Sentence Transformers (offline)
+    try:
+        from sentence_transformers import SentenceTransformer
+
+        model = SentenceTransformer("all-MiniLM-L6-v2")
+        print("[retrieval] embedding provider=sentence-transformers model=all-MiniLM-L6-v2")
+
+        def embed(text: str) -> list:
+            return model.encode([text])[0].tolist()
+
+        return embed
+    except Exception:
+        pass
+
+    # Option D: deterministic pseudo-embedding cho test (không cần API key)
+    import hashlib
+
+    def embed(text: str) -> list:
+        digest = hashlib.sha256(text.encode("utf-8")).digest()
+        # tạo vector ổn định 384 chiều từ hash
+        values = []
+        seed = digest
+        while len(values) < 384:
+            seed = hashlib.sha256(seed).digest()
+            values.extend([(b / 255.0) for b in seed])
+        return values[:384]
+
+    print("⚠️  WARNING: Using deterministic fallback embeddings (test mode).")
+>>>>>>> NhatVi
     return embed
 
 
 def _get_collection():
+<<<<<<< HEAD
     """Kết nối ChromaDB collection day09_docs."""
     import chromadb
     client = chromadb.PersistentClient(path=CHROMA_DB_PATH)
@@ -109,6 +195,24 @@ def _get_bm25_index() -> dict:
     tokenized = [doc.lower().split() for doc in docs]
     _bm25_cache = {"bm25": BM25Okapi(tokenized), "docs": docs, "metas": metas}
     return _bm25_cache
+=======
+    """
+    Kết nối ChromaDB collection.
+    TODO Sprint 2: Đảm bảo collection đã được build từ Step 3 trong README.
+    """
+    import chromadb
+    client = chromadb.PersistentClient(path="./chroma_db")
+    try:
+        collection = client.get_collection("day09_docs")
+    except Exception:
+        # Auto-create nếu chưa có
+        collection = client.get_or_create_collection(
+            "day09_docs",
+            metadata={"hnsw:space": "cosine"}
+        )
+        print(f"⚠️  Collection 'day09_docs' chưa có data. Chạy index script trong README trước.")
+    return collection
+>>>>>>> NhatVi
 
 
 def retrieve_dense(query: str, top_k: int = DEFAULT_TOP_K) -> list:
@@ -155,6 +259,7 @@ def retrieve_dense(query: str, top_k: int = DEFAULT_TOP_K) -> list:
         return []
 
 
+<<<<<<< HEAD
 def retrieve_sparse(query: str, top_k: int = DEFAULT_TOP_K) -> list:
     """
     Sparse retrieval via BM25 keyword search.
@@ -215,6 +320,8 @@ def retrieve_hybrid(
     return ranked[:top_k]
 
 
+=======
+>>>>>>> NhatVi
 def run(state: dict) -> dict:
     """
     Worker entry point — gọi từ graph.py.
@@ -242,7 +349,11 @@ def run(state: dict) -> dict:
     }
 
     try:
+<<<<<<< HEAD
         chunks = retrieve_hybrid(task, top_k=top_k)  # hybrid is the default (Day 08 winning config)
+=======
+        chunks = retrieve_dense(task, top_k=top_k)
+>>>>>>> NhatVi
 
         sources = list({c["source"] for c in chunks})
 
@@ -274,6 +385,11 @@ def run(state: dict) -> dict:
 # ─────────────────────────────────────────────
 
 if __name__ == "__main__":
+<<<<<<< HEAD
+=======
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+>>>>>>> NhatVi
     print("=" * 50)
     print("Retrieval Worker — Standalone Test")
     print("=" * 50)
@@ -285,7 +401,11 @@ if __name__ == "__main__":
     ]
 
     for query in test_queries:
+<<<<<<< HEAD
         print(f"\n▶ Query: {query}")
+=======
+        print(f"\n> Query: {query}")
+>>>>>>> NhatVi
         result = run({"task": query})
         chunks = result.get("retrieved_chunks", [])
         print(f"  Retrieved: {len(chunks)} chunks")
@@ -293,4 +413,8 @@ if __name__ == "__main__":
             print(f"    [{c['score']:.3f}] {c['source']}: {c['text'][:80]}...")
         print(f"  Sources: {result.get('retrieved_sources', [])}")
 
+<<<<<<< HEAD
     print("\n✅ retrieval_worker test done.")
+=======
+    print("\n[OK] retrieval_worker test done.")
+>>>>>>> NhatVi

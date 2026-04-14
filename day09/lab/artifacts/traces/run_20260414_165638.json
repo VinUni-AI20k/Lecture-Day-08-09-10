@@ -1,0 +1,102 @@
+{
+  "task": "Nhân viên được làm remote tối đa mấy ngày mỗi tuần?",
+  "route_reason": "default -> retrieval_worker",
+  "risk_high": false,
+  "needs_tool": false,
+  "hitl_triggered": false,
+  "retrieved_chunks": [
+    {
+      "text": "4.1 Điều kiện remote:\n- Nhân viên sau probation period có thể làm remote tối đa 2 ngày/tuần.\n- Team Lead phải phê duyệt lịch remote qua HR Portal.\n- Ngày onsite bắt buộc: Thứ 3 và Thứ 5 theo lịch team.\n\n4.2 Yêu cầu kỹ thuật khi remote:\n- Kết nối VPN bắt buộc khi làm việc với hệ thống nội bộ.\n- Camera bật trong các cuộc họp team.",
+      "source": "hr/leave-policy-2026.pdf",
+      "score": 0.8256,
+      "metadata": {
+        "source": "hr/leave-policy-2026.pdf",
+        "department": "HR",
+        "section": "Phần 4: Remote work policy",
+        "access": "internal",
+        "effective_date": "2026-01-01"
+      }
+    },
+    {
+      "text": "3.1 Điều kiện làm thêm:\nLàm thêm giờ phải được Line Manager phê duyệt trước bằng văn bản.\n\n3.2 Hệ số lương làm thêm:\n- Ngày thường: 150% lương giờ tiêu chuẩn.\n- Ngày cuối tuần: 200% lương giờ tiêu chuẩn.\n- Ngày lễ: 300% lương giờ tiêu chuẩn.",
+      "source": "hr/leave-policy-2026.pdf",
+      "score": 0.7304,
+      "metadata": {
+        "source": "hr/leave-policy-2026.pdf",
+        "access": "internal",
+        "department": "HR",
+        "section": "Phần 3: Chính sách làm thêm giờ",
+        "effective_date": "2026-01-01"
+      }
+    },
+    {
+      "text": "1.1 Nghỉ phép năm (Annual Leave):\n- Số ngày: 12 ngày/năm cho nhân viên dưới 3 năm kinh nghiệm.\n- Số ngày: 15 ngày/năm cho nhân viên từ 3-5 năm kinh nghiệm.\n- Số ngày: 18 ngày/năm cho nhân viên trên 5 năm kinh nghiệm.\n- Chuyển năm sau: Tối đa 5 ngày phép năm chưa dùng được chuyển sang năm tiếp theo.\n\n1.2 Nghỉ ốm (Sick Leave):\n- Số ngày: 10 ngày/năm có trả lương.\n- Yêu cầu: Thông báo cho Line Manager trước 9:00 sáng ngày nghỉ.\n- Nếu nghỉ trên 3 ngày liên tiếp: Cần giấy tờ y tế từ bệnh viện.\n\n1.3 Nghỉ thai sản:\n- Nghỉ sinh con: 6 tháng theo quy định Luật Lao động.\n- Nghỉ nuôi con nhỏ: 1 tiếng/ngày trong 12 tháng đầu sau sinh.\n\n1.4 Nghỉ lễ tết:\nTheo lịch nghỉ lễ quốc gia do HR công bố hàng năm vào tháng 12.",
+      "source": "hr/leave-policy-2026.pdf",
+      "score": 0.7057,
+      "metadata": {
+        "access": "internal",
+        "source": "hr/leave-policy-2026.pdf",
+        "department": "HR",
+        "section": "Phần 1: Các loại nghỉ phép",
+        "effective_date": "2026-01-01"
+      }
+    }
+  ],
+  "retrieved_sources": [
+    "hr/leave-policy-2026.pdf"
+  ],
+  "policy_result": {},
+  "mcp_tools_used": [],
+  "final_answer": "Trả lời tóm tắt cho câu hỏi: Nhân viên được làm remote tối đa mấy ngày mỗi tuần?\n- [1] 4.1 Điều kiện remote: - Nhân viên sau probation period có thể làm remote tối đa 2 ngày/tuần. - Team Lead phải phê duyệt lịch remote qua HR Portal. - Ngày onsite bắt buộc: Thứ 3 và Thứ 5 theo lịch team.  4.2 Yêu cầu kỹ th [hr/leave-policy-2026.pdf]\n- [2] 3.1 Điều kiện làm thêm: Làm thêm giờ phải được Line Manager phê duyệt trước bằng văn bản.  3.2 Hệ số lương làm thêm: - Ngày thường: 150% lương giờ tiêu chuẩn. - Ngày cuối tuần: 200% lương giờ tiêu chuẩn. - Ngày lễ: 300%  [hr/leave-policy-2026.pdf]",
+  "sources": [
+    "hr/leave-policy-2026.pdf"
+  ],
+  "confidence": 0.75,
+  "history": [
+    "[supervisor] received task: Nhân viên được làm remote tối đa mấy ngày mỗi tuần?",
+    "[supervisor] route=retrieval_worker reason=default -> retrieval_worker",
+    "[retrieval_worker] retrieved 3 chunks from ['hr/leave-policy-2026.pdf']",
+    "[synthesis_worker] answer generated, confidence=0.75, sources=['hr/leave-policy-2026.pdf']",
+    "[graph] completed in 2794ms"
+  ],
+  "workers_called": [
+    "retrieval_worker",
+    "synthesis_worker"
+  ],
+  "supervisor_route": "retrieval_worker",
+  "latency_ms": 2794,
+  "run_id": "run_20260414_165638",
+  "worker_io_logs": [
+    {
+      "worker": "retrieval_worker",
+      "input": {
+        "task": "Nhân viên được làm remote tối đa mấy ngày mỗi tuần?",
+        "top_k": 3
+      },
+      "output": {
+        "chunks_count": 3,
+        "sources": [
+          "hr/leave-policy-2026.pdf"
+        ]
+      },
+      "error": null
+    },
+    {
+      "worker": "synthesis_worker",
+      "input": {
+        "task": "Nhân viên được làm remote tối đa mấy ngày mỗi tuần?",
+        "chunks_count": 3,
+        "has_policy": false
+      },
+      "output": {
+        "answer_length": 588,
+        "sources": [
+          "hr/leave-policy-2026.pdf"
+        ],
+        "confidence": 0.75
+      },
+      "error": null
+    }
+  ],
+  "question_id": "q05"
+}
