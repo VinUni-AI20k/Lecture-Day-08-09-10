@@ -1,7 +1,7 @@
 # Routing Decisions Log — Lab Day 09
 
-**Nhóm:** ___________  
-**Ngày:** ___________
+**Nhóm:** AI in Action (AICB-P1)
+**Ngày:** 14/04/2026
 
 > **Hướng dẫn:** Ghi lại ít nhất **3 quyết định routing** thực tế từ trace của nhóm.
 > Không ghi giả định — phải từ trace thật (`artifacts/traces/`).
@@ -13,21 +13,20 @@
 ## Routing Decision #1
 
 **Task đầu vào:**
-> _________________
+> Cần cấp quyền Level 3 để khắc phục P1 khẩn cấp. Quy trình là gì?
 
-**Worker được chọn:** `___________________`  
-**Route reason (từ trace):** `___________________`  
-**MCP tools được gọi:** _________________  
-**Workers called sequence:** _________________
+**Worker được chọn:** `policy_tool_worker`  
+**Route reason (từ trace):** `task contains policy/access keyword | risk_high flagged`  
+**MCP tools được gọi:** `None` (Mock stage)  
+**Workers called sequence:** `policy_tool_worker` -> `retrieval_worker` -> `synthesis_worker`
 
 **Kết quả thực tế:**
-- final_answer (ngắn): _________________
-- confidence: _________________
-- Correct routing? Yes / No
+- final_answer (ngắn): [PLACEHOLDER] Câu trả lời được tổng hợp từ 1 chunks.
+- confidence: 0.75
+- Correct routing? Yes
 
 **Nhận xét:** _(Routing này đúng hay sai? Nếu sai, nguyên nhân là gì?)_
-
-_________________
+Routing **Đúng**. Hệ thống đã nhận diện được từ khóa "cấp quyền" (access) và mức độ khẩn cấp (P1/khẩn cấp) để chuyển đến Policy worker xử lý ngoại lệ trước khi tìm kiếm tài liệu.
 
 ---
 
@@ -110,8 +109,9 @@ _________________
 > Quyết định kỹ thuật quan trọng nhất nhóm đưa ra về routing logic là gì?  
 > (VD: dùng keyword matching vs LLM classifier, threshold confidence cho HITL, v.v.)
 
-1. ___________________
-2. ___________________
+1. **Sức mạnh của Keyword Matching**: Với một tập hợp tài liệu nội bộ có cấu trúc rõ ràng (SLA, Refund, Access SOP), việc sử dụng keyword matching kết hợp Regex là đủ hiệu quả và cực kỳ nhanh so với việc dùng LLM để phân loại, đồng thời tiết kiệm chi phí API.
+2. **Tầm quan trọng của route_reason**: Việc bắt buộc ghi lại lý do định tuyến giúp tầng Synthesis hiểu rõ tại sao context đó được chọn, đồng thời giúp con người dễ dàng can thiệp (HITL) khi có sai sót.
+3. **Mở rộng qua MCP**: Tách biệt logic routing và logic gọi công cụ (tools) giúp Supervisor giữ được sự tinh gọn, chỉ quan tâm đến việc "đi đâu" thay vì "làm thế nào".
 
 ### Route Reason Quality
 

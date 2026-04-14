@@ -27,24 +27,20 @@
 
 ## 1. Kiến trúc nhóm đã xây dựng (150–200 từ)
 
-> Mô tả ngắn gọn hệ thống nhóm: bao nhiêu workers, routing logic hoạt động thế nào,
-> MCP tools nào được tích hợp. Dùng kết quả từ `docs/system_architecture.md`.
-
 **Hệ thống tổng quan:**
-
-_________________
+Hệ thống được thiết kế theo mô hình **Supervisor-Worker** sử dụng cấu trúc Graph để điều phối luồng xử lý. Supervisor nhận câu hỏi, thực hiện phân tích định tuyến dựa trên từ khóa và mức độ rủi ro, sau đó phân phối công việc cho các Worker chuyên biệt. Hệ thống tích hợp một tầng **MCP (Model Context Protocol)** để cung cấp các khả năng ngoại vi như tra cứu ticket Jira và kiểm tra quyền truy cập hệ thống.
 
 **Routing logic cốt lõi:**
-> Mô tả logic supervisor dùng để quyết định route (keyword matching, LLM classifier, rule-based, v.v.)
-
-_________________
+Nhóm sử dụng logic **Keyword Matching + Regex** tích hợp trong Supervisor. Logic này ưu tiên:
+- Phân loại nhanh các yêu cầu về chính sách hoàn tiền/truy cập sang `policy_tool_worker`.
+- Phân loại các yêu cầu về sự cố/SLA sang `retrieval_worker`.
+- Kích hoạt **Human-in-the-Loop (HITL)** khi phát hiện các mã lỗi hệ thống không xác định hoặc tình huống khẩn cấp ngoài giờ làm việc.
 
 **MCP tools đã tích hợp:**
-> Liệt kê tools đã implement và 1 ví dụ trace có gọi MCP tool.
-
-- `search_kb`: ___________________
-- `get_ticket_info`: ___________________
-- ___________________: ___________________
+- `search_kb`: Công cụ tìm kiếm ngữ nghĩa trong cơ sở dữ liệu tri thức ChromaDB.
+- `get_ticket_info`: Tra cứu trạng thái và chi tiết các ticket P1/SLA từ hệ thống giả lập.
+- `check_access_permission`: Kiểm tra điều kiện cấp quyền dựa trên Access Control SOP.
+- `create_ticket`: Hỗ trợ tạo ticket Jira tự động cho các yêu cầu không thể tự xử lý.
 
 ---
 

@@ -15,3 +15,9 @@ day08/lab/data/bm25_index/
 day08/lab/data/chroma_db/
 day08/lab/data/test_questions_extended.json
 day08/lab/test_retrieval.py
+
+# Python environment and project files
+.python-version
+pyproject.toml
+main.py
+.venv/
