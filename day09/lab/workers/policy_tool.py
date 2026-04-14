@@ -27,20 +27,25 @@ WORKER_NAME = "policy_tool_worker"
 # MCP Client — Sprint 3: Thay bằng real MCP call
 # ─────────────────────────────────────────────
 
+# MCP integration by: Nguyen Dong Hung (2A202600392) - MCP Owner
 def _call_mcp_tool(tool_name: str, tool_input: dict) -> dict:
     """
-    Gọi MCP tool.
-
-    Sprint 3 TODO: Implement bằng cách import mcp_server hoặc gọi HTTP.
-
-    Hiện tại: Import trực tiếp từ mcp_server.py (trong-process mock).
+    Gọi MCP tool (Dual mode).
+    - Ưu tiên: Gọi qua FastAPI HTTP API (cổng 8080).
+    - Fallback: Import trực tiếp in-process mock (nếu HTTP server chưa chạy).
     """
     from datetime import datetime
+    import sys
 
     try:
-        # TODO Sprint 3: Thay bằng real MCP client nếu dùng HTTP server
-        from mcp_server import dispatch_tool
-        result = dispatch_tool(tool_name, tool_input)
+        # Cách 1: Ưu tiên HTTP
+        import httpx
+        url = "http://127.0.0.1:8080/tools/call"
+        payload = {"tool_name": tool_name, "tool_input": tool_input}
+        # Dùng raw requests để tránh crash khi chưa có server
+        response = httpx.post(url, json=payload, timeout=2.0)
+        result = response.json()
+        print(f"  [MCP Client] Gọi thành công {tool_name} qua HTTP API.")
         return {
             "tool": tool_name,
             "input": tool_input,
@@ -48,14 +53,27 @@ def _call_mcp_tool(tool_name: str, tool_input: dict) -> dict:
             "error": None,
             "timestamp": datetime.now().isoformat(),
         }
-    except Exception as e:
-        return {
-            "tool": tool_name,
-            "input": tool_input,
-            "output": None,
-            "error": {"code": "MCP_CALL_FAILED", "reason": str(e)},
-            "timestamp": datetime.now().isoformat(),
-        }
+    except Exception as e_http:
+        # Cách 2: Fallback in-process import
+        try:
+            print(f"  [MCP Client] HTTP failed ({e_http}), fallback to in-process mock.")
+            from mcp_server import dispatch_tool
+            result = dispatch_tool(tool_name, tool_input)
+            return {
+                "tool": tool_name,
+                "input": tool_input,
+                "output": result,
+                "error": None,
+                "timestamp": datetime.now().isoformat(),
+            }
+        except Exception as e_mock:
+            return {
+                "tool": tool_name,
+                "input": tool_input,
+                "output": None,
+                "error": {"code": "MCP_CALL_FAILED", "reason": str(e_mock)},
+                "timestamp": datetime.now().isoformat(),
+            }
 
 
 # ─────────────────────────────────────────────

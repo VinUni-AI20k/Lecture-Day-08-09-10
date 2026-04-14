@@ -1,5 +1,6 @@
 """
-mcp_server.py — Mock MCP Server
+mcp_server.py — Mock MCP Server & FastAPI HTTP Server
+# MCP Owner: Nguyen Dong Hung (2A202600392)
 Sprint 3: Implement ít nhất 2 MCP tools.
 
 Mô phỏng MCP (Model Context Protocol) interface trong Python.
@@ -328,15 +329,51 @@ def dispatch_tool(tool_name: str, tool_input: dict) -> dict:
 
 
 # ─────────────────────────────────────────────
+# FastAPI HTTP Server (Sprint 3 Bonus)
+# ─────────────────────────────────────────────
+try:
+    from fastapi import FastAPI, HTTPException
+    from pydantic import BaseModel
+    import uvicorn
+
+    app = FastAPI(title="Day 09 Mock MCP Server", description="MCP Server run via HTTP for Multi-Agent")
+
+    class ToolCallRequest(BaseModel):
+        tool_name: str
+        tool_input: dict
+
+    @app.get("/tools/list")
+    def api_list_tools():
+        return {"tools": list_tools()}
+
+    @app.post("/tools/call")
+    def api_dispatch_tool(request: ToolCallRequest):
+        result = dispatch_tool(request.tool_name, request.tool_input)
+        return result
+
+except ImportError:
+    app = None
+
+# ─────────────────────────────────────────────
 # Test & Demo
 # ─────────────────────────────────────────────
 
 if __name__ == "__main__":
-    print("=" * 60)
-    print("MCP Server — Tool Discovery & Test")
-    print("=" * 60)
+    import sys
+    if len(sys.argv) > 1 and sys.argv[1] == "--http":
+        if app is None:
+            print("Please install fastapi and uvicorn: pip install fastapi uvicorn")
+            sys.exit(1)
+        import uvicorn
+        print("Starting FastAPI HTTP Server on port 8080...")
+        uvicorn.run(app, host="127.0.0.1", port=8080)
+    else:
+        print("=" * 60)
+        print("MCP Server — Tool Discovery & Test")
+        print("Run with '--http' flag to start the FastAPI server.")
+        print("=" * 60)
 
-    # 1. Discover tools
+        # 1. Discover tools
     print("\n📋 Available Tools:")
     for tool in list_tools():
         print(f"  • {tool['name']}: {tool['description'][:60]}...")
