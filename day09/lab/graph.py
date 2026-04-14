@@ -122,33 +122,39 @@ def supervisor_node(state: AgentState) -> AgentState:
         route_reason = "unknown error code with risk_high context → human review required"
         risk_high = True
     
-    # Priority 2: Policy/access control questions → policy_tool_worker
+    # Priority 2: Policy/access control questions → policy_tool_worker + MCP enabled
     elif any(kw in task for kw in policy_keywords):
         route = "policy_tool_worker"
         matched_keywords = [kw for kw in policy_keywords if kw in task]
-        route_reason = f"task contains policy/access keywords: {', '.join(matched_keywords[:2])}"
+        route_reason = (
+            f"task contains policy/access keywords: {', '.join(matched_keywords[:2])}"
+            " | MCP enabled: search_kb + check_access_permission"
+        )
         needs_tool = True
-        
+
         # Check if also high risk
         if any(kw in task for kw in risk_keywords):
             risk_high = True
             route_reason += " | risk_high: emergency context detected"
-    
-    # Priority 3: SLA/ticket questions → retrieval_worker (high priority)
+
+    # Priority 3: SLA/ticket questions → retrieval_worker (no MCP needed)
     elif any(kw in task for kw in sla_keywords):
         route = "retrieval_worker"
         matched_keywords = [kw for kw in sla_keywords if kw in task]
-        route_reason = f"task contains SLA/ticket keywords: {', '.join(matched_keywords[:2])}"
-        
+        route_reason = (
+            f"task contains SLA/ticket keywords: {', '.join(matched_keywords[:2])}"
+            " | MCP disabled: direct retrieval sufficient"
+        )
+
         # Check if also high risk
         if any(kw in task for kw in risk_keywords):
             risk_high = True
             route_reason += " | risk_high: time-sensitive SLA query"
-    
-    # Priority 4: Default → retrieval_worker
+
+    # Priority 4: Default → retrieval_worker (no MCP needed)
     else:
         route = "retrieval_worker"
-        route_reason = "default route: general knowledge retrieval"
+        route_reason = "default route: general knowledge retrieval | MCP disabled"
 
     # Ensure route_reason is never empty
     if not route_reason:

@@ -32,24 +32,54 @@ WORKER_NAME = "retrieval_worker"
 DEFAULT_TOP_K = 3
 
 
+def _get_embedding_fn():
+    """
+    Trả về embedding function phù hợp với môi trường.
+    Ưu tiên SentenceTransformers (offline), fallback sang OpenAI nếu có key.
+    """
+    try:
+        from sentence_transformers import SentenceTransformer
+        _model = SentenceTransformer("all-MiniLM-L6-v2")
+        def st_embed(texts):
+            return _model.encode(texts).tolist()
+        # Wrap để chromadb gọi được
+        from chromadb.utils.embedding_functions import EmbeddingFunction
+        class STEmbeddingFunction(EmbeddingFunction):
+            def __call__(self, input):
+                return _model.encode(input).tolist()
+        return STEmbeddingFunction()
+    except ImportError:
+        pass
+
+    openai_key = os.getenv('OPENAI_API_KEY')
+    if openai_key:
+        return embedding_functions.OpenAIEmbeddingFunction(
+            api_key=openai_key,
+            model_name="text-embedding-3-small"
+        )
+
+    raise RuntimeError("Không có embedding backend. Cài sentence-transformers hoặc set OPENAI_API_KEY.")
+
+
 def _get_collection():
     """
-    Kết nối ChromaDB collection với OpenAI embedding function.
+    Kết nối ChromaDB collection.
+    Dùng SentenceTransformers nếu không có OPENAI_API_KEY.
     """
-    openai_ef = embedding_functions.OpenAIEmbeddingFunction(
-        api_key=os.getenv('OPENAI_API_KEY'),
-        model_name="text-embedding-3-small"
-    )
-    
     client = chromadb.PersistentClient(path="./chroma_db")
+    ef = _get_embedding_fn()
     try:
         collection = client.get_collection(
             name="day09_docs",
-            embedding_function=openai_ef
+            embedding_function=ef
         )
-    except Exception as e:
-        print(f"⚠️  Collection 'day09_docs' not found. Run build_index.py first.")
-        raise e
+    except Exception:
+        collection = client.get_or_create_collection(
+            name="day09_docs",
+            embedding_function=ef,
+            metadata={"hnsw:space": "cosine"}
+        )
+        print("⚠️  Collection 'day09_docs' chưa có data. Chạy build_index.py trước.")
     return collection
 
 

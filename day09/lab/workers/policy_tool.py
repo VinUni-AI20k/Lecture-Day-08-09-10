@@ -367,13 +367,14 @@ def run(state: dict) -> dict:
     }
 
     try:
-        # Step 1: Nếu chưa có chunks, gọi MCP search_kb
-        if not chunks and needs_tool:
+        # Step 1: Khi needs_tool=True, LUÔN gọi MCP search_kb (MCP là interface chính)
+        if needs_tool:
             mcp_result = _call_mcp_tool("search_kb", {"query": task, "top_k": 3})
             state["mcp_tools_used"].append(mcp_result)
             state["history"].append(f"[{WORKER_NAME}] called MCP search_kb")
 
-            if mcp_result.get("output") and mcp_result["output"].get("chunks"):
+            # Nếu chưa có chunks từ retrieval, dùng kết quả từ MCP
+            if not chunks and mcp_result.get("output") and mcp_result["output"].get("chunks"):
                 chunks = mcp_result["output"]["chunks"]
                 state["retrieved_chunks"] = chunks
 
@@ -381,8 +382,22 @@ def run(state: dict) -> dict:
         policy_result = analyze_policy(task, chunks)
         state["policy_result"] = policy_result
 
-        # Step 3: Nếu cần thêm info từ MCP (e.g., ticket status), gọi get_ticket_info
-        if needs_tool and any(kw in task.lower() for kw in ["ticket", "p1", "jira"]):
+        # Step 3: Gọi check_access_permission nếu task liên quan đến access control
+        task_lower = task.lower()
+        if needs_tool and any(kw in task_lower for kw in ["access", "cấp quyền", "level 2", "level 3", "quyền"]):
+            level = 3 if "level 3" in task_lower else 2
+            is_emergency = any(kw in task_lower for kw in ["emergency", "khẩn cấp", "urgent"])
+            requester = "contractor" if "contractor" in task_lower else "employee"
+            mcp_result = _call_mcp_tool("check_access_permission", {
+                "access_level": level,
+                "requester_role": requester,
+                "is_emergency": is_emergency,
+            })
+            state["mcp_tools_used"].append(mcp_result)
+            state["history"].append(f"[{WORKER_NAME}] called MCP check_access_permission level={level}")
+
+        # Step 4: Gọi get_ticket_info nếu task liên quan đến ticket/P1
+        if needs_tool and any(kw in task_lower for kw in ["ticket", "p1", "jira"]):
             mcp_result = _call_mcp_tool("get_ticket_info", {"ticket_id": "P1-LATEST"})
             state["mcp_tools_used"].append(mcp_result)
             state["history"].append(f"[{WORKER_NAME}] called MCP get_ticket_info")
