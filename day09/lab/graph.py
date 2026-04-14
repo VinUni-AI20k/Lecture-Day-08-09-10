@@ -11,11 +11,15 @@ Chạy thử:
 
 import json
 import os
+import sys
 from datetime import datetime
 from typing import TypedDict, Literal, Optional
 
 # Uncomment nếu dùng LangGraph:
 # from langgraph.graph import StateGraph, END
+
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8")
 
 # ─────────────────────────────────────────────
 # 1. Shared State — dữ liệu đi xuyên toàn graph

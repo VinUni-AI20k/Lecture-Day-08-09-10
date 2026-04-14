@@ -21,6 +21,9 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8")
+
 # ─────────────────────────────────────────────
 # Worker Contract (xem contracts/worker_contracts.yaml)
 # Input:  {"task": str, "top_k": int = 3}

@@ -17,6 +17,7 @@ Gọi độc lập để test:
 """
 
 import os
+import sys
 
 WORKER_NAME = "synthesis_worker"
 
@@ -37,6 +38,9 @@ try:
 except ImportError:
     pass
 load_dotenv()
+
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8")
 
 
 def _call_llm(messages: list) -> str:

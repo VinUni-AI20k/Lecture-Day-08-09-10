@@ -20,6 +20,10 @@ import os
 import sys
 from typing import Optional
 
+# Ensure UTF-8 output on Windows terminals
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8")
+
 # load_dotenv = lambda: None  # Placeholder nếu chưa dùng dotenv package
 # try:
 #     from dotenv import load_dotenv as _load_dotenv
