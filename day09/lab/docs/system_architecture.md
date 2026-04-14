@@ -178,3 +178,4 @@ Với 3 query mẫu chạy ngày 14/4/2026: query SLA route đúng qua `retrieva
 1. `policy_tool_worker` phụ thuộc thư viện `mcp`; khi môi trường thiếu package này thì nhánh policy thất bại và trả abstain.
 2. Routing hiện tại dựa trên keyword heuristic, chưa có classifier/LLM router nên dễ miss các câu diễn đạt gián tiếp.
 3. `human_review` mới là placeholder, chưa có HITL interrupt thực sự (chưa có bước chờ/phê duyệt thủ công trong runtime).
+**TrinhDucAnh**
