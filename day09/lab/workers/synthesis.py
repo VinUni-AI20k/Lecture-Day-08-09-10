@@ -17,6 +17,15 @@ Gọi độc lập để test:
 """
 
 import os
+import json
+
+# Load .env for standalone execution
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
+
 
 WORKER_NAME = "synthesis_worker"
 
@@ -37,29 +46,33 @@ def _call_llm(messages: list) -> str:
     TODO Sprint 2: Implement với OpenAI hoặc Gemini.
     """
     # Option A: OpenAI
-    try:
-        from openai import OpenAI
-        client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-        response = client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=messages,
-            temperature=0.1,  # Low temperature để grounded
-            max_tokens=500,
-        )
-        return response.choices[0].message.content
-    except Exception:
-        pass
+    api_key = os.getenv("OPENAI_API_KEY")
+    if api_key:
+        try:
+            from openai import OpenAI
+            client = OpenAI(api_key=api_key)
+            response = client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=messages,
+                temperature=0.1,  # Low temperature để grounded
+                max_tokens=800,
+            )
+            return response.choices[0].message.content
+        except Exception as e:
+            print(f"[synthesis_worker] OpenAI Error: {e}")
 
     # Option B: Gemini
-    try:
-        import google.generativeai as genai
-        genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
-        model = genai.GenerativeModel("gemini-1.5-flash")
-        combined = "\n".join([m["content"] for m in messages])
-        response = model.generate_content(combined)
-        return response.text
-    except Exception:
-        pass
+    gemini_key = os.getenv("GOOGLE_API_KEY")
+    if gemini_key:
+        try:
+            import google.generativeai as genai
+            genai.configure(api_key=gemini_key)
+            model = genai.GenerativeModel("gemini-2.5-flash")
+            combined = "\\n".join([f"{m['role']}: {m['content']}" for m in messages])
+            response = model.generate_content(combined)
+            return response.text
+        except Exception as e:
+            print(f"[synthesis_worker] Gemini Error: {e}")
 
     # Fallback: trả về message báo lỗi (không hallucinate)
     return "[SYNTHESIS ERROR] Không thể gọi LLM. Kiểm tra API key trong .env."
@@ -75,17 +88,20 @@ def _build_context(chunks: list, policy_result: dict) -> str:
             source = chunk.get("source", "unknown")
             text = chunk.get("text", "")
             score = chunk.get("score", 0)
-            parts.append(f"[{i}] Nguồn: {source} (relevance: {score:.2f})\n{text}")
+            parts.append(f"[{i}] Nguồn: {source} (relevance: {score:.2f})\\n{text}")
 
     if policy_result and policy_result.get("exceptions_found"):
-        parts.append("\n=== POLICY EXCEPTIONS ===")
+        parts.append("\\n=== POLICY EXCEPTIONS ===")
         for ex in policy_result["exceptions_found"]:
             parts.append(f"- {ex.get('rule', '')}")
+            
+    if policy_result and policy_result.get("policy_version_note"):
+        parts.append(f"\\n=== LƯU Ý CHÍNH SÁCH ===\\n- {policy_result['policy_version_note']}")
 
     if not parts:
         return "(Không có context)"
 
-    return "\n\n".join(parts)
+    return "\\n\\n".join(parts)
 
 
 def _estimate_confidence(chunks: list, answer: str, policy_result: dict) -> float:
@@ -100,10 +116,40 @@ def _estimate_confidence(chunks: list, answer: str, policy_result: dict) -> floa
     if not chunks:
         return 0.1  # Không có evidence → low confidence
 
-    if "Không đủ thông tin" in answer or "không có trong tài liệu" in answer.lower():
+    if "không đủ thông tin" in answer.lower() or "không có trong tài liệu" in answer.lower() or "abstain" in answer.lower():
         return 0.3  # Abstain → moderate-low
+        
+    # LLM-as-Judge Implementation
+    api_key = os.getenv("OPENAI_API_KEY")
+    if api_key:
+        try:
+            from openai import OpenAI
+            client = OpenAI(api_key=api_key)
+            context_text = " ".join([c.get("text", "") for c in chunks])
+            
+            prompt = f"""Đánh giá mức độ tự tin (confidence score) từ 0.0 đến 1.0 cho câu trả lời sau dựa trên tài liệu.
+            Tài liệu: {context_text}
+            Câu trả lời: {answer}
+            
+            Chỉ trả về JSON định dạng:
+            {{"confidence": 0.85}}
+            """
+            
+            response = client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[{"role": "user", "content": prompt}],
+                response_format={"type": "json_object"},
+                temperature=0.0
+            )
+            result = json.loads(response.choices[0].message.content)
+            llm_conf = float(result.get("confidence", 0.0))
+            if llm_conf > 0.0:
+                exception_penalty = 0.05 * len(policy_result.get("exceptions_found", []))
+                return round(max(0.1, min(0.95, llm_conf - exception_penalty)), 2)
+        except Exception:
+            pass
 
-    # Weighted average của chunk scores
+    # Option B: Rule-based fallback
     if chunks:
         avg_score = sum(c.get("score", 0) for c in chunks) / len(chunks)
     else:
@@ -139,7 +185,7 @@ Hãy trả lời câu hỏi dựa vào tài liệu trên."""
     ]
 
     answer = _call_llm(messages)
-    sources = list({c.get("source", "unknown") for c in chunks})
+    sources = list({c.get("source", "unknown") for c in chunks if c})
     confidence = _estimate_confidence(chunks, answer, policy_result)
 
     return {
