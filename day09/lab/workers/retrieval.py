@@ -32,42 +32,59 @@ WORKER_NAME = "retrieval_worker"
 DEFAULT_TOP_K = 3
 
 
-def _get_embedding_fn():
-    """
-    Trả về embedding function phù hợp với môi trường.
-    Ưu tiên SentenceTransformers (offline), fallback sang OpenAI nếu có key.
-    """
+def _get_openai_embedding_fn():
+    openai_key = os.getenv("OPENAI_API_KEY")
+    if not openai_key:
+        return None
+    return embedding_functions.OpenAIEmbeddingFunction(
+        api_key=openai_key,
+        model_name="text-embedding-3-small",
+    )
+
+
+def _get_st_embedding_fn():
     try:
         from sentence_transformers import SentenceTransformer
         _model = SentenceTransformer("all-MiniLM-L6-v2")
-        def st_embed(texts):
-            return _model.encode(texts).tolist()
         # Wrap để chromadb gọi được
         from chromadb.utils.embedding_functions import EmbeddingFunction
+
         class STEmbeddingFunction(EmbeddingFunction):
             def __call__(self, input):
                 return _model.encode(input).tolist()
+
         return STEmbeddingFunction()
     except ImportError:
-        pass
+        return None
 
-    openai_key = os.getenv('OPENAI_API_KEY')
-    if openai_key:
-        return embedding_functions.OpenAIEmbeddingFunction(
-            api_key=openai_key,
-            model_name="text-embedding-3-small"
-        )
+
+def _get_embedding_fn():
+    """
+    Trả về embedding function phù hợp với môi trường.
+    Ưu tiên OpenAI nếu có OPENAI_API_KEY, fallback sang SentenceTransformers (offline).
+    """
+    try:
+        ef = _get_openai_embedding_fn()
+        if ef is not None:
+            return ef
+    except Exception as e:
+        # Nếu có key nhưng init lỗi (deps/version), fallback sang local để lab vẫn chạy được.
+        print(f"⚠️  OpenAI embedding init failed, fallback to local ST: {e}")
+
+    ef = _get_st_embedding_fn()
+    if ef is not None:
+        return ef
 
     raise RuntimeError("Không có embedding backend. Cài sentence-transformers hoặc set OPENAI_API_KEY.")
 
 
-def _get_collection():
+def _get_collection(ef=None):
     """
     Kết nối ChromaDB collection.
     Dùng SentenceTransformers nếu không có OPENAI_API_KEY.
     """
     client = chromadb.PersistentClient(path="./chroma_db")
-    ef = _get_embedding_fn()
+    ef = ef or _get_embedding_fn()
     try:
         collection = client.get_collection(
             name="day09_docs",
@@ -91,12 +108,41 @@ def retrieve_dense(query: str, top_k: int = DEFAULT_TOP_K) -> list:
         list of {"text": str, "source": str, "score": float, "metadata": dict}
     """
     try:
-        collection = _get_collection()
-        results = collection.query(
-            query_texts=[query],
-            n_results=top_k,
-            include=["documents", "distances", "metadatas"]
-        )
+        # 1) Try preferred embedding backend
+        preferred_ef = _get_embedding_fn()
+        collection = _get_collection(ef=preferred_ef)
+        try:
+            results = collection.query(
+                query_texts=[query],
+                n_results=top_k,
+                include=["documents", "distances", "metadatas"],
+            )
+        except Exception as e:
+            # Common pitfall: collection was built with a different embedding dimension.
+            msg = str(e)
+            if "expecting embedding with dimension" in msg and "got" in msg:
+                # 2) Retry with the other backend (OpenAI <-> local ST) if available
+                alt_ef = None
+                try:
+                    if os.getenv("OPENAI_API_KEY"):
+                        alt_ef = _get_st_embedding_fn()
+                    else:
+                        alt_ef = _get_openai_embedding_fn()
+                except Exception:
+                    alt_ef = None
+
+                if alt_ef is None:
+                    raise
+
+                print(f"⚠️  Embedding dimension mismatch. Retrying with alternate backend.")
+                collection = _get_collection(ef=alt_ef)
+                results = collection.query(
+                    query_texts=[query],
+                    n_results=top_k,
+                    include=["documents", "distances", "metadatas"],
+                )
+            else:
+                raise
 
         chunks = []
         if results["documents"] and results["documents"][0]:
