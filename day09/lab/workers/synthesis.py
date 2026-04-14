@@ -43,7 +43,7 @@ def _call_llm(messages: list) -> str:
         response = client.chat.completions.create(
             model="gpt-4o-mini",
             messages=messages,
-            temperature=0.1,  # Low temperature để grounded
+            temperature=0,  # 0 = fully deterministic, grounded
             max_tokens=500,
         )
         return response.choices[0].message.content
@@ -103,11 +103,14 @@ def _estimate_confidence(chunks: list, answer: str, policy_result: dict) -> floa
     if "Không đủ thông tin" in answer or "không có trong tài liệu" in answer.lower():
         return 0.3  # Abstain → moderate-low
 
-    # Weighted average của chunk scores
-    if chunks:
-        avg_score = sum(c.get("score", 0) for c in chunks) / len(chunks)
-    else:
-        avg_score = 0
+    # Hybrid RRF scores are small floats (e.g. 0.008); dense cosine scores are 0-1.
+    # Normalise by capping at 1.0 before averaging.
+    raw_scores = [min(c.get("score", 0), 1.0) for c in chunks]
+    # If all scores are very small (BM25-dominant), scale up relative to max
+    max_score = max(raw_scores) if raw_scores else 0
+    if max_score < 0.1 and max_score > 0:
+        raw_scores = [s / max_score for s in raw_scores]
+    avg_score = sum(raw_scores) / len(raw_scores) if raw_scores else 0
 
     # Penalty nếu có exceptions (phức tạp hơn)
     exception_penalty = 0.05 * len(policy_result.get("exceptions_found", []))
