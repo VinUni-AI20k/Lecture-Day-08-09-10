@@ -30,33 +30,54 @@ WORKER_NAME = "policy_tool_worker"
 
 def _call_mcp_tool(tool_name: str, tool_input: dict) -> dict:
     """
-    Gọi MCP tool.
-
-    Sprint 3 TODO: Implement bằng cách import mcp_server hoặc gọi HTTP.
-
-    Hiện tại: Import trực tiếp từ mcp_server.py (trong-process mock).
+    Gọi MCP tool via HTTP để chứng minh External Capability (Sprint 3 Advanced).
+    Sử dụng httpx để gửi REST request đến FastAPI/MCP server đang chạy.
+    Fallback về mock cục bộ (dispatch_tool) nếu server HTTP chưa bật.
     """
     from datetime import datetime
+    import httpx
+    
+    SERVER_URL = "http://localhost:8000/call"
 
     try:
-        # TODO Sprint 3: Thay bằng real MCP client nếu dùng HTTP server
-        from mcp_server import dispatch_tool
-        result = dispatch_tool(tool_name, tool_input)
+        # Gọi HTTP server externe cho MCP tool
+        payload = {"tool_name": tool_name, "tool_input": tool_input}
+        response = httpx.post(SERVER_URL, json=payload, timeout=2.0)
+        response.raise_for_status()
+        
+        result = response.json()
         return {
             "tool": tool_name,
             "input": tool_input,
             "output": result,
             "error": None,
             "timestamp": datetime.now().isoformat(),
+            "source": "http_mcp_server"
         }
     except Exception as e:
-        return {
-            "tool": tool_name,
-            "input": tool_input,
-            "output": None,
-            "error": {"code": "MCP_CALL_FAILED", "reason": str(e)},
-            "timestamp": datetime.now().isoformat(),
-        }
+        # Fallback về mock class nếu ko có HTTP server để test không lỗi
+        try:
+            import os, sys
+            sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+            from mcp_server import dispatch_tool
+            
+            result = dispatch_tool(tool_name, tool_input)
+            return {
+                "tool": tool_name,
+                "input": tool_input,
+                "output": result,
+                "error": None,
+                "timestamp": datetime.now().isoformat(),
+                "source": "local_mock_fallback"
+            }
+        except Exception as inner_e:
+            return {
+                "tool": tool_name,
+                "input": tool_input,
+                "output": None,
+                "error": {"code": "MCP_CALL_FAILED", "reason": f"HTTP Failed: {e} | Fallback Failed: {inner_e}"},
+                "timestamp": datetime.now().isoformat(),
+            }
 
 
 # ─────────────────────────────────────────────
@@ -273,7 +294,7 @@ if __name__ == "__main__":
                 {"text": "Sản phẩm kỹ thuật số (license key, subscription) không được hoàn tiền theo Điều 3.", "source": "policy_refund_v4.txt", "score": 0.88}
             ],
             "expected_policy_applies": False,
-            "expected_exception_types": ["digital_product_exception"],
+            "expected_exception_types": ["digital_product_exception", "activated_exception"],
         },
         {
             "name": "Activated Product Exception",

@@ -328,10 +328,57 @@ def dispatch_tool(tool_name: str, tool_input: dict) -> dict:
 
 
 # ─────────────────────────────────────────────
+# FastAPI Settings (Sprint 3 Advanced - B. Minh)
+# ─────────────────────────────────────────────
+
+try:
+    from fastapi import FastAPI, HTTPException
+    from pydantic import BaseModel
+    import uvicorn
+    
+    app = FastAPI(
+        title="MCP Mock Server", 
+        description="External Model Context Protocol Server (Sprint 3 Advanced)"
+    )
+
+    class ToolCallRequest(BaseModel):
+        tool_name: str
+        tool_input: Dict[str, Any]
+
+    @app.get("/tools")
+    def api_list_tools():
+        return {"tools": list_tools()}
+
+    @app.post("/call")
+    def api_dispatch_tool(request: ToolCallRequest):
+        res = dispatch_tool(request.tool_name, request.tool_input)
+        if "error" in res and "schema" in res:
+             raise HTTPException(status_code=400, detail=res)
+        return res
+
+except ImportError:
+    app = None
+    print("Warning: fastapi or uvicorn is not installed. HTTP Server disabled.")
+
+
+# ─────────────────────────────────────────────
 # Test & Demo
 # ─────────────────────────────────────────────
 
 if __name__ == "__main__":
+    import sys
+    
+    # Cho phép chạy mode server: python mcp_server.py serve
+    if len(sys.argv) > 1 and sys.argv[1] == "serve":
+        if app:
+            print("=" * 60)
+            print("🚀 Khởi chạy MCP FastAPI Server trên cổng 8000")
+            print("=" * 60)
+            uvicorn.run(app, host="0.0.0.0", port=8000)
+        else:
+            print("❌ Lỗi: Cần cài đặt fastapi và uvicorn (pip install fastapi uvicorn)")
+        sys.exit(0)
+        
     print("=" * 60)
     print("MCP Server — Tool Discovery & Test")
     print("=" * 60)
@@ -375,4 +422,4 @@ if __name__ == "__main__":
     print(f"  Error: {err.get('error')}")
 
     print("\n✅ MCP server test done.")
-    print("\nTODO Sprint 3: Implement HTTP server nếu muốn bonus +2.")
+    print("💡 Mẹo: Chạy `python mcp_server.py serve` để bật mode API (FastAPI) cho Worker connect.")
