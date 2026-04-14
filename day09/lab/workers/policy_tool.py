@@ -23,9 +23,9 @@ from typing import Optional
 WORKER_NAME = "policy_tool_worker"
 
 
-# ─────────────────────────────────────────────
+# ————————————————————————————————————————————————
 # MCP Client — Sprint 3: Thay bằng real MCP call
-# ─────────────────────────────────────────────
+# ————————————————————————————————————————————————
 
 def _call_mcp_tool(tool_name: str, tool_input: dict) -> dict:
     """
@@ -45,7 +45,7 @@ def _call_mcp_tool(tool_name: str, tool_input: dict) -> dict:
             "tool": tool_name,
             "input": tool_input,
             "output": result,
-            "error": None,
+            "error": None if not (isinstance(result, dict) and result.get("error")) else {"code": "MCP_TOOL_ERROR", "reason": str(result.get("error"))},
             "timestamp": datetime.now().isoformat(),
         }
     except Exception as e:
@@ -58,9 +58,9 @@ def _call_mcp_tool(tool_name: str, tool_input: dict) -> dict:
         }
 
 
-# ─────────────────────────────────────────────
+# ————————————————————————————————————————————————
 # Policy Analysis Logic
-# ─────────────────────────────────────────────
+# ————————————————————————————————————————————————
 
 def analyze_policy(task: str, chunks: list) -> dict:
     """
@@ -77,6 +77,8 @@ def analyze_policy(task: str, chunks: list) -> dict:
     Returns:
         dict with: policy_applies, policy_name, exceptions_found, source, rule, explanation
     """
+    import re
+
     task_lower = task.lower()
     context_text = " ".join([c.get("text", "") for c in chunks]).lower()
 
@@ -87,23 +89,23 @@ def analyze_policy(task: str, chunks: list) -> dict:
     if "flash sale" in task_lower or "flash sale" in context_text:
         exceptions_found.append({
             "type": "flash_sale_exception",
-            "rule": "Đơn hàng Flash Sale không được hoàn tiền (Điều 3, chính sách v4).",
+            "rule": "Orders purchased under Flash Sale promotions are not refundable.",
             "source": "policy_refund_v4.txt",
         })
 
     # Exception 2: Digital product
-    if any(kw in task_lower for kw in ["license key", "license", "subscription", "kỹ thuật số"]):
+    if any(kw in task_lower for kw in ["license key", "license", "subscription", "digital product"]):
         exceptions_found.append({
             "type": "digital_product_exception",
-            "rule": "Sản phẩm kỹ thuật số (license key, subscription) không được hoàn tiền (Điều 3).",
+            "rule": "Digital products such as license keys and subscriptions are not refundable.",
             "source": "policy_refund_v4.txt",
         })
 
     # Exception 3: Activated product
-    if any(kw in task_lower for kw in ["đã kích hoạt", "đã đăng ký", "đã sử dụng"]):
+    if any(kw in task_lower for kw in ["đã kích hoạt", "da kich hoat", "activated", "đã đăng ký", "da dang ky"]):
         exceptions_found.append({
             "type": "activated_exception",
-            "rule": "Sản phẩm đã kích hoạt hoặc đăng ký tài khoản không được hoàn tiền (Điều 3).",
+            "rule": "Activated or account-registered products are not refundable.",
             "source": "policy_refund_v4.txt",
         })
 
@@ -114,8 +116,22 @@ def analyze_policy(task: str, chunks: list) -> dict:
     # TODO: Check nếu đơn hàng trước 01/02/2026 → v3 applies (không có docs, nên flag cho synthesis)
     policy_name = "refund_policy_v4"
     policy_version_note = ""
-    if "31/01" in task_lower or "30/01" in task_lower or "trước 01/02" in task_lower:
-        policy_version_note = "Đơn hàng đặt trước 01/02/2026 áp dụng chính sách v3 (không có trong tài liệu hiện tại)."
+    order_dates = re.findall(r"(\d{2})/(\d{2})/(\d{4})", task)
+    for day_text, month_text, year_text in order_dates:
+        if f"{day_text}/{month_text}/{year_text}" < "01/02/2026":
+            policy_version_note = (
+                "Order date is before 01/02/2026, so refund policy v3 applies. "
+                "The current document set only contains v4, so the answer should abstain from claiming v3 details."
+            )
+            policy_applies = False
+            break
+
+    if "trước 01/02/2026" in task_lower or "truoc 01/02/2026" in task_lower:
+        policy_version_note = (
+            "Order date is before 01/02/2026, so refund policy v3 applies. "
+            "The current document set only contains v4, so the answer should abstain from claiming v3 details."
+        )
+        policy_applies = False
 
     # TODO Sprint 2: Gọi LLM để phân tích phức tạp hơn
     # Ví dụ:
@@ -136,15 +152,18 @@ def analyze_policy(task: str, chunks: list) -> dict:
         "policy_applies": policy_applies,
         "policy_name": policy_name,
         "exceptions_found": exceptions_found,
-        "source": sources,
+        "source": sources or ["policy_refund_v4.txt"],
         "policy_version_note": policy_version_note,
+        "rule": exceptions_found[0]["rule"] if exceptions_found else (
+            "Refund is allowed only when the product is manufacturer-defective, requested within 7 working days, and has not been used or activated."
+        ),
         "explanation": "Analyzed via rule-based policy check. TODO: upgrade to LLM-based analysis.",
     }
 
 
-# ─────────────────────────────────────────────
+# ————————————————————————————————————————————————
 # Worker Entry Point
-# ─────────────────────────────────────────────
+# ————————————————————————————————————————————————
 
 def run(state: dict) -> dict:
     """
@@ -190,6 +209,52 @@ def run(state: dict) -> dict:
 
         # Step 2: Phân tích policy
         policy_result = analyze_policy(task, chunks)
+
+        # Access-control augmentation when the task clearly asks for access workflow
+        if any(kw in task.lower() for kw in ["cấp quyền", "cap quyen", "access", "level 2", "level 3", "level 4", "admin access"]):
+            import re
+
+            level_match = re.search(r"level\s*(\d)", task.lower())
+            access_level = int(level_match.group(1)) if level_match else 3
+            is_emergency = any(kw in task.lower() for kw in ["emergency", "khẩn cấp", "khan cap", "p1", "2am"])
+            requester_role = "contractor" if "contractor" in task.lower() else "employee"
+
+            access_mcp_result = _call_mcp_tool(
+                "check_access_permission",
+                {
+                    "access_level": access_level,
+                    "requester_role": requester_role,
+                    "is_emergency": is_emergency,
+                },
+            )
+            state["mcp_tools_used"].append(access_mcp_result)
+            state["history"].append(f"[{WORKER_NAME}] called MCP check_access_permission")
+
+            if access_mcp_result.get("output") and not access_mcp_result["output"].get("error"):
+                access_output = access_mcp_result["output"]
+                policy_result.update({
+                    "policy_name": "access_control_sop",
+                    "policy_applies": bool(access_output.get("can_grant", False)),
+                    "source": list(set(policy_result.get("source", []) + ["access_control_sop.txt"])),
+                    "required_approvers": access_output.get("required_approvers", []),
+                    "emergency_override": access_output.get("emergency_override", False),
+                    "rule": (
+                        "Temporary emergency access can be granted only when the SOP explicitly allows emergency override."
+                        if access_output.get("emergency_override", False)
+                        else f"Standard approval chain applies: {', '.join(access_output.get('required_approvers', []))}."
+                    ),
+                    "explanation": "Analyzed via MCP access permission check plus rule-based policy logic.",
+                })
+
+                if is_emergency and not access_output.get("emergency_override", False):
+                    policy_result["exceptions_found"] = [{
+                        "type": "no_emergency_bypass",
+                        "rule": f"Level {access_level} does not support emergency bypass. Standard approval chain still applies.",
+                        "source": "access_control_sop.txt",
+                    }]
+                    policy_result["policy_applies"] = False
+                    policy_result["rule"] = policy_result["exceptions_found"][0]["rule"]
+
         state["policy_result"] = policy_result
 
         # Step 3: Nếu cần thêm info từ MCP (e.g., ticket status), gọi get_ticket_info
@@ -217,9 +282,9 @@ def run(state: dict) -> dict:
     return state
 
 
-# ─────────────────────────────────────────────
+# ————————————————————————————————————————————————
 # Test độc lập
-# ─────────────────────────────────────────────
+# ————————————————————————————————————————————————
 
 if __name__ == "__main__":
     print("=" * 50)
