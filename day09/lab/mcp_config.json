@@ -1,0 +1,48 @@
+{
+  "version": "1.0",
+  "server": {
+    "name": "day09_mcp_server",
+    "module": "mcp_server.py",
+    "mode": "http",
+    "host": "127.0.0.1",
+    "port": 8080,
+    "baseUrl": "http://127.0.0.1:8080",
+    "healthEndpoint": "/health",
+    "toolsListEndpoint": "/tools/list",
+    "toolsCallEndpoint": "/tools/call"
+  },
+  "guardrails": {
+    "allowSideEffects": false,
+    "sideEffectTools": ["create_ticket"],
+    "requiredMetadata": {
+      "requested_by": "policy_tool_worker",
+      "allow_side_effects": false
+    }
+  },
+  "tools": [
+    {
+      "name": "search_kb",
+      "description": "Search internal KB and return top-k chunks",
+      "requiredInputs": ["query"],
+      "optionalInputs": ["top_k"]
+    },
+    {
+      "name": "get_ticket_info",
+      "description": "Lookup ticket details by ticket_id",
+      "requiredInputs": ["ticket_id"],
+      "optionalInputs": []
+    },
+    {
+      "name": "check_access_permission",
+      "description": "Check access approval chain and emergency override",
+      "requiredInputs": ["access_level", "requester_role"],
+      "optionalInputs": ["is_emergency"]
+    },
+    {
+      "name": "create_ticket",
+      "description": "Create mock ticket (blocked unless safeguard is explicitly enabled)",
+      "requiredInputs": ["priority", "title"],
+      "optionalInputs": ["description"]
+    }
+  ]
+}
