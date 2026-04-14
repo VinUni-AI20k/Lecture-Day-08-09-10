@@ -23,6 +23,9 @@ import math
 from collections import Counter
 from functools import lru_cache
 from typing import Callable, Optional
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # ─────────────────────────────────────────────
 # Worker Contract (xem contracts/worker_contracts.yaml)
