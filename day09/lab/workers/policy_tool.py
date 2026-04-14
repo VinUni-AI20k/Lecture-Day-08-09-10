@@ -29,26 +29,36 @@ WORKER_NAME = "policy_tool_worker"
 
 def _call_mcp_tool(tool_name: str, tool_input: dict) -> dict:
     """
-    Gọi MCP tool và trả về định dạng khớp với tiêu chí SCORING.md.
+    Gọi MCP tool qua HTTP Server (Sprint 3 Advanced Bonus +2).
     """
     from datetime import datetime
+    import requests
+    
+    server_url = "http://localhost:8000/tools/call"
+    
     try:
-        from mcp_server import dispatch_tool
-        result = dispatch_tool(tool_name, tool_input)
+        # Gửi yêu cầu đến FastAPI Server
+        response = requests.post(
+            server_url, 
+            json={"tool_name": tool_name, "tool_input": tool_input},
+            timeout=10
+        )
+        result = response.json()
         
         # Format bắt buộc theo SCORING.md: mcp_tool_called và mcp_result
         return {
             "mcp_tool_called": tool_name,
             "mcp_result": result,
             "input": tool_input,
-            "status": "success" if "error" not in result else "failed",
+            "status": "success" if response.status_code == 200 else "failed",
             "timestamp": datetime.now().isoformat(),
         }
     except Exception as e:
+        # Fallback: Nếu server chưa chạy, có thể quay lại gọi trực tiếp hoặc báo lỗi
         return {
             "mcp_tool_called": tool_name,
             "mcp_result": None,
-            "error": str(e),
+            "error": f"MCP HTTP Server Error: {str(e)}. Đảm bảo mcp_api.py đang chạy!",
             "status": "error",
             "timestamp": datetime.now().isoformat(),
         }
