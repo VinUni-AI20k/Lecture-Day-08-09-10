@@ -43,7 +43,7 @@ def _call_llm(messages: list) -> str:
         from openai import OpenAI
         client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
         response = client.chat.completions.create(
-            model="gpt-4o-mini",
+            model="gpt-4o",
             messages=messages,
             temperature=0.1,  # Low temperature để grounded
             max_tokens=500,
