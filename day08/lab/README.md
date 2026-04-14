@@ -69,7 +69,7 @@ pip install -r requirements.txt
 ### 2. Tạo file .env
 ```bash
 cp .env.example .env
-# Điền OPENAI_API_KEY hoặc GOOGLE_API_KEY
+# Điền OPENAI_API_KEY hoặc GEMINI_API_KEY
 ```
 
 ### 3. Test setup

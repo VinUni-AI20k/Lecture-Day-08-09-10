@@ -17,6 +17,10 @@ Gọi độc lập để test:
 """
 
 import os
+from pathlib import Path
+
+from dotenv import load_dotenv
+load_dotenv()
 
 WORKER_NAME = "synthesis_worker"
 
@@ -31,38 +35,74 @@ Quy tắc nghiêm ngặt:
 """
 
 
+def _is_valid_openai_key(key: str | None) -> bool:
+    if not key:
+        return False
+    if key.startswith("sk-") and "..." not in key and "your-key" not in key:
+        return True
+    return False
+
+
 def _call_llm(messages: list) -> str:
-    """
-    Gọi LLM để tổng hợp câu trả lời.
-    TODO Sprint 2: Implement với OpenAI hoặc Gemini.
-    """
-    # Option A: OpenAI
-    try:
-        from openai import OpenAI
-        client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-        response = client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=messages,
-            temperature=0.1,  # Low temperature để grounded
-            max_tokens=500,
-        )
-        return response.choices[0].message.content
-    except Exception:
-        pass
+    """Gọi LLM để tổng hợp câu trả lời (OpenAI → Gemini → fallback)."""
+    openai_key = os.getenv("OPENAI_API_KEY")
+    if _is_valid_openai_key(openai_key):
+        try:
+            from openai import OpenAI
+
+            client = OpenAI(api_key=openai_key)
+            response = client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=messages,
+                temperature=0.1,
+                max_tokens=500,
+            )
+            return response.choices[0].message.content
+        except Exception as e:
+            print(f"OpenAI API error: {e}")
 
     # Option B: Gemini
     try:
-        import google.generativeai as genai
-        genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
-        model = genai.GenerativeModel("gemini-1.5-flash")
+        from google import genai
+        from google.genai import types
+        client = genai.Client(api_key=os.getenv("GOOGLE_API_KEY"))
         combined = "\n".join([m["content"] for m in messages])
-        response = model.generate_content(combined)
+        response = client.models.generate_content(
+            model="gemini-2.5-flash",
+            contents=combined
+        )
         return response.text
-    except Exception:
-        pass
+    except Exception as e:
+        print(f"Gemini API error: {e}")
 
-    # Fallback: trả về message báo lỗi (không hallucinate)
     return "[SYNTHESIS ERROR] Không thể gọi LLM. Kiểm tra API key trong .env."
+
+
+def _fallback_grounded_answer(chunks: list, policy_result: dict) -> str:
+    """Fallback answer builder when LLM is unavailable."""
+    lines = []
+
+    exceptions = policy_result.get("exceptions_found", []) if policy_result else []
+    if exceptions:
+        lines.append("Có ngoại lệ chính sách cần lưu ý:")
+        for ex in exceptions:
+            rule = ex.get("rule", "")
+            source = ex.get("source", "unknown")
+            lines.append(f"- {rule} [{source}]")
+
+    if chunks:
+        best = sorted(chunks, key=lambda c: c.get("score", 0), reverse=True)[:2]
+        lines.append("Thông tin trong tài liệu nội bộ:")
+        for c in best:
+            text = (c.get("text", "") or "").strip().replace("\n", " ")
+            source = c.get("source", "unknown")
+            snippet = text[:240] + ("..." if len(text) > 240 else "")
+            lines.append(f"- {snippet} [{source}]")
+
+    if not lines:
+        return "Không đủ thông tin trong tài liệu nội bộ để trả lời câu hỏi này."
+
+    return "\n".join(lines)
 
 
 def _build_context(chunks: list, policy_result: dict) -> str:
@@ -113,6 +153,7 @@ def _estimate_confidence(chunks: list, answer: str, policy_result: dict) -> floa
     exception_penalty = 0.05 * len(policy_result.get("exceptions_found", []))
 
     confidence = min(0.95, avg_score - exception_penalty)
+
     return round(max(0.1, confidence), 2)
 
 
@@ -123,6 +164,14 @@ def synthesize(task: str, chunks: list, policy_result: dict) -> dict:
     Returns:
         {"answer": str, "sources": list, "confidence": float}
     """
+    if not chunks:
+        answer = "Không đủ thông tin trong tài liệu nội bộ để trả lời câu hỏi này."
+        return {
+            "answer": answer,
+            "sources": [],
+            "confidence": _estimate_confidence([], answer, policy_result or {}),
+        }
+
     context = _build_context(chunks, policy_result)
 
     # Build messages
@@ -138,8 +187,17 @@ Hãy trả lời câu hỏi dựa vào tài liệu trên."""
         }
     ]
 
-    answer = _call_llm(messages)
+    answer = _call_llm(messages) or ""
+    if not answer or answer.startswith("[SYNTHESIS ERROR]"):
+        answer = _fallback_grounded_answer(chunks, policy_result or {})
+
     sources = list({c.get("source", "unknown") for c in chunks})
+
+    # Enforce citations when we have evidence.
+    if sources and "[" not in answer:
+        citations = ", ".join(f"[{src}]" for src in sorted(sources))
+        answer = f"{answer}\n\nNguồn: {citations}"
+
     confidence = _estimate_confidence(chunks, answer, policy_result)
 
     return {
