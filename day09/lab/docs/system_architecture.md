@@ -1,7 +1,7 @@
 # System Architecture — Lab Day 09
 
-**Nhóm:** ___________  
-**Ngày:** ___________  
+**Nhóm:** Y3  
+**Ngày:** 14/4/2026
 **Version:** 1.0
 
 ---
@@ -52,7 +52,29 @@ Retrieval Worker     Policy Tool Worker
 **Sơ đồ thực tế của nhóm:**
 
 ```
-[NHÓM ĐIỀN VÀO ĐÂY]
+User Request
+     │
+     ▼
+┌──────────────┐
+│  Supervisor  │  ← route_reason, risk_high, needs_tool
+└──────┬───────┘
+       │
+   [route_decision] (LLM)
+       │
+  ┌────┴────────────────────┐──────────────────────────────────┐
+  │                         │                                  |
+  ▼                         ▼                                  ▼
+Retrieval Worker     Policy Tool Worker                  human_review
+  (evidence)           (policy check + MCP)            (pause and wait human approval)
+  │                         │                                   |
+  └─────────┬───────────────┘───────────────────────────────────┘
+            │
+            ▼
+      Synthesis Worker
+        (answer + cite)
+            │
+            ▼
+         Output
 ```
 
 ---
@@ -63,11 +85,11 @@ Retrieval Worker     Policy Tool Worker
 
 | Thuộc tính | Mô tả |
 |-----------|-------|
-| **Nhiệm vụ** | ___________________ |
-| **Input** | ___________________ |
+| **Nhiệm vụ** | Nhận input user phân tích input bằng Supervisor đưa vào route decision(LLM) và đưa cho các worker xử lý |
+| **Input** | test_queries |
 | **Output** | supervisor_route, route_reason, risk_high, needs_tool |
-| **Routing logic** | ___________________ |
-| **HITL condition** | ___________________ |
+| **Routing logic** | Gọi LLM phân tích đua ra lựa chọn với 3 workers|
+| **HITL condition** | True/False |
 
 ### Retrieval Worker (`workers/retrieval.py`)
 
