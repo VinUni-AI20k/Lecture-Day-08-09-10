@@ -1,6 +1,6 @@
 # Báo Cáo Cá Nhân — Lab Day 09: Multi-Agent Orchestration
 
-**Họ và tên:** B  
+**Họ và tên:** Lưu Lê Gia Bảo
 **Vai trò trong nhóm:** Supervisor Owner (Routing)  
 **Ngày nộp:** 14-04-2026  
 **Độ dài yêu cầu:** 500–800 từ
