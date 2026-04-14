@@ -12,12 +12,18 @@ export function SourcesSection({ sources }: Props) {
   return (
     <div className="rounded-xl border border-border bg-card p-3 space-y-2">
       <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-        Sources ({sources.length})
+        Tài liệu tham chiếu ({sources.length})
       </p>
       <ul className="space-y-1.5">
         {sources.map((src, i) => (
           <li key={src}>
-            <div className="flex items-start gap-2.5 rounded-lg border border-border bg-muted/30 px-3 py-2 hover:bg-accent/40 hover:border-primary/30 transition-all cursor-default group">
+            <a
+              href={`/api/source-doc?src=${encodeURIComponent(src)}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-start gap-2.5 rounded-lg border border-border bg-muted/30 px-3 py-2 hover:bg-accent/40 hover:border-primary/30 transition-all cursor-pointer group"
+              title={`Mở tài liệu: ${src}`}
+            >
               <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-primary/10 mt-0.5">
                 <FileText className="h-3 w-3 text-primary" />
               </div>
@@ -33,7 +39,7 @@ export function SourcesSection({ sources }: Props) {
                   <p className="mt-0.5 text-[10px] text-muted-foreground truncate">{src}</p>
                 )}
               </div>
-            </div>
+            </a>
           </li>
         ))}
       </ul>

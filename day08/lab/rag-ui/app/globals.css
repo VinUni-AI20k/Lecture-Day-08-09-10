@@ -6,7 +6,7 @@
   --radius: 0.625rem;
 
   /* Surfaces */
-  --background: #f8faff;
+  --background: #f0f5ff;
   --foreground: #0f172a;
   --card: #ffffff;
   --card-foreground: #0f172a;
@@ -17,19 +17,19 @@
   --primary: #2563eb;
   --primary-foreground: #ffffff;
   --primary-hover: #1d4ed8;
-  --primary-subtle: #eff6ff;
+  --primary-subtle: #dbeafe;
   --primary-subtle-foreground: #1d4ed8;
 
   /* Secondary */
-  --secondary: #f1f5f9;
-  --secondary-foreground: #0f172a;
+  --secondary: #e8f0fe;
+  --secondary-foreground: #1e3a8a;
 
   /* Muted */
-  --muted: #f1f5f9;
-  --muted-foreground: #64748b;
+  --muted: #eef2ff;
+  --muted-foreground: #4b5da8;
 
   /* Accent */
-  --accent: #eff6ff;
+  --accent: #dbeafe;
   --accent-foreground: #1d4ed8;
 
   /* Destructive */
@@ -37,24 +37,25 @@
   --destructive-foreground: #ffffff;
 
   /* Borders / inputs */
-  --border: #e2e8f0;
-  --border-strong: #cbd5e1;
-  --input: #e2e8f0;
+  --border: #c7d7f8;
+  --border-strong: #93b4f5;
+  --input: #dbeafe;
   --ring: #2563eb;
 
   /* Sidebar */
-  --sidebar: #ffffff;
+  --sidebar: #f8faff;
   --sidebar-foreground: #0f172a;
   --sidebar-primary: #2563eb;
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #eff6ff;
+  --sidebar-accent: #dbeafe;
   --sidebar-accent-foreground: #1d4ed8;
-  --sidebar-border: #e8edf5;
+  --sidebar-border: #c7d7f8;
   --sidebar-ring: #2563eb;
 
   /* Gradients */
   --gradient-primary: linear-gradient(135deg, #1d4ed8 0%, #2563eb 50%, #3b82f6 100%);
-  --gradient-surface: linear-gradient(180deg, #f8faff 0%, #ffffff 100%);
+  --gradient-surface: linear-gradient(180deg, #f0f5ff 0%, #ffffff 100%);
+  --gradient-header: linear-gradient(90deg, #1e3a8a 0%, #2563eb 60%, #3b82f6 100%);
 
   /* Step colors */
   --step-1: #2563eb;
@@ -260,23 +261,110 @@ body {
   50% { opacity: 0; }
 }
 
-/* ── Citation chip ─────────────────────────────────────────────────────────── */
+/* ── Citation chip (interactive) ───────────────────────────────────────────── */
 .citation-chip {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 1.25em;
-  height: 1.25em;
+  min-width: 1.5em;
+  height: 1.5em;
+  padding: 0 5px;
+  border-radius: 99px;
+  background: #dbeafe;
+  color: #1d4ed8;
+  border: 1.5px solid #93c5fd;
+  font-size: 0.68em;
+  font-weight: 800;
+  line-height: 1;
+  vertical-align: middle;
+  cursor: pointer;
+  letter-spacing: 0;
+  transition: background 0.15s, box-shadow 0.15s, transform 0.1s;
+  position: relative;
+}
+.citation-chip:hover {
+  background: #bfdbfe;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.18);
+  transform: scale(1.08);
+}
+.citation-chip-active {
+  background: #2563eb !important;
+  color: #fff !important;
+  border-color: #1d4ed8 !important;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.25);
+}
+.citation-chip-static {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.4em;
+  height: 1.4em;
   padding: 0 4px;
   border-radius: 99px;
-  background: var(--accent);
-  color: var(--accent-foreground);
-  font-size: 0.7em;
+  background: #eff6ff;
+  color: #3b82f6;
+  border: 1px solid #bfdbfe;
+  font-size: 0.68em;
   font-weight: 700;
   line-height: 1;
   vertical-align: middle;
-  cursor: default;
-  letter-spacing: 0;
+}
+
+/* Citation popover card */
+.citation-card {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  width: 320px;
+  background: white;
+  border: 1.5px solid #bfdbfe;
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(37, 99, 235, 0.18), 0 2px 8px rgba(0,0,0,0.08);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: step-enter 0.18s ease-out;
+}
+.citation-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 10px;
+  background: linear-gradient(90deg, #1e3a8a 0%, #2563eb 100%);
+  color: white;
+}
+.citation-card-section {
+  display: block;
+  padding: 4px 10px;
+  font-size: 10px;
+  font-weight: 600;
+  color: #1d4ed8;
+  background: #eff6ff;
+  border-bottom: 1px solid #dbeafe;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.citation-card-preview {
+  display: block;
+  padding: 8px 10px;
+  font-size: 11px;
+  line-height: 1.55;
+  color: #374151;
+  max-height: 160px;
+  overflow-y: auto;
+  white-space: pre-wrap;
+}
+.citation-card-footer {
+  display: block;
+  padding: 4px 10px;
+  font-size: 10px;
+  color: #9ca3af;
+  font-family: var(--font-mono, monospace);
+  border-top: 1px solid #f1f5f9;
+  background: #f8fafc;
 }
 
 /* ── Step card animations ──────────────────────────────────────────────────── */

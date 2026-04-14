@@ -1,0 +1,274 @@
+# Worker Contracts — Day 09 Lab
+# Định nghĩa input/output rõ ràng cho từng worker.
+# Supervisor và workers phải tuân theo contract này.
+#
+# Rule: Supervisor giữ quyết định luồng. Worker giữ domain skill.
+#       Contract là ranh giới rõ ràng giữa hai bên.
+#
+# TODO Sprint 2: Cập nhật "actual_implementation" khi đã implement xong.
+
+version: "1.0"
+updated_at: "2026-04-13"
+
+# ─────────────────────────────────────────────
+# Supervisor
+# ─────────────────────────────────────────────
+
+supervisor:
+  name: supervisor
+  description: "Phân tích task và quyết định route. KHÔNG tự trả lời domain knowledge."
+  input:
+    task:
+      type: string
+      required: true
+      description: "Câu hỏi từ user"
+  output:
+    supervisor_route:
+      type: string
+      enum: ["retrieval_worker", "policy_tool_worker", "human_review"]
+      required: true
+    route_reason:
+      type: string
+      required: true
+      description: "Lý do cụ thể tại sao chọn route này (không được để 'unknown')"
+    risk_high:
+      type: boolean
+      required: true
+    needs_tool:
+      type: boolean
+      required: true
+  routing_rules:
+    - condition: "task chứa 'hoàn tiền', 'refund', 'flash sale', 'license', 'cấp quyền', 'access level'"
+      route: "policy_tool_worker"
+    - condition: "task chứa 'P1', 'SLA', 'ticket', 'escalation', 'sự cố'"
+      route: "retrieval_worker"
+    - condition: "task chứa mã lỗi không rõ (ERR-xxx) VÀ không có context"
+      route: "human_review"
+    - condition: "default"
+      route: "retrieval_worker"
+  constraints:
+    - "Supervisor không được tự trả lời policy questions"
+    - "route_reason KHÔNG được là chuỗi rỗng hoặc 'unknown'"
+    - "Nếu risk_high=True → luôn ghi lý do cụ thể"
+
+# ─────────────────────────────────────────────
+# Retrieval Worker
+# ─────────────────────────────────────────────
+
+retrieval_worker:
+  name: retrieval_worker
+  file: workers/retrieval.py
+  description: "Tìm kiếm chunks bằng chứng từ Knowledge Base. Stateless — test độc lập được."
+  input:
+    task:
+      type: string
+      required: true
+      description: "Câu hỏi cần tìm evidence"
+    top_k:
+      type: integer
+      required: false
+      default: 3
+      description: "Số chunks cần retrieve"
+  output:
+    retrieved_chunks:
+      type: array
+      required: true
+      description: "List of chunk objects"
+      items:
+        text: string
+        source: string
+        score: float  # 0.0 - 1.0 (cosine similarity)
+        metadata: object
+    retrieved_sources:
+      type: array
+      required: true
+      description: "Unique list of source filenames"
+    worker_io_logs:
+      type: array
+      required: true
+      description: "Log input/output của worker (append to array)"
+  error_format:
+    code: "RETRIEVAL_FAILED"
+    reason: string
+  constraints:
+    - "Phải trả về ít nhất 1 chunk nếu tìm thấy"
+    - "Nếu không tìm thấy → retrieved_chunks=[] (không trả về fake chunks)"
+    - "Score phải là float trong khoảng [0, 1]"
+    - "Stateless: không đọc hoặc ghi state ngoài những gì được khai báo ở trên"
+  actual_implementation:
+    status: "done"
+    notes: "Dense Chroma retrieval; LAB_ROOT chroma_db path; worker_io_logs"
+
+# ─────────────────────────────────────────────
+# Policy Tool Worker
+# ─────────────────────────────────────────────
+
+policy_tool_worker:
+  name: policy_tool_worker
+  file: workers/policy_tool.py
+  description: "Kiểm tra policy và xử lý exceptions. Có thể gọi MCP tools khi cần."
+  input:
+    task:
+      type: string
+      required: true
+    retrieved_chunks:
+      type: array
+      required: false
+      description: "Context từ retrieval_worker (nếu đã có)"
+    needs_tool:
+      type: boolean
+      required: false
+      default: false
+      description: "True → worker được phép gọi MCP tools"
+  output:
+    policy_result:
+      type: object
+      required: true
+      properties:
+        policy_applies:
+          type: boolean
+          description: "True nếu policy cho phép, False nếu bị chặn"
+        policy_name:
+          type: string
+          example: "refund_policy_v4"
+        exceptions_found:
+          type: array
+          description: "Danh sách exceptions tìm thấy"
+          items:
+            type: object
+            properties:
+              type: string  # e.g., "flash_sale_exception"
+              rule: string  # Câu policy rule cụ thể
+              source: string
+        source:
+          type: array
+          description: "Nguồn tài liệu đã dùng"
+        policy_version_note:
+          type: string
+          description: "Note về version nếu có vấn đề temporal scoping"
+    mcp_tools_used:
+      type: array
+      description: "Danh sách MCP tool calls thực hiện"
+      items:
+        tool: string
+        input: object
+        output: object
+        error: object | null
+        timestamp: string
+    worker_io_logs:
+      type: array
+      required: true
+  error_format:
+    code: "POLICY_CHECK_FAILED"
+    reason: string
+  constraints:
+    - "Phải detect exception cases: flash_sale, digital_product, activated_product"
+    - "Phải ghi tên MCP tool đã gọi vào mcp_tools_used"
+    - "Không được tự bịa policy rules không có trong tài liệu"
+  actual_implementation:
+    status: "done"
+    notes: "MCP search_kb + get_ticket_info; rule-based exceptions"
+
+# ─────────────────────────────────────────────
+# Synthesis Worker
+# ─────────────────────────────────────────────
+
+synthesis_worker:
+  name: synthesis_worker
+  file: workers/synthesis.py
+  description: "Tổng hợp câu trả lời từ evidence. Gọi LLM với grounded prompt."
+  input:
+    task:
+      type: string
+      required: true
+    retrieved_chunks:
+      type: array
+      required: false
+      description: "Evidence từ retrieval_worker"
+    policy_result:
+      type: object
+      required: false
+      description: "Policy check result từ policy_tool_worker"
+  output:
+    final_answer:
+      type: string
+      required: true
+      description: "Câu trả lời cuối có citation"
+    sources:
+      type: array
+      required: true
+      description: "Sources được cite trong answer"
+    confidence:
+      type: float
+      required: true
+      description: "Mức độ tin cậy 0.0-1.0"
+    worker_io_logs:
+      type: array
+      required: true
+  error_format:
+    code: "SYNTHESIS_FAILED"
+    reason: string
+  constraints:
+    - "Phải có citation [1] hoặc [source_name] trong answer nếu có chunks"
+    - "Nếu retrieved_chunks=[] → phải abstain, không hallucinate"
+    - "confidence < 0.4 → khuyến khích set hitl_triggered=True"
+    - "Không được dùng kiến thức ngoài context được cung cấp"
+  actual_implementation:
+    status: "done"
+    notes: "OpenAI/Gemini grounded; confidence heuristic"
+
+# ─────────────────────────────────────────────
+# MCP Server
+# ─────────────────────────────────────────────
+
+mcp_server:
+  name: mcp_server
+  file: mcp_server.py
+  description: "Mock MCP Server expose tools cho workers qua dispatch_tool()."
+  tools:
+    search_kb:
+      input:
+        query: string  # required
+        top_k: integer  # default: 3
+      output:
+        chunks: array
+        sources: array
+        total_found: integer
+    get_ticket_info:
+      input:
+        ticket_id: string  # required (e.g., "P1-LATEST", "IT-1234")
+      output:
+        ticket_id: string
+        priority: string
+        status: string
+        assignee: string
+        created_at: string
+        sla_deadline: string
+        notifications_sent: array
+    check_access_permission:
+      input:
+        access_level: integer  # 1, 2, hoặc 3
+        requester_role: string
+        is_emergency: boolean  # default: false
+      output:
+        can_grant: boolean
+        required_approvers: array
+        emergency_override: boolean
+        notes: array
+        source: string
+    create_ticket:
+      input:
+        priority: string  # P1, P2, P3, P4
+        title: string
+        description: string
+      output:
+        ticket_id: string
+        url: string
+        created_at: string
+  constraints:
+    - "dispatch_tool() phải trả về error dict nếu tool không tồn tại"
+    - "list_tools() phải trả về đúng format MCP tool schema"
+    - "Không được raise exception ra ngoài dispatch_tool()"
+  actual_implementation:
+    status: "done"
+    notes: "dispatch_tool + list_tools in-process mock"

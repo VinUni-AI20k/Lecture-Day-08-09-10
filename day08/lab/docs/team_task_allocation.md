@@ -103,6 +103,64 @@ Commit gợi ý:
 - `chore(day08-lab): warn for short documents in indexing`
 - `docs(day08-lab): add quick rebuild-index note`
 
+## PHẦN MỚI - Task bổ sung riêng cho Dang Dinh Tu Anh (chỉ core AI Day 08)
+
+Mục tiêu phần này: tăng điểm cá nhân của TuAnh ở đúng trọng tâm bài hôm nay (retrieval + grounding + grading log), không đụng UI.
+
+**Owner chính:** Dang Dinh Tu Anh  
+**Phạm vi:** chỉ các file core AI (`.py`, `data/*.json`, `results/*.md`, `docs/*.md`) theo rubric SCORING.
+
+### Gói task bổ sung (ưu tiên theo thứ tự)
+
+1. **Task A - Cứng hóa "abstain" cho câu không có dữ liệu (gq07)**
+   - **File chính:** `day08/lab/rag_answer.py`
+   - **Việc cần làm:**
+     - Rà lại nhánh thiếu context để luôn trả lời theo hướng "không có thông tin trong tài liệu".
+     - Đảm bảo không sinh chi tiết/ con số mới khi source rỗng hoặc context quá yếu.
+   - **Output bắt buộc:** 1 đoạn note ngắn trong `docs/tuning-log.md` giải thích logic abstain.
+   - **Commit gợi ý:** `fix(day08-lab): harden abstain path for insufficient-context questions`
+
+2. **Task B - Chuẩn hóa citation grounding ở answer**
+   - **File chính:** `day08/lab/rag_answer.py`
+   - **Việc cần làm:**
+     - Kiểm tra answer luôn giữ format trích dẫn `[1]`, `[2]` khi có context.
+     - Tránh trường hợp trả lời có nội dung nhưng thiếu citation.
+   - **Output bắt buộc:** cập nhật ví dụ trước/sau trong `docs/tuning-log.md`.
+   - **Commit gợi ý:** `feat(day08-lab): enforce citation grounding format in generated answers`
+
+3. **Task C - Bổ sung bộ test "dễ hallucinate" để kiểm chứng core AI**
+   - **File chính:** `day08/lab/data/grading_questions.json` (hoặc file test bổ sung cùng thư mục data)
+   - **Việc cần làm:**
+     - Thêm 2-3 câu kiểu "dễ bịa" (thiếu dữ kiện, alias tên cũ, câu nhiều điều kiện).
+     - Ghi rõ mục tiêu mỗi câu: kiểm tra retrieval hay kiểm tra abstain.
+   - **Output bắt buộc:** note mục đích từng câu trong file hoặc docs.
+   - **Commit gợi ý:** `chore(day08-lab): add adversarial grading questions for anti-hallucination checks`
+
+4. **Task D - Chạy lại grading log với config tốt nhất và lưu bằng chứng**
+   - **File chính:** `day08/lab/logs/grading_run.json`, `day08/lab/results/scorecard_variant.md`
+   - **Việc cần làm:**
+     - Chạy lại pipeline với config đã chốt (ví dụ `hybrid` + tùy chọn rerank theo A/B).
+     - Đảm bảo log đủ 10 câu, có `retrieval_mode`, `sources`, `chunks_retrieved`, `timestamp`.
+   - **Output bắt buộc:** scorecard mới + log mới, dùng để chứng minh cải thiện.
+   - **Commit gợi ý:** `chore(day08-lab): refresh grading log and variant scorecard with finalized core config`
+
+5. **Task E - Bảng so sánh ngắn baseline vs variant (đúng tinh thần A/B 1 biến)**
+   - **File chính:** `day08/lab/docs/tuning-log.md`
+   - **Việc cần làm:**
+     - Ghi rõ Baseline config, Variant config, biến duy nhất đã đổi.
+     - Bổ sung bảng so sánh tối thiểu: Faithfulness, Relevance, Context Recall.
+   - **Output bắt buộc:** bảng trước/sau + kết luận 3-5 dòng "vì sao chọn variant".
+   - **Commit gợi ý:** `docs(day08-lab): add single-variable ab comparison for core rag quality`
+
+### KPI riêng cho TuAnh (để thầy dễ chấm)
+
+- Có ít nhất **5 commit tách bạch** tương ứng Task A-E.
+- Mỗi commit chỉ chạm đúng nhóm file của task đó.
+- Phải có bằng chứng trực tiếp trong repo cho 3 năng lực core AI:
+  1) chống hallucination,  
+  2) grounding bằng citation,  
+  3) so sánh baseline-variant có số liệu.
+
 ---
 
 ## Giai đoạn 2 - Retrieval và answer quality

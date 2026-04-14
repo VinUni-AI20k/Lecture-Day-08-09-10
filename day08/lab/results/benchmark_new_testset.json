@@ -1,0 +1,108 @@
+[
+  {
+    "label": "dense_k12_s4_no_rerank",
+    "config": {
+      "label": "dense_k12_s4_no_rerank",
+      "retrieval_mode": "dense",
+      "top_k_search": 12,
+      "top_k_select": 4,
+      "use_rerank": false
+    },
+    "raw": 75.0,
+    "max_raw": 98.0,
+    "projected_30": 22.96,
+    "verdicts": {
+      "Full": 6,
+      "Partial": 3,
+      "Zero": 1
+    }
+  },
+  {
+    "label": "dense_k10_s3_no_rerank",
+    "config": {
+      "label": "dense_k10_s3_no_rerank",
+      "retrieval_mode": "dense",
+      "top_k_search": 10,
+      "top_k_select": 3,
+      "use_rerank": false
+    },
+    "raw": 70.0,
+    "max_raw": 98.0,
+    "projected_30": 21.43,
+    "verdicts": {
+      "Full": 5,
+      "Partial": 4,
+      "Zero": 1
+    }
+  },
+  {
+    "label": "dense_k15_s4_rerank",
+    "config": {
+      "label": "dense_k15_s4_rerank",
+      "retrieval_mode": "dense",
+      "top_k_search": 15,
+      "top_k_select": 4,
+      "use_rerank": true
+    },
+    "raw": 70.0,
+    "max_raw": 98.0,
+    "projected_30": 21.43,
+    "verdicts": {
+      "Full": 5,
+      "Partial": 4,
+      "Zero": 1
+    }
+  },
+  {
+    "label": "hybrid_k15_s4_rerank",
+    "config": {
+      "label": "hybrid_k15_s4_rerank",
+      "retrieval_mode": "hybrid",
+      "top_k_search": 15,
+      "top_k_select": 4,
+      "use_rerank": true
+    },
+    "raw": 65.0,
+    "max_raw": 98.0,
+    "projected_30": 19.9,
+    "verdicts": {
+      "Partial": 5,
+      "Full": 4,
+      "Zero": 1
+    }
+  },
+  {
+    "label": "hybrid_k10_s3_no_rerank",
+    "config": {
+      "label": "hybrid_k10_s3_no_rerank",
+      "retrieval_mode": "hybrid",
+      "top_k_search": 10,
+      "top_k_select": 3,
+      "use_rerank": false
+    },
+    "raw": 10.0,
+    "max_raw": 98.0,
+    "projected_30": 3.06,
+    "verdicts": {
+      "Zero": 9,
+      "Full": 1
+    }
+  },
+  {
+    "label": "hybrid_k12_s4_no_rerank",
+    "config": {
+      "label": "hybrid_k12_s4_no_rerank",
+      "retrieval_mode": "hybrid",
+      "top_k_search": 12,
+      "top_k_select": 4,
+      "use_rerank": false
+    },
+    "raw": 10.0,
+    "max_raw": 98.0,
+    "projected_30": 3.06,
+    "verdicts": {
+      "Zero": 9,
+      "Full": 1
+    }
+  }
+]

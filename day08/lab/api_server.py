@@ -108,7 +108,8 @@ class RagRequest(BaseModel):
     query: str = Field(..., min_length=1, max_length=8000)
     retrieval_mode: Literal["dense", "sparse", "hybrid"] = "dense"
     top_k_search: Optional[int] = Field(default=None, ge=1, le=48)
-    top_k_select: Optional[int] = Field(default=None, ge=1, le=12)
+    # UI cho phép kéo tới 24, nên backend phải đồng bộ để tránh 422 validation.
+    top_k_select: Optional[int] = Field(default=None, ge=1, le=24)
     use_rerank: bool = False
 
 

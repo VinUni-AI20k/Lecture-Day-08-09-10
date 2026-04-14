@@ -21,6 +21,12 @@ export type RagTelemetry = {
   };
 };
 
+export type ScoreStats = {
+  min: number;
+  max: number;
+  avg: number;
+};
+
 export type PipelineStep = {
   step: number;
   name: string;
@@ -31,6 +37,14 @@ export type PipelineStep = {
   context_preview?: string;
   prompt_preview?: string;
   answer_chars?: number;
+  /** Enriched stats from QuachGiaDuoc's retrieval trace */
+  stats?: {
+    score?: ScoreStats | null;
+    non_empty_chunks?: number;
+    sources_preview?: string;
+    dropped_candidates?: number;
+    prompt_sources_preview?: string;
+  };
 };
 
 export type ChunkRow = {
@@ -131,9 +145,29 @@ export function streamRag(
         signal: controller.signal,
       });
 
+      // If streaming endpoint is unavailable, fall back to non-streaming /api/rag
       if (!res.ok || !res.body) {
-        const text = await res.text().catch(() => `HTTP ${res.status}`);
-        callbacks.onError(new Error(text || `HTTP ${res.status}`));
+        const statusCode = res.status;
+        // Try non-streaming fallback for 404/502/503 (endpoint might not exist yet)
+        if ([404, 502, 503].includes(statusCode) || !res.body) {
+          try {
+            const fallback = await postRag(body);
+            // Simulate step events from pipeline_steps in the fallback response
+            for (const step of fallback.pipeline_steps ?? []) {
+              callbacks.onStep(step);
+            }
+            callbacks.onDone(fallback);
+            return;
+          } catch (fallbackErr) {
+            const msg = fallbackErr instanceof Error ? fallbackErr.message : String(fallbackErr);
+            callbacks.onError(new Error(`API unreachable. Start FastAPI: uvicorn api_server:app --port 8010\n${msg}`));
+            return;
+          }
+        }
+        const text = await res.text().catch(() => `HTTP ${statusCode}`);
+        let detail = text;
+        try { detail = JSON.parse(text)?.detail ?? text; } catch { /* keep raw */ }
+        callbacks.onError(new Error(detail || `HTTP ${statusCode}`));
         return;
       }
 
@@ -183,7 +217,16 @@ export function streamRag(
       }
     } catch (e) {
       if ((e as { name?: string }).name === "AbortError") return;
-      callbacks.onError(e instanceof Error ? e : new Error(String(e)));
+      // Network-level failure — FastAPI probably not running; try non-streaming fallback
+      try {
+        const fallback = await postRag(body);
+        for (const step of fallback.pipeline_steps ?? []) callbacks.onStep(step);
+        callbacks.onDone(fallback);
+      } catch {
+        const hint = "Start FastAPI: uvicorn api_server:app --reload --host 127.0.0.1 --port 8010";
+        const orig = e instanceof Error ? e.message : String(e);
+        callbacks.onError(new Error(`${hint}\n\nDetail: ${orig}`));
+      }
     }
   }
 

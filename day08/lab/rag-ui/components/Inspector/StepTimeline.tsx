@@ -10,7 +10,7 @@ import {
   ChevronDown,
   Loader2,
 } from "lucide-react";
-import type { PipelineStep } from "@/lib/rag-client";
+import type { PipelineStep, ScoreStats } from "@/lib/rag-client";
 import { ChunkTable } from "./ChunkTable";
 import { cn } from "@/lib/utils";
 
@@ -26,32 +26,32 @@ const STEP_META: Record<
   }
 > = {
   1: {
-    label: "Query Understanding",
-    description: "Analyzing your question and choosing retrieval strategy",
+    label: "Phân Tích Câu Hỏi",
+    description: "Phân tích câu hỏi và chọn chiến lược truy xuất phù hợp",
     icon: MessageSquare,
     color: "var(--step-1)",
   },
   2: {
-    label: "Document Retrieval",
-    description: "Searching the vector store for relevant chunks",
+    label: "Truy Xuất Tài Liệu",
+    description: "Tìm kiếm trong kho vector các đoạn văn liên quan",
     icon: Database,
     color: "var(--step-2)",
   },
   3: {
-    label: "Selection & Rerank",
-    description: "Filtering the best evidence for the LLM",
+    label: "Lọc & Sắp Xếp Lại",
+    description: "Lọc bằng chứng tốt nhất để đưa vào LLM",
     icon: Filter,
     color: "var(--step-3)",
   },
   4: {
-    label: "Context Assembly",
-    description: "Building the grounded prompt with citations",
+    label: "Ghép Ngữ Cảnh",
+    description: "Xây dựng câu lệnh cho AI có trích dẫn và nguồn tham chiếu",
     icon: FileText,
     color: "var(--step-4)",
   },
   5: {
-    label: "LLM Generation",
-    description: "Generating a grounded answer from evidence",
+    label: "Sinh Câu Trả Lời (LLM)",
+    description: "Tạo câu trả lời có căn cứ từ ngữ cảnh đã thu thập",
     icon: Sparkles,
     color: "var(--step-5)",
   },
@@ -135,15 +135,18 @@ function StepCard({
                       className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full"
                       style={{ background: `${meta.color}18`, color: meta.color }}
                     >
-                      {step.table.length} chunks
+                      {step.table.length} đoạn
                     </span>
+                  )}
+                  {!isPending && step.stats?.score && (
+                    <ScoreBadge score={step.stats.score} color={meta.color} />
                   )}
                   {!isPending && step.step === 5 && step.answer_chars && (
                     <span
                       className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full"
                       style={{ background: `${meta.color}18`, color: meta.color }}
                     >
-                      {step.answer_chars} chars
+                      {step.answer_chars} ký tự
                     </span>
                   )}
                   {hasExpand && (
@@ -162,6 +165,11 @@ function StepCard({
                 <p className="mt-1 text-[11px] text-muted-foreground leading-relaxed line-clamp-2">
                   {step.detail.replace(/\*\*/g, "")}
                 </p>
+              )}
+
+              {/* Stats inline summary (QuachGiaDuoc enrichment) */}
+              {!isPending && step.stats && (
+                <StatsRow stats={step.stats} color={meta.color} />
               )}
 
               {/* Pending skeleton */}
@@ -203,6 +211,50 @@ function StepCard({
   );
 }
 
+// ── Stats helpers ────────────────────────────────────────────────────────────
+
+function ScoreBadge({ score, color }: { score: ScoreStats; color: string }) {
+  const pct = Math.round(score.avg * 100);
+  return (
+    <span
+      className="text-[10px] font-bold px-1.5 py-0.5 rounded-full"
+      title={`min=${score.min.toFixed(3)} avg=${score.avg.toFixed(3)} max=${score.max.toFixed(3)}`}
+      style={{ background: `${color}18`, color }}
+    >
+      avg {pct}%
+    </span>
+  );
+}
+
+function StatsRow({
+  stats,
+  color,
+}: {
+  stats: NonNullable<PipelineStep["stats"]>;
+  color: string;
+}) {
+  const pills: { label: string; value: string | number }[] = [];
+  if (stats.non_empty_chunks != null) pills.push({ label: "có nội dung", value: stats.non_empty_chunks });
+  if (stats.dropped_candidates != null) pills.push({ label: "loại bỏ", value: stats.dropped_candidates });
+  if (stats.sources_preview) pills.push({ label: "nguồn", value: stats.sources_preview });
+  if (pills.length === 0) return null;
+
+  return (
+    <div className="mt-1.5 flex flex-wrap gap-1.5">
+      {pills.map((p) => (
+        <span
+          key={p.label}
+          className="inline-flex items-center gap-1 text-[10px] rounded-md px-1.5 py-0.5 border"
+          style={{ borderColor: `${color}30`, color: "var(--muted-foreground)", background: `${color}08` }}
+        >
+          <span style={{ color }} className="font-semibold">{p.label}</span>
+          {p.value}
+        </span>
+      ))}
+    </div>
+  );
+}
+
 // ── Main component ───────────────────────────────────────────────────────────
 
 interface Props {
@@ -223,9 +275,9 @@ export function StepTimeline({ steps, loading, totalSteps = 5 }: Props) {
           <Database className="h-5 w-5 text-primary/60" />
         </div>
         <div>
-          <p className="text-sm font-semibold text-foreground">RAG Pipeline</p>
+          <p className="text-sm font-semibold text-foreground">Luồng RAG</p>
           <p className="mt-1 text-xs text-muted-foreground leading-relaxed max-w-[200px]">
-            Send a question to watch the 5-step pipeline run in real time.
+            Gửi câu hỏi để xem pipeline 5 bước chạy theo thời gian thực.
           </p>
         </div>
       </div>

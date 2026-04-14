@@ -48,7 +48,7 @@ function ThinkingIndicator() {
   return (
     <div className="flex items-center gap-2.5 h-5">
       <div className="thinking-ring h-2 w-2 rounded-full bg-primary" />
-      <span className="text-xs text-muted-foreground font-medium tracking-wide">Thinking…</span>
+      <span className="text-xs text-muted-foreground font-medium tracking-wide">Đang suy nghĩ…</span>
     </div>
   );
 }

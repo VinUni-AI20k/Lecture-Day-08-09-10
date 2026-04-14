@@ -16,6 +16,8 @@ from __future__ import annotations
 
 import argparse
 import json
+from collections import Counter
+from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List
 
@@ -33,6 +35,23 @@ def _parse_judge_json(text: str) -> Dict[str, Any]:
     from eval import _parse_json_from_llm
 
     return _parse_json_from_llm(text)
+
+
+def _md_cell(value: Any, max_len: int = 100) -> str:
+    """Chuẩn hóa nội dung ô markdown để tránh vỡ bảng."""
+    if value is None:
+        return ""
+    text = str(value).replace("\n", " ").replace("|", "/")
+    text = " ".join(text.split())
+    return text[:max_len]
+
+
+def _criteria_hit_ratio(criteria_met: Any) -> str:
+    if not isinstance(criteria_met, list) or not criteria_met:
+        return "N/A"
+    total = len(criteria_met)
+    hit = sum(1 for x in criteria_met if bool(x))
+    return f"{hit}/{total}"
 
 
 def judge_one(rubric: Dict[str, Any], log_row: Dict[str, Any]) -> Dict[str, Any]:
@@ -154,26 +173,69 @@ def main() -> None:
         encoding="utf-8",
     )
 
+    verdict_counts = Counter()
+    for row in per_q:
+        verdict_counts[str(row.get("verdict") or "ERROR")] += 1
+
     lines = [
         "# Chấm tự động — grading questions",
         "",
         "> LLM-as-judge: **ước lượng** để benchmark nội bộ. Điểm chính thức do GV chấm theo [SCORING.md](SCORING.md).",
         "",
+        f"- **Thời điểm chạy:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
+        f"- **Nguồn đề:** `{args.questions}`",
+        f"- **Nguồn log:** `{args.log}`",
         f"- **Tổng raw (ước lượng):** {total_raw:.2f} / {max_raw:.0f}",
         f"- **Quy đổi kiểu 30 điểm phần grading nhóm:** **{projected_30:.2f} / 30**",
         "",
+        "## Tổng hợp verdict",
+        "",
+        "|Verdict|Số câu|",
+        "|-------|-----|",
+        f"|Full|{verdict_counts.get('Full', 0)}|",
+        f"|Partial|{verdict_counts.get('Partial', 0)}|",
+        f"|Zero|{verdict_counts.get('Zero', 0)}|",
+        f"|Penalty|{verdict_counts.get('Penalty', 0)}|",
+        f"|ERROR|{verdict_counts.get('ERROR', 0)}|",
+        "",
         "## Chi tiết",
         "",
-        "| ID | Verdict | Điểm | Max | Lý do (rút gọn) |",
-        "|----|---------|------|-----|-----------------|",
+        "|ID|Verdict|Điểm|Max|Criteria|Hallucination|Lý do (rút gọn)|",
+        "|--|-------|----|---|--------|------------|----------------|",
     ]
     for r in per_q:
         if "error" in r:
-            lines.append(f"| {r.get('id')} | ERROR | 0 | — | {r.get('error', '')[:100]} |")
-        else:
-            reason = (r.get("reason") or "").replace("|", "/").replace("\n", " ")[:100]
             lines.append(
-                f"| {r['id']} | {r.get('verdict')} | {r.get('points')} | {r.get('max_points')} | {reason} |"
+                "|"
+                + "|".join(
+                    [
+                        _md_cell(r.get("id"), 24),
+                        "ERROR",
+                        "0",
+                        "-",
+                        "N/A",
+                        "N/A",
+                        _md_cell(r.get("error", ""), 120),
+                    ]
+                )
+                + "|"
+            )
+        else:
+            reason = _md_cell(r.get("reason"), 120)
+            lines.append(
+                "|"
+                + "|".join(
+                    [
+                        _md_cell(r.get("id"), 24),
+                        _md_cell(r.get("verdict"), 16),
+                        _md_cell(r.get("points"), 12),
+                        _md_cell(r.get("max_points"), 12),
+                        _criteria_hit_ratio(r.get("criteria_met")),
+                        _md_cell(r.get("hallucination"), 12),
+                        reason,
+                    ]
+                )
+                + "|"
             )
 
     lines.extend(

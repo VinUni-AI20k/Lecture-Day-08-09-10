@@ -44,8 +44,8 @@ def _env_int(name: str, default: int, lo: int = 1, hi: int = 64) -> int:
 # =============================================================================
 
 # Có thể ghi đè bằng .env: TOP_K_SEARCH, TOP_K_SELECT, RRF_K
-TOP_K_SEARCH = _env_int("TOP_K_SEARCH", 10, 1, 48)  # pool trước rerank / cắt top list
-TOP_K_SELECT = _env_int("TOP_K_SELECT", 3, 1, 12)     # số chunk vào prompt
+TOP_K_SEARCH = _env_int("TOP_K_SEARCH", 20, 1, 48)  # pool trước rerank / cắt top list
+TOP_K_SELECT = _env_int("TOP_K_SELECT", 8, 1, 24)     # số chunk vào prompt
 
 LLM_MODEL = os.getenv("LLM_MODEL", "gpt-4o-mini")
 LLM_PROVIDER = os.getenv("LLM_PROVIDER", "openai").lower()
@@ -59,6 +59,14 @@ CHROMA_DB_DIR = Path(__file__).parent / "chroma_db"
 CHROMA_COLLECTION = "rag_lab"
 RRF_K = _env_int("RRF_K", 60, 10, 120)
 ABSTAIN_ANSWER = "Không đủ dữ liệu trong tài liệu để trả lời."
+
+# Ngưỡng score tối thiểu để coi context là "đủ mạnh".
+# Dense/Hybrid score = 1 - cosine_distance (0..1); BM25 raw score có thể > 1.
+# Nếu max score trong top-k < ngưỡng → context quá yếu → abstain trước khi gọi LLM.
+# Mặc định 0.05: giảm false-positive abstain cho câu cross-doc / scope questions.
+WEAK_CONTEXT_SCORE_THRESHOLD = float(
+    os.getenv("WEAK_CONTEXT_SCORE_THRESHOLD", "0.05")
+)
 
 # Cache BM25 corpus (reload sau khi build_index)
 _bm25_bundle: Optional[Tuple[Any, List[str], List[str], List[Dict[str, Any]]]] = None
@@ -337,14 +345,12 @@ def build_context_block(chunks: List[Dict[str, Any]]) -> str:
         meta = chunk.get("metadata", {})
         source = meta.get("source", "unknown")
         section = meta.get("section", "")
-        score = chunk.get("score", 0)
         text = chunk.get("text", "")
 
-        header = f"[{i}] {source}"
+        header = f"--- Snippet [{i}] from: {source}"
         if section:
-            header += f" | {section}"
-        if score is not None:
-            header += f" | score={float(score):.4f}"
+            header += f" § {section}"
+        header += " ---"
 
         context_parts.append(f"{header}\n{text}")
 
@@ -354,16 +360,31 @@ def build_context_block(chunks: List[Dict[str, Any]]) -> str:
 def build_grounded_prompt(query: str, context_block: str) -> str:
     """
     Grounded prompt: evidence-only, abstain, citation [n], cùng ngôn ngữ với câu hỏi.
-    """
-    prompt = f"""You are an internal CS/IT policy assistant. Follow strictly:
 
-1) Use ONLY information from the numbered context snippets below. Do not use outside knowledge.
-2) **Same-or-different / comparison questions (e.g. leave types, access levels):** If the context defines two or more separate categories (e.g. distinct headings like "Annual Leave" vs "Sick Leave", or separate numbered items), you MUST answer by contrasting them using that text. State clearly whether the question's wording treats them as one thing or not, per policy. Cite [n]. **Do not abstain** when those definitions appear in any snippet.
-3) **Abstain** only when no snippet contains facts needed to address the question at all. Then reply exactly:
+    Abstain rules (hardened):
+      - Abstain khi không có snippet nào chứa dữ kiện liên quan.
+      - Tuyệt đối không tự bịa số, ngày, tên, quy trình không có trong context.
+      - Mọi claim phải có [n] trích dẫn; không citation → không claim.
+    """
+    prompt = f"""You are an internal CS/IT policy assistant. Follow these rules strictly:
+
+1) Use ONLY information from the numbered context snippets below. Do NOT use any outside knowledge.
+2) **Never invent specifics.** Do NOT fabricate numbers, dates, names, thresholds, or procedures that are not explicitly stated in the snippets — even if they seem plausible.
+3) **Stay focused but complete.** Answer exactly what the question asks — include ALL details relevant to the question (approvers, deadlines, requirements, contact channels, conditions) but do NOT add tangential information not asked about.
+4) **Scope and applicability questions:** If a snippet defines a scope (e.g., "applies to all employees, contractors, and third-party vendors"), combine that scope with relevant detail sections. Do NOT abstain when scope + detail together answer the question.
+5) **Abstain** ONLY when genuinely no snippet contains any relevant fact. Then reply exactly:
     "{ABSTAIN_ANSWER}"
-   (English questions may use: "Insufficient information in the documents to answer.")
-4) When you cite evidence, include bracket references like [1], [2] matching snippet numbers.
-5) Be concise and factual. Same language as the user's question (Vietnamese or English).
+   Before abstaining, re-check ALL snippets for indirect evidence (scope declarations, general rules).
+6) **Citation rules (MANDATORY — follow exactly):**
+   - Every factual claim MUST have a bracket reference [n] matching the snippet number.
+   - Each fact must cite the SPECIFIC snippet that contains it — NEVER attribute all facts to [1].
+   - When facts come from DIFFERENT snippets/documents, cite EACH separately (e.g., "VPN là bắt buộc [2] và tối đa 2 thiết bị [5]").
+   - Cross-document questions: you MUST cite ALL relevant snippet numbers from ALL different source documents.
+   - ALWAYS include the source document name or article/section in your citation. Format: "theo [document/section name] [n]" — for example: "theo Điều 5 chính sách hoàn tiền [1]", "theo IT Helpdesk FAQ [3]", "theo HR Leave Policy [2]".
+   - If information spans 2+ documents, your answer MUST contain citation references to snippets from EACH document separately.
+7) **Include ALL actionable details** from the snippets: URLs, phone extensions (ext.), portal names, hotline numbers, email addresses, software names, and specific procedures. For process/procedure questions, scan ALL snippets for relevant contact channels (hotlines, ext. numbers, on-call info) and include them.
+8) When mentioning optional vs mandatory items, explicitly state whether it is "tùy chọn" (optional) or "bắt buộc" (mandatory).
+9) Be concise and factual. Use the same language as the user's question (Vietnamese or English).
 
 Question: {query}
 
@@ -422,7 +443,7 @@ def call_llm(prompt: str) -> str:
         model=LLM_MODEL,
         messages=[{"role": "user", "content": prompt}],
         temperature=0,
-        max_tokens=512,
+        max_tokens=768,
     )
     tel = get_telemetry()
     if tel is not None:
@@ -761,6 +782,37 @@ def rag_answer_impl(
             out["pipeline_steps"] = steps
         return out
 
+    # --- Hardened abstain: kiểm tra context quá yếu trước khi gọi LLM ---
+    # Chỉ áp dụng cho dense mode KHÔNG rerank (cosine score 0..1).
+    # Hybrid (RRF), sparse (BM25), và rerank (cross-encoder) có scale khác.
+    max_score = max((float(c.get("score", 0.0)) for c in candidates), default=0.0)
+    _apply_weak_check = retrieval_mode == "dense" and not use_rerank
+    if _apply_weak_check and max_score < WEAK_CONTEXT_SCORE_THRESHOLD:
+        weak_detail = (
+            f"Max chunk score {max_score:.4f} < ngưỡng {WEAK_CONTEXT_SCORE_THRESHOLD} "
+            f"— context quá yếu, không đủ bằng chứng. Abstain sớm để tránh hallucination."
+        )
+        out: Dict[str, Any] = {
+            "query": query,
+            "answer": ABSTAIN_ANSWER,
+            "sources": [],
+            "chunks_used": [],
+            "config": config,
+            "abstain_reason": "weak_context_score",
+        }
+        if trace:
+            steps.append({
+                "step": 4,
+                "name": "Context check",
+                "emoji": "4️⃣",
+                "detail": weak_detail,
+                "table": _trace_chunk_rows(candidates),
+            })
+            out["pipeline_steps"] = steps
+        if verbose:
+            print(f"[RAG] Abstain (weak context): {weak_detail}")
+        return out
+
     # --- Bước 3: Build context và prompt ---
     context_block = build_context_block(candidates)
     if not context_block.strip():
@@ -980,6 +1032,30 @@ def rag_answer_stream(
             yield {"event": "done", "data": done_data}
             return
 
+        # ── Hardened abstain: chỉ áp dụng cho dense mode ──
+        max_score = max((float(c.get("score", 0.0)) for c in candidates), default=0.0)
+        _apply_weak = retrieval_mode == "dense"
+        if _apply_weak and max_score < WEAK_CONTEXT_SCORE_THRESHOLD:
+            weak_step = {
+                "step": 4, "name": "Context check", "emoji": "4️⃣",
+                "detail": (
+                    f"Max chunk score {max_score:.4f} < ngưỡng {WEAK_CONTEXT_SCORE_THRESHOLD} "
+                    f"— context quá yếu. Abstain sớm để tránh hallucination."
+                ),
+                "table": _trace_chunk_rows(candidates),
+            }
+            yield {"event": "step", "data": weak_step}
+            done_data = {
+                "answer": ABSTAIN_ANSWER,
+                "sources": [], "chunks_used": [], "query": query, "config": config,
+                "abstain_reason": "weak_context_score",
+                "pipeline_steps": [step1, step2, step3, weak_step],
+                "telemetry": _finish_tel(tel, tok, rid, config, query, ok=True),
+                "request_id": rid,
+            }
+            yield {"event": "done", "data": done_data}
+            return
+
         # ── Step 4: Context + prompt ──────────────────────────────────
         context_block = build_context_block(candidates)
         if not context_block.strip():
@@ -1020,10 +1096,11 @@ def rag_answer_stream(
         answer = ("".join(answer_parts)).strip() or ABSTAIN_ANSWER
 
         step5 = {
-            "step": 5, "name": "LLM", "emoji": "5️⃣",
-            "detail": f"**{LLM_MODEL}** · temperature=0 · trả lời bám context.",
+            "step": 5, "name": "LLM Generation", "emoji": "5️⃣",
+            "detail": f"**{LLM_MODEL}** · temperature=0 · {len(answer)} chars · grounded answer.",
             "answer_chars": len(answer),
         }
+        yield {"event": "step", "data": step5}
 
         sources = list({c["metadata"].get("source", "unknown") for c in candidates})
         pipeline_steps = [step1, step2, step3, step4, step5]

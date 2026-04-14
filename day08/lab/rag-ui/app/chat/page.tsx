@@ -2,12 +2,12 @@
 
 import { useCallback, useId, useRef, useState } from "react";
 import Link from "next/link";
-import { Settings2, PanelRight, AlertCircle, X, Zap, Database, Filter } from "lucide-react";
+import { Settings2, PanelRight, AlertCircle, X, Zap, Database, Filter, Lightbulb, ChevronDown, ChevronUp } from "lucide-react";
 import { Group as PanelGroup, Panel, Separator as PanelResizeHandle } from "react-resizable-panels";
 import { streamRag, type RagResponse, type PipelineStep, type StreamRagHandle } from "@/lib/rag-client";
 import { MessageList } from "@/components/Chat/MessageList";
 import { ChatInput } from "@/components/Chat/ChatInput";
-import type { Message } from "@/components/Chat/MessageBubble";
+import type { Message, ChunkMeta } from "@/components/Chat/MessageBubble";
 import { InspectorPanel } from "@/components/Inspector/InspectorPanel";
 import {
   SettingsDrawer,
@@ -19,9 +19,21 @@ import { cn } from "@/lib/utils";
 
 // ── Example questions ────────────────────────────────────────────────────────
 const EXAMPLE_QUESTIONS = [
-  "What is the SLA for P1 tickets?",
-  "How many days of annual leave do employees get?",
-  "What are the security access levels?",
+  "SLA xử lý ticket P1 là bao lâu?",
+  "Nhân viên có bao nhiêu ngày nghỉ phép năm?",
+  "Các cấp quyền truy cập hệ thống gồm những gì?",
+];
+const TEST_QUESTIONS = [
+  "SLA xử lý ticket P1 là bao lâu?",
+  "Khách hàng có thể yêu cầu hoàn tiền trong bao nhiêu ngày?",
+  "Ai phải phê duyệt để cấp quyền Level 3?",
+  "Sản phẩm kỹ thuật số có được hoàn tiền không?",
+  "Tài khoản bị khóa sau bao nhiêu lần đăng nhập sai?",
+  "Escalation trong sự cố P1 diễn ra như thế nào?",
+  "Approval Matrix để cấp quyền hệ thống là tài liệu nào?",
+  "Nhân viên được làm remote tối đa mấy ngày mỗi tuần?",
+  "ERR-403-AUTH là lỗi gì và cách xử lý?",
+  "Nếu cần hoàn tiền khẩn cấp cho khách hàng VIP, quy trình có khác không?",
 ];
 
 // ── Mode badges ──────────────────────────────────────────────────────────────
@@ -30,6 +42,11 @@ const MODE_ICONS = {
   sparse: <Database className="h-3 w-3" />,
   hybrid: <Filter className="h-3 w-3" />,
 };
+const MODE_LABELS = {
+  dense: "Ngữ nghĩa",
+  sparse: "Từ khóa",
+  hybrid: "Kết hợp",
+} as const;
 
 // ── Component ────────────────────────────────────────────────────────────────
 
@@ -46,6 +63,7 @@ export default function ChatPage() {
   const [streamingSteps, setStreamingSteps] = useState<PipelineStep[]>([]);
   const [inspectorOpen, setInspectorOpen] = useState(true);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [showSuggestions, setShowSuggestions] = useState(false);
 
   const [settings, setSettings] = useState<Settings>({
     mode: "dense",
@@ -112,11 +130,18 @@ export default function ChatPage() {
           },
           onDone(result) {
             setLast(result);
-            setStreamingSteps([]);
+            // Do NOT clear streamingSteps here — InspectorPanel will switch to
+            // last.pipeline_steps (which also contains step5) once loading=false.
+            // streamingSteps is cleared at the start of the next send().
             setMessages((prev) =>
               prev.map((m) =>
                 m.id === asstMsgId
-                  ? { ...m, text: result.answer, isStreaming: false }
+                  ? {
+                      ...m,
+                      text: result.answer,
+                      isStreaming: false,
+                      chunks: result.chunks_used as ChunkMeta[],
+                    }
                   : m
               )
             );
@@ -124,14 +149,16 @@ export default function ChatPage() {
             streamHandle.current = null;
           },
           onError(err) {
-            const msg = err.message || String(err);
-            setError({ msg });
+            const raw = err.message || String(err);
+            // First line of error is the human-readable summary
+            const firstLine = raw.split("\n")[0];
+            setError({ msg: firstLine });
             setMessages((prev) =>
               prev.map((m) =>
                 m.id === asstMsgId
                   ? {
                       ...m,
-                      text: "Could not connect to the API. Check that FastAPI is running.",
+                      text: `⚠️ ${firstLine}`,
                       isStreaming: false,
                     }
                   : m
@@ -154,38 +181,41 @@ export default function ChatPage() {
     <TooltipProvider>
       <div className="flex h-screen flex-col overflow-hidden">
         {/* ── Top header ──────────────────────────────────────────────── */}
-        <header className="shrink-0 flex items-center justify-between gap-2 border-b border-border bg-card/80 backdrop-blur-sm px-4 py-2.5 z-10">
+        <header
+          className="shrink-0 flex items-center justify-between gap-2 px-4 py-2.5 z-10"
+          style={{ background: "var(--gradient-header)" }}
+        >
           <div className="flex items-center gap-3">
             <Link
               href="/"
-              className="text-xs text-muted-foreground hover:text-foreground transition-colors font-medium"
+              className="text-xs text-blue-200 hover:text-white transition-colors font-medium"
             >
-              ← Home
+              ← Trang chủ
             </Link>
-            <div className="h-4 w-px bg-border" />
+            <div className="h-4 w-px bg-white/20" />
             <div className="flex items-center gap-2">
-              <div
-                className="h-5 w-5 rounded-md flex items-center justify-center"
-                style={{ background: "var(--gradient-primary)" }}
-              >
-                <span className="text-[9px] font-bold text-white">R</span>
+              <div className="h-6 w-6 rounded-lg flex items-center justify-center bg-white/20 backdrop-blur-sm">
+                <span className="text-[10px] font-bold text-white">RAG</span>
               </div>
-              <h1 className="text-sm font-bold text-foreground tracking-tight">
-                RAG Chat
+              <h1 className="text-sm font-bold text-white tracking-tight">
+                Ngày 08 — Luồng RAG
               </h1>
             </div>
           </div>
 
           {/* Right controls */}
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1.5">
             {/* Mode badge */}
             <button
               type="button"
               onClick={() => setSettingsOpen(true)}
-              className="flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-semibold bg-accent text-accent-foreground hover:bg-primary/10 hover:text-primary transition-colors"
+              className="flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-semibold bg-white/15 text-white hover:bg-white/25 transition-colors"
             >
               {MODE_ICONS[settings.mode as keyof typeof MODE_ICONS]}
-              {settings.mode}
+              {MODE_LABELS[settings.mode as keyof typeof MODE_LABELS]}
+              <span className="opacity-60">·</span>
+              <span className="opacity-80">{settings.topKSearch}/{settings.topKSelect}</span>
+              {settings.useRerank && <span className="text-yellow-300 text-[10px]">✦</span>}
             </button>
 
             <Tooltip>
@@ -193,13 +223,13 @@ export default function ChatPage() {
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-8 w-8"
+                  className="h-8 w-8 text-white/70 hover:text-white hover:bg-white/15"
                   onClick={() => setSettingsOpen(true)}
                 >
                   <Settings2 className="h-4 w-4" />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent>Retrieval settings</TooltipContent>
+              <TooltipContent>Cài đặt truy xuất</TooltipContent>
             </Tooltip>
 
             <Tooltip>
@@ -207,13 +237,16 @@ export default function ChatPage() {
                 <Button
                   variant="ghost"
                   size="icon"
-                  className={cn("h-8 w-8", inspectorOpen && "bg-accent text-accent-foreground")}
+                  className={cn(
+                    "h-8 w-8 text-white/70 hover:text-white hover:bg-white/15",
+                    inspectorOpen && "bg-white/20 text-white"
+                  )}
                   onClick={() => setInspectorOpen((o) => !o)}
                 >
                   <PanelRight className="h-4 w-4" />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent>Toggle inspector</TooltipContent>
+              <TooltipContent>Bật/tắt bảng theo dõi</TooltipContent>
             </Tooltip>
           </div>
         </header>
@@ -225,7 +258,7 @@ export default function ChatPage() {
             <div className="flex-1 min-w-0 text-xs text-destructive">
               <p className="font-semibold">{error.msg}</p>
               {error.reqId && (
-                <p className="mt-0.5 opacity-70">request_id: <code>{error.reqId}</code></p>
+                <p className="mt-0.5 opacity-70">mã yêu cầu: <code>{error.reqId}</code></p>
               )}
             </div>
             <button
@@ -243,6 +276,36 @@ export default function ChatPage() {
           <PanelGroup orientation="horizontal" className="h-full">
             {/* ── Chat panel ────────────────────────────────────────── */}
             <Panel defaultSize="65%" minSize="35%" className="flex flex-col min-h-0">
+              {/* Suggestion strip (always available, user can toggle) */}
+              <div className="shrink-0 border-b border-primary/15 bg-white/70 px-4 py-2">
+                <div className="mx-auto max-w-3xl">
+                  <button
+                    type="button"
+                    onClick={() => setShowSuggestions((v) => !v)}
+                    className="inline-flex items-center gap-1.5 rounded-full border border-primary/25 bg-primary/5 px-3 py-1 text-[11px] font-semibold text-primary hover:bg-primary/10 transition-colors"
+                  >
+                    <Lightbulb className="h-3.5 w-3.5" />
+                    Câu hỏi gợi ý từ bộ test
+                    {showSuggestions ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+                  </button>
+                  {showSuggestions && (
+                    <div className="mt-2 flex gap-1.5 overflow-x-auto pb-1">
+                      {TEST_QUESTIONS.map((q, idx) => (
+                        <button
+                          key={`${idx}-${q}`}
+                          type="button"
+                          onClick={() => setQuery(q)}
+                          className="shrink-0 rounded-full border border-primary/25 bg-white px-3 py-1 text-[11px] font-medium text-foreground hover:border-primary/50 hover:bg-primary/10 hover:text-primary transition-colors"
+                          title={q}
+                        >
+                          {q.length > 54 ? `${q.slice(0, 54)}...` : q}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+
               {/* Messages area */}
               <div className="flex-1 min-h-0 overflow-y-auto">
                 {isEmpty ? (
@@ -255,7 +318,7 @@ export default function ChatPage() {
               </div>
 
               {/* Input bar */}
-              <div className="shrink-0 border-t border-border bg-card/80 backdrop-blur-sm px-4 py-3">
+              <div className="shrink-0 border-t border-primary/20 bg-white/60 backdrop-blur-sm px-4 py-3">
                 <div className="mx-auto max-w-3xl">
                   <ChatInput
                     value={query}
@@ -264,9 +327,6 @@ export default function ChatPage() {
                     onStop={stop}
                     loading={loading}
                   />
-                  <p className="mt-1.5 text-center text-[10px] text-muted-foreground">
-                    Enter to send · Shift+Enter for new line
-                  </p>
                 </div>
               </div>
             </Panel>
@@ -320,8 +380,8 @@ function EmptyState({ onQuestion }: { onQuestion: (q: string) => void }) {
       {/* Animated logo */}
       <div className="relative mb-6">
         <div
-          className="flex h-16 w-16 items-center justify-center rounded-2xl shadow-lg"
-          style={{ background: "var(--gradient-primary)" }}
+          className="flex h-16 w-16 items-center justify-center rounded-2xl shadow-xl"
+          style={{ background: "var(--gradient-header)" }}
         >
           <svg
             width="28"
@@ -338,31 +398,36 @@ function EmptyState({ onQuestion }: { onQuestion: (q: string) => void }) {
         </div>
         {/* Glow ring */}
         <div
-          className="absolute inset-0 rounded-2xl opacity-30 blur-xl"
+          className="absolute inset-0 rounded-2xl opacity-40 blur-xl"
           style={{ background: "var(--gradient-primary)" }}
         />
       </div>
 
-      <h2 className="text-xl font-bold text-foreground tracking-tight mb-1">
-        Ask your documents
+      <h2 className="text-xl font-bold tracking-tight mb-1 text-gradient">
+        Hỏi tài liệu của bạn
       </h2>
       <p className="text-sm text-muted-foreground max-w-xs leading-relaxed mb-8">
-        Powered by RAG — retrieval-augmented generation. Every answer is grounded in your indexed documents with full pipeline transparency.
+        Được hỗ trợ bởi RAG — mỗi câu trả lời đều có căn cứ từ tài liệu đã lập chỉ mục, với trực quan hóa pipeline 5 bước đầy đủ.
       </p>
 
       {/* Example chips */}
       <div className="flex flex-col gap-2 w-full max-w-sm">
-        <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground mb-1">
-          Try asking
+        <p className="text-[11px] font-bold uppercase tracking-widest text-primary/60 mb-1">
+          Thử hỏi
         </p>
-        {EXAMPLE_QUESTIONS.map((q) => (
+        {EXAMPLE_QUESTIONS.map((q, i) => (
           <button
             key={q}
             type="button"
             onClick={() => onQuestion(q)}
-            className="flex items-center gap-2 rounded-xl border border-border bg-card px-4 py-2.5 text-left text-xs font-medium text-foreground hover:border-primary/40 hover:bg-accent/60 hover:text-primary transition-all group"
+            className="flex items-center gap-3 rounded-xl border border-primary/20 bg-white px-4 py-3 text-left text-xs font-medium text-foreground hover:border-primary/50 hover:bg-primary/5 hover:text-primary transition-all group shadow-sm"
           >
-            <span className="h-1.5 w-1.5 rounded-full bg-primary/40 group-hover:bg-primary transition-colors shrink-0" />
+            <span
+              className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[9px] font-bold text-white"
+              style={{ background: "var(--gradient-primary)" }}
+            >
+              {i + 1}
+            </span>
             {q}
           </button>
         ))}
