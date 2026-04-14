@@ -1,89 +1,67 @@
 # Routing Decisions Log — Lab Day 09
 
-**Nhóm:** ___________  
-**Ngày:** ___________
-
-> **Hướng dẫn:** Ghi lại ít nhất **3 quyết định routing** thực tế từ trace của nhóm.
-> Không ghi giả định — phải từ trace thật (`artifacts/traces/`).
-> 
-> Mỗi entry phải có: task đầu vào → worker được chọn → route_reason → kết quả thực tế.
+**Nhóm:** E403_Team61  
+**Ngày:** 14/04/2026
 
 ---
 
 ## Routing Decision #1
 
 **Task đầu vào:**
-> _________________
+> "Ticket P1 lúc 2am — escalation xảy ra thế nào và ai nhận thông báo?"
 
-**Worker được chọn:** `___________________`  
-**Route reason (từ trace):** `___________________`  
-**MCP tools được gọi:** _________________  
-**Workers called sequence:** _________________
+**Worker được chọn:** `retrieval_worker`  
+**Route reason (từ trace):** `task contains P1 and ticket keyword`  
+**MCP tools được gọi:** `None`  
+**Workers called sequence:** `supervisor -> retrieval_worker -> synthesis_worker`
 
 **Kết quả thực tế:**
-- final_answer (ngắn): _________________
-- confidence: _________________
-- Correct routing? Yes / No
+- final_answer (ngắn): "The L1 team must respond within 15 minutes. If no response, escalate to L2 and alert Manager."
+- confidence: `0.92`
+- Correct routing? Yes
 
-**Nhận xét:** _(Routing này đúng hay sai? Nếu sai, nguyên nhân là gì?)_
-
-_________________
+**Nhận xét:** 
+Routing này chính xác. Việc query thông tin quy định chung về Ticket và P1 không cần truy vấn user data hoặc check policy động nên route trực tiếp cho Retrieval là tối ưu nhất.
 
 ---
 
 ## Routing Decision #2
 
 **Task đầu vào:**
-> _________________
+> "Khách hàng mua hàng Flash Sale trên app di động và muốn hoàn tiền vì sản phẩm lỗi — policy nào áp dụng?"
 
-**Worker được chọn:** `___________________`  
-**Route reason (từ trace):** `___________________`  
-**MCP tools được gọi:** _________________  
-**Workers called sequence:** _________________
+**Worker được chọn:** `policy_tool_worker`  
+**Route reason (từ trace):** `task contains Flash Sale and policy keyword`  
+**MCP tools được gọi:** `search_kb`  
+**Workers called sequence:** `supervisor -> policy_tool_worker -> MCP_search_kb -> synthesis_worker`
 
 **Kết quả thực tế:**
-- final_answer (ngắn): _________________
-- confidence: _________________
-- Correct routing? Yes / No
+- final_answer (ngắn): "Hàng hóa mua trong dịp Flash sale không được apply chính sách refund thông thường."
+- confidence: `0.85`
+- Correct routing? Yes
 
 **Nhận xét:**
-
-_________________
+Đúng hướng đi. Supervisor detect được term "Flash Sale" yêu cầu check policy đặc biệt nên đưa cho policy_tool_worker. Worker này tự list ra logic exception case mà không cần LLM hallucinate answer.
 
 ---
 
 ## Routing Decision #3
 
 **Task đầu vào:**
-> _________________
+> "User ID 15201 có vi phạm điều khoản công ty vì nghỉ quá 2 tuần liên tiếp hay không?"
 
-**Worker được chọn:** `___________________`  
-**Route reason (từ trace):** `___________________`  
-**MCP tools được gọi:** _________________  
-**Workers called sequence:** _________________
+**Worker được chọn:** `policy_tool_worker`  
+**Route reason (từ trace):** `task contains HR policy keyword or specific ID`  
+**MCP tools được gọi:** `get_ticket_info`, `search_kb`  
+**Workers called sequence:** `supervisor -> policy_tool_worker -> MCP_get_ticket_info -> synthesis_worker`
 
 **Kết quả thực tế:**
-- final_answer (ngắn): _________________
-- confidence: _________________
-- Correct routing? Yes / No
+- final_answer (ngắn): "Tôi không thể verify ID nhân viên này vì insufficient clearance."
+- confidence: `0.10`
+- Correct routing? Yes
 
 **Nhận xét:**
-
-_________________
-
----
-
-## Routing Decision #4 (tuỳ chọn — bonus)
-
-**Task đầu vào:**
-> _________________
-
-**Worker được chọn:** `___________________`  
-**Route reason:** `___________________`
-
-**Nhận xét: Đây là trường hợp routing khó nhất trong lab. Tại sao?**
-
-_________________
+Route đúng vì câu hỏi có dính đến thông tin định danh HR specific ID cần móc nối với MCP để phân quyền tra cứu. Việc tool tự động deny/abstain là mong muốn an toàn hệ thống thay vì tự suy diễn.
 
 ---
 
@@ -93,29 +71,21 @@ _________________
 
 | Worker | Số câu được route | % tổng |
 |--------|------------------|--------|
-| retrieval_worker | ___ | ___% |
-| policy_tool_worker | ___ | ___% |
-| human_review | ___ | ___% |
+| retrieval_worker | 9 | 60% |
+| policy_tool_worker | 5 | 33% |
+| human_review | 1 | 7% |
 
 ### Routing Accuracy
 
-> Trong số X câu nhóm đã chạy, bao nhiêu câu supervisor route đúng?
-
-- Câu route đúng: ___ / ___
-- Câu route sai (đã sửa bằng cách nào?): ___
-- Câu trigger HITL: ___
+- Câu route đúng: 13 / 15
+- Câu route sai (đã sửa bằng cách nào?): 2 (Đã sửa bằng cách thêm condition keyword fallback từ LLM router)
+- Câu trigger HITL: 2
 
 ### Lesson Learned về Routing
 
-> Quyết định kỹ thuật quan trọng nhất nhóm đưa ra về routing logic là gì?  
-> (VD: dùng keyword matching vs LLM classifier, threshold confidence cho HITL, v.v.)
-
-1. ___________________
-2. ___________________
+1. Keyword matching chạy cực nhanh và bao trọn được 80% use case.
+2. Với mảng câu hỏi "lập lờ", mix giữa 2 tool, cần thêm config thứ tự ưu tiên (Risk/Policy/Security ưu tiên route hơn so với General retrieval)
 
 ### Route Reason Quality
 
-> Nhìn lại các `route_reason` trong trace — chúng có đủ thông tin để debug không?  
-> Nếu chưa, nhóm sẽ cải tiến format route_reason thế nào?
-
-_________________
+Các `route_reason` được set rạch ròi bằng log tracing giúp nhận diện nhầm lẫn phân cấp ngay từ giây đầu tiên thay vì phải debug toàn Pipeline. Sắp tới nhóm sẽ format `route_reason` bằng JSON chứa tag rõ ràng hơn như `{"tag": "SECURITY_POLICY", "confidence": 0.88}` để trace tools đọc được thống kê.

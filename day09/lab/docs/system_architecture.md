@@ -1,58 +1,36 @@
 # System Architecture — Lab Day 09
 
-**Nhóm:** ___________  
-**Ngày:** ___________  
+**Nhóm:** E403_Team61
+**Ngày:** 14/04/2026
 **Version:** 1.0
 
 ---
 
 ## 1. Tổng quan kiến trúc
 
-> Mô tả ngắn hệ thống của nhóm: chọn pattern gì, gồm những thành phần nào.
+> Cấu trúc được chia nhỏ thành các module có vai trò rõ ràng, cho phép xử lý và route linh hoạt.
 
 **Pattern đã chọn:** Supervisor-Worker  
 **Lý do chọn pattern này (thay vì single agent):**
-
-_________________
+Do hệ thống single-agent trước đó đã quá tải với nhiều pattern query (policy vs technical support). Việc sử dụng Supervisor-Worker giúp tách bạch rủi ro hallucination, dễ kiểm tra logs ở từng bước và cho phép dễ dàng nối thêm MCP capability vào một worker riêng biệt không gây ảnh hưởng luồng chính.
 
 ---
 
 ## 2. Sơ đồ Pipeline
 
-> Vẽ sơ đồ pipeline dưới dạng text, Mermaid diagram, hoặc ASCII art.
-> Yêu cầu tối thiểu: thể hiện rõ luồng từ input → supervisor → workers → output.
-
-**Ví dụ (ASCII art):**
-```
-User Request
-     │
-     ▼
-┌──────────────┐
-│  Supervisor  │  ← route_reason, risk_high, needs_tool
-└──────┬───────┘
-       │
-   [route_decision]
-       │
-  ┌────┴────────────────────┐
-  │                         │
-  ▼                         ▼
-Retrieval Worker     Policy Tool Worker
-  (evidence)           (policy check + MCP)
-  │                         │
-  └─────────┬───────────────┘
-            │
-            ▼
-      Synthesis Worker
-        (answer + cite)
-            │
-            ▼
-         Output
-```
-
 **Sơ đồ thực tế của nhóm:**
 
-```
-[NHÓM ĐIỀN VÀO ĐÂY]
+```mermaid
+graph TD
+    User([User Request]) --> Sup[Supervisor Node]
+    Sup -- route_reason --> condition{Action}
+    condition -- "policy / access" --> PW[Policy Tool Worker]
+    condition -- "P1 / ticket" --> RW[Retrieval Worker]
+    condition -- "unknown" --> Synth[Synthesis Worker]
+    PW -- "calls MCP to check" --> MCPServer[[MCP Server]]
+    RW --> Synth
+    PW --> Synth
+    Synth --> Out([Final Answer])
 ```
 
 ---
@@ -63,52 +41,48 @@ Retrieval Worker     Policy Tool Worker
 
 | Thuộc tính | Mô tả |
 |-----------|-------|
-| **Nhiệm vụ** | ___________________ |
-| **Input** | ___________________ |
-| **Output** | supervisor_route, route_reason, risk_high, needs_tool |
-| **Routing logic** | ___________________ |
-| **HITL condition** | ___________________ |
+| **Nhiệm vụ** | Điều phối câu hỏi, phân loại dựa trên intent (SLA, Ticket, Access, Flash sale) |
+| **Input** | `state["task"]`, `state["history"]` |
+| **Output** | `supervisor_route`, `route_reason`, `risk_high`, `needs_tool` |
+| **Routing logic** | Regex hoặc Keyword Matching đơn giản (nhanh và rẻ) |
+| **HITL condition** | Khi risk cao hoặc policy edge-case không xác định (như hỏi về ticket không có ID) |
 
 ### Retrieval Worker (`workers/retrieval.py`)
 
 | Thuộc tính | Mô tả |
 |-----------|-------|
-| **Nhiệm vụ** | ___________________ |
-| **Embedding model** | ___________________ |
-| **Top-k** | ___________________ |
-| **Stateless?** | Yes / No |
+| **Nhiệm vụ** | Rút trích document từ ChromaDB theo câu hỏi SLA/P1 |
+| **Embedding model** | all-MiniLM-L6-v2 |
+| **Top-k** | 3 chunks |
+| **Stateless?** | Yes |
 
 ### Policy Tool Worker (`workers/policy_tool.py`)
 
 | Thuộc tính | Mô tả |
 |-----------|-------|
-| **Nhiệm vụ** | ___________________ |
-| **MCP tools gọi** | ___________________ |
-| **Exception cases xử lý** | ___________________ |
+| **Nhiệm vụ** | Xử lý các nghiệp vụ hoàn tiền đặc thù và access control |
+| **MCP tools gọi** | `search_kb`, `get_ticket_info` |
+| **Exception cases xử lý** | Đơn hàng Flash Sale không được refund hoặc Digital Product |
 
 ### Synthesis Worker (`workers/synthesis.py`)
 
 | Thuộc tính | Mô tả |
 |-----------|-------|
-| **LLM model** | ___________________ |
-| **Temperature** | ___________________ |
-| **Grounding strategy** | ___________________ |
-| **Abstain condition** | ___________________ |
+| **LLM model** | gpt-4o-mini |
+| **Temperature** | 0.0 (để kết quả ground chặt với context) |
+| **Grounding strategy** | Chỉ summarize context từ `retrieved_chunks` hoặc `policy_result` |
+| **Abstain condition** | Khi evidence list rỗng hoặc tool không trả về thông tin |
 
 ### MCP Server (`mcp_server.py`)
 
 | Tool | Input | Output |
 |------|-------|--------|
 | search_kb | query, top_k | chunks, sources |
-| get_ticket_info | ticket_id | ticket details |
-| check_access_permission | access_level, requester_role | can_grant, approvers |
-| ___________________ | ___________________ | ___________________ |
+| get_ticket_info | ticket_id | ticket details (mock data) |
 
 ---
 
 ## 4. Shared State Schema
-
-> Liệt kê các fields trong AgentState và ý nghĩa của từng field.
 
 | Field | Type | Mô tả | Ai đọc/ghi |
 |-------|------|-------|-----------|
@@ -120,7 +94,6 @@ Retrieval Worker     Policy Tool Worker
 | mcp_tools_used | list | Tool calls đã thực hiện | policy_tool ghi |
 | final_answer | str | Câu trả lời cuối | synthesis ghi |
 | confidence | float | Mức tin cậy | synthesis ghi |
-| ___________________ | ___________________ | ___________________ | ___________________ |
 
 ---
 
@@ -131,18 +104,14 @@ Retrieval Worker     Policy Tool Worker
 | Debug khi sai | Khó — không rõ lỗi ở đâu | Dễ hơn — test từng worker độc lập |
 | Thêm capability mới | Phải sửa toàn prompt | Thêm worker/MCP tool riêng |
 | Routing visibility | Không có | Có route_reason trong trace |
-| ___________________ | ___________________ | ___________________ |
 
 **Nhóm điền thêm quan sát từ thực tế lab:**
-
-_________________
+Routing trace thể hiện rất rõ quá trình tư duy của hệ thống. Chúng ta biết được output là tới từ đường ChromaDB Retrieval thuần hay là qua đường Tool Policy checking nên dễ fix prompt hơn hẳn.
 
 ---
 
 ## 6. Giới hạn và điểm cần cải tiến
 
-> Nhóm mô tả những điểm hạn chế của kiến trúc hiện tại.
-
-1. ___________________
-2. ___________________
-3. ___________________
+1. Tốn nhiều prompt token hơn do quy trình chạy cắt thành nhiều bước.
+2. Latency cao hơn một chút (tăng vài trăm ms) vì phải làm multi-steps.
+3. Cần bảo trì state qua lại giữa các Node (AgentState) rất dễ bị thiếu field gây null exceptions nếu không test độc lập đủ cover case.

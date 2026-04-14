@@ -23,11 +23,67 @@ import os
 from pathlib import Path
 from typing import List, Dict, Any, Optional
 from datetime import datetime
+import time
+import argparse
 from rag_answer import rag_answer
 import dotenv
 from openai import OpenAI
 
 dotenv.load_dotenv()
+
+def _is_abstain(answer: str, sources: List[str]) -> bool:
+    if not answer:
+        return True
+    t = answer.strip().lower()
+    if len(sources) == 0:
+        return True
+    return (
+        "không đủ dữ liệu" in t
+        or "không tìm thấy" in t
+        or "tôi không biết" in t
+        or t == "pipeline_not_implemented"
+        or t.startswith("error:")
+    )
+
+def _confidence_from_chunks(chunks_used: List[Dict[str, Any]]) -> float:
+    scores: List[float] = []
+    for c in chunks_used:
+        try:
+            scores.append(float(c.get("score", 0.0) or 0.0))
+        except Exception:
+            continue
+    return max(scores) if scores else 0.0
+
+def _compute_baseline_metrics(rows: List[Dict[str, Any]]) -> Dict[str, Any]:
+    total = len(rows)
+    if total == 0:
+        return {
+            "total_questions": 0,
+            "avg_confidence": 0.0,
+            "avg_latency_ms": 0,
+            "abstain_rate": "0%",
+            "multi_hop_accuracy": "N/A",
+        }
+
+    confidences = [float(r.get("confidence", 0.0) or 0.0) for r in rows]
+    latencies = [int(r.get("latency_ms", 0) or 0) for r in rows]
+    abstains = sum(1 for r in rows if bool(r.get("abstained")))
+
+    hard = [r for r in rows if (r.get("difficulty") or "").strip().lower() == "hard"]
+    hard_total = len(hard)
+    hard_correct = sum(
+        1
+        for r in hard
+        if (r.get("context_recall") or 0) >= 5 and not bool(r.get("abstained"))
+    )
+
+    return {
+        "total_questions": total,
+        "avg_confidence": round(sum(confidences) / len(confidences), 3) if confidences else 0.0,
+        "avg_latency_ms": round(sum(latencies) / len(latencies)) if latencies else 0,
+        "abstain_rate": f"{round((abstains / total) * 100)}%",
+        "multi_hop_accuracy": f"{round((hard_correct / hard_total) * 100)}%" if hard_total else "N/A",
+    }
 
 def _call_llm_judge(sys_prompt: str, user_prompt: str) -> dict:
     try:
@@ -154,6 +210,7 @@ def run_scorecard(
     config: Dict[str, Any],
     test_questions: Optional[List[Dict]] = None,
     verbose: bool = True,
+    use_llm_judge: bool = True,
 ) -> List[Dict[str, Any]]:
     """
     Chạy toàn bộ test questions qua pipeline và chấm điểm.
@@ -192,6 +249,7 @@ def run_scorecard(
         query = q["question"]
         expected_answer = q.get("expected_answer", "")
         expected_sources = q.get("expected_sources", [])
+        difficulty = q.get("difficulty", "")
         category = q.get("category", "")
 
         if verbose:
@@ -199,6 +257,7 @@ def run_scorecard(
 
         # --- Gọi pipeline ---
         try:
+            t0 = time.perf_counter()
             result = rag_answer(
                 query=query,
                 retrieval_mode=config.get("retrieval_mode", "dense"),
@@ -209,31 +268,47 @@ def run_scorecard(
                 query_transform_strategy=config.get("query_transform_strategy", "expansion"),
                 verbose=False,
             )
+            latency_ms = int(round((time.perf_counter() - t0) * 1000))
             answer = result["answer"]
             chunks_used = result["chunks_used"]
 
         except NotImplementedError:
             answer = "PIPELINE_NOT_IMPLEMENTED"
             chunks_used = []
+            latency_ms = 0
         except Exception as e:
             answer = f"ERROR: {e}"
             chunks_used = []
+            latency_ms = 0
+
+        sources = [c.get("metadata", {}).get("source", "") for c in chunks_used]
+        confidence = _confidence_from_chunks(chunks_used)
+        abstained = _is_abstain(answer, sources)
 
         # --- Chấm điểm ---
-        faith = score_faithfulness(answer, chunks_used)
-        relevance = score_answer_relevance(query, answer)
+        if use_llm_judge:
+            faith = score_faithfulness(answer, chunks_used)
+            relevance = score_answer_relevance(query, answer)
+            complete = score_completeness(query, answer, expected_answer)
+        else:
+            faith = {"score": None, "notes": "Skipped (use_llm_judge=False)."}
+            relevance = {"score": None, "notes": "Skipped (use_llm_judge=False)."}
+            complete = {"score": None, "notes": "Skipped (use_llm_judge=False)."}
         recall = score_context_recall(chunks_used, expected_sources)
-        complete = score_completeness(query, answer, expected_answer)
 
         row = {
             "id": question_id,
             "category": category,
+            "difficulty": difficulty,
             "query": query,
             "answer": answer,
-            "sources": [c.get("metadata", {}).get("source", "") for c in chunks_used],
+            "sources": sources,
             "chunks_used": chunks_used,
             "expected_sources": expected_sources,
             "expected_answer": expected_answer,
+            "confidence": confidence,
+            "latency_ms": latency_ms,
+            "abstained": abstained,
             "faithfulness": faith["score"],
             "faithfulness_notes": faith["notes"],
             "relevance": relevance["score"],
@@ -411,14 +486,33 @@ if __name__ == "__main__":
     if hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(encoding="utf-8")
 
+    parser = argparse.ArgumentParser(description="Day 08 Lab — Evaluation & Metrics")
+    parser.add_argument(
+        "--questions-file",
+        default=str(TEST_QUESTIONS_PATH),
+        help="Path to questions JSON (e.g. data/test_questions.json or data/grading_questions.json)",
+    )
+    parser.add_argument(
+        "--no-judge",
+        action="store_true",
+        help="Skip LLM-as-judge scoring (faster, deterministic).",
+    )
+    parser.add_argument(
+        "--baseline-only",
+        action="store_true",
+        help="Run baseline only (skip variant).",
+    )
+    args = parser.parse_args()
+
     print("=" * 60)
     print("Sprint 4: Evaluation & Scorecard")
     print("=" * 60)
 
     # Kiểm tra test questions
-    print(f"\nLoading test questions từ: {TEST_QUESTIONS_PATH}")
+    questions_path = Path(args.questions_file)
+    print(f"\nLoading questions từ: {questions_path}")
     try:
-        with open(TEST_QUESTIONS_PATH, "r", encoding="utf-8") as f:
+        with open(questions_path, "r", encoding="utf-8") as f:
             test_questions = json.load(f)
         print(f"Tìm thấy {len(test_questions)} câu hỏi")
 
@@ -428,7 +522,7 @@ if __name__ == "__main__":
         print("  ...")
 
     except FileNotFoundError:
-        print("Không tìm thấy file test_questions.json!")
+        print("Không tìm thấy file questions!")
         test_questions = []
 
     # --- Chạy Baseline ---
@@ -439,6 +533,7 @@ if __name__ == "__main__":
             config=BASELINE_CONFIG,
             test_questions=test_questions,
             verbose=True,
+            use_llm_judge=(not args.no_judge),
         )
 
         # Save scorecard
@@ -448,20 +543,48 @@ if __name__ == "__main__":
         scorecard_path.write_text(baseline_md, encoding="utf-8")
         print(f"\nScorecard lưu tại: {scorecard_path}")
 
+        day08_metrics = _compute_baseline_metrics(baseline_results)
+        suffix = questions_path.stem.replace("questions", "").strip("_-") or questions_path.stem
+        metrics_path = RESULTS_DIR / f"day08_baseline_metrics_{suffix}.json"
+        metrics_path.write_text(json.dumps(day08_metrics, ensure_ascii=False, indent=2), encoding="utf-8")
+        metrics_md_path = RESULTS_DIR / f"day08_baseline_metrics_{suffix}.md"
+        metrics_md_path.write_text(
+            "\n".join(
+                [
+                    "# Day08 Baseline Metrics",
+                    f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M')}",
+                    f"Questions file: {questions_path.as_posix()}",
+                    f"Judge: {'OFF' if args.no_judge else 'ON'}",
+                    "",
+                    "```json",
+                    json.dumps(day08_metrics, ensure_ascii=False, indent=2),
+                    "```",
+                    "",
+                ]
+            ),
+            encoding="utf-8",
+        )
+        print(f"\nBaseline metrics saved: {metrics_path}")
+        print(f"Baseline metrics (md) saved: {metrics_md_path}")
+
     except NotImplementedError:
         print("Pipeline chưa implement. Hoàn thành Sprint 2 trước.")
         baseline_results = []
 
     # --- Chạy Variant (sau khi Sprint 3 hoàn thành) ---
     # TODO Sprint 4: Uncomment sau khi implement variant trong rag_answer.py
-    print("\n--- Chạy Variant ---")
-    variant_results = run_scorecard(
-        config=VARIANT_CONFIG,
-        test_questions=test_questions,
-        verbose=True,
-    )
-    variant_md = generate_scorecard_summary(variant_results, VARIANT_CONFIG["label"])
-    (RESULTS_DIR / "scorecard_variant.md").write_text(variant_md, encoding="utf-8")
+    if not args.baseline_only:
+        print("\n--- Chạy Variant ---")
+        variant_results = run_scorecard(
+            config=VARIANT_CONFIG,
+            test_questions=test_questions,
+            verbose=True,
+            use_llm_judge=(not args.no_judge),
+        )
+        variant_md = generate_scorecard_summary(variant_results, VARIANT_CONFIG["label"])
+        (RESULTS_DIR / "scorecard_variant.md").write_text(variant_md, encoding="utf-8")
+    else:
+        variant_results = []
 
     # --- A/B Comparison ---
     # TODO Sprint 4: Uncomment sau khi có cả baseline và variant

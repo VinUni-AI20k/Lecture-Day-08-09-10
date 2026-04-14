@@ -1,0 +1,33 @@
+{
+  "total_traces": 82,
+  "routing_distribution": {
+    "policy_tool_worker": "41/82 (50%)",
+    "retrieval_worker": "41/82 (50%)"
+  },
+  "avg_confidence": 0.634,
+  "avg_latency_ms": 14004,
+  "mcp_usage_rate": "7/82 (8%)",
+  "hitl_rate": "5/82 (6%)",
+  "top_sources": [
+    [
+      "sla_p1_2026.txt",
+      73
+    ],
+    [
+      "it_helpdesk_faq.txt",
+      15
+    ],
+    [
+      "access_control_sop.txt",
+      11
+    ],
+    [
+      "policy_refund_v4.txt",
+      8
+    ],
+    [
+      "hr_leave_policy.txt",
+      5
+    ]
+  ]
+}
