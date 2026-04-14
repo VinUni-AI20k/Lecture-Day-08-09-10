@@ -3,6 +3,7 @@
 *~
 
 .venv
+.cursor/
 day08/lab/.env
 day09/lab/.env
 day10/lab/.env
