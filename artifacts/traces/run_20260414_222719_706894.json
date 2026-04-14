@@ -1,0 +1,106 @@
+{
+  "task": "Một nhân viên mới đang trong probation period muốn làm remote vì lý do cá nhân. Yêu cầu này có được chấp thuận không? Điều kiện để được làm remote là gì?",
+  "question_type": "eligibility_policy",
+  "route_reason": "default retrieval for evidence gathering",
+  "risk_high": false,
+  "needs_tool": false,
+  "hitl_triggered": true,
+  "retrieved_chunks": [
+    {
+      "text": "Nhân viên sau probation period có thể làm remote tối đa 2 ngày/tuần.",
+      "source": "hr_leave_policy.txt",
+      "score": 0.3227
+    },
+    {
+      "text": "4.1 Điều kiện remote:",
+      "source": "hr_leave_policy.txt",
+      "score": 0.3227
+    },
+    {
+      "text": "Trường hợp khẩn cấp: Có thể gửi yêu cầu muộn hơn nhưng phải được Line Manager đồng ý qua tin nhắn trực tiếp.",
+      "source": "hr_leave_policy.txt",
+      "score": 0.3227
+    },
+    {
+      "text": "3.1 Điều kiện làm thêm:",
+      "source": "hr_leave_policy.txt",
+      "score": 0.3227
+    }
+  ],
+  "retrieved_sources": [
+    "hr_leave_policy.txt"
+  ],
+  "policy_result": {},
+  "mcp_tools_used": [],
+  "mcp_tool_called": [],
+  "mcp_result": [],
+  "final_answer": "Yêu cầu làm remote của nhân viên mới trong probation period không được chấp thuận, vì nhân viên chỉ có thể làm remote sau khi hoàn thành probation period. \n\nĐiều kiện để được làm remote là nhân viên phải hoàn thành probation period và có thể làm remote tối đa 2 ngày/tuần [1].",
+  "answer_schema_type": "eligibility_policy",
+  "answer_schema": {
+    "type": "eligibility_policy",
+    "allowed": false,
+    "eligibility_rule": "Nhân viên sau probation period có thể làm remote tối đa 2 ngày/tuần.",
+    "conditions": [
+      "Nhân viên sau probation period có thể làm remote tối đa 2 ngày/tuần."
+    ],
+    "sources": [
+      "hr_leave_policy.txt"
+    ]
+  },
+  "sources": [
+    "hr_leave_policy.txt"
+  ],
+  "confidence": 0.37,
+  "history": [
+    "Run started at 2026-04-14T22:27:19.706894",
+    "[supervisor] received task: Một nhân viên mới đang trong probation period muốn làm remote vì lý do cá nhân. ",
+    "[supervisor] route=retrieval_worker question_type=eligibility_policy needs_tool=False risk_high=False reason=default retrieval for evidence gathering",
+    "[retrieval_worker] retrieved 4 chunks from ['hr_leave_policy.txt']",
+    "[synthesis_worker] type=eligibility_policy answer_schema=eligibility_policy confidence=0.37, sources=['hr_leave_policy.txt']"
+  ],
+  "workers_called": [
+    "retrieval_worker",
+    "synthesis_worker"
+  ],
+  "worker_io_logs": [
+    {
+      "worker": "retrieval_worker",
+      "input": {
+        "task": "Một nhân viên mới đang trong probation period muốn làm remote vì lý do cá nhân. Yêu cầu này có được chấp thuận không? Điều kiện để được làm remote là gì?",
+        "top_k": 3
+      },
+      "output": {
+        "chunks_count": 4,
+        "sources": [
+          "hr_leave_policy.txt"
+        ]
+      },
+      "error": null
+    },
+    {
+      "worker": "synthesis_worker",
+      "input": {
+        "task": "Một nhân viên mới đang trong probation period muốn làm remote vì lý do cá nhân. Yêu cầu này có được chấp thuận không? Điều kiện để được làm remote là gì?",
+        "question_type": "eligibility_policy",
+        "chunks_count": 4,
+        "has_policy": false
+      },
+      "output": {
+        "question_type": "eligibility_policy",
+        "answer_schema_type": "eligibility_policy",
+        "answer_length": 276,
+        "sources": [
+          "hr_leave_policy.txt"
+        ],
+        "confidence": 0.37
+      },
+      "error": null
+    }
+  ],
+  "supervisor_route": "retrieval_worker",
+  "retrieval_top_k": 3,
+  "latency_ms": 2249,
+  "run_id": "run_20260414_222719_706894",
+  "timestamp": "2026-04-14T22:27:19.706894",
+  "question_id": "gq06"
+}

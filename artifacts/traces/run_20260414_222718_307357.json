@@ -1,0 +1,107 @@
+{
+  "task": "Ticket P1 được tạo và on-call engineer không phản hồi sau 10 phút. Theo đúng SLA, hệ thống sẽ làm gì tiếp theo?",
+  "question_type": "sla_action",
+  "route_reason": "SLA/ticket/escalation signal detected | risk_high flagged",
+  "risk_high": true,
+  "needs_tool": false,
+  "hitl_triggered": false,
+  "retrieved_chunks": [
+    {
+      "text": "Escalation: Tự động escalate lên Senior Engineer nếu không có phản hồi trong 10 phút.",
+      "source": "sla_p1_2026.txt",
+      "score": 0.3577
+    },
+    {
+      "text": "Lead Engineer phân công engineer xử lý trong 10 phút.",
+      "source": "sla_p1_2026.txt",
+      "score": 0.3577
+    },
+    {
+      "text": "On-call engineer nhận alert hoặc ticket, xác nhận severity trong 5 phút.",
+      "source": "sla_p1_2026.txt",
+      "score": 0.3577
+    },
+    {
+      "text": "Thông báo stakeholder: Ngay khi nhận ticket, update mỗi 30 phút cho đến khi resolve.",
+      "source": "sla_p1_2026.txt",
+      "score": 0.3577
+    }
+  ],
+  "retrieved_sources": [
+    "sla_p1_2026.txt"
+  ],
+  "policy_result": {},
+  "mcp_tools_used": [],
+  "mcp_tool_called": [],
+  "mcp_result": [],
+  "final_answer": "Theo đúng SLA, nếu ticket P1 được tạo và on-call engineer không phản hồi sau 10 phút, hệ thống sẽ tự động escalate lên Senior Engineer. [1]",
+  "answer_schema_type": "sla_action",
+  "answer_schema": {
+    "type": "sla_action",
+    "next_action": "auto_escalate",
+    "escalation_target": "Senior Engineer",
+    "trigger_window_minutes": 10,
+    "supporting_facts": [
+      "Theo đúng SLA, nếu ticket P1 được tạo và on-call engineer không phản hồi sau 10 phút, hệ thống sẽ tự động escalate lên Senior Engineer. [1]"
+    ],
+    "sources": [
+      "sla_p1_2026.txt"
+    ]
+  },
+  "sources": [
+    "sla_p1_2026.txt"
+  ],
+  "confidence": 0.41,
+  "history": [
+    "Run started at 2026-04-14T22:27:18.307357",
+    "[supervisor] received task: Ticket P1 được tạo và on-call engineer không phản hồi sau 10 phút. Theo đúng SLA",
+    "[supervisor] route=retrieval_worker question_type=sla_action needs_tool=False risk_high=True reason=SLA/ticket/escalation signal detected | risk_high flagged",
+    "[retrieval_worker] retrieved 4 chunks from ['sla_p1_2026.txt']",
+    "[synthesis_worker] type=sla_action answer_schema=sla_action confidence=0.41, sources=['sla_p1_2026.txt']"
+  ],
+  "workers_called": [
+    "retrieval_worker",
+    "synthesis_worker"
+  ],
+  "worker_io_logs": [
+    {
+      "worker": "retrieval_worker",
+      "input": {
+        "task": "Ticket P1 được tạo và on-call engineer không phản hồi sau 10 phút. Theo đúng SLA, hệ thống sẽ làm gì tiếp theo?",
+        "top_k": 3
+      },
+      "output": {
+        "chunks_count": 4,
+        "sources": [
+          "sla_p1_2026.txt"
+        ]
+      },
+      "error": null
+    },
+    {
+      "worker": "synthesis_worker",
+      "input": {
+        "task": "Ticket P1 được tạo và on-call engineer không phản hồi sau 10 phút. Theo đúng SLA, hệ thống sẽ làm gì tiếp theo?",
+        "question_type": "sla_action",
+        "chunks_count": 4,
+        "has_policy": false
+      },
+      "output": {
+        "question_type": "sla_action",
+        "answer_schema_type": "sla_action",
+        "answer_length": 139,
+        "sources": [
+          "sla_p1_2026.txt"
+        ],
+        "confidence": 0.41
+      },
+      "error": null
+    }
+  ],
+  "supervisor_route": "retrieval_worker",
+  "retrieval_top_k": 3,
+  "latency_ms": 1398,
+  "run_id": "run_20260414_222718_307357",
+  "timestamp": "2026-04-14T22:27:18.307357",
+  "question_id": "gq05"
+}

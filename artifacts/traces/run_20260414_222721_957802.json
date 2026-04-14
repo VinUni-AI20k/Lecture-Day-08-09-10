@@ -1,0 +1,73 @@
+{
+  "task": "Mức phạt tài chính cụ thể khi đội IT vi phạm SLA P1 resolution time (không resolve trong 4 giờ) là bao nhiêu?",
+  "question_type": "abstain_missing_info",
+  "route_reason": "SLA/ticket/escalation signal detected | risk_high flagged",
+  "risk_high": true,
+  "needs_tool": false,
+  "hitl_triggered": true,
+  "retrieved_chunks": [],
+  "retrieved_sources": [],
+  "policy_result": {},
+  "mcp_tools_used": [],
+  "mcp_tool_called": [],
+  "mcp_result": [],
+  "final_answer": "Không đủ thông tin trong tài liệu nội bộ.",
+  "answer_schema_type": "abstain_missing_info",
+  "answer_schema": {
+    "type": "abstain_missing_info",
+    "can_answer": false,
+    "missing_info": "Requested fact is not present in the current internal documents.",
+    "suggested_next_step": "Check with the owning department or source of truth for penalty terms.",
+    "sources": []
+  },
+  "sources": [],
+  "confidence": 0.1,
+  "history": [
+    "Run started at 2026-04-14T22:27:21.957802",
+    "[supervisor] received task: Mức phạt tài chính cụ thể khi đội IT vi phạm SLA P1 resolution time (không resol",
+    "[supervisor] route=retrieval_worker question_type=abstain_missing_info needs_tool=False risk_high=True reason=SLA/ticket/escalation signal detected | risk_high flagged",
+    "[retrieval_worker] retrieved 0 chunks from []",
+    "[synthesis_worker] type=abstain_missing_info answer_schema=abstain_missing_info confidence=0.1, sources=[]"
+  ],
+  "workers_called": [
+    "retrieval_worker",
+    "synthesis_worker"
+  ],
+  "worker_io_logs": [
+    {
+      "worker": "retrieval_worker",
+      "input": {
+        "task": "Mức phạt tài chính cụ thể khi đội IT vi phạm SLA P1 resolution time (không resolve trong 4 giờ) là bao nhiêu?",
+        "top_k": 3
+      },
+      "output": {
+        "chunks_count": 0,
+        "sources": []
+      },
+      "error": null
+    },
+    {
+      "worker": "synthesis_worker",
+      "input": {
+        "task": "Mức phạt tài chính cụ thể khi đội IT vi phạm SLA P1 resolution time (không resolve trong 4 giờ) là bao nhiêu?",
+        "question_type": "abstain_missing_info",
+        "chunks_count": 0,
+        "has_policy": false
+      },
+      "output": {
+        "question_type": "abstain_missing_info",
+        "answer_schema_type": "abstain_missing_info",
+        "answer_length": 41,
+        "sources": [],
+        "confidence": 0.1
+      },
+      "error": null
+    }
+  ],
+  "supervisor_route": "retrieval_worker",
+  "retrieval_top_k": 3,
+  "latency_ms": 1144,
+  "run_id": "run_20260414_222721_957802",
+  "timestamp": "2026-04-14T22:27:21.957802",
+  "question_id": "gq07"
+}

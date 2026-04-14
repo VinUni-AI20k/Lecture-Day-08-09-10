@@ -1,0 +1,115 @@
+{
+  "task": "Ticket P1 được tạo lúc 22:47. Đúng theo SLA, ai nhận thông báo đầu tiên và qua kênh nào? Deadline escalation là mấy giờ?",
+  "question_type": "sla_detail",
+  "route_reason": "SLA/ticket/escalation signal detected | risk_high flagged",
+  "risk_high": true,
+  "needs_tool": false,
+  "hitl_triggered": true,
+  "retrieved_chunks": [
+    {
+      "text": "Gửi thông báo tới Slack #incident-p1 và email incident@company.internal ngay lập tức.",
+      "source": "sla_p1_2026.txt",
+      "score": 0.7
+    },
+    {
+      "text": "PagerDuty: Tự động nhắn on-call khi P1 ticket mới",
+      "source": "sla_p1_2026.txt",
+      "score": 0.7
+    },
+    {
+      "text": "On-call engineer nhận alert hoặc ticket, xác nhận severity trong 5 phút.",
+      "source": "sla_p1_2026.txt",
+      "score": 0.7
+    },
+    {
+      "text": "On-call IT Admin có thể cấp quyền tạm thời (max 24 giờ) sau khi được Tech Lead phê duyệt bằng lời.",
+      "source": "access_control_sop.txt",
+      "score": 0.7
+    }
+  ],
+  "retrieved_sources": [
+    "sla_p1_2026.txt",
+    "access_control_sop.txt"
+  ],
+  "policy_result": {},
+  "mcp_tools_used": [],
+  "mcp_tool_called": [],
+  "mcp_result": [],
+  "final_answer": "1. **Người nhận thông báo đầu tiên**: On-call engineer nhận alert hoặc ticket.  \n   **Kênh thông báo**: Thông báo được gửi qua Slack #incident-p1 và email incident@company.internal ngay lập tức. [1], [2], [3]\n\n2. **Deadline escalation**: Không đủ thông tin trong tài liệu nội bộ.",
+  "answer_schema_type": "sla_detail",
+  "answer_schema": {
+    "type": "sla_detail",
+    "channels": [
+      "Slack #incident-p1",
+      "incident@company.internal",
+      "PagerDuty"
+    ],
+    "initial_recipient": "On-call engineer",
+    "escalation_target": null,
+    "escalation_window_minutes": null,
+    "escalation_deadline_clock": null,
+    "sources": [
+      "sla_p1_2026.txt",
+      "access_control_sop.txt"
+    ]
+  },
+  "sources": [
+    "sla_p1_2026.txt",
+    "access_control_sop.txt"
+  ],
+  "confidence": 0.3,
+  "history": [
+    "Run started at 2026-04-14T22:27:08.732207",
+    "[supervisor] received task: Ticket P1 được tạo lúc 22:47. Đúng theo SLA, ai nhận thông báo đầu tiên và qua k",
+    "[supervisor] route=retrieval_worker question_type=sla_detail needs_tool=False risk_high=True reason=SLA/ticket/escalation signal detected | risk_high flagged",
+    "[retrieval_worker] retrieved 4 chunks from ['sla_p1_2026.txt', 'access_control_sop.txt']",
+    "[synthesis_worker] type=sla_detail answer_schema=sla_detail confidence=0.3, sources=['sla_p1_2026.txt', 'access_control_sop.txt']"
+  ],
+  "workers_called": [
+    "retrieval_worker",
+    "synthesis_worker"
+  ],
+  "worker_io_logs": [
+    {
+      "worker": "retrieval_worker",
+      "input": {
+        "task": "Ticket P1 được tạo lúc 22:47. Đúng theo SLA, ai nhận thông báo đầu tiên và qua kênh nào? Deadline escalation là mấy giờ?",
+        "top_k": 3
+      },
+      "output": {
+        "chunks_count": 4,
+        "sources": [
+          "sla_p1_2026.txt",
+          "access_control_sop.txt"
+        ]
+      },
+      "error": null
+    },
+    {
+      "worker": "synthesis_worker",
+      "input": {
+        "task": "Ticket P1 được tạo lúc 22:47. Đúng theo SLA, ai nhận thông báo đầu tiên và qua kênh nào? Deadline escalation là mấy giờ?",
+        "question_type": "sla_detail",
+        "chunks_count": 4,
+        "has_policy": false
+      },
+      "output": {
+        "question_type": "sla_detail",
+        "answer_schema_type": "sla_detail",
+        "answer_length": 279,
+        "sources": [
+          "sla_p1_2026.txt",
+          "access_control_sop.txt"
+        ],
+        "confidence": 0.3
+      },
+      "error": null
+    }
+  ],
+  "supervisor_route": "retrieval_worker",
+  "retrieval_top_k": 3,
+  "latency_ms": 4719,
+  "run_id": "run_20260414_222708_732207",
+  "timestamp": "2026-04-14T22:27:08.732207",
+  "question_id": "gq01"
+}

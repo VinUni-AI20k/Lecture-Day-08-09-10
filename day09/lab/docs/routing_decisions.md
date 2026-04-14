@@ -123,3 +123,4 @@ _________________
 > Nếu chưa, nhóm sẽ cải tiến format route_reason thế nào?
 
 > Khá tốt. Format hiện tại đã chỉ ra được các "signals" (tín hiệu) mà Supervisor bắt được (ví dụ: access-control signal). Tuy nhiên, nhóm sẽ cải tiến để ghi rõ Supervisor có nhận diện được Ticket ID cụ thể hay không để debug phần MCP tốt hơn.
+**TrinhDucAnh**

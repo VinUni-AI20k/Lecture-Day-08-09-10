@@ -1,5 +1,5 @@
 # Scorecard: baseline_dense
-Generated: 2026-04-13 17:15
+Generated: 2026-04-14 22:28
 
 ## Summary
 
@@ -20,10 +20,10 @@ Generated: 2026-04-13 17:15
 
 | ID | Category | Faithful | Relevant | Recall | Complete | Notes |
 |----|----------|----------|----------|--------|----------|-------|
-| q01 | SLA | 5 | 5 | 5 | 5 | The answer is fully supported by the retrieved chunk, which explicitly states th |
+| q01 | SLA | 5 | 5 | 5 | 5 | The answer is fully supported by the retrieved chunks, which explicitly state th |
 | q02 | Refund | 5 | 5 | 5 | 5 | The answer is fully supported by the retrieved chunks, which state that customer |
 | q03 | Access Control | 5 | 5 | 5 | 5 | The answer is fully supported by the retrieved chunks, which explicitly state th |
-| q04 | Refund | 5 | 5 | 5 | 4 | The answer is fully supported by the retrieved chunks, which state that digital  |
+| q04 | Refund | 5 | 5 | 5 | 4 | The answer is fully supported by the retrieved chunks, which explicitly state th |
 | q05 | IT Helpdesk | 5 | 5 | 5 | 5 | The answer is directly supported by the retrieved chunk, which states the same f |
 | q06 | SLA | 5 | 5 | 5 | 5 | The answer is fully supported by the retrieved chunks, specifically stating that |
 | q07 | Access Control | 2 | 4 | 5 | 2 | The answer states the document is 'Approval Matrix for System Access', but the e |

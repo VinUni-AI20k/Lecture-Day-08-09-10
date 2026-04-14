@@ -1,14 +1,14 @@
 # Scorecard: variant_hybrid
-Generated: 2026-04-13 17:16
+Generated: 2026-04-14 22:29
 
 ## Summary
 
 | Metric | Average Score |
 |--------|--------------|
-| Faithfulness | 4.30/5 |
-| Answer Relevance | 4.40/5 |
+| Faithfulness | 4.20/5 |
+| Answer Relevance | 4.50/5 |
 | Context Recall | 5.00/5 |
-| Completeness | 3.70/5 |
+| Completeness | 3.60/5 |
 
 ## Quick Notes
 
@@ -20,13 +20,13 @@ Generated: 2026-04-13 17:16
 
 | ID | Category | Faithful | Relevant | Recall | Complete | Notes |
 |----|----------|----------|----------|--------|----------|-------|
-| q01 | SLA | 5 | 5 | 5 | 5 | The answer is fully supported by the retrieved chunks, which explicitly state th |
+| q01 | SLA | 5 | 5 | 5 | 5 | The answer is fully supported by the retrieved chunk, which explicitly states th |
 | q02 | Refund | 5 | 5 | 5 | 5 | The answer is fully supported by the retrieved chunks, which state that customer |
-| q03 | Access Control | 5 | 5 | 5 | 5 | The answer is fully supported by the retrieved chunks, specifically confirming t |
-| q04 | Refund | 5 | 5 | 5 | 4 | The answer is fully supported by the retrieved chunks, which state that digital  |
+| q03 | Access Control | 5 | 5 | 5 | 5 | The answer is fully supported by the retrieved chunks, specifically the second c |
+| q04 | Refund | 5 | 5 | 5 | 4 | The answer is fully supported by the retrieved chunks, specifically stating that |
 | q05 | IT Helpdesk | 5 | 5 | 5 | 5 | The answer is directly supported by the retrieved chunk, which states the same f |
-| q06 | SLA | 2 | 3 | 5 | 2 | The answer includes information about temporary permissions granted by the IT Ad |
-| q07 | Access Control | 2 | 3 | 5 | 2 | The answer states the document is 'Approval Matrix for System Access', but the e |
+| q06 | SLA | 2 | 2 | 5 | 2 | The answer includes information about temporary permissions granted by the on-ca |
+| q07 | Access Control | 2 | 4 | 5 | 2 | The answer states the document is 'Approval Matrix for System Access', but the e |
 | q08 | HR Policy | 5 | 5 | 5 | 4 | The answer is fully supported by the retrieved chunks, specifically stating that |
-| q09 | Insufficient Context | 4 | 3 | None | 2 | The answer correctly states that there is insufficient data, but it does not men |
-| q10 | Refund | 5 | 5 | 5 | 3 | The answer correctly states that there is insufficient data to determine if the  |
+| q09 | Insufficient Context | 3 | 4 | None | 2 | The answer states insufficient data, which is accurate given the lack of relevan |
+| q10 | Refund | 5 | 5 | 5 | 2 | The answer correctly states that there is insufficient data to determine if the  |
