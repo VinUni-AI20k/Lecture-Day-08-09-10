@@ -17,6 +17,8 @@ Gọi độc lập để test:
 
 import os
 import sys
+import re
+from pathlib import Path
 
 # ─────────────────────────────────────────────
 # Worker Contract (xem contracts/worker_contracts.yaml)
@@ -26,6 +28,7 @@ import sys
 
 WORKER_NAME = "retrieval_worker"
 DEFAULT_TOP_K = 3
+DOCS_DIR = Path(__file__).resolve().parents[1] / "data" / "docs"
 
 
 def _get_embedding_fn():
@@ -117,12 +120,65 @@ def retrieve_dense(query: str, top_k: int = DEFAULT_TOP_K) -> list:
                 "score": round(1 - dist, 4),  # cosine similarity
                 "metadata": meta,
             })
-        return chunks
+        if chunks:
+            return chunks
 
     except Exception as e:
         print(f"⚠️  ChromaDB query failed: {e}")
-        # Fallback: return empty (abstain)
+    # Fallback lexical retrieval để pipeline vẫn hoạt động khi chưa setup vector index.
+    return retrieve_lexical(query, top_k=top_k)
+
+
+def _simple_chunk_text(text: str, chunk_size: int = 420, overlap: int = 60) -> list:
+    cleaned = " ".join(text.split())
+    if not cleaned:
         return []
+    chunks = []
+    start = 0
+    while start < len(cleaned):
+        end = min(len(cleaned), start + chunk_size)
+        chunks.append(cleaned[start:end])
+        if end == len(cleaned):
+            break
+        start = max(0, end - overlap)
+    return chunks
+
+
+def _keyword_score(query: str, text: str) -> float:
+    q_tokens = [t for t in re.findall(r"\w+", query.lower()) if len(t) > 1]
+    if not q_tokens:
+        return 0.0
+    t_low = text.lower()
+    hit = sum(1 for tok in q_tokens if tok in t_low)
+    return hit / len(set(q_tokens))
+
+
+def retrieve_lexical(query: str, top_k: int = DEFAULT_TOP_K) -> list:
+    """Fallback keyword retrieval trên local docs khi Chroma/embedding không sẵn sàng."""
+    if not DOCS_DIR.exists():
+        return []
+
+    scored = []
+    for fpath in sorted(DOCS_DIR.glob("*.txt")):
+        try:
+            content = fpath.read_text(encoding="utf-8")
+        except Exception:
+            continue
+        for piece in _simple_chunk_text(content):
+            score = _keyword_score(query, piece)
+            if score <= 0:
+                continue
+            scored.append(
+                {
+                    "text": piece,
+                    "source": fpath.name,
+                    "score": round(min(0.99, score), 4),
+                    "metadata": {"source": fpath.name, "method": "lexical_fallback"},
+                }
+            )
+
+    scored.sort(key=lambda x: x["score"], reverse=True)
+    return scored[:top_k]
 
 
 def run(state: dict) -> dict:
