@@ -1,7 +1,7 @@
 # Single Agent vs Multi-Agent Comparison — Lab Day 09
 
-**Nhóm:** ___________  
-**Ngày:** ___________
+**Nhóm:** C401-A4 
+**Ngày:** 14/4/2026
 
 > **Hướng dẫn:** So sánh Day 08 (single-agent RAG) với Day 09 (supervisor-worker).
 > Phải có **số liệu thực tế** từ trace — không ghi ước đoán.
