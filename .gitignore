@@ -21,3 +21,5 @@ day09/lab/.venv
 day10/lab/.env
 day10/lab/venv
 day10/lab/.venv
+
+*__pycache__

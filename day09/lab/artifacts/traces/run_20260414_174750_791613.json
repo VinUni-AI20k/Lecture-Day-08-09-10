@@ -28,13 +28,13 @@
   "mcp_tools_used": [],
   "mcp_tool_called": [],
   "mcp_result": [],
-  "final_answer": "- v2026.1 (2026-01-15): Cập nhật SLA P1 resolution từ 6 giờ xuống 4 giờ. [sla_p1_2026.txt]\n- Thông báo stakeholder: Ngay khi nhận ticket, update mỗi 30 phút cho đến khi resolve. [sla_p1_2026.txt]",
+  "final_answer": "SLA xử lý ticket P1 là 4 giờ. [2]",
   "sources": [
     "sla_p1_2026.txt"
   ],
   "confidence": 0.95,
   "history": [
-    "Run started at 2026-04-14T17:09:06.509969",
+    "Run started at 2026-04-14T17:47:50.791613",
     "[supervisor] received task: SLA xu ly ticket P1 la bao lau?",
     "[supervisor] route=retrieval_worker needs_tool=False risk_high=True reason=SLA/ticket/escalation signal detected | risk_high flagged",
     "[retrieval_worker] retrieved 3 chunks from ['sla_p1_2026.txt']",
@@ -67,7 +67,7 @@
         "has_policy": false
       },
       "output": {
-        "answer_length": 195,
+        "answer_length": 33,
         "sources": [
           "sla_p1_2026.txt"
         ],
@@ -78,7 +78,7 @@
   ],
   "supervisor_route": "retrieval_worker",
   "retrieval_top_k": 3,
-  "latency_ms": 7801,
-  "run_id": "run_20260414_170906_509969",
-  "timestamp": "2026-04-14T17:09:06.509969"
+  "latency_ms": 5670,
+  "run_id": "run_20260414_174750_791613",
+  "timestamp": "2026-04-14T17:47:50.791613"
 }
