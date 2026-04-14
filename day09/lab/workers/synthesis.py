@@ -58,21 +58,12 @@ def _call_llm(messages: list) -> str:
         from google import genai
         from google.genai import types
         client = genai.Client(api_key=os.getenv("GOOGLE_API_KEY"))
-        from google import genai
-        from google.genai import types
-        client = genai.Client(api_key=os.getenv("GOOGLE_API_KEY"))
         combined = "\n".join([m["content"] for m in messages])
         response = client.models.generate_content(
             model="gemini-3-flash-preview",
             contents=combined
         )
-        response = client.models.generate_content(
-            model="gemini-3-flash-preview",
-            contents=combined
-        )
         return response.text
-    except Exception as e:
-        print(f"Gemini API error: {e}")
     except Exception as e:
         print(f"Gemini API error: {e}")
         pass
