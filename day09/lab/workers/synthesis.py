@@ -17,6 +17,12 @@ Gọi độc lập để test:
 """
 
 import os
+import sys
+import chromadb
+from openai import OpenAI
+from dotenv import load_dotenv
+
+load_dotenv()
 
 WORKER_NAME = "synthesis_worker"
 
@@ -50,19 +56,19 @@ def _call_llm(messages: list) -> str:
     except Exception:
         pass
 
-    # Option B: Gemini
-    try:
-        import google.generativeai as genai
-        genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
-        model = genai.GenerativeModel("gemini-1.5-flash")
-        combined = "\n".join([m["content"] for m in messages])
-        response = model.generate_content(combined)
-        return response.text
-    except Exception:
-        pass
-
-    # Fallback: trả về message báo lỗi (không hallucinate)
-    return "[SYNTHESIS ERROR] Không thể gọi LLM. Kiểm tra API key trong .env."
+    # # Option B: Gemini
+    # try:
+    #     import google.generativeai as genai
+    #     genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
+    #     model = genai.GenerativeModel("gemini-1.5-flash")
+    #     combined = "\n".join([m["content"] for m in messages])
+    #     response = model.generate_content(combined)
+    #     return response.text
+    # except Exception:
+    #     pass
+    #
+    # # Fallback: trả về message báo lỗi (không hallucinate)
+    # return "[SYNTHESIS ERROR] Không thể gọi LLM. Kiểm tra API key trong .env."
 
 
 def _build_context(chunks: list, policy_result: dict) -> str:
