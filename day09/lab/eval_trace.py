@@ -118,6 +118,12 @@ def run_grading_questions(questions_file: str = "data/grading_questions.json") -
 
             try:
                 result = run_graph(question_text)
+                raw_mcp_tools = result.get("mcp_tools_used") or []
+                mcp_tool_names = [
+                    t.get("tool")
+                    for t in raw_mcp_tools
+                    if isinstance(t, dict) and t.get("tool")
+                ]
                 record = {
                     "id": q_id,
                     "question": question_text,
@@ -126,7 +132,7 @@ def run_grading_questions(questions_file: str = "data/grading_questions.json") -
                     "supervisor_route": result.get("supervisor_route", ""),
                     "route_reason": result.get("route_reason", ""),
                     "workers_called": result.get("workers_called", []),
-                    "mcp_tools_used": [t.get("tool") for t in result.get("mcp_tools_used", [])],
+                    "mcp_tools_used": mcp_tool_names,
                     "confidence": result.get("confidence", 0.0),
                     "hitl_triggered": result.get("hitl_triggered", False),
                     "latency_ms": result.get("latency_ms"),
@@ -194,6 +200,7 @@ def analyze_traces(traces_dir: str = "artifacts/traces") -> dict:
     confidences = []
     latencies = []
     mcp_calls = 0
+    mcp_valid_calls = 0
     hitl_triggers = 0
     source_counts = {}
 
@@ -201,16 +208,23 @@ def analyze_traces(traces_dir: str = "artifacts/traces") -> dict:
         route = t.get("supervisor_route", "unknown")
         routing_counts[route] = routing_counts.get(route, 0) + 1
 
-        conf = t.get("confidence", 0)
-        if conf:
+        conf = t.get("confidence")
+        if conf is not None:
             confidences.append(conf)
 
         lat = t.get("latency_ms")
-        if lat:
+        if lat is not None:
             latencies.append(lat)
 
-        if t.get("mcp_tools_used"):
+        mcp_tools = t.get("mcp_tools_used") or []
+        if mcp_tools:
             mcp_calls += 1
+        valid_tool_calls = [
+            tool for tool in mcp_tools
+            if isinstance(tool, dict) and tool.get("tool")
+        ]
+        if valid_tool_calls:
+            mcp_valid_calls += 1
 
         if t.get("hitl_triggered"):
             hitl_triggers += 1
@@ -225,6 +239,7 @@ def analyze_traces(traces_dir: str = "artifacts/traces") -> dict:
         "avg_confidence": round(sum(confidences) / len(confidences), 3) if confidences else 0,
         "avg_latency_ms": round(sum(latencies) / len(latencies)) if latencies else 0,
         "mcp_usage_rate": f"{mcp_calls}/{total} ({100*mcp_calls//total}%)" if total else "0%",
+        "mcp_valid_usage_rate": f"{mcp_valid_calls}/{total} ({100*mcp_valid_calls//total}%)" if total else "0%",
         "hitl_rate": f"{hitl_triggers}/{total} ({100*hitl_triggers//total}%)" if total else "0%",
         "top_sources": sorted(source_counts.items(), key=lambda x: -x[1])[:5],
     }
@@ -302,7 +317,8 @@ def compare_single_vs_multi(
 
 def _parse_day08_scorecard(scorecard_path: str) -> dict:
     """Đọc scorecard markdown Day 08 và trích các chỉ số trung bình."""
-    text = open(scorecard_path, encoding="utf-8").read()
+    with open(scorecard_path, encoding="utf-8") as f:
+        text = f.read()
 
     def _extract(metric: str) -> float:
         m = re.search(rf"\|\s*{re.escape(metric)}\s*\|\s*([0-9.]+)/5\s*\|", text)
