@@ -1,5 +1,5 @@
 {
-  "task": "Cần cấp quyền Level 3 để khắc phục P1 khẩn cấp. Quy trình là gì?",
+  "task": "Ticket P1 lúc 2am. Cần cấp Level 2 access tạm thời cho contractor để thực hiện emergency fix. Đồng thời cần notify stakeholders theo SLA. Nêu đủ cả hai quy trình.",
   "route_reason": "task contains policy/access keyword | risk_high flagged",
   "risk_high": true,
   "needs_tool": true,
@@ -8,37 +8,37 @@
     {
       "text": "Escalation chỉ áp dụng khi cần thay đổi quyền hệ thống ngoài quy trình thông thường.\nVí dụ: Khẩn cấp trong sự cố P1, cần cấp quyền tạm thời để fix incident.\n\nQuy trình escalation khẩn cấp:\n1. On-call IT Admin có thể cấp quyền tạm thời (max 24 giờ) sau khi được Tech Lead phê duyệt bằng lời.\n2. Sau 24 giờ, phải có ticket chính thức hoặc quyền bị thu hồi tự động.\n3. Mọi quyền tạm thời phải được ghi log vào hệ thống Security Audit.",
       "source": "it/access-control-sop.md",
-      "score": 0.5871,
+      "score": 0.6913,
       "metadata": {
-        "department": "IT Security",
-        "section": "Section 4: Escalation khi cần thay đổi quyền hệ thống",
         "effective_date": "2026-01-01",
-        "access": "internal",
-        "source": "it/access-control-sop.md"
+        "source": "it/access-control-sop.md",
+        "section": "Section 4: Escalation khi cần thay đổi quyền hệ thống",
+        "department": "IT Security",
+        "access": "internal"
       }
     },
     {
       "text": "Level 1 — Read Only:\nÁp dụng cho: Tất cả nhân viên mới trong 30 ngày đầu.\nPhê duyệt: Line Manager.\nThời gian xử lý: 1 ngày làm việc.\n\nLevel 2 — Standard Access:\nÁp dụng cho: Nhân viên chính thức đã qua thử việc.\nPhê duyệt: Line Manager + IT Admin.\nThời gian xử lý: 2 ngày làm việc.\n\nLevel 3 — Elevated Access:\nÁp dụng cho: Team Lead, Senior Engineer, Manager.\nPhê duyệt: Line Manager + IT Admin + IT Security.\nThời gian xử lý: 3 ngày làm việc.\n\nLevel 4 — Admin Access:\nÁp dụng cho: DevOps, SRE, IT Admin.\nPhê duyệt: IT Manager + CISO.\nThời gian xử lý: 5 ngày làm việc.\nYêu cầu thêm: Training bắt buộc về security policy.",
       "source": "it/access-control-sop.md",
-      "score": 0.5002,
+      "score": 0.6032,
       "metadata": {
         "department": "IT Security",
-        "effective_date": "2026-01-01",
+        "section": "Section 2: Phân cấp quyền truy cập",
         "access": "internal",
         "source": "it/access-control-sop.md",
-        "section": "Section 2: Phân cấp quyền truy cập"
+        "effective_date": "2026-01-01"
       }
     },
     {
-      "text": "Bước 1: Nhân viên tạo Access Request ticket trên Jira (project IT-ACCESS).\nBước 2: Line Manager phê duyệt yêu cầu trong 1 ngày làm việc.\nBước 3: IT Admin kiểm tra compliance và cấp quyền.\nBước 4: IT Security review với Level 3 và Level 4.\nBước 5: Nhân viên nhận thông báo qua email khi quyền được cấp.",
-      "source": "it/access-control-sop.md",
-      "score": 0.4921,
+      "text": "Ticket P1:\n- Phản hồi ban đầu (first response): 15 phút kể từ khi ticket được tạo.\n- Xử lý và khắc phục (resolution): 4 giờ.\n- Escalation: Tự động escalate lên Senior Engineer nếu không có phản hồi trong 10 phút.\n- Thông báo stakeholder: Ngay khi nhận ticket, update mỗi 30 phút cho đến khi resolve.\n\nTicket P2:\n- Phản hồi ban đầu: 2 giờ.\n- Xử lý và khắc phục: 1 ngày làm việc.\n- Escalation: Tự động escalate sau 90 phút không có phản hồi.\n\nTicket P3:\n- Phản hồi ban đầu: 1 ngày làm việc.\n- Xử lý và khắc phục: 5 ngày làm việc.\n\nTicket P4:\n- Phản hồi ban đầu: 3 ngày làm việc.\n- Xử lý và khắc phục: Theo sprint cycle (thông thường 2-4 tuần).",
+      "source": "support/sla-p1-2026.pdf",
+      "score": 0.6025,
       "metadata": {
-        "source": "it/access-control-sop.md",
-        "effective_date": "2026-01-01",
-        "section": "Section 3: Quy trình yêu cầu cấp quyền",
-        "department": "IT Security",
-        "access": "internal"
+        "access": "internal",
+        "department": "IT",
+        "effective_date": "2026-01-15",
+        "source": "support/sla-p1-2026.pdf",
+        "section": "Phần 2: SLA theo mức độ ưu tiên"
       }
     }
   ],
@@ -48,7 +48,8 @@
     "policy_name": "refund_policy_v4",
     "exceptions_found": [],
     "source": [
-      "it/access-control-sop.md"
+      "it/access-control-sop.md",
+      "support/sla-p1-2026.pdf"
     ],
     "policy_version_note": "",
     "explanation": "Analyzed via rule-based policy check. TODO: upgrade to LLM-based analysis."
@@ -57,7 +58,7 @@
     {
       "tool": "search_kb",
       "input": {
-        "query": "Cần cấp quyền Level 3 để khắc phục P1 khẩn cấp. Quy trình là gì?",
+        "query": "Ticket P1 lúc 2am. Cần cấp Level 2 access tạm thời cho contractor để thực hiện emergency fix. Đồng thời cần notify stakeholders theo SLA. Nêu đủ cả hai quy trình.",
         "top_k": 3
       },
       "output": {
@@ -65,47 +66,48 @@
           {
             "text": "Escalation chỉ áp dụng khi cần thay đổi quyền hệ thống ngoài quy trình thông thường.\nVí dụ: Khẩn cấp trong sự cố P1, cần cấp quyền tạm thời để fix incident.\n\nQuy trình escalation khẩn cấp:\n1. On-call IT Admin có thể cấp quyền tạm thời (max 24 giờ) sau khi được Tech Lead phê duyệt bằng lời.\n2. Sau 24 giờ, phải có ticket chính thức hoặc quyền bị thu hồi tự động.\n3. Mọi quyền tạm thời phải được ghi log vào hệ thống Security Audit.",
             "source": "it/access-control-sop.md",
-            "score": 0.5871,
+            "score": 0.6913,
             "metadata": {
-              "department": "IT Security",
-              "section": "Section 4: Escalation khi cần thay đổi quyền hệ thống",
               "effective_date": "2026-01-01",
-              "access": "internal",
-              "source": "it/access-control-sop.md"
+              "source": "it/access-control-sop.md",
+              "section": "Section 4: Escalation khi cần thay đổi quyền hệ thống",
+              "department": "IT Security",
+              "access": "internal"
             }
           },
           {
             "text": "Level 1 — Read Only:\nÁp dụng cho: Tất cả nhân viên mới trong 30 ngày đầu.\nPhê duyệt: Line Manager.\nThời gian xử lý: 1 ngày làm việc.\n\nLevel 2 — Standard Access:\nÁp dụng cho: Nhân viên chính thức đã qua thử việc.\nPhê duyệt: Line Manager + IT Admin.\nThời gian xử lý: 2 ngày làm việc.\n\nLevel 3 — Elevated Access:\nÁp dụng cho: Team Lead, Senior Engineer, Manager.\nPhê duyệt: Line Manager + IT Admin + IT Security.\nThời gian xử lý: 3 ngày làm việc.\n\nLevel 4 — Admin Access:\nÁp dụng cho: DevOps, SRE, IT Admin.\nPhê duyệt: IT Manager + CISO.\nThời gian xử lý: 5 ngày làm việc.\nYêu cầu thêm: Training bắt buộc về security policy.",
             "source": "it/access-control-sop.md",
-            "score": 0.5002,
+            "score": 0.6032,
             "metadata": {
               "department": "IT Security",
-              "effective_date": "2026-01-01",
+              "section": "Section 2: Phân cấp quyền truy cập",
               "access": "internal",
               "source": "it/access-control-sop.md",
-              "section": "Section 2: Phân cấp quyền truy cập"
+              "effective_date": "2026-01-01"
             }
           },
           {
-            "text": "Bước 1: Nhân viên tạo Access Request ticket trên Jira (project IT-ACCESS).\nBước 2: Line Manager phê duyệt yêu cầu trong 1 ngày làm việc.\nBước 3: IT Admin kiểm tra compliance và cấp quyền.\nBước 4: IT Security review với Level 3 và Level 4.\nBước 5: Nhân viên nhận thông báo qua email khi quyền được cấp.",
-            "source": "it/access-control-sop.md",
-            "score": 0.4921,
+            "text": "Ticket P1:\n- Phản hồi ban đầu (first response): 15 phút kể từ khi ticket được tạo.\n- Xử lý và khắc phục (resolution): 4 giờ.\n- Escalation: Tự động escalate lên Senior Engineer nếu không có phản hồi trong 10 phút.\n- Thông báo stakeholder: Ngay khi nhận ticket, update mỗi 30 phút cho đến khi resolve.\n\nTicket P2:\n- Phản hồi ban đầu: 2 giờ.\n- Xử lý và khắc phục: 1 ngày làm việc.\n- Escalation: Tự động escalate sau 90 phút không có phản hồi.\n\nTicket P3:\n- Phản hồi ban đầu: 1 ngày làm việc.\n- Xử lý và khắc phục: 5 ngày làm việc.\n\nTicket P4:\n- Phản hồi ban đầu: 3 ngày làm việc.\n- Xử lý và khắc phục: Theo sprint cycle (thông thường 2-4 tuần).",
+            "source": "support/sla-p1-2026.pdf",
+            "score": 0.6025,
             "metadata": {
-              "source": "it/access-control-sop.md",
-              "effective_date": "2026-01-01",
-              "section": "Section 3: Quy trình yêu cầu cấp quyền",
-              "department": "IT Security",
-              "access": "internal"
+              "access": "internal",
+              "department": "IT",
+              "effective_date": "2026-01-15",
+              "source": "support/sla-p1-2026.pdf",
+              "section": "Phần 2: SLA theo mức độ ưu tiên"
             }
           }
         ],
         "sources": [
-          "it/access-control-sop.md"
+          "it/access-control-sop.md",
+          "support/sla-p1-2026.pdf"
         ],
         "total_found": 3
       },
       "error": null,
-      "timestamp": "2026-04-14T15:58:43.456743"
+      "timestamp": "2026-04-14T17:22:04.061180"
     },
     {
       "tool": "get_ticket_info",
@@ -129,35 +131,36 @@
         ]
       },
       "error": null,
-      "timestamp": "2026-04-14T15:58:43.456743"
+      "timestamp": "2026-04-14T17:22:04.061274"
     }
   ],
-  "final_answer": "Để cấp quyền Level 3 khẩn cấp nhằm khắc phục sự cố P1, quy trình như sau:\n\n1. **On-call IT Admin** có thể cấp quyền tạm thời (tối đa 24 giờ) sau khi được **Tech Lead** phê duyệt bằng lời.\n2. Sau 24 giờ, phải có **ticket chính thức** hoặc quyền sẽ bị thu hồi tự động.\n3. Mọi quyền tạm thời phải được **ghi log** vào hệ thống Security Audit.\n\nLưu ý: Quy trình này là ngoại lệ cho quy trình cấp quyền thông thường [1].",
+  "final_answer": "### Quy trình cấp Level 2 access tạm thời cho contractor:\n\n1. **Phê duyệt**: On-call IT Admin cần được phê duyệt bằng lời từ Tech Lead.\n2. **Cấp quyền**: IT Admin có thể cấp quyền tạm thời cho contractor (max 24 giờ).\n3. **Ghi log**: Mọi quyền tạm thời phải được ghi log vào hệ thống Security Audit.\n4. **Sau 24 giờ**: Phải có ticket chính thức hoặc quyền sẽ bị thu hồi tự động. [1]\n\n### Quy trình thông báo stakeholders theo SLA cho Ticket P1:\n\n1. **Phản hồi ban đầu**: Cần phản hồi trong vòng 15 phút kể từ khi ticket được tạo.\n2. **Cập nhật thông tin**: Cần thông báo cho stakeholders ngay khi nhận ticket và cập nhật mỗi 30 phút cho đến khi sự cố được giải quyết. [3]\n\nLưu ý: Quy trình cấp quyền tạm thời chỉ áp dụng trong trường hợp khẩn cấp như sự cố P1.",
   "sources": [
-    "it/access-control-sop.md"
+    "it/access-control-sop.md",
+    "support/sla-p1-2026.pdf"
   ],
-  "confidence": 0.53,
+  "confidence": 0.63,
   "history": [
-    "[supervisor] received task: Cần cấp quyền Level 3 để khắc phục P1 khẩn cấp. Quy trình là gì?",
+    "[supervisor] received task: Ticket P1 lúc 2am. Cần cấp Level 2 access tạm thời cho contractor để thực hiện e",
     "[supervisor] route=policy_tool_worker reason=task contains policy/access keyword | risk_high flagged",
     "[policy_tool_worker] called MCP search_kb",
     "[policy_tool_worker] called MCP get_ticket_info",
     "[policy_tool_worker] policy_applies=True, exceptions=0",
-    "[synthesis_worker] answer generated, confidence=0.53, sources=['it/access-control-sop.md']",
-    "[graph] completed in 3183ms"
+    "[synthesis_worker] answer generated, confidence=0.63, sources=['it/access-control-sop.md', 'support/sla-p1-2026.pdf']",
+    "[graph] completed in 5697ms"
   ],
   "workers_called": [
     "policy_tool_worker",
     "synthesis_worker"
   ],
   "supervisor_route": "policy_tool_worker",
-  "latency_ms": 3183,
-  "run_id": "run_20260414_155842",
+  "latency_ms": 5697,
+  "run_id": "run_20260414_172204",
   "worker_io_logs": [
     {
       "worker": "policy_tool_worker",
       "input": {
-        "task": "Cần cấp quyền Level 3 để khắc phục P1 khẩn cấp. Quy trình là gì?",
+        "task": "Ticket P1 lúc 2am. Cần cấp Level 2 access tạm thời cho contractor để thực hiện emergency fix. Đồng thời cần notify stakeholders theo SLA. Nêu đủ cả hai quy trình.",
         "chunks_count": 0,
         "needs_tool": true
       },
@@ -171,18 +174,20 @@
     {
       "worker": "synthesis_worker",
       "input": {
-        "task": "Cần cấp quyền Level 3 để khắc phục P1 khẩn cấp. Quy trình là gì?",
+        "task": "Ticket P1 lúc 2am. Cần cấp Level 2 access tạm thời cho contractor để thực hiện emergency fix. Đồng thời cần notify stakeholders theo SLA. Nêu đủ cả hai quy trình.",
         "chunks_count": 3,
         "has_policy": true
       },
       "output": {
-        "answer_length": 415,
+        "answer_length": 760,
         "sources": [
-          "it/access-control-sop.md"
+          "it/access-control-sop.md",
+          "support/sla-p1-2026.pdf"
         ],
-        "confidence": 0.53
+        "confidence": 0.63
       },
       "error": null
     }
-  ]
+  ],
+  "question_id": "q15"
 }

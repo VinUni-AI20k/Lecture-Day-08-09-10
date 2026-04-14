@@ -1,0 +1,110 @@
+{
+  "task": "Ticket P1 được tạo lúc 22:47. Ai sẽ nhận thông báo đầu tiên và qua kênh nào? Escalation xảy ra lúc mấy giờ?",
+  "route_reason": "default route",
+  "risk_high": false,
+  "needs_tool": false,
+  "hitl_triggered": false,
+  "retrieved_chunks": [
+    {
+      "text": "Q: Hộp thư đến đầy, phải làm gì?\nA: Xóa email cũ hoặc yêu cầu tăng dung lượng qua ticket IT-ACCESS. Dung lượng tiêu chuẩn là 50GB.\n\nQ: Tôi không nhận được email từ bên ngoài?\nA: Kiểm tra thư mục Spam trước. Nếu vẫn không có, tạo ticket P2 kèm địa chỉ email gửi và thời gian gửi.",
+      "source": "support/helpdesk-faq.md",
+      "score": 0.6856,
+      "metadata": {
+        "effective_date": "2026-01-20",
+        "section": "Section 5: Email và lịch",
+        "department": "IT",
+        "source": "support/helpdesk-faq.md",
+        "access": "internal"
+      }
+    },
+    {
+      "text": "Ticket P1:\n- Phản hồi ban đầu (first response): 15 phút kể từ khi ticket được tạo.\n- Xử lý và khắc phục (resolution): 4 giờ.\n- Escalation: Tự động escalate lên Senior Engineer nếu không có phản hồi trong 10 phút.\n- Thông báo stakeholder: Ngay khi nhận ticket, update mỗi 30 phút cho đến khi resolve.\n\nTicket P2:\n- Phản hồi ban đầu: 2 giờ.\n- Xử lý và khắc phục: 1 ngày làm việc.\n- Escalation: Tự động escalate sau 90 phút không có phản hồi.\n\nTicket P3:\n- Phản hồi ban đầu: 1 ngày làm việc.\n- Xử lý và khắc phục: 5 ngày làm việc.\n\nTicket P4:\n- Phản hồi ban đầu: 3 ngày làm việc.\n- Xử lý và khắc phục: Theo sprint cycle (thông thường 2-4 tuần).",
+      "source": "support/sla-p1-2026.pdf",
+      "score": 0.6603,
+      "metadata": {
+        "access": "internal",
+        "section": "Phần 2: SLA theo mức độ ưu tiên",
+        "department": "IT",
+        "source": "support/sla-p1-2026.pdf",
+        "effective_date": "2026-01-15"
+      }
+    },
+    {
+      "text": "Escalation chỉ áp dụng khi cần thay đổi quyền hệ thống ngoài quy trình thông thường.\nVí dụ: Khẩn cấp trong sự cố P1, cần cấp quyền tạm thời để fix incident.\n\nQuy trình escalation khẩn cấp:\n1. On-call IT Admin có thể cấp quyền tạm thời (max 24 giờ) sau khi được Tech Lead phê duyệt bằng lời.\n2. Sau 24 giờ, phải có ticket chính thức hoặc quyền bị thu hồi tự động.\n3. Mọi quyền tạm thời phải được ghi log vào hệ thống Security Audit.",
+      "source": "it/access-control-sop.md",
+      "score": 0.6433,
+      "metadata": {
+        "section": "Section 4: Escalation khi cần thay đổi quyền hệ thống",
+        "department": "IT Security",
+        "effective_date": "2026-01-01",
+        "access": "internal",
+        "source": "it/access-control-sop.md"
+      }
+    }
+  ],
+  "retrieved_sources": [
+    "it/access-control-sop.md",
+    "support/sla-p1-2026.pdf",
+    "support/helpdesk-faq.md"
+  ],
+  "policy_result": {},
+  "mcp_tools_used": [],
+  "final_answer": "1. **Ai sẽ nhận thông báo đầu tiên và qua kênh nào?**\n   - Thông báo đầu tiên sẽ được gửi đến stakeholder ngay khi ticket P1 được tạo, qua email. [2]\n\n2. **Escalation xảy ra lúc mấy giờ?**\n   - Escalation sẽ xảy ra tự động sau 10 phút nếu không có phản hồi. Nếu ticket P1 được tạo lúc 22:47, thì escalation sẽ xảy ra lúc 22:57. [2]",
+  "sources": [
+    "it/access-control-sop.md",
+    "support/sla-p1-2026.pdf",
+    "support/helpdesk-faq.md"
+  ],
+  "confidence": 0.66,
+  "history": [
+    "[supervisor] received task: Ticket P1 được tạo lúc 22:47. Ai sẽ nhận thông báo đầu tiên và qua kênh nào? Esc",
+    "[supervisor] route=retrieval_worker reason=default route",
+    "[retrieval_worker] retrieved 3 chunks from ['it/access-control-sop.md', 'support/sla-p1-2026.pdf', 'support/helpdesk-faq.md']",
+    "[synthesis_worker] answer generated, confidence=0.66, sources=['it/access-control-sop.md', 'support/sla-p1-2026.pdf', 'support/helpdesk-faq.md']",
+    "[graph] completed in 3138ms"
+  ],
+  "workers_called": [
+    "retrieval_worker",
+    "synthesis_worker"
+  ],
+  "supervisor_route": "retrieval_worker",
+  "latency_ms": 3138,
+  "run_id": "run_20260414_172149",
+  "worker_io_logs": [
+    {
+      "worker": "retrieval_worker",
+      "input": {
+        "task": "Ticket P1 được tạo lúc 22:47. Ai sẽ nhận thông báo đầu tiên và qua kênh nào? Escalation xảy ra lúc mấy giờ?",
+        "top_k": 3
+      },
+      "output": {
+        "chunks_count": 3,
+        "sources": [
+          "it/access-control-sop.md",
+          "support/sla-p1-2026.pdf",
+          "support/helpdesk-faq.md"
+        ]
+      },
+      "error": null
+    },
+    {
+      "worker": "synthesis_worker",
+      "input": {
+        "task": "Ticket P1 được tạo lúc 22:47. Ai sẽ nhận thông báo đầu tiên và qua kênh nào? Escalation xảy ra lúc mấy giờ?",
+        "chunks_count": 3,
+        "has_policy": false
+      },
+      "output": {
+        "answer_length": 331,
+        "sources": [
+          "it/access-control-sop.md",
+          "support/sla-p1-2026.pdf",
+          "support/helpdesk-faq.md"
+        ],
+        "confidence": 0.66
+      },
+      "error": null
+    }
+  ],
+  "question_id": "q11"
+}

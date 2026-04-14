@@ -1,7 +1,7 @@
 # System Architecture — Lab Day 09
 
-**Nhóm:** ___________  
-**Ngày:** ___________  
+**Nhóm:** 67  
+**Ngày:** 14/04/2026  
 **Version:** 1.0
 
 ---
@@ -12,47 +12,42 @@
 
 **Pattern đã chọn:** Supervisor-Worker  
 **Lý do chọn pattern này (thay vì single agent):**
-
-_________________
+Giúp chia tách rõ ràng logic phân loại (Routing), tra cứu (Retrieval) và công cụ (Tools). Cho phép kiểm tra rủi ro (HITL) độc lập trước khi thực thi nhằm tránh ảo giác và sai lệch quy trình nội bộ khắt khe.
 
 ---
 
 ## 2. Sơ đồ Pipeline
 
-> Vẽ sơ đồ pipeline dưới dạng text, Mermaid diagram, hoặc ASCII art.
-> Yêu cầu tối thiểu: thể hiện rõ luồng từ input → supervisor → workers → output.
+**Sơ đồ thực tế của nhóm:**
 
-**Ví dụ (ASCII art):**
 ```
 User Request
      │
      ▼
 ┌──────────────┐
-│  Supervisor  │  ← route_reason, risk_high, needs_tool
+│  Supervisor  │  ← Kiểm tra Keyword: "hoàn tiền", "refund", "err-", "P1"...
 └──────┬───────┘
        │
-   [route_decision]
+   [route_decision] (if/else)
        │
-  ┌────┴────────────────────┐
-  │                         │
-  ▼                         ▼
-Retrieval Worker     Policy Tool Worker
-  (evidence)           (policy check + MCP)
-  │                         │
-  └─────────┬───────────────┘
+  ┌────┼───────────────────────────┐
+  │    │                           │
+  ▼    ▼                           ▼
+Human Review (HITL)         Policy Tool Worker
+  │                              (gọi MCP search_kb, get_ticket_info)
+  │                                │
+  └─────────┬──────────────────────┘
+            │
+            ▼ (Nếu default route hoặc sau khi duyệt)
+     Retrieval Worker
+        (query ChromaDB)
             │
             ▼
       Synthesis Worker
-        (answer + cite)
+        (answer + cites)
             │
             ▼
          Output
-```
-
-**Sơ đồ thực tế của nhóm:**
-
-```
-[NHÓM ĐIỀN VÀO ĐÂY]
 ```
 
 ---
@@ -63,52 +58,50 @@ Retrieval Worker     Policy Tool Worker
 
 | Thuộc tính | Mô tả |
 |-----------|-------|
-| **Nhiệm vụ** | ___________________ |
-| **Input** | ___________________ |
-| **Output** | supervisor_route, route_reason, risk_high, needs_tool |
-| **Routing logic** | ___________________ |
-| **HITL condition** | ___________________ |
+| **Nhiệm vụ** | Nhận task, phân tích từ khóa và điều hướng đến Worker tương ứng. Đánh giá rủi ro (`risk_high`). |
+| **Input** | `state["task"]` |
+| **Output** | `supervisor_route`, `route_reason`, `risk_high`, `needs_tool` |
+| **Routing logic** | Rule-based (Keyword matching). Nhận diện "hoàn tiền, cấp quyền..." → `policy_tool_worker`. Gặp "err-" → `human_review`. Phần còn lại chuyển default `retrieval_worker`. |
+| **HITL condition** | Trigger nếu string chứa `"err-"` VÀ rơi vào keyword thuộc `risk_keywords`. |
 
 ### Retrieval Worker (`workers/retrieval.py`)
 
 | Thuộc tính | Mô tả |
 |-----------|-------|
-| **Nhiệm vụ** | ___________________ |
-| **Embedding model** | ___________________ |
-| **Top-k** | ___________________ |
-| **Stateless?** | Yes / No |
+| **Nhiệm vụ** | Embed câu hỏi và search ChromaDB để lấy chunks. |
+| **Embedding model** | `sentence-transformers/all-MiniLM-L6-v2` |
+| **Top-k** | Default 3 |
+| **Stateless?** | Yes |
 
 ### Policy Tool Worker (`workers/policy_tool.py`)
 
 | Thuộc tính | Mô tả |
 |-----------|-------|
-| **Nhiệm vụ** | ___________________ |
-| **MCP tools gọi** | ___________________ |
-| **Exception cases xử lý** | ___________________ |
+| **Nhiệm vụ** | Kiểm tra Policy exception bằng IF/ELSE và gọi MCP Tools phụ trợ thông tin thực tế. |
+| **MCP tools gọi** | `search_kb`, `get_ticket_info` |
+| **Exception cases xử lý** | Flash Sale, License key/Digital product, Sản phẩm đã kích hoạt. |
 
 ### Synthesis Worker (`workers/synthesis.py`)
 
 | Thuộc tính | Mô tả |
 |-----------|-------|
-| **LLM model** | ___________________ |
-| **Temperature** | ___________________ |
-| **Grounding strategy** | ___________________ |
-| **Abstain condition** | ___________________ |
+| **LLM model** | `gpt-4o-mini` hoặc `gemini-1.5-flash` |
+| **Temperature** | 0.1 (để bám sát Ground truth) |
+| **Grounding strategy** | Cấu trúc Context gồm `[Nguồn] + Text`. Bắt buộc cite nguồn ở cuối câu bằng `[source]`. |
+| **Abstain condition** | Khi context rỗng hoặc không liên quan ngữ nghĩa. Tự bắt keyword "Không đủ thông tin" để hạ confidence = 0.3. |
 
 ### MCP Server (`mcp_server.py`)
 
 | Tool | Input | Output |
 |------|-------|--------|
-| search_kb | query, top_k | chunks, sources |
-| get_ticket_info | ticket_id | ticket details |
-| check_access_permission | access_level, requester_role | can_grant, approvers |
-| ___________________ | ___________________ | ___________________ |
+| search_kb | query, top_k | chunks, sources, total_found |
+| get_ticket_info | ticket_id | ticket details (từ MOCK_TICKETS dict) |
+| check_access_permission | access_level, requester_role | can_grant, required_approvers, emergency_override |
+| create_ticket | priority, title, description | ticket_id, url (lưu vào tickets_db.json) |
 
 ---
 
 ## 4. Shared State Schema
-
-> Liệt kê các fields trong AgentState và ý nghĩa của từng field.
 
 | Field | Type | Mô tả | Ai đọc/ghi |
 |-------|------|-------|-----------|
@@ -117,10 +110,9 @@ Retrieval Worker     Policy Tool Worker
 | route_reason | str | Lý do route | supervisor ghi |
 | retrieved_chunks | list | Evidence từ retrieval | retrieval ghi, synthesis đọc |
 | policy_result | dict | Kết quả kiểm tra policy | policy_tool ghi, synthesis đọc |
-| mcp_tools_used | list | Tool calls đã thực hiện | policy_tool ghi |
+| mcp_tools_used | list | Tool calls đã thực hiện | policy_tool ghi, synthesis đọc |
 | final_answer | str | Câu trả lời cuối | synthesis ghi |
-| confidence | float | Mức tin cậy | synthesis ghi |
-| ___________________ | ___________________ | ___________________ | ___________________ |
+| confidence | float | Mức tin cậy (0.0 - 1.0) | synthesis ghi |
 
 ---
 
@@ -128,21 +120,17 @@ Retrieval Worker     Policy Tool Worker
 
 | Tiêu chí | Single Agent (Day 08) | Supervisor-Worker (Day 09) |
 |----------|----------------------|--------------------------|
-| Debug khi sai | Khó — không rõ lỗi ở đâu | Dễ hơn — test từng worker độc lập |
-| Thêm capability mới | Phải sửa toàn prompt | Thêm worker/MCP tool riêng |
-| Routing visibility | Không có | Có route_reason trong trace |
-| ___________________ | ___________________ | ___________________ |
+| Debug khi sai | Khó — không rõ lỗi ở khâu VectorDB hay Prompt | Dễ hơn — test từng worker thông qua `worker_io_logs` |
+| Thêm capability mới | Phải sửa toàn prompt | Chỉ việc đăng ký tool vào `mcp_server` và báo Policy Worker |
+| Routing visibility | Không có | Có log `route_reason` thể hiện rule nào được trigger |
 
 **Nhóm điền thêm quan sát từ thực tế lab:**
-
-_________________
+Policy_tool_worker khi kết nối MCP là điểm mạnh xuất sắc: Nó tự động detect ra truy vấn chứa ticket ID khẩn cấp, từ chối policy vì đó là Flash Sale một cách minh bạch qua mảng `exceptions_found` thay vì ép LLM phải tự dò dẫm text như Day 08.
 
 ---
 
 ## 6. Giới hạn và điểm cần cải tiến
 
-> Nhóm mô tả những điểm hạn chế của kiến trúc hiện tại.
-
-1. ___________________
-2. ___________________
-3. ___________________
+1. Logic Router trong `graph.py` hiện dùng if-else keyword tĩnh, dễ bị miss match các từ khóa không liệt kê sẵn.
+2. `policy_tool_worker` implement hard-code các luật exception cho bài toán Hoàn tiền trực tiếp bằng code Python thay vì suy luận động thông qua LLM.
+3. Node cấu trúc bằng code Python thuần (Option A), chưa tận dụng được tính năng Snapshot trạng thái StateGraph của LangGraph.

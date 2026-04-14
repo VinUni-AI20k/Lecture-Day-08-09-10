@@ -1,0 +1,110 @@
+{
+  "task": "Ticket P1 không được phản hồi sau 10 phút. Hệ thống tự động làm gì?",
+  "route_reason": "default route",
+  "risk_high": false,
+  "needs_tool": false,
+  "hitl_triggered": false,
+  "retrieved_chunks": [
+    {
+      "text": "Q: Hộp thư đến đầy, phải làm gì?\nA: Xóa email cũ hoặc yêu cầu tăng dung lượng qua ticket IT-ACCESS. Dung lượng tiêu chuẩn là 50GB.\n\nQ: Tôi không nhận được email từ bên ngoài?\nA: Kiểm tra thư mục Spam trước. Nếu vẫn không có, tạo ticket P2 kèm địa chỉ email gửi và thời gian gửi.",
+      "source": "support/helpdesk-faq.md",
+      "score": 0.7214,
+      "metadata": {
+        "source": "support/helpdesk-faq.md",
+        "access": "internal",
+        "department": "IT",
+        "effective_date": "2026-01-20",
+        "section": "Section 5: Email và lịch"
+      }
+    },
+    {
+      "text": "Ticket P1:\n- Phản hồi ban đầu (first response): 15 phút kể từ khi ticket được tạo.\n- Xử lý và khắc phục (resolution): 4 giờ.\n- Escalation: Tự động escalate lên Senior Engineer nếu không có phản hồi trong 10 phút.\n- Thông báo stakeholder: Ngay khi nhận ticket, update mỗi 30 phút cho đến khi resolve.\n\nTicket P2:\n- Phản hồi ban đầu: 2 giờ.\n- Xử lý và khắc phục: 1 ngày làm việc.\n- Escalation: Tự động escalate sau 90 phút không có phản hồi.\n\nTicket P3:\n- Phản hồi ban đầu: 1 ngày làm việc.\n- Xử lý và khắc phục: 5 ngày làm việc.\n\nTicket P4:\n- Phản hồi ban đầu: 3 ngày làm việc.\n- Xử lý và khắc phục: Theo sprint cycle (thông thường 2-4 tuần).",
+      "source": "support/sla-p1-2026.pdf",
+      "score": 0.714,
+      "metadata": {
+        "access": "internal",
+        "department": "IT",
+        "effective_date": "2026-01-15",
+        "source": "support/sla-p1-2026.pdf",
+        "section": "Phần 2: SLA theo mức độ ưu tiên"
+      }
+    },
+    {
+      "text": "Hoàn tiền — Điều kiện áp dụng:\nYêu cầu được gửi trong vòng 7 ngày kể từ thời điểm xác nhận đơn hàng.\n\nNgoại lệ không được hoàn tiền:\n- Sản phẩm thuộc danh mục hàng kỹ thuật số (license key, subscription).\n- Đơn hàng đã áp dụng mã giảm giá đặc biệt theo chương trình khuyến mãi Flash Sale.\n- Sản phẩm đã được kích hoạt hoặc đăng ký tài khoản.",
+      "source": "policy/refund-v4.pdf",
+      "score": 0.6498,
+      "metadata": {
+        "effective_date": "2026-02-01",
+        "department": "CS",
+        "access": "internal",
+        "source": "policy/refund-v4.pdf",
+        "section": "Điều 3: Điều kiện áp dụng và ngoại lệ"
+      }
+    }
+  ],
+  "retrieved_sources": [
+    "support/sla-p1-2026.pdf",
+    "support/helpdesk-faq.md",
+    "policy/refund-v4.pdf"
+  ],
+  "policy_result": {},
+  "mcp_tools_used": [],
+  "final_answer": "Khi ticket P1 không được phản hồi sau 10 phút, hệ thống sẽ tự động escalate lên Senior Engineer. [2]",
+  "sources": [
+    "support/sla-p1-2026.pdf",
+    "support/helpdesk-faq.md",
+    "policy/refund-v4.pdf"
+  ],
+  "confidence": 0.7,
+  "history": [
+    "[supervisor] received task: Ticket P1 không được phản hồi sau 10 phút. Hệ thống tự động làm gì?",
+    "[supervisor] route=retrieval_worker reason=default route",
+    "[retrieval_worker] retrieved 3 chunks from ['support/sla-p1-2026.pdf', 'support/helpdesk-faq.md', 'policy/refund-v4.pdf']",
+    "[synthesis_worker] answer generated, confidence=0.7, sources=['support/sla-p1-2026.pdf', 'support/helpdesk-faq.md', 'policy/refund-v4.pdf']",
+    "[graph] completed in 1749ms"
+  ],
+  "workers_called": [
+    "retrieval_worker",
+    "synthesis_worker"
+  ],
+  "supervisor_route": "retrieval_worker",
+  "latency_ms": 1749,
+  "run_id": "run_20260414_172139",
+  "worker_io_logs": [
+    {
+      "worker": "retrieval_worker",
+      "input": {
+        "task": "Ticket P1 không được phản hồi sau 10 phút. Hệ thống tự động làm gì?",
+        "top_k": 3
+      },
+      "output": {
+        "chunks_count": 3,
+        "sources": [
+          "support/sla-p1-2026.pdf",
+          "support/helpdesk-faq.md",
+          "policy/refund-v4.pdf"
+        ]
+      },
+      "error": null
+    },
+    {
+      "worker": "synthesis_worker",
+      "input": {
+        "task": "Ticket P1 không được phản hồi sau 10 phút. Hệ thống tự động làm gì?",
+        "chunks_count": 3,
+        "has_policy": false
+      },
+      "output": {
+        "answer_length": 100,
+        "sources": [
+          "support/sla-p1-2026.pdf",
+          "support/helpdesk-faq.md",
+          "policy/refund-v4.pdf"
+        ],
+        "confidence": 0.7
+      },
+      "error": null
+    }
+  ],
+  "question_id": "q06"
+}

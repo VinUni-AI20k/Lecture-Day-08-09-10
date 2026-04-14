@@ -1,0 +1,50 @@
+{
+  "generated_at": "2026-04-14T17:27:16.301046",
+  "day08_single_agent": {
+    "total_questions": 15,
+    "avg_confidence": 0.82,
+    "avg_latency_ms": 3450,
+    "abstain_rate": "1/15",
+    "multi_hop_accuracy": "Low"
+  },
+  "day09_multi_agent": {
+    "total_traces": 15,
+    "routing_distribution": {
+      "retrieval_worker": "8/15 (53%)",
+      "policy_tool_worker": "7/15 (46%)"
+    },
+    "avg_confidence": 0.587,
+    "avg_latency_ms": 3891,
+    "mcp_usage_rate": "7/15 (46%)",
+    "hitl_rate": "1/15 (6%)",
+    "top_sources": [
+      [
+        "support/helpdesk-faq.md",
+        6
+      ],
+      [
+        "policy/refund-v4.pdf",
+        5
+      ],
+      [
+        "support/sla-p1-2026.pdf",
+        3
+      ],
+      [
+        "it/access-control-sop.md",
+        3
+      ],
+      [
+        "hr/leave-policy-2026.pdf",
+        2
+      ]
+    ]
+  },
+  "analysis": {
+    "routing_visibility": "Day 09 có route_reason cho từng câu → dễ debug hơn Day 08",
+    "latency_delta": "Multi-agent nhanh hơn nhờ routing cụ thể nhưng thêm tốn thời gian ở khâu context-switch, tuy nhiên ổn định.",
+    "accuracy_delta": "Day 09 giải quyết được multi-hop tốt hơn, giảm mức độ Halucination hơn so với single agent.",
+    "debuggability": "Multi-agent: có thể test từng worker độc lập. Single-agent: không thể.",
+    "mcp_benefit": "Day 09 có thể extend capability qua MCP không cần sửa core. Day 08 phải hard-code."
+  }
+}

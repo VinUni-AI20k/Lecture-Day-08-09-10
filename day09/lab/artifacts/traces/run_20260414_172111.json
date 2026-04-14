@@ -1,0 +1,106 @@
+{
+  "task": "SLA xử lý ticket P1 là bao lâu?",
+  "route_reason": "default route",
+  "risk_high": false,
+  "needs_tool": false,
+  "hitl_triggered": false,
+  "retrieved_chunks": [
+    {
+      "text": "Q: Laptop mới được cấp sau bao lâu khi vào công ty?\nA: Laptop được cấp trong ngày onboarding đầu tiên. Nếu có vấn đề, liên hệ HR hoặc IT Admin.\n\nQ: Laptop bị hỏng phải báo cáo như thế nào?\nA: Tạo ticket P2 hoặc P3 tùy mức độ nghiêm trọng. Mang thiết bị đến IT Room (tầng 3) để kiểm tra.",
+      "source": "support/helpdesk-faq.md",
+      "score": 0.5604,
+      "metadata": {
+        "effective_date": "2026-01-20",
+        "section": "Section 4: Thiết bị và phần cứng",
+        "department": "IT",
+        "access": "internal",
+        "source": "support/helpdesk-faq.md"
+      }
+    },
+    {
+      "text": "Ticket P1:\n- Phản hồi ban đầu (first response): 15 phút kể từ khi ticket được tạo.\n- Xử lý và khắc phục (resolution): 4 giờ.\n- Escalation: Tự động escalate lên Senior Engineer nếu không có phản hồi trong 10 phút.\n- Thông báo stakeholder: Ngay khi nhận ticket, update mỗi 30 phút cho đến khi resolve.\n\nTicket P2:\n- Phản hồi ban đầu: 2 giờ.\n- Xử lý và khắc phục: 1 ngày làm việc.\n- Escalation: Tự động escalate sau 90 phút không có phản hồi.\n\nTicket P3:\n- Phản hồi ban đầu: 1 ngày làm việc.\n- Xử lý và khắc phục: 5 ngày làm việc.\n\nTicket P4:\n- Phản hồi ban đầu: 3 ngày làm việc.\n- Xử lý và khắc phục: Theo sprint cycle (thông thường 2-4 tuần).",
+      "source": "support/sla-p1-2026.pdf",
+      "score": 0.5597,
+      "metadata": {
+        "access": "internal",
+        "source": "support/sla-p1-2026.pdf",
+        "effective_date": "2026-01-15",
+        "section": "Phần 2: SLA theo mức độ ưu tiên",
+        "department": "IT"
+      }
+    },
+    {
+      "text": "Q: Hộp thư đến đầy, phải làm gì?\nA: Xóa email cũ hoặc yêu cầu tăng dung lượng qua ticket IT-ACCESS. Dung lượng tiêu chuẩn là 50GB.\n\nQ: Tôi không nhận được email từ bên ngoài?\nA: Kiểm tra thư mục Spam trước. Nếu vẫn không có, tạo ticket P2 kèm địa chỉ email gửi và thời gian gửi.",
+      "source": "support/helpdesk-faq.md",
+      "score": 0.5402,
+      "metadata": {
+        "access": "internal",
+        "source": "support/helpdesk-faq.md",
+        "section": "Section 5: Email và lịch",
+        "department": "IT",
+        "effective_date": "2026-01-20"
+      }
+    }
+  ],
+  "retrieved_sources": [
+    "support/sla-p1-2026.pdf",
+    "support/helpdesk-faq.md"
+  ],
+  "policy_result": {},
+  "mcp_tools_used": [],
+  "final_answer": "SLA xử lý ticket P1 là như sau:\n- Phản hồi ban đầu: 15 phút kể từ khi ticket được tạo.\n- Xử lý và khắc phục: 4 giờ. \n- Escalation: Tự động escalate lên Senior Engineer nếu không có phản hồi trong 10 phút. \n- Thông báo stakeholder: Ngay khi nhận ticket, update mỗi 30 phút cho đến khi resolve [2].",
+  "sources": [
+    "support/sla-p1-2026.pdf",
+    "support/helpdesk-faq.md"
+  ],
+  "confidence": 0.55,
+  "history": [
+    "[supervisor] received task: SLA xử lý ticket P1 là bao lâu?",
+    "[supervisor] route=retrieval_worker reason=default route",
+    "[retrieval_worker] retrieved 3 chunks from ['support/sla-p1-2026.pdf', 'support/helpdesk-faq.md']",
+    "[synthesis_worker] answer generated, confidence=0.55, sources=['support/sla-p1-2026.pdf', 'support/helpdesk-faq.md']",
+    "[graph] completed in 18863ms"
+  ],
+  "workers_called": [
+    "retrieval_worker",
+    "synthesis_worker"
+  ],
+  "supervisor_route": "retrieval_worker",
+  "latency_ms": 18863,
+  "run_id": "run_20260414_172111",
+  "worker_io_logs": [
+    {
+      "worker": "retrieval_worker",
+      "input": {
+        "task": "SLA xử lý ticket P1 là bao lâu?",
+        "top_k": 3
+      },
+      "output": {
+        "chunks_count": 3,
+        "sources": [
+          "support/sla-p1-2026.pdf",
+          "support/helpdesk-faq.md"
+        ]
+      },
+      "error": null
+    },
+    {
+      "worker": "synthesis_worker",
+      "input": {
+        "task": "SLA xử lý ticket P1 là bao lâu?",
+        "chunks_count": 3,
+        "has_policy": false
+      },
+      "output": {
+        "answer_length": 296,
+        "sources": [
+          "support/sla-p1-2026.pdf",
+          "support/helpdesk-faq.md"
+        ],
+        "confidence": 0.55
+      },
+      "error": null
+    }
+  ],
+  "question_id": "q01"
+}
