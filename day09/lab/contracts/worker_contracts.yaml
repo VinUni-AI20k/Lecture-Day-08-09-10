@@ -96,8 +96,8 @@ retrieval_worker:
     - "Score phải là float trong khoảng [0, 1]"
     - "Stateless: không đọc hoặc ghi state ngoài những gì được khai báo ở trên"
   actual_implementation:
-    status: "TODO Sprint 2"  # Update to "done" khi xong
-    notes: ""
+    status: "done"
+    notes: "Implemented in workers/retrieval.py: dense retrieval, contract-compliant IO logs, input validation, and RETRIEVAL_FAILED error format."
 
 # ─────────────────────────────────────────────
 # Policy Tool Worker
