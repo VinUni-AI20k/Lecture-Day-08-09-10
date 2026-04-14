@@ -21,10 +21,6 @@ __pycache__/
 
 # Dữ liệu nhạy cảm
 .env
-*.podspec
-
-# Database (nếu bạn dùng SQLite để test local)
-*.sqlite3
 
 # Grading questions — không public trước 17:00
 day08/lab/data/grading_questions.json

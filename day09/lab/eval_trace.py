@@ -185,7 +185,7 @@ def analyze_traces(traces_dir: str = "artifacts/traces") -> dict:
 
     traces = []
     for fname in trace_files:
-        with open(os.path.join(traces_dir, fname)) as f:
+        with open(os.path.join(traces_dir, fname), encoding="utf-8") as f:
             traces.append(json.load(f))
 
     # Compute metrics
@@ -253,10 +253,10 @@ def compare_single_vs_multi(
     # Nếu không có, dùng baseline giả lập để format
     day08_baseline = {
         "total_questions": 15,
-        "avg_confidence": 0.0,          # TODO: Điền từ Day 08 eval.py
-        "avg_latency_ms": 0,            # TODO: Điền từ Day 08
-        "abstain_rate": "?",            # TODO: Điền từ Day 08
-        "multi_hop_accuracy": "?",      # TODO: Điền từ Day 08
+        "avg_confidence": 0.76,          # TODO: Điền từ Day 08 eval.py
+        "avg_latency_ms": 7448,            # TODO: Điền từ Day 08
+        "abstain_rate": 0.0,            # TODO: Điền từ Day 08
+        "multi_hop_accuracy": 0.4,      # TODO: Điền từ Day 08
     }
 
     if day08_results_file and os.path.exists(day08_results_file):
@@ -269,7 +269,7 @@ def compare_single_vs_multi(
         "day09_multi_agent": multi_metrics,
         "analysis": {
             "routing_visibility": "Day 09 có route_reason cho từng câu → dễ debug hơn Day 08",
-            "latency_delta": "TODO: Điền delta latency thực tế",
+            "latency_delta": "20587",
             "accuracy_delta": "TODO: Điền delta accuracy thực tế từ grading",
             "debuggability": "Multi-agent: có thể test từng worker độc lập. Single-agent: không thể.",
             "mcp_benefit": "Day 09 có thể extend capability qua MCP không cần sửa core. Day 08 phải hard-code.",
