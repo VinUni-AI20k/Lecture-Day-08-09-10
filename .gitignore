@@ -8,4 +8,7 @@ chroma_db/
 # Grading questions — không public trước 17:00
 day08/lab/data/grading_questions.json
 day08/lab/chroma_db/chroma.sqlite3
+day08/lab/chroma_db/
+.venv/
 
+.venv/Lib/site-packages/_cffi_backend.cp311-win_amd64.pyd
