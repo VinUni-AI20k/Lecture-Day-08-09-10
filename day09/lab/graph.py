@@ -13,9 +13,9 @@ import json
 import os
 from datetime import datetime
 from typing import TypedDict, Literal, Optional
+import time
 
-# Uncomment nếu dùng LangGraph:
-# from langgraph.graph import StateGraph, END
+from langgraph.graph import StateGraph, END
 
 # ─────────────────────────────────────────────
 # 1. Shared State — dữ liệu đi xuyên toàn graph
@@ -150,7 +150,13 @@ def route_decision(state: AgentState) -> Literal["retrieval_worker", "policy_too
     Đây là conditional edge của graph.
     """
     route = state.get("supervisor_route", "retrieval_worker")
-    return route  # type: ignore
+    if route in ("retrieval_worker", "policy_tool_worker", "human_review"):
+        return route
+
+    state["history"].append(
+        f"[route_decision] invalid supervisor_route='{route}', fallback='retrieval_worker'"
+    )
+    return "retrieval_worker"
 
 
 # ─────────────────────────────────────────────
@@ -210,6 +216,14 @@ def synthesis_worker_node(state: AgentState) -> AgentState:
     return synthesis_run(state)
 
 
+def policy_next_decision(state: AgentState) -> Literal["retrieval_worker", "synthesis_worker"]:
+    """Nếu policy worker chưa có context thì đi retrieval, ngược lại sang synthesis."""
+    chunks = state.get("retrieved_chunks", [])
+    if chunks:
+        return "synthesis_worker"
+    return "retrieval_worker"
+
+
 # ─────────────────────────────────────────────
 # 6. Build Graph
 # ─────────────────────────────────────────────
@@ -224,38 +238,40 @@ def build_graph():
     Lab này implement Option A theo mặc định.
     TODO Sprint 1: Có thể chuyển sang LangGraph nếu muốn.
     """
-    # Option A: Simple Python orchestrator
-    def run(state: AgentState) -> AgentState:
-        import time
-        start = time.time()
+    graph = StateGraph(AgentState)
 
-        # Step 1: Supervisor decides route
-        state = supervisor_node(state)
+    graph.add_node("supervisor", supervisor_node)
+    graph.add_node("retrieval_worker", retrieval_worker_node)
+    graph.add_node("policy_tool_worker", policy_tool_worker_node)
+    graph.add_node("human_review", human_review_node)
+    graph.add_node("synthesis_worker", synthesis_worker_node)
 
-        # Step 2: Route to appropriate worker
-        route = route_decision(state)
+    graph.set_entry_point("supervisor")
 
-        if route == "human_review":
-            state = human_review_node(state)
-            # After human approval, continue with retrieval
-            state = retrieval_worker_node(state)
-        elif route == "policy_tool_worker":
-            state = policy_tool_worker_node(state)
-            # Policy worker may need retrieval context first
-            if not state["retrieved_chunks"]:
-                state = retrieval_worker_node(state)
-        else:
-            # Default: retrieval_worker
-            state = retrieval_worker_node(state)
+    graph.add_conditional_edges(
+        "supervisor",
+        route_decision,
+        {
+            "retrieval_worker": "retrieval_worker",
+            "policy_tool_worker": "policy_tool_worker",
+            "human_review": "human_review",
+        },
+    )
 
-        # Step 3: Always synthesize
-        state = synthesis_worker_node(state)
+    graph.add_conditional_edges(
+        "policy_tool_worker",
+        policy_next_decision,
+        {
+            "retrieval_worker": "retrieval_worker",
+            "synthesis_worker": "synthesis_worker",
+        },
+    )
 
-        state["latency_ms"] = int((time.time() - start) * 1000)
-        state["history"].append(f"[graph] completed in {state['latency_ms']}ms")
-        return state
+    graph.add_edge("human_review", "retrieval_worker")
+    graph.add_edge("retrieval_worker", "synthesis_worker")
+    graph.add_edge("synthesis_worker", END)
 
-    return run
+    return graph.compile()
 
 
 # ─────────────────────────────────────────────
@@ -276,7 +292,10 @@ def run_graph(task: str) -> AgentState:
         AgentState với final_answer, trace, routing info, v.v.
     """
     state = make_initial_state(task)
-    result = _graph(state)
+    start = time.time()
+    result = _graph.invoke(state)
+    result["latency_ms"] = int((time.time() - start) * 1000)
+    result["history"].append(f"[graph] completed in {result['latency_ms']}ms")
     return result
 
 
