@@ -6,7 +6,7 @@
 |-----|---------|-------|
 |  | Supervisor Owner |  |
 | Vũ Đức Minh| Worker Owner | vuducminhvn2003@gmail.com  |
-|  | MCP Owner |  |
+| Nguyễn Thị Ngọc | MCP Owner | ngocntit@gmail.com |
 | Nguyễn Việt Quang | Trace & Docs Owner | nguyenvietquang.1601@gmail.com |
 
 **Ngày nộp:** 2026-04-14
