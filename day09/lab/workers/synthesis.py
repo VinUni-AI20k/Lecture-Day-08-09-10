@@ -18,6 +18,11 @@ Gọi độc lập để test:
 
 import os
 
+try:
+    from .mcp_client import call_mcp_tool
+except ImportError:
+    from workers.mcp_client import call_mcp_tool
+
 WORKER_NAME = "synthesis_worker"
 
 SYSTEM_PROMPT = """Bạn là trợ lý IT Helpdesk nội bộ.
@@ -159,6 +164,7 @@ def run(state: dict) -> dict:
 
     state.setdefault("workers_called", [])
     state.setdefault("history", [])
+    state.setdefault("mcp_tools_used", [])
     state["workers_called"].append(WORKER_NAME)
 
     worker_io = {
@@ -173,6 +179,17 @@ def run(state: dict) -> dict:
     }
 
     try:
+        # Fallback retrieval qua MCP để synthesis không phụ thuộc direct DB access.
+        if not chunks:
+            mcp_result = call_mcp_tool("search_kb", {"query": task, "top_k": 3})
+            state["mcp_tools_used"].append(mcp_result)
+            output = mcp_result.get("output") or {}
+            if output.get("chunks"):
+                chunks = output["chunks"]
+                state["retrieved_chunks"] = chunks
+                state["retrieved_sources"] = list({c.get("source", "unknown") for c in chunks})
+                state["history"].append(f"[{WORKER_NAME}] called MCP search_kb fallback")
+
         result = synthesize(task, chunks, policy_result)
         state["final_answer"] = result["answer"]
         state["sources"] = result["sources"]

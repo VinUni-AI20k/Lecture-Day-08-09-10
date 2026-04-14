@@ -1,6 +1,6 @@
 """
 workers/retrieval.py — Retrieval Worker
-Sprint 2: Implement retrieval từ ChromaDB, trả về chunks + sources.
+Sprint 2+3: Retrieval qua MCP client (search_kb), trả về chunks + sources.
 
 Input (từ AgentState):
     - task: câu hỏi cần retrieve
@@ -15,8 +15,10 @@ Gọi độc lập để test:
     python workers/retrieval.py
 """
 
-import os
-import sys
+try:
+    from .mcp_client import call_mcp_tool
+except ImportError:
+    from workers.mcp_client import call_mcp_tool
 
 # ─────────────────────────────────────────────
 # Worker Contract (xem contracts/worker_contracts.yaml)
@@ -28,101 +30,18 @@ WORKER_NAME = "retrieval_worker"
 DEFAULT_TOP_K = 3
 
 
-def _get_embedding_fn():
-    """
-    Trả về embedding function.
-    TODO Sprint 1: Implement dùng OpenAI hoặc Sentence Transformers.
-    """
-    # Option A: Sentence Transformers (offline, không cần API key)
-    try:
-        from sentence_transformers import SentenceTransformer
-        model = SentenceTransformer("all-MiniLM-L6-v2")
-        def embed(text: str) -> list:
-            return model.encode([text])[0].tolist()
-        return embed
-    except ImportError:
-        pass
-
-    # Option B: OpenAI (cần API key)
-    try:
-        from openai import OpenAI
-        client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-        def embed(text: str) -> list:
-            resp = client.embeddings.create(input=text, model="text-embedding-3-small")
-            return resp.data[0].embedding
-        return embed
-    except ImportError:
-        pass
-
-    # Fallback: random embeddings cho test (KHÔNG dùng production)
-    import random
-    def embed(text: str) -> list:
-        return [random.random() for _ in range(384)]
-    print("⚠️  WARNING: Using random embeddings (test only). Install sentence-transformers.")
-    return embed
-
-
-def _get_collection():
-    """
-    Kết nối ChromaDB collection.
-    TODO Sprint 2: Đảm bảo collection đã được build từ Step 3 trong README.
-    """
-    import chromadb
-    client = chromadb.PersistentClient(path="./chroma_db")
-    try:
-        collection = client.get_collection("day09_docs")
-    except Exception:
-        # Auto-create nếu chưa có
-        collection = client.get_or_create_collection(
-            "day09_docs",
-            metadata={"hnsw:space": "cosine"}
-        )
-        print(f"⚠️  Collection 'day09_docs' chưa có data. Chạy index script trong README trước.")
-    return collection
-
-
 def retrieve_dense(query: str, top_k: int = DEFAULT_TOP_K) -> list:
     """
-    Dense retrieval: embed query → query ChromaDB → trả về top_k chunks.
-
-    TODO Sprint 2: Implement phần này.
-    - Dùng _get_embedding_fn() để embed query
-    - Query collection với n_results=top_k
-    - Format result thành list of dict
+    Dense retrieval via MCP search_kb tool.
 
     Returns:
         list of {"text": str, "source": str, "score": float, "metadata": dict}
     """
-    # TODO: Implement dense retrieval
-    embed = _get_embedding_fn()
-    query_embedding = embed(query)
-
-    try:
-        collection = _get_collection()
-        results = collection.query(
-            query_embeddings=[query_embedding],
-            n_results=top_k,
-            include=["documents", "distances", "metadatas"]
-        )
-
-        chunks = []
-        for i, (doc, dist, meta) in enumerate(zip(
-            results["documents"][0],
-            results["distances"][0],
-            results["metadatas"][0]
-        )):
-            chunks.append({
-                "text": doc,
-                "source": meta.get("source", "unknown"),
-                "score": round(1 - dist, 4),  # cosine similarity
-                "metadata": meta,
-            })
-        return chunks
-
-    except Exception as e:
-        print(f"⚠️  ChromaDB query failed: {e}")
-        # Fallback: return empty (abstain)
+    mcp_result = call_mcp_tool("search_kb", {"query": query, "top_k": top_k})
+    output = mcp_result.get("output") or {}
+    if output.get("error"):
         return []
+    return output.get("chunks", [])
 
 
 def run(state: dict) -> dict:
@@ -140,6 +59,7 @@ def run(state: dict) -> dict:
 
     state.setdefault("workers_called", [])
     state.setdefault("history", [])
+    state.setdefault("mcp_tools_used", [])
 
     state["workers_called"].append(WORKER_NAME)
 
@@ -152,7 +72,17 @@ def run(state: dict) -> dict:
     }
 
     try:
-        chunks = retrieve_dense(task, top_k=top_k)
+        mcp_result = call_mcp_tool("search_kb", {"query": task, "top_k": top_k})
+        state["mcp_tools_used"].append(mcp_result)
+
+        if mcp_result.get("error"):
+            raise RuntimeError(mcp_result["error"].get("reason", "MCP call failed"))
+
+        output = mcp_result.get("output") or {}
+        if output.get("error"):
+            raise RuntimeError(output["error"])
+
+        chunks = output.get("chunks", [])
 
         sources = list({c["source"] for c in chunks})
 
@@ -162,9 +92,10 @@ def run(state: dict) -> dict:
         worker_io["output"] = {
             "chunks_count": len(chunks),
             "sources": sources,
+            "mcp_tool": "search_kb",
         }
         state["history"].append(
-            f"[{WORKER_NAME}] retrieved {len(chunks)} chunks from {sources}"
+            f"[{WORKER_NAME}] called MCP search_kb, retrieved {len(chunks)} chunks from {sources}"
         )
 
     except Exception as e:
