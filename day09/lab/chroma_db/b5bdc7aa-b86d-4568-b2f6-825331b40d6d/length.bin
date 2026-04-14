@@ -1,0 +1,1 @@
+invalid type: string "Hotline: ext. 9000 (8:00 - 18:00, Thứ 2 - Thứ 6)\nEmail: helpdesk@company.internal\nJira: project IT-SUPPORT\nSlack: #it-helpdesk\nEmergency (ngoài giờ): ext. 9999", expected f64 Laptop bị hỏng phải báo cáo như thế nào?\nA: Tạo ticket P2 hoặc P3 tùy mức độ nghiêm trọng. Mang thiết bị đến IT Room (tầng 3) để kiểm tra.", expected f6

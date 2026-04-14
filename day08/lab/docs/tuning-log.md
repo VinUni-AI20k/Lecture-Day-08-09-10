@@ -7,29 +7,29 @@
 
 ## Baseline (Sprint 2)
 
-**Ngày:** ___________  
+**Ngày:** 13/04/2026
 **Config:**
 ```
 retrieval_mode = "dense"
-chunk_size = _____ tokens
-overlap = _____ tokens
+chunk_size = 500 tokens
+overlap = 50 tokens
 top_k_search = 10
 top_k_select = 3
 use_rerank = False
-llm_model = _____
+llm_model = gemini-2.5-flash
 ```
 
 **Scorecard Baseline:**
 | Metric | Average Score |
 |--------|--------------|
-| Faithfulness | ? /5 |
-| Answer Relevance | ? /5 |
-| Context Recall | ? /5 |
-| Completeness | ? /5 |
+| Faithfulness | 4.10/5 |
+| Answer Relevance | 4.40/5 |
+| Context Recall | 4.50/5 |
+| Completeness | 4.00/5 |
 
 **Câu hỏi yếu nhất (điểm thấp):**
-> TODO: Liệt kê 2-3 câu hỏi có điểm thấp nhất và lý do tại sao.
-> Ví dụ: "q07 (Approval Matrix) - context recall = 1/5 vì dense bỏ lỡ alias."
+> Các câu lỗi: q09, q10
+> q05 (Approval Matrix) - context recall = 1/5 vì dense bỏ lỡ alias
 
 **Giả thuyết nguyên nhân (Error Tree):**
 - [ ] Indexing: Chunking cắt giữa điều khoản
@@ -71,24 +71,6 @@ retrieval_mode = "hybrid"   # hoặc biến khác
 **Kết luận:**
 > TODO: Variant 1 có tốt hơn baseline không?
 > Bằng chứng là gì? (điểm số, câu hỏi cụ thể)
-
----
-
-## Variant 2 (nếu có thời gian)
-
-**Biến thay đổi:** ___________  
-**Config:**
-```
-# TODO
-```
-
-**Scorecard Variant 2:**
-| Metric | Baseline | Variant 1 | Variant 2 | Best |
-|--------|----------|-----------|-----------|------|
-| Faithfulness | ? | ? | ? | ? |
-| Answer Relevance | ? | ? | ? | ? |
-| Context Recall | ? | ? | ? | ? |
-| Completeness | ? | ? | ? | ? |
 
 ---
 

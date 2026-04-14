@@ -27,7 +27,7 @@ WORKER_NAME = "policy_tool_worker"
 # MCP Client — Sprint 3: Thay bằng real MCP call
 # ─────────────────────────────────────────────
 
-def _call_mcp_tool(tool_name: str, tool_input: dict) -> dict:
+def _call_mcp_tool(tool_name: str, tool_input: dict, retry: int = 1) -> dict:
     """
     Gọi MCP tool.
 
@@ -36,20 +36,22 @@ def _call_mcp_tool(tool_name: str, tool_input: dict) -> dict:
     Hiện tại: Import trực tiếp từ mcp_server.py (trong-process mock).
     """
     from datetime import datetime
+    for attempt in range(retry+1):
+        try:
+            # TODO Sprint 3: Thay bằng real MCP client nếu dùng HTTP server
+            from mcp_server import dispatch_tool
 
-    try:
-        # TODO Sprint 3: Thay bằng real MCP client nếu dùng HTTP server
-        from mcp_server import dispatch_tool
-        result = dispatch_tool(tool_name, tool_input)
-        return {
+            result = dispatch_tool(tool_name, tool_input)
+
+            return {
             "tool": tool_name,
             "input": tool_input,
             "output": result,
             "error": None,
             "timestamp": datetime.now().isoformat(),
         }
-    except Exception as e:
-        return {
+        except Exception as e:
+            return {
             "tool": tool_name,
             "input": tool_input,
             "output": None,
@@ -77,6 +79,9 @@ def analyze_policy(task: str, chunks: list) -> dict:
     Returns:
         dict with: policy_applies, policy_name, exceptions_found, source, rule, explanation
     """
+    from dotenv import load_dotenv
+    load_dotenv()
+
     task_lower = task.lower()
     context_text = " ".join([c.get("text", "") for c in chunks]).lower()
 
@@ -130,6 +135,27 @@ def analyze_policy(task: str, chunks: list) -> dict:
     # )
     # analysis = response.choices[0].message.content
 
+    # TODO Sprint 2: Gọi LLM để phân tích phức tạp hơn
+    explanation = "Analyzed via rule-based policy check."
+    try:
+        from google import genai
+        from google.genai import types
+        client = genai.Client(api_key=os.getenv("GOOGLE_API_KEY"))
+        prompt = (
+            "Bạn là policy analyst. Dựa vào context, xác định policy áp dụng và các exceptions.\n\n"
+            f"Task: {task}\n\nContext:\n" + "\n".join([c.get('text', '') for c in chunks])
+        )
+        response = client.models.generate_content(
+            model="gemini-2.5-flash",
+            contents=prompt,
+        )
+        analysis = response.text
+        if analysis:
+            explanation = analysis
+    except Exception as e:
+        # Fallback: giữ rule-based explanation nếu LLM fail
+        explanation += f" (LLM analysis skipped: {e})"
+
     sources = list({c.get("source", "unknown") for c in chunks if c})
 
     return {
@@ -138,7 +164,7 @@ def analyze_policy(task: str, chunks: list) -> dict:
         "exceptions_found": exceptions_found,
         "source": sources,
         "policy_version_note": policy_version_note,
-        "explanation": "Analyzed via rule-based policy check. TODO: upgrade to LLM-based analysis.",
+        "explanation": explanation,
     }
 
 
