@@ -18,11 +18,11 @@ Gọi độc lập để test:
 import os
 import sys
 
-# ─────────────────────────────────────────────
+# ————————————————————————————————————————————————
 # Worker Contract (xem contracts/worker_contracts.yaml)
 # Input:  {"task": str, "top_k": int = 3}
 # Output: {"retrieved_chunks": list, "retrieved_sources": list, "error": dict | None}
-# ─────────────────────────────────────────────
+# ————————————————————————————————————————————————
 
 WORKER_NAME = "retrieval_worker"
 DEFAULT_TOP_K = 3
@@ -36,28 +36,34 @@ def _get_embedding_fn():
     # Option A: Sentence Transformers (offline, không cần API key)
     try:
         from sentence_transformers import SentenceTransformer
-        model = SentenceTransformer("all-MiniLM-L6-v2")
+        model = SentenceTransformer("all-MiniLM-L6-v2", local_files_only=True)
+
         def embed(text: str) -> list:
             return model.encode([text])[0].tolist()
+
         return embed
-    except ImportError:
+    except Exception:
         pass
 
     # Option B: OpenAI (cần API key)
     try:
         from openai import OpenAI
         client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+
         def embed(text: str) -> list:
             resp = client.embeddings.create(input=text, model="text-embedding-3-small")
             return resp.data[0].embedding
+
         return embed
-    except ImportError:
+    except Exception:
         pass
 
     # Fallback: random embeddings cho test (KHÔNG dùng production)
     import random
+
     def embed(text: str) -> list:
         return [random.random() for _ in range(384)]
+
     print("⚠️  WARNING: Using random embeddings (test only). Install sentence-transformers.")
     return embed
 
@@ -68,6 +74,7 @@ def _get_collection():
     TODO Sprint 2: Đảm bảo collection đã được build từ Step 3 trong README.
     """
     import chromadb
+
     client = chromadb.PersistentClient(path="./chroma_db")
     try:
         collection = client.get_collection("day09_docs")
@@ -93,36 +100,116 @@ def retrieve_dense(query: str, top_k: int = DEFAULT_TOP_K) -> list:
     Returns:
         list of {"text": str, "source": str, "score": float, "metadata": dict}
     """
-    # TODO: Implement dense retrieval
-    embed = _get_embedding_fn()
-    query_embedding = embed(query)
-
     try:
         collection = _get_collection()
-        results = collection.query(
-            query_embeddings=[query_embedding],
-            n_results=top_k,
-            include=["documents", "distances", "metadatas"]
-        )
 
-        chunks = []
-        for i, (doc, dist, meta) in enumerate(zip(
-            results["documents"][0],
-            results["distances"][0],
-            results["metadatas"][0]
-        )):
-            chunks.append({
-                "text": doc,
-                "source": meta.get("source", "unknown"),
-                "score": round(1 - dist, 4),  # cosine similarity
-                "metadata": meta,
-            })
-        return chunks
+        try:
+            has_indexed_data = collection.count() > 0
+        except Exception:
+            has_indexed_data = False
 
+        if has_indexed_data:
+            embed = _get_embedding_fn()
+            query_embedding = embed(query)
+            results = collection.query(
+                query_embeddings=[query_embedding],
+                n_results=top_k,
+                include=["documents", "distances", "metadatas"]
+            )
+
+            documents = results.get("documents", [[]])
+            distances = results.get("distances", [[]])
+            metadatas = results.get("metadatas", [[]])
+
+            if documents and documents[0]:
+                chunks = []
+                for doc, dist, meta in zip(documents[0], distances[0], metadatas[0]):
+                    metadata = meta or {}
+                    chunks.append({
+                        "text": doc,
+                        "source": metadata.get("source", "unknown"),
+                        "score": round(max(0.0, min(1.0, 1 - float(dist))), 4),
+                        "metadata": metadata,
+                    })
+                return chunks
     except Exception as e:
         print(f"⚠️  ChromaDB query failed: {e}")
-        # Fallback: return empty (abstain)
+
+    # Fallback lexical retrieval on local docs so worker can still run independently
+    # when ChromaDB has not been indexed yet.
+    import re
+    import unicodedata
+
+    def normalize(text: str) -> str:
+        normalized = unicodedata.normalize("NFKD", text)
+        normalized = "".join(char for char in normalized if not unicodedata.combining(char))
+        return normalized.lower()
+
+    def tokenize(text: str) -> list:
+        return re.findall(r"[a-z0-9_]+", normalize(text))
+
+    docs_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "docs")
+    if not os.path.isdir(docs_dir):
         return []
+
+    query_tokens = set(tokenize(query))
+    fallback_chunks = []
+
+    for fname in sorted(os.listdir(docs_dir)):
+        file_path = os.path.join(docs_dir, fname)
+        if not os.path.isfile(file_path):
+            continue
+
+        with open(file_path, "r", encoding="utf-8") as f:
+            content = f.read()
+
+        sections = [section.strip() for section in re.split(r"\n(?=== )", content.replace("\r\n", "\n")) if section.strip()]
+        for section_index, section_text in enumerate(sections, start=1):
+            section_tokens = set(tokenize(section_text))
+            if not section_tokens:
+                continue
+
+            overlap = len(query_tokens & section_tokens)
+            if overlap == 0:
+                continue
+
+            score = overlap / max(len(query_tokens), 1)
+            normalized_query = normalize(query)
+            normalized_section = normalize(section_text)
+            normalized_source = normalize(fname)
+
+            if "flash sale" in normalized_query and "flash sale" in normalized_section:
+                score += 0.2
+            if "license key" in normalized_query and "license key" in normalized_section:
+                score += 0.2
+            if "store credit" in normalized_query and "store credit" in normalized_section:
+                score += 0.2
+            if "p1" in normalized_query and "p1" in normalized_section:
+                score += 0.15
+            if "level 2" in normalized_query and "level 2" in normalized_section:
+                score += 0.15
+            if "level 3" in normalized_query and "level 3" in normalized_section:
+                score += 0.15
+            if "refund" in normalized_query and "refund" in normalized_source:
+                score += 0.1
+            if "access" in normalized_query and "access" in normalized_source:
+                score += 0.1
+            if "sla" in normalized_query and "sla" in normalized_source:
+                score += 0.1
+
+            fallback_chunks.append({
+                "text": section_text,
+                "source": fname,
+                "score": round(min(1.0, score), 4),
+                "metadata": {
+                    "source": fname,
+                    "fallback": "local_lexical_search",
+                    "section_index": section_index,
+                },
+            })
+
+    fallback_chunks.sort(key=lambda chunk: chunk["score"], reverse=True)
+    return fallback_chunks[:top_k]
 
 
 def run(state: dict) -> dict:
@@ -179,9 +266,9 @@ def run(state: dict) -> dict:
     return state
 
 
-# ─────────────────────────────────────────────
+# ————————————————————————————————————————————————
 # Test độc lập
-# ─────────────────────────────────────────────
+# ————————————————————————————————————————————————
 
 if __name__ == "__main__":
     print("=" * 50)
@@ -200,7 +287,8 @@ if __name__ == "__main__":
         chunks = result.get("retrieved_chunks", [])
         print(f"  Retrieved: {len(chunks)} chunks")
         for c in chunks[:2]:
-            print(f"    [{c['score']:.3f}] {c['source']}: {c['text'][:80]}...")
+            preview = c["text"][:80].encode("ascii", "replace").decode("ascii")
+            print(f"    [{c['score']:.3f}] {c['source']}: {preview}...")
         print(f"  Sources: {result.get('retrieved_sources', [])}")
 
     print("\n✅ retrieval_worker test done.")
