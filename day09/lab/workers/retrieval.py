@@ -73,16 +73,22 @@ def _get_collection():
     TODO Sprint 2: Đảm bảo collection đã được build từ Step 3 trong README.
     """
     import chromadb
-    client = chromadb.PersistentClient(path="./chroma_db")
+    # Resolve path từ env, fallback về thư mục cha của workers/ (day09/lab/)
+    chroma_path = os.getenv("CHROMA_DB_PATH", "./chroma_db")
+    if not os.path.isabs(chroma_path):
+        chroma_path = str(Path(__file__).resolve().parent.parent / chroma_path.lstrip("./"))
+    collection_name = os.getenv("CHROMA_COLLECTION", "day09_docs")
+
+    client = chromadb.PersistentClient(path=chroma_path)
     try:
-        collection = client.get_collection("day09_docs")
+        collection = client.get_collection(collection_name)
     except Exception:
         # Auto-create nếu chưa có
         collection = client.get_or_create_collection(
-            "day09_docs",
+            collection_name,
             metadata={"hnsw:space": "cosine"}
         )
-        print(f"⚠️  Collection 'day09_docs' chưa có data. Chạy index script trong README trước.")
+        print(f"⚠️  Collection '{collection_name}' chưa có data. Chạy index script trong README trước.")
     return collection
 
 
