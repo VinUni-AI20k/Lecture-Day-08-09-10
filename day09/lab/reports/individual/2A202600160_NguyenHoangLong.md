@@ -105,4 +105,4 @@ Tôi sẽ implement **LLM-as-Judge scoring** cho answer quality — gọi LLM đ
 
 ---
 
-*File: `reports/individual/Long.md`*
+*File: reports/individual/2A202600160_NguyenHoangLong.md*
