@@ -179,11 +179,15 @@ def _resolve_policy_version(task_text: str, context_text: str) -> tuple[str, str
 
 def _infer_access_level(task_text: str) -> int:
     """Infer requested access level from task text."""
-    if "level 3" in task_text or "admin access" in task_text:
-        return 3
-    if "level 2" in task_text or "elevated access" in task_text:
+    import re
+    level_match = re.search(r'level\s*(\d)', task_text)
+    if level_match:
+        return int(level_match.group(1))
+    if "admin access" in task_text or "admin" in task_text:
+        return 4
+    if "elevated access" in task_text:
         return 2
-    return 1
+    return 3  # default elevated
 
 
 def _infer_requester_role(task_text: str) -> str:
@@ -411,7 +415,8 @@ def run(state: dict) -> dict:
     try:
         # Step 1: Nếu chưa có chunks, gọi MCP search_kb
         if not chunks and needs_tool:
-            mcp_result = _record_mcp_call(state, "search_kb", {"query": task, "top_k": 3})
+            tk = int(state.get("retrieval_top_k", 3) or 3)
+            mcp_result = _record_mcp_call(state, "search_kb", {"query": task, "top_k": tk})
             mcp_output = mcp_result.get("output", {})
 
             if isinstance(mcp_output, dict) and mcp_output.get("chunks"):
@@ -425,7 +430,11 @@ def run(state: dict) -> dict:
 
         # Step 3: Nếu cần thêm info từ MCP (e.g., ticket status), gọi get_ticket_info
         if needs_tool and _contains_any(task_lower, TICKET_LOOKUP_KEYWORDS):
-            _record_mcp_call(state, "get_ticket_info", {"ticket_id": "P1-LATEST"})
+            ticket_result = _record_mcp_call(state, "get_ticket_info", {"ticket_id": "P1-LATEST"})
+            out = (ticket_result.get("output") or {})
+            if isinstance(out, dict) and out.get("ticket_id"):
+                state["policy_result"] = dict(state.get("policy_result") or {})
+                state["policy_result"]["ticket_info"] = out
 
         # Step 4: Access policy check qua MCP
         if needs_tool and _contains_any(task_lower, ACCESS_PERMISSION_KEYWORDS):
@@ -434,7 +443,11 @@ def run(state: dict) -> dict:
                 "requester_role": _infer_requester_role(task_lower),
                 "is_emergency": _contains_any(task_lower, EMERGENCY_HINT_KEYWORDS),
             }
-            _record_mcp_call(state, "check_access_permission", access_input)
+            access_result = _record_mcp_call(state, "check_access_permission", access_input)
+            out = (access_result.get("output") or {})
+            if isinstance(out, dict) and not out.get("error"):
+                state["policy_result"] = dict(state.get("policy_result") or {})
+                state["policy_result"]["access_permission"] = out
 
         # Step 5: Create ticket theo explicit intent
         if needs_tool and _contains_any(task_lower, CREATE_TICKET_KEYWORDS):
@@ -445,16 +458,17 @@ def run(state: dict) -> dict:
         called_tools = [call.get("tool", "unknown") for call in mcp_calls]
         error_tools = [call.get("tool", "unknown") for call in mcp_calls if call.get("error")]
 
+        pr_final = state.get("policy_result") or {}
         worker_io["output"] = {
-            "policy_applies": policy_result["policy_applies"],
-            "exceptions_count": len(policy_result.get("exceptions_found", [])),
+            "policy_applies": pr_final.get("policy_applies"),
+            "exceptions_count": len(pr_final.get("exceptions_found") or []),
             "mcp_calls": len(mcp_calls),
             "mcp_tools": called_tools,
             "mcp_error_tools": error_tools,
         }
         state["history"].append(
-            f"[{WORKER_NAME}] policy_applies={policy_result['policy_applies']}, "
-            f"exceptions={len(policy_result.get('exceptions_found', []))}"
+            f"[{WORKER_NAME}] policy_applies={pr_final.get('policy_applies')}, "
+            f"exceptions={len(pr_final.get('exceptions_found') or [])}"
         )
         if called_tools:
             state["history"].append(f"[{WORKER_NAME}] tools_used={called_tools}")

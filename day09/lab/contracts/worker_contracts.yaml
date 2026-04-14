@@ -96,8 +96,8 @@ retrieval_worker:
     - "Score phải là float trong khoảng [0, 1]"
     - "Stateless: không đọc hoặc ghi state ngoài những gì được khai báo ở trên"
   actual_implementation:
-    status: "TODO Sprint 2"  # Update to "done" khi xong
-    notes: ""
+    status: "done"
+    notes: "Dense Chroma retrieval; LAB_ROOT chroma_db path; worker_io_logs"
 
 # ─────────────────────────────────────────────
 # Policy Tool Worker
@@ -166,8 +166,8 @@ policy_tool_worker:
     - "Phải ghi tên MCP tool đã gọi vào mcp_tools_used"
     - "Không được tự bịa policy rules không có trong tài liệu"
   actual_implementation:
-    status: "TODO Sprint 2"
-    notes: ""
+    status: "done"
+    notes: "MCP search_kb + get_ticket_info; rule-based exceptions"
 
 # ─────────────────────────────────────────────
 # Synthesis Worker
@@ -214,8 +214,8 @@ synthesis_worker:
     - "confidence < 0.4 → khuyến khích set hitl_triggered=True"
     - "Không được dùng kiến thức ngoài context được cung cấp"
   actual_implementation:
-    status: "TODO Sprint 2"
-    notes: ""
+    status: "done"
+    notes: "OpenAI/Gemini grounded; confidence heuristic"
 
 # ─────────────────────────────────────────────
 # MCP Server
@@ -270,5 +270,5 @@ mcp_server:
     - "list_tools() phải trả về đúng format MCP tool schema"
     - "Không được raise exception ra ngoài dispatch_tool()"
   actual_implementation:
-    status: "TODO Sprint 3"
-    notes: ""
+    status: "done"
+    notes: "dispatch_tool + list_tools in-process mock"

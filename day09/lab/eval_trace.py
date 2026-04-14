@@ -19,11 +19,21 @@ import os
 import sys
 import argparse
 from datetime import datetime
+from pathlib import Path
 from typing import Optional
+
+from dotenv import load_dotenv
+
+LAB_ROOT = os.path.dirname(os.path.abspath(__file__))
+load_dotenv(Path(LAB_ROOT) / ".env")
 
 # Import graph
 sys.path.insert(0, os.path.dirname(__file__))
 from graph import run_graph, save_trace
+
+DAY08_GRADING_AUTO = os.path.normpath(
+    os.path.join(LAB_ROOT, "..", "..", "day08", "lab", "results", "grading_auto.json")
+)
 
 
 # ─────────────────────────────────────────────
@@ -121,11 +131,11 @@ def run_grading_questions(questions_file: str = "data/grading_questions.json") -
                     "id": q_id,
                     "question": question_text,
                     "answer": result.get("final_answer", "PIPELINE_ERROR: no answer"),
-                    "sources": result.get("retrieved_sources", []),
+                    "sources": result.get("retrieved_sources", []) or result.get("sources", []),
                     "supervisor_route": result.get("supervisor_route", ""),
                     "route_reason": result.get("route_reason", ""),
                     "workers_called": result.get("workers_called", []),
-                    "mcp_tools_used": [t.get("tool") for t in result.get("mcp_tools_used", [])],
+                    "mcp_tools_used": [t.get("tool") if isinstance(t, dict) else str(t) for t in result.get("mcp_tools_used", [])],
                     "confidence": result.get("confidence", 0.0),
                     "hitl_triggered": result.get("hitl_triggered", False),
                     "latency_ms": result.get("latency_ms"),
@@ -185,7 +195,7 @@ def analyze_traces(traces_dir: str = "artifacts/traces") -> dict:
 
     traces = []
     for fname in trace_files:
-        with open(os.path.join(traces_dir, fname)) as f:
+        with open(os.path.join(traces_dir, fname), encoding="utf-8") as f:
             traces.append(json.load(f))
 
     # Compute metrics
@@ -235,6 +245,24 @@ def analyze_traces(traces_dir: str = "artifacts/traces") -> dict:
 # 4. Compare Single vs Multi Agent
 # ─────────────────────────────────────────────
 
+def _load_day08_grading_snapshot(path: str) -> dict:
+    """Đọc day08/lab/results/grading_auto.json (nếu có) để làm baseline so sánh."""
+    if not os.path.exists(path):
+        return {
+            "note": "Không tìm thấy file Day 08 — chạy lab Day 08 và tạo grading_auto.json",
+            "path": path,
+        }
+    with open(path, encoding="utf-8") as f:
+        data = json.load(f)
+    return {
+        "source": path,
+        "grading_total_raw": data.get("total_raw"),
+        "grading_max_raw": data.get("max_raw"),
+        "grading_projected_30_points": data.get("projected_30"),
+        "config": data.get("config"),
+    }
+
+
 def compare_single_vs_multi(
     multi_traces_dir: str = "artifacts/traces",
     day08_results_file: Optional[str] = None,
@@ -242,37 +270,28 @@ def compare_single_vs_multi(
     """
     So sánh Day 08 (single agent RAG) vs Day 09 (multi-agent).
 
-    TODO Sprint 4: Điền kết quả thực tế từ Day 08 vào day08_baseline.
-
     Returns:
         dict của comparison metrics
     """
     multi_metrics = analyze_traces(multi_traces_dir)
 
-    # TODO: Load Day 08 results nếu có
-    # Nếu không có, dùng baseline giả lập để format
-    day08_baseline = {
-        "total_questions": 15,
-        "avg_confidence": 0.0,          # TODO: Điền từ Day 08 eval.py
-        "avg_latency_ms": 0,            # TODO: Điền từ Day 08
-        "abstain_rate": "?",            # TODO: Điền từ Day 08
-        "multi_hop_accuracy": "?",      # TODO: Điền từ Day 08
-    }
+    d8_path = day08_results_file or DAY08_GRADING_AUTO
+    day08_baseline = _load_day08_grading_snapshot(d8_path)
 
-    if day08_results_file and os.path.exists(day08_results_file):
-        with open(day08_results_file) as f:
-            day08_baseline = json.load(f)
+    avg_conf = multi_metrics.get("avg_confidence", 0)
+    avg_lat = multi_metrics.get("avg_latency_ms", 0)
 
     comparison = {
         "generated_at": datetime.now().isoformat(),
         "day08_single_agent": day08_baseline,
         "day09_multi_agent": multi_metrics,
         "analysis": {
-            "routing_visibility": "Day 09 có route_reason cho từng câu → dễ debug hơn Day 08",
-            "latency_delta": "TODO: Điền delta latency thực tế",
-            "accuracy_delta": "TODO: Điền delta accuracy thực tế từ grading",
-            "debuggability": "Multi-agent: có thể test từng worker độc lập. Single-agent: không thể.",
-            "mcp_benefit": "Day 09 có thể extend capability qua MCP không cần sửa core. Day 08 phải hard-code.",
+            "routing_visibility": "Day 09 có supervisor_route + route_reason trong trace — không có trong Day 08 single-agent RAG.",
+            "latency_delta": f"Day 09 avg_latency_ms ≈ {avg_lat} (multi) — đo từ artifacts/traces; Day 08 không log cùng format.",
+            "accuracy_delta": "So khớp grading: dùng grading_total_raw / projected_30 từ Day 08 vs chạy --grading Day 09.",
+            "debuggability": "Multi-agent: test từng worker + MCP; single-agent: debug monolithic rag_answer.",
+            "mcp_benefit": "Day 09 có MCP tools (search_kb, get_ticket_info) trong policy path; Day 08 không có MCP boundary.",
+            "avg_confidence_day09": avg_conf,
         },
     }
 
@@ -315,6 +334,11 @@ def print_metrics(metrics: dict):
 
 
 if __name__ == "__main__":
+    if hasattr(sys.stdout, "reconfigure"):
+        try:
+            sys.stdout.reconfigure(encoding="utf-8")
+        except Exception:
+            pass
     parser = argparse.ArgumentParser(description="Day 09 Lab — Trace Evaluation")
     parser.add_argument("--grading", action="store_true", help="Run grading questions")
     parser.add_argument("--analyze", action="store_true", help="Analyze existing traces")

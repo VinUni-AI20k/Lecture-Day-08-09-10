@@ -1,0 +1,251 @@
+{
+  "task": "Store credit khi hoàn tiền có giá trị bao nhiêu so với tiền gốc?",
+  "route_reason": "policy/access/refund exception keywords — policy_tool uses MCP search_kb (not direct Chroma)",
+  "risk_high": false,
+  "needs_tool": true,
+  "hitl_triggered": false,
+  "retrieved_chunks": [
+    {
+      "text": "- Hoàn tiền qua phương thức thanh toán gốc: áp dụng trong 100% trường hợp đủ điều kiện.\n- Hoàn tiền qua credit nội bộ (store credit): khách hàng có thể chọn nhận store credit thay thế với giá trị 110% so với số tiền hoàn.",
+      "source": "policy_refund_v4.txt",
+      "score": 0.766,
+      "metadata": {
+        "effective_date": "2026-02-01",
+        "access": "internal",
+        "source": "policy_refund_v4.txt",
+        "department": "CS",
+        "source_file": "policy_refund_v4.txt",
+        "section": "Điều 5: Hình thức hoàn tiền"
+      }
+    },
+    {
+      "text": "Hoàn tiền — Điều kiện áp dụng:\nYêu cầu được gửi trong vòng 7 ngày kể từ thời điểm xác nhận đơn hàng.\n\nNgoại lệ không được hoàn tiền:\n- Sản phẩm thuộc danh mục hàng kỹ thuật số (license key, subscription).\n- Đơn hàng đã áp dụng mã giảm giá đặc biệt theo chương trình khuyến mãi Flash Sale.\n- Sản phẩm đã được kích hoạt hoặc đăng ký tài khoản.",
+      "source": "policy_refund_v4.txt",
+      "score": 0.5962,
+      "metadata": {
+        "department": "CS",
+        "source": "policy_refund_v4.txt",
+        "effective_date": "2026-02-01",
+        "source_file": "policy_refund_v4.txt",
+        "section": "Điều 3: Điều kiện áp dụng và ngoại lệ",
+        "access": "internal"
+      }
+    },
+    {
+      "text": "Tài liệu này quy định quy trình cấp phép truy cập vào các hệ thống nội bộ của công ty.\nÁp dụng cho tất cả nhân viên, contractor, và third-party vendor.",
+      "source": "access_control_sop.txt",
+      "score": 0.5412,
+      "metadata": {
+        "access": "internal",
+        "section": "Section 1: Phạm vi và mục đích",
+        "department": "IT Security",
+        "effective_date": "2026-01-01",
+        "source_file": "access_control_sop.txt",
+        "source": "access_control_sop.txt"
+      }
+    },
+    {
+      "text": "Khách hàng được quyền yêu cầu hoàn tiền khi đáp ứng đủ các điều kiện sau:\n- Sản phẩm bị lỗi do nhà sản xuất, không phải do người dùng.\n- Yêu cầu được gửi trong vòng 7 ngày làm việc kể từ thời điểm xác nhận đơn hàng.\n- Đơn hàng chưa được sử dụng hoặc chưa bị mở seal.",
+      "source": "policy_refund_v4.txt",
+      "score": 0.5342,
+      "metadata": {
+        "source_file": "policy_refund_v4.txt",
+        "section": "Điều 2: Điều kiện được hoàn tiền",
+        "source": "policy_refund_v4.txt",
+        "effective_date": "2026-02-01",
+        "access": "internal",
+        "department": "CS"
+      }
+    },
+    {
+      "text": "Bước 1: Nhân viên gửi yêu cầu nghỉ phép qua hệ thống HR Portal (https://hr.company.internal) ít nhất 3 ngày làm việc trước ngày nghỉ.\nBước 2: Line Manager phê duyệt hoặc từ chối trong vòng 1 ngày làm việc.\nBước 3: Nhân viên nhận thông báo qua email sau khi được phê duyệt.\n\nTrường hợp khẩn cấp: Có thể gửi yêu cầu muộn hơn nhưng phải được Line Manager đồng ý qua tin nhắn trực tiếp.",
+      "source": "hr_leave_policy.txt",
+      "score": 0.5209,
+      "metadata": {
+        "access": "internal",
+        "section": "Phần 2: Quy trình xin nghỉ phép",
+        "effective_date": "2026-01-01",
+        "source": "hr_leave_policy.txt",
+        "source_file": "hr_leave_policy.txt",
+        "department": "HR"
+      }
+    }
+  ],
+  "retrieved_sources": [
+    "policy_refund_v4.txt",
+    "access_control_sop.txt",
+    "hr_leave_policy.txt"
+  ],
+  "policy_result": {
+    "policy_applies": false,
+    "policy_name": "refund_policy_v4",
+    "exceptions_found": [
+      {
+        "type": "flash_sale_exception",
+        "rule": "Đơn hàng Flash Sale không được hoàn tiền (Điều 3, chính sách v4).",
+        "source": "policy_refund_v4.txt"
+      },
+      {
+        "type": "digital_product_exception",
+        "rule": "Sản phẩm kỹ thuật số (license key, subscription) không được hoàn tiền (Điều 3).",
+        "source": "policy_refund_v4.txt"
+      }
+    ],
+    "source": [
+      "policy_refund_v4.txt",
+      "access_control_sop.txt",
+      "hr_leave_policy.txt"
+    ],
+    "policy_version_note": "",
+    "explanation": "Analyzed via rule-based policy check. TODO: upgrade to LLM-based analysis."
+  },
+  "mcp_tools_used": [
+    {
+      "tool": "search_kb",
+      "input": {
+        "query": "Store credit khi hoàn tiền có giá trị bao nhiêu so với tiền gốc?",
+        "top_k": 5
+      },
+      "output": {
+        "chunks": [
+          {
+            "text": "- Hoàn tiền qua phương thức thanh toán gốc: áp dụng trong 100% trường hợp đủ điều kiện.\n- Hoàn tiền qua credit nội bộ (store credit): khách hàng có thể chọn nhận store credit thay thế với giá trị 110% so với số tiền hoàn.",
+            "source": "policy_refund_v4.txt",
+            "score": 0.766,
+            "metadata": {
+              "effective_date": "2026-02-01",
+              "access": "internal",
+              "source": "policy_refund_v4.txt",
+              "department": "CS",
+              "source_file": "policy_refund_v4.txt",
+              "section": "Điều 5: Hình thức hoàn tiền"
+            }
+          },
+          {
+            "text": "Hoàn tiền — Điều kiện áp dụng:\nYêu cầu được gửi trong vòng 7 ngày kể từ thời điểm xác nhận đơn hàng.\n\nNgoại lệ không được hoàn tiền:\n- Sản phẩm thuộc danh mục hàng kỹ thuật số (license key, subscription).\n- Đơn hàng đã áp dụng mã giảm giá đặc biệt theo chương trình khuyến mãi Flash Sale.\n- Sản phẩm đã được kích hoạt hoặc đăng ký tài khoản.",
+            "source": "policy_refund_v4.txt",
+            "score": 0.5962,
+            "metadata": {
+              "department": "CS",
+              "source": "policy_refund_v4.txt",
+              "effective_date": "2026-02-01",
+              "source_file": "policy_refund_v4.txt",
+              "section": "Điều 3: Điều kiện áp dụng và ngoại lệ",
+              "access": "internal"
+            }
+          },
+          {
+            "text": "Tài liệu này quy định quy trình cấp phép truy cập vào các hệ thống nội bộ của công ty.\nÁp dụng cho tất cả nhân viên, contractor, và third-party vendor.",
+            "source": "access_control_sop.txt",
+            "score": 0.5412,
+            "metadata": {
+              "access": "internal",
+              "section": "Section 1: Phạm vi và mục đích",
+              "department": "IT Security",
+              "effective_date": "2026-01-01",
+              "source_file": "access_control_sop.txt",
+              "source": "access_control_sop.txt"
+            }
+          },
+          {
+            "text": "Khách hàng được quyền yêu cầu hoàn tiền khi đáp ứng đủ các điều kiện sau:\n- Sản phẩm bị lỗi do nhà sản xuất, không phải do người dùng.\n- Yêu cầu được gửi trong vòng 7 ngày làm việc kể từ thời điểm xác nhận đơn hàng.\n- Đơn hàng chưa được sử dụng hoặc chưa bị mở seal.",
+            "source": "policy_refund_v4.txt",
+            "score": 0.5342,
+            "metadata": {
+              "source_file": "policy_refund_v4.txt",
+              "section": "Điều 2: Điều kiện được hoàn tiền",
+              "source": "policy_refund_v4.txt",
+              "effective_date": "2026-02-01",
+              "access": "internal",
+              "department": "CS"
+            }
+          },
+          {
+            "text": "Bước 1: Nhân viên gửi yêu cầu nghỉ phép qua hệ thống HR Portal (https://hr.company.internal) ít nhất 3 ngày làm việc trước ngày nghỉ.\nBước 2: Line Manager phê duyệt hoặc từ chối trong vòng 1 ngày làm việc.\nBước 3: Nhân viên nhận thông báo qua email sau khi được phê duyệt.\n\nTrường hợp khẩn cấp: Có thể gửi yêu cầu muộn hơn nhưng phải được Line Manager đồng ý qua tin nhắn trực tiếp.",
+            "source": "hr_leave_policy.txt",
+            "score": 0.5209,
+            "metadata": {
+              "access": "internal",
+              "section": "Phần 2: Quy trình xin nghỉ phép",
+              "effective_date": "2026-01-01",
+              "source": "hr_leave_policy.txt",
+              "source_file": "hr_leave_policy.txt",
+              "department": "HR"
+            }
+          }
+        ],
+        "sources": [
+          "access_control_sop.txt",
+          "hr_leave_policy.txt",
+          "policy_refund_v4.txt"
+        ],
+        "total_found": 5
+      },
+      "error": null,
+      "timestamp": "2026-04-14T17:01:13.265787"
+    }
+  ],
+  "final_answer": "Store credit khi hoàn tiền có giá trị 110% so với số tiền gốc mà khách hàng đã thanh toán. Khách hàng có thể chọn nhận store credit thay thế trong trường hợp đủ điều kiện hoàn tiền [policy_refund_v4.txt]. \n\nĐiều kiện để được hoàn tiền bao gồm việc yêu cầu phải được gửi trong vòng 7 ngày kể từ thời điểm xác nhận đơn hàng, và sản phẩm phải đáp ứng các tiêu chí nhất định [policy_refund_v4.txt]. \n\nNgoài ra, có một số ngoại lệ không được hoàn tiền, bao gồm sản phẩm thuộc danh mục hàng kỹ thuật số (license key, subscription) và đơn hàng đã áp dụng mã giảm giá đặc biệt theo chương trình khuyến mãi Flash Sale [policy_refund_v4.txt].",
+  "sources": [
+    "access_control_sop.txt",
+    "hr_leave_policy.txt",
+    "policy_refund_v4.txt"
+  ],
+  "confidence": 0.67,
+  "history": [
+    "[supervisor] received task: Store credit khi hoàn tiền có giá trị bao nhiêu so với tiền gốc?",
+    "[supervisor] route=policy_tool_worker reason=policy/access/refund exception keywords — policy_tool uses MCP search_kb (not direct Chroma)",
+    "[policy_tool_worker] called MCP search_kb",
+    "[policy_tool_worker] policy_applies=False, exceptions=2",
+    "[policy_tool_worker] tools_used=['search_kb']",
+    "[synthesis_worker] answer generated, confidence=0.67, sources=['access_control_sop.txt', 'hr_leave_policy.txt', 'policy_refund_v4.txt']",
+    "[graph] completed in 4427ms"
+  ],
+  "workers_called": [
+    "policy_tool_worker",
+    "synthesis_worker"
+  ],
+  "supervisor_route": "policy_tool_worker",
+  "latency_ms": 4427,
+  "run_id": "run_20260414_170113",
+  "worker_io_logs": [
+    {
+      "worker": "policy_tool_worker",
+      "input": {
+        "task": "Store credit khi hoàn tiền có giá trị bao nhiêu so với tiền gốc?",
+        "chunks_count": 0,
+        "needs_tool": true
+      },
+      "output": {
+        "policy_applies": false,
+        "exceptions_count": 2,
+        "mcp_calls": 1,
+        "mcp_tools": [
+          "search_kb"
+        ],
+        "mcp_error_tools": []
+      },
+      "error": null
+    },
+    {
+      "worker": "synthesis_worker",
+      "input": {
+        "task": "Store credit khi hoàn tiền có giá trị bao nhiêu so với tiền gốc?",
+        "chunks_count": 5,
+        "has_policy": true
+      },
+      "output": {
+        "answer_length": 632,
+        "sources": [
+          "access_control_sop.txt",
+          "hr_leave_policy.txt",
+          "policy_refund_v4.txt"
+        ],
+        "confidence": 0.67
+      },
+      "error": null
+    }
+  ],
+  "retrieval_top_k": 5,
+  "question_id": "q10"
+}

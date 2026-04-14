@@ -370,18 +370,20 @@ def build_grounded_prompt(query: str, context_block: str) -> str:
 
 1) Use ONLY information from the numbered context snippets below. Do NOT use any outside knowledge.
 2) **Never invent specifics.** Do NOT fabricate numbers, dates, names, thresholds, or procedures that are not explicitly stated in the snippets — even if they seem plausible.
-3) **Stay focused but complete.** Answer exactly what the question asks — include ALL details relevant to the question (approvers, deadlines, requirements, contact channels, conditions) but do NOT add tangential information not asked about (e.g., do not list version history changes beyond the one being asked about).
+3) **Stay focused but complete.** Answer exactly what the question asks — include ALL details relevant to the question (approvers, deadlines, requirements, contact channels, conditions) but do NOT add tangential information not asked about.
 4) **Scope and applicability questions:** If a snippet defines a scope (e.g., "applies to all employees, contractors, and third-party vendors"), combine that scope with relevant detail sections. Do NOT abstain when scope + detail together answer the question.
 5) **Abstain** ONLY when genuinely no snippet contains any relevant fact. Then reply exactly:
     "{ABSTAIN_ANSWER}"
    Before abstaining, re-check ALL snippets for indirect evidence (scope declarations, general rules).
-6) **Citation rules (critical):**
-   - Every factual claim MUST have a bracket reference [n] matching the snippet number it comes from.
-   - Each fact must cite the SPECIFIC snippet that contains it — do NOT attribute all facts to [1].
-   - When facts come from DIFFERENT snippets, cite EACH separately (e.g., "VPN is required [2] and max 2 devices [5]").
-   - Cross-document questions: if information spans multiple documents/snippets, you MUST cite all relevant snippet numbers.
-7) **Include all actionable details** from the snippets: URLs, phone extensions (ext.), portal names, hotline numbers, email addresses, and specific procedures. For process/procedure questions, also mention relevant contact channels from the context.
-8) When citing important policies, mention the source document name or section (e.g., "theo Điều 5 của chính sách hoàn tiền [1]") so the citation is traceable.
+6) **Citation rules (MANDATORY — follow exactly):**
+   - Every factual claim MUST have a bracket reference [n] matching the snippet number.
+   - Each fact must cite the SPECIFIC snippet that contains it — NEVER attribute all facts to [1].
+   - When facts come from DIFFERENT snippets/documents, cite EACH separately (e.g., "VPN là bắt buộc [2] và tối đa 2 thiết bị [5]").
+   - Cross-document questions: you MUST cite ALL relevant snippet numbers from ALL different source documents.
+   - ALWAYS include the source document name or article/section in your citation. Format: "theo [document/section name] [n]" — for example: "theo Điều 5 chính sách hoàn tiền [1]", "theo IT Helpdesk FAQ [3]", "theo HR Leave Policy [2]".
+   - If information spans 2+ documents, your answer MUST contain citation references to snippets from EACH document separately.
+7) **Include ALL actionable details** from the snippets: URLs, phone extensions (ext.), portal names, hotline numbers, email addresses, software names, and specific procedures. For process/procedure questions, scan ALL snippets for relevant contact channels (hotlines, ext. numbers, on-call info) and include them.
+8) When mentioning optional vs mandatory items, explicitly state whether it is "tùy chọn" (optional) or "bắt buộc" (mandatory).
 9) Be concise and factual. Use the same language as the user's question (Vietnamese or English).
 
 Question: {query}
@@ -441,7 +443,7 @@ def call_llm(prompt: str) -> str:
         model=LLM_MODEL,
         messages=[{"role": "user", "content": prompt}],
         temperature=0,
-        max_tokens=512,
+        max_tokens=768,
     )
     tel = get_telemetry()
     if tel is not None:
@@ -781,10 +783,10 @@ def rag_answer_impl(
         return out
 
     # --- Hardened abstain: kiểm tra context quá yếu trước khi gọi LLM ---
-    # Chỉ áp dụng cho dense mode (cosine score 0..1).
-    # Hybrid (RRF) và sparse (BM25) có scale khác nên bỏ qua check này.
+    # Chỉ áp dụng cho dense mode KHÔNG rerank (cosine score 0..1).
+    # Hybrid (RRF), sparse (BM25), và rerank (cross-encoder) có scale khác.
     max_score = max((float(c.get("score", 0.0)) for c in candidates), default=0.0)
-    _apply_weak_check = retrieval_mode == "dense"
+    _apply_weak_check = retrieval_mode == "dense" and not use_rerank
     if _apply_weak_check and max_score < WEAK_CONTEXT_SCORE_THRESHOLD:
         weak_detail = (
             f"Max chunk score {max_score:.4f} < ngưỡng {WEAK_CONTEXT_SCORE_THRESHOLD} "

@@ -17,8 +17,12 @@ Gọi độc lập để test:
 
 import hashlib
 import os
+import sys
 from pathlib import Path
 from typing import Callable, List, Optional
+
+LAB_ROOT = Path(__file__).resolve().parent.parent
+CHROMA_PATH = str(LAB_ROOT / "chroma_db")
 
 # ─────────────────────────────────────────────
 # Worker Contract (xem contracts/worker_contracts.yaml)
@@ -30,7 +34,7 @@ WORKER_NAME = "retrieval_worker"
 DEFAULT_TOP_K = 3
 COLLECTION_NAME = "day09_docs"
 CHROMA_DB_PATH = str(Path(__file__).resolve().parents[1] / "chroma_db")
-EMBEDDING_PROVIDER = os.getenv("EMBEDDING_PROVIDER", "openai").strip().lower()
+EMBEDDING_PROVIDER = os.getenv("EMBEDDING_PROVIDER", "local").strip().lower()
 OPENAI_EMBEDDING_MODEL = os.getenv("OPENAI_EMBEDDING_MODEL", "text-embedding-3-small")
 
 _EMBED_FN_CACHE: Optional[Callable[[str], List[float]]] = None
@@ -91,7 +95,8 @@ def _build_fallback_embed_fn() -> Callable[[str], List[float]]:
 def _get_embedding_fn() -> Callable[[str], List[float]]:
     """
     Trả về embedding function.
-    TODO Sprint 1: Implement dùng OpenAI hoặc Sentence Transformers.
+    MUST match build_index.py: all-MiniLM-L6-v2 (384-dim).
+    Default provider = "local" to avoid dimension mismatch with index.
     """
     global _EMBED_FN_CACHE
     if _EMBED_FN_CACHE is not None:
@@ -99,7 +104,7 @@ def _get_embedding_fn() -> Callable[[str], List[float]]:
 
     provider = EMBEDDING_PROVIDER
     if provider not in {"openai", "local", "auto"}:
-        provider = "openai"
+        provider = "local"
 
     openai_fn = _build_openai_embed_fn
     local_fn = _build_local_embed_fn
@@ -122,8 +127,7 @@ def _get_collection():
     TODO Sprint 2: Đảm bảo collection đã được build từ Step 3 trong README.
     """
     import chromadb
-
-    client = chromadb.PersistentClient(path=CHROMA_DB_PATH)
+    client = chromadb.PersistentClient(path=CHROMA_PATH)
     try:
         collection = client.get_collection(COLLECTION_NAME)
     except Exception:

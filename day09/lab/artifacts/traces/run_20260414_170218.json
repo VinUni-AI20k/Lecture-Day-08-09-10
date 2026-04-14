@@ -1,0 +1,157 @@
+{
+  "task": "Ticket P1 không được phản hồi sau 10 phút. Hệ thống tự động làm gì?",
+  "route_reason": "SLA / P1 / IT ops keywords — retrieval + synthesis",
+  "risk_high": false,
+  "needs_tool": false,
+  "hitl_triggered": false,
+  "retrieved_chunks": [
+    {
+      "text": "Q: Hộp thư đến đầy, phải làm gì?\nA: Xóa email cũ hoặc yêu cầu tăng dung lượng qua ticket IT-ACCESS. Dung lượng tiêu chuẩn là 50GB.\n\nQ: Tôi không nhận được email từ bên ngoài?\nA: Kiểm tra thư mục Spam trước. Nếu vẫn không có, tạo ticket P2 kèm địa chỉ email gửi và thời gian gửi.",
+      "source": "it_helpdesk_faq.txt",
+      "score": 0.7214,
+      "metadata": {
+        "effective_date": "2026-01-20",
+        "section": "Section 5: Email và lịch",
+        "access": "internal",
+        "department": "IT",
+        "source_file": "it_helpdesk_faq.txt",
+        "source": "it_helpdesk_faq.txt"
+      }
+    },
+    {
+      "text": "Ticket P1:\n- Phản hồi ban đầu (first response): 15 phút kể từ khi ticket được tạo.\n- Xử lý và khắc phục (resolution): 4 giờ.\n- Escalation: Tự động escalate lên Senior Engineer nếu không có phản hồi trong 10 phút.\n- Thông báo stakeholder: Ngay khi nhận ticket, update mỗi 30 phút cho đến khi resolve.\n\nTicket P2:\n- Phản hồi ban đầu: 2 giờ.\n- Xử lý và khắc phục: 1 ngày làm việc.\n- Escalation: Tự động escalate sau 90 phút không có phản hồi.\n\nTicket P3:\n- Phản hồi ban đầu: 1 ngày làm việc.\n- Xử lý và khắc phục: 5 ngày làm việc.\n\nTicket P4:\n- Phản hồi ban đầu: 3 ngày làm việc.\n- Xử lý và khắc phục: Theo sprint cycle (thông thường 2-4 tuần).",
+      "source": "sla_p1_2026.txt",
+      "score": 0.714,
+      "metadata": {
+        "source_file": "sla_p1_2026.txt",
+        "source": "sla_p1_2026.txt",
+        "access": "internal",
+        "department": "IT",
+        "effective_date": "2026-01-15",
+        "section": "Phần 2: SLA theo mức độ ưu tiên"
+      }
+    },
+    {
+      "text": "Hoàn tiền — Điều kiện áp dụng:\nYêu cầu được gửi trong vòng 7 ngày kể từ thời điểm xác nhận đơn hàng.\n\nNgoại lệ không được hoàn tiền:\n- Sản phẩm thuộc danh mục hàng kỹ thuật số (license key, subscription).\n- Đơn hàng đã áp dụng mã giảm giá đặc biệt theo chương trình khuyến mãi Flash Sale.\n- Sản phẩm đã được kích hoạt hoặc đăng ký tài khoản.",
+      "source": "policy_refund_v4.txt",
+      "score": 0.6498,
+      "metadata": {
+        "effective_date": "2026-02-01",
+        "source": "policy_refund_v4.txt",
+        "source_file": "policy_refund_v4.txt",
+        "access": "internal",
+        "department": "CS",
+        "section": "Điều 3: Điều kiện áp dụng và ngoại lệ"
+      }
+    },
+    {
+      "text": "Q: Laptop mới được cấp sau bao lâu khi vào công ty?\nA: Laptop được cấp trong ngày onboarding đầu tiên. Nếu có vấn đề, liên hệ HR hoặc IT Admin.\n\nQ: Laptop bị hỏng phải báo cáo như thế nào?\nA: Tạo ticket P2 hoặc P3 tùy mức độ nghiêm trọng. Mang thiết bị đến IT Room (tầng 3) để kiểm tra.",
+      "source": "it_helpdesk_faq.txt",
+      "score": 0.635,
+      "metadata": {
+        "access": "internal",
+        "source": "it_helpdesk_faq.txt",
+        "department": "IT",
+        "effective_date": "2026-01-20",
+        "section": "Section 4: Thiết bị và phần cứng",
+        "source_file": "it_helpdesk_faq.txt"
+      }
+    },
+    {
+      "text": "Q: Tôi quên mật khẩu, phải làm gì?\nA: Truy cập https://sso.company.internal/reset hoặc liên hệ Helpdesk qua ext. 9000. Mật khẩu mới sẽ được gửi qua email công ty trong vòng 5 phút.\n\nQ: Tài khoản bị khóa sau bao nhiêu lần đăng nhập sai?\nA: Tài khoản bị khóa sau 5 lần đăng nhập sai liên tiếp. Để mở khóa, liên hệ IT Helpdesk hoặc tự reset qua portal SSO.\n\nQ: Mật khẩu cần thay đổi định kỳ không?\nA: Có. Mật khẩu phải được thay đổi mỗi 90 ngày. Hệ thống sẽ nhắc nhở 7 ngày trước khi hết hạn.",
+      "source": "it_helpdesk_faq.txt",
+      "score": 0.6349,
+      "metadata": {
+        "effective_date": "2026-01-20",
+        "department": "IT",
+        "access": "internal",
+        "section": "Section 1: Tài khoản và mật khẩu",
+        "source_file": "it_helpdesk_faq.txt",
+        "source": "it_helpdesk_faq.txt"
+      }
+    },
+    {
+      "text": "Escalation chỉ áp dụng khi cần thay đổi quyền hệ thống ngoài quy trình thông thường.\nVí dụ: Khẩn cấp trong sự cố P1, cần cấp quyền tạm thời để fix incident.\n\nQuy trình escalation khẩn cấp:\n1. On-call IT Admin có thể cấp quyền tạm thời (max 24 giờ) sau khi được Tech Lead phê duyệt bằng lời.\n2. Sau 24 giờ, phải có ticket chính thức hoặc quyền bị thu hồi tự động.\n3. Mọi quyền tạm thời phải được ghi log vào hệ thống Security Audit.",
+      "source": "access_control_sop.txt",
+      "score": 0.6323,
+      "metadata": {
+        "access": "internal",
+        "department": "IT Security",
+        "section": "Section 4: Escalation khi cần thay đổi quyền hệ thống",
+        "effective_date": "2026-01-01",
+        "source_file": "access_control_sop.txt",
+        "source": "access_control_sop.txt"
+      }
+    }
+  ],
+  "retrieved_sources": [
+    "access_control_sop.txt",
+    "it_helpdesk_faq.txt",
+    "policy_refund_v4.txt",
+    "sla_p1_2026.txt"
+  ],
+  "policy_result": {},
+  "mcp_tools_used": [],
+  "final_answer": "Khi một ticket P1 không được phản hồi sau 10 phút, hệ thống sẽ tự động escalate lên Senior Engineer. Điều này được quy định trong tài liệu SLA cho ticket P1, trong đó nêu rõ rằng việc escalation sẽ diễn ra nếu không có phản hồi trong khoảng thời gian này [sla_p1_2026.txt].",
+  "sources": [
+    "policy_refund_v4.txt",
+    "access_control_sop.txt",
+    "it_helpdesk_faq.txt",
+    "sla_p1_2026.txt"
+  ],
+  "confidence": 0.77,
+  "history": [
+    "[supervisor] received task: Ticket P1 không được phản hồi sau 10 phút. Hệ thống tự động làm gì?",
+    "[supervisor] route=retrieval_worker reason=SLA / P1 / IT ops keywords — retrieval + synthesis",
+    "[retrieval_worker] retrieved 6 chunks from ['access_control_sop.txt', 'it_helpdesk_faq.txt', 'policy_refund_v4.txt', 'sla_p1_2026.txt']",
+    "[synthesis_worker] answer generated, confidence=0.77, sources=['policy_refund_v4.txt', 'access_control_sop.txt', 'it_helpdesk_faq.txt', 'sla_p1_2026.txt']",
+    "[graph] completed in 2403ms"
+  ],
+  "workers_called": [
+    "retrieval_worker",
+    "synthesis_worker"
+  ],
+  "supervisor_route": "retrieval_worker",
+  "latency_ms": 2403,
+  "run_id": "run_20260414_170218",
+  "worker_io_logs": [
+    {
+      "worker": "retrieval_worker",
+      "input": {
+        "task": "Ticket P1 không được phản hồi sau 10 phút. Hệ thống tự động làm gì?",
+        "top_k": 6
+      },
+      "output": {
+        "chunks_count": 6,
+        "sources": [
+          "access_control_sop.txt",
+          "it_helpdesk_faq.txt",
+          "policy_refund_v4.txt",
+          "sla_p1_2026.txt"
+        ]
+      },
+      "error": null
+    },
+    {
+      "worker": "synthesis_worker",
+      "input": {
+        "task": "Ticket P1 không được phản hồi sau 10 phút. Hệ thống tự động làm gì?",
+        "chunks_count": 6,
+        "has_policy": false
+      },
+      "output": {
+        "answer_length": 273,
+        "sources": [
+          "policy_refund_v4.txt",
+          "access_control_sop.txt",
+          "it_helpdesk_faq.txt",
+          "sla_p1_2026.txt"
+        ],
+        "confidence": 0.77
+      },
+      "error": null
+    }
+  ],
+  "retrieval_top_k": 6,
+  "question_id": "q06"
+}

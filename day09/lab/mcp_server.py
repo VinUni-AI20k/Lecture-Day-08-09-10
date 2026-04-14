@@ -29,8 +29,16 @@ Chạy thử:
 """
 
 import copy
+import os
+import sys
+import json
 from datetime import datetime
+from pathlib import Path
 from typing import Any, Dict, List, Optional
+
+_LAB = Path(__file__).resolve().parent
+if str(_LAB) not in sys.path:
+    sys.path.insert(0, str(_LAB))
 
 
 # ─────────────────────────────────────────────
@@ -87,7 +95,7 @@ TOOL_SCHEMAS = {
         "inputSchema": {
             "type": "object",
             "properties": {
-                "access_level": {"type": "integer", "description": "Level cần cấp (1, 2, hoặc 3)"},
+                "access_level": {"type": "integer", "description": "Level cần cấp (1, 2, 3, hoặc 4)"},
                 "requester_role": {"type": "string", "description": "Vai trò của người yêu cầu"},
                 "is_emergency": {"type": "boolean", "description": "Có phải khẩn cấp không", "default": False},
             },
@@ -298,7 +306,14 @@ ACCESS_RULES = {
     3: {
         "required_approvers": ["Line Manager", "IT Admin", "IT Security"],
         "emergency_can_bypass": False,
-        "note": "Admin access — không có emergency bypass",
+        "note": "Elevated access — không có emergency bypass",
+    },
+    4: {
+        "required_approvers": ["IT Manager", "CISO"],
+        "emergency_can_bypass": False,
+        "processing_days": 5,
+        "additional_requirements": "Training bắt buộc về security policy",
+        "note": "Admin Access — phê duyệt IT Manager + CISO, 5 ngày làm việc, training bắt buộc",
     },
 }
 
@@ -318,7 +333,7 @@ def tool_check_access_permission(access_level: int, requester_role: str, is_emer
 
     rule = ACCESS_RULES.get(access_level)
     if not rule:
-        return {"error": f"Access level {access_level} không hợp lệ. Levels: 1, 2, 3."}
+        return {"error": f"Access level {access_level} không hợp lệ. Levels: 1, 2, 3, 4."}
 
     can_grant = True
     notes = []
@@ -333,7 +348,7 @@ def tool_check_access_permission(access_level: int, requester_role: str, is_emer
         can_grant = False
         notes.append("Contractor không được cấp trực tiếp Level 3; cần quy trình escalate qua nhân sự nội bộ.")
 
-    return {
+    result = {
         "access_level": access_level,
         "requester_role": requester_role,
         "can_grant": can_grant,
@@ -343,6 +358,14 @@ def tool_check_access_permission(access_level: int, requester_role: str, is_emer
         "notes": notes,
         "source": "access_control_sop.txt",
     }
+
+    # Include processing time and additional requirements if available
+    if rule.get("processing_days"):
+        result["processing_days"] = rule["processing_days"]
+    if rule.get("additional_requirements"):
+        result["additional_requirements"] = rule["additional_requirements"]
+
+    return result
 
 
 def tool_create_ticket(priority: str, title: str, description: str = "") -> dict:
