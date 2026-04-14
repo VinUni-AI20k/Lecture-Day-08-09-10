@@ -21,6 +21,7 @@ from typing import TypedDict, Literal, Optional
 # 1. Shared State — dữ liệu đi xuyên toàn graph
 # ─────────────────────────────────────────────
 
+
 class AgentState(TypedDict):
     # Input
     task: str                           # Câu hỏi đầu vào từ user
@@ -87,7 +88,8 @@ def supervisor_node(state: AgentState) -> AgentState:
     TODO Sprint 1: Implement routing logic dựa vào task keywords.
     """
     task = state["task"].lower()
-    state["history"].append(f"[supervisor] received task: {state['task'][:80]}")
+    state["history"].append(
+        f"[supervisor] received task: {state['task'][:80]}")
 
     # --- TODO: Implement routing logic ---
     # Gợi ý:
@@ -103,7 +105,8 @@ def supervisor_node(state: AgentState) -> AgentState:
     risk_high = False
 
     # Ví dụ routing cơ bản — nhóm phát triển thêm:
-    policy_keywords = ["hoàn tiền", "refund", "flash sale", "license", "cấp quyền", "access", "level 3"]
+    policy_keywords = ["hoàn tiền", "refund", "flash sale",
+                       "license", "cấp quyền", "access level", "level 3"]
     risk_keywords = ["emergency", "khẩn cấp", "2am", "không rõ", "err-"]
 
     if any(kw in task for kw in policy_keywords):
@@ -115,8 +118,14 @@ def supervisor_node(state: AgentState) -> AgentState:
         risk_high = True
         route_reason += " | risk_high flagged"
 
+    # Specific routing for P1 and SLA (retrieval is preferred for standard retrieval tasks)
+    retrieval_keywords = ["p1", "escalation", "sla", "ticket"]
+    if any(kw in task for kw in retrieval_keywords) and route == "retrieval_worker":
+        route = "retrieval_worker"
+        route_reason = "task contains P1/SLA/Ticket keyword -> retrieval preferred"
+
     # Human review override
-    if risk_high and "err-" in task:
+    if risk_high and ("err-" in task or "không rõ" in task):
         route = "human_review"
         route_reason = "unknown error code + risk_high → human review"
 
@@ -124,7 +133,8 @@ def supervisor_node(state: AgentState) -> AgentState:
     state["route_reason"] = route_reason
     state["needs_tool"] = needs_tool
     state["risk_high"] = risk_high
-    state["history"].append(f"[supervisor] route={route} reason={route_reason}")
+    state["history"].append(
+        f"[supervisor] route={route} reason={route_reason}")
 
     return state
 
@@ -155,7 +165,8 @@ def human_review_node(state: AgentState) -> AgentState:
     breakpoint nếu dùng LangGraph.
     """
     state["hitl_triggered"] = True
-    state["history"].append("[human_review] HITL triggered — awaiting human input")
+    state["history"].append(
+        "[human_review] HITL triggered — awaiting human input")
     state["workers_called"].append("human_review")
 
     # Placeholder: tự động approve để pipeline tiếp tục
@@ -189,10 +200,12 @@ def retrieval_worker_node(state: AgentState) -> AgentState:
 
     # Placeholder output để test graph chạy được
     state["retrieved_chunks"] = [
-        {"text": "SLA P1: phản hồi 15 phút, xử lý 4 giờ.", "source": "sla_p1_2026.txt", "score": 0.92}
+        {"text": "SLA P1: phản hồi 15 phút, xử lý 4 giờ.",
+            "source": "sla_p1_2026.txt", "score": 0.92}
     ]
     state["retrieved_sources"] = ["sla_p1_2026.txt"]
-    state["history"].append(f"[retrieval_worker] retrieved {len(state['retrieved_chunks'])} chunks")
+    state["history"].append(
+        f"[retrieval_worker] retrieved {len(state['retrieved_chunks'])} chunks")
     return state
 
 
@@ -225,7 +238,8 @@ def synthesis_worker_node(state: AgentState) -> AgentState:
     state["final_answer"] = f"[PLACEHOLDER] Câu trả lời được tổng hợp từ {len(chunks)} chunks."
     state["sources"] = sources
     state["confidence"] = 0.75
-    state["history"].append(f"[synthesis_worker] answer generated, confidence={state['confidence']}")
+    state["history"].append(
+        f"[synthesis_worker] answer generated, confidence={state['confidence']}")
     return state
 
 
@@ -271,7 +285,8 @@ def build_graph():
         state = synthesis_worker_node(state)
 
         state["latency_ms"] = int((time.time() - start) * 1000)
-        state["history"].append(f"[graph] completed in {state['latency_ms']}ms")
+        state["history"].append(
+            f"[graph] completed in {state['latency_ms']}ms")
         return state
 
     return run
