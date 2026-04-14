@@ -18,7 +18,14 @@
       "Bash(npm run lint)",
       "Bash(npm run dev:*)",
       "Bash(git fetch:*)",
-      "Bash(git log:*)"
+      "Bash(git log:*)",
+      "Bash(test:*)",
+      "Bash(git push:*)",
+      "Bash(git remote set-url:*)",
+      "Bash(python graph.py:*)",
+      "Bash(python:*)",
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nfix\\(day09\\): add multi-query retrieval to fix gq08 partial → full\n\ngq08 asked about both \"nghỉ phép năm\" \\(annual leave 3-day notice\\) and\n\"nghỉ ốm\" \\(sick leave 3-day medical docs\\). The critical procedure chunk\nwas at retrieval position 11 \\(score 0.5395\\), unreachable with top_k=5.\n\nAdded _extract_sub_queries\\(\\) in retrieval.py that detects multi-topic\nHR leave questions and generates focused sub-queries, merging results\nwith deduplication. gq08 confidence: 0.30 → 0.76. No regression on\ngq07 \\(abstain preserved\\) or gq09.\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n\\)\")"
     ]
   }
 }

@@ -1,0 +1,158 @@
+{
+  "task": "Ticket P1 được tạo lúc 22:47. Ai sẽ nhận thông báo đầu tiên và qua kênh nào? Escalation xảy ra lúc mấy giờ?",
+  "route_reason": "SLA / P1 / IT ops keywords — retrieval + synthesis",
+  "risk_high": false,
+  "needs_tool": false,
+  "hitl_triggered": false,
+  "retrieved_chunks": [
+    {
+      "text": "Q: Hộp thư đến đầy, phải làm gì?\nA: Xóa email cũ hoặc yêu cầu tăng dung lượng qua ticket IT-ACCESS. Dung lượng tiêu chuẩn là 50GB.\n\nQ: Tôi không nhận được email từ bên ngoài?\nA: Kiểm tra thư mục Spam trước. Nếu vẫn không có, tạo ticket P2 kèm địa chỉ email gửi và thời gian gửi.",
+      "source": "it_helpdesk_faq.txt",
+      "score": 0.6856,
+      "metadata": {
+        "access": "internal",
+        "source_file": "it_helpdesk_faq.txt",
+        "effective_date": "2026-01-20",
+        "department": "IT",
+        "section": "Section 5: Email và lịch",
+        "source": "it_helpdesk_faq.txt"
+      }
+    },
+    {
+      "text": "Ticket P1:\n- Phản hồi ban đầu (first response): 15 phút kể từ khi ticket được tạo.\n- Xử lý và khắc phục (resolution): 4 giờ.\n- Escalation: Tự động escalate lên Senior Engineer nếu không có phản hồi trong 10 phút.\n- Thông báo stakeholder: Ngay khi nhận ticket, update mỗi 30 phút cho đến khi resolve.\n\nTicket P2:\n- Phản hồi ban đầu: 2 giờ.\n- Xử lý và khắc phục: 1 ngày làm việc.\n- Escalation: Tự động escalate sau 90 phút không có phản hồi.\n\nTicket P3:\n- Phản hồi ban đầu: 1 ngày làm việc.\n- Xử lý và khắc phục: 5 ngày làm việc.\n\nTicket P4:\n- Phản hồi ban đầu: 3 ngày làm việc.\n- Xử lý và khắc phục: Theo sprint cycle (thông thường 2-4 tuần).",
+      "source": "sla_p1_2026.txt",
+      "score": 0.6603,
+      "metadata": {
+        "source_file": "sla_p1_2026.txt",
+        "source": "sla_p1_2026.txt",
+        "access": "internal",
+        "section": "Phần 2: SLA theo mức độ ưu tiên",
+        "effective_date": "2026-01-15",
+        "department": "IT"
+      }
+    },
+    {
+      "text": "Escalation chỉ áp dụng khi cần thay đổi quyền hệ thống ngoài quy trình thông thường.\nVí dụ: Khẩn cấp trong sự cố P1, cần cấp quyền tạm thời để fix incident.\n\nQuy trình escalation khẩn cấp:\n1. On-call IT Admin có thể cấp quyền tạm thời (max 24 giờ) sau khi được Tech Lead phê duyệt bằng lời.\n2. Sau 24 giờ, phải có ticket chính thức hoặc quyền bị thu hồi tự động.\n3. Mọi quyền tạm thời phải được ghi log vào hệ thống Security Audit.",
+      "source": "access_control_sop.txt",
+      "score": 0.6433,
+      "metadata": {
+        "department": "IT Security",
+        "access": "internal",
+        "source": "access_control_sop.txt",
+        "effective_date": "2026-01-01",
+        "source_file": "access_control_sop.txt",
+        "section": "Section 4: Escalation khi cần thay đổi quyền hệ thống"
+      }
+    },
+    {
+      "text": "Chính sách này áp dụng cho tất cả các đơn hàng được đặt trên hệ thống nội bộ kể từ ngày 01/02/2026.\nCác đơn hàng đặt trước ngày có hiệu lực sẽ áp dụng theo chính sách hoàn tiền phiên bản 3.",
+      "source": "policy_refund_v4.txt",
+      "score": 0.614,
+      "metadata": {
+        "department": "CS",
+        "section": "Điều 1: Phạm vi áp dụng",
+        "effective_date": "2026-02-01",
+        "source_file": "policy_refund_v4.txt",
+        "access": "internal",
+        "source": "policy_refund_v4.txt"
+      }
+    },
+    {
+      "text": "Hoàn tiền — Điều kiện áp dụng:\nYêu cầu được gửi trong vòng 7 ngày kể từ thời điểm xác nhận đơn hàng.\n\nNgoại lệ không được hoàn tiền:\n- Sản phẩm thuộc danh mục hàng kỹ thuật số (license key, subscription).\n- Đơn hàng đã áp dụng mã giảm giá đặc biệt theo chương trình khuyến mãi Flash Sale.\n- Sản phẩm đã được kích hoạt hoặc đăng ký tài khoản.",
+      "source": "policy_refund_v4.txt",
+      "score": 0.6122,
+      "metadata": {
+        "source": "policy_refund_v4.txt",
+        "source_file": "policy_refund_v4.txt",
+        "section": "Điều 3: Điều kiện áp dụng và ngoại lệ",
+        "effective_date": "2026-02-01",
+        "department": "CS",
+        "access": "internal"
+      }
+    },
+    {
+      "text": "Q: Laptop mới được cấp sau bao lâu khi vào công ty?\nA: Laptop được cấp trong ngày onboarding đầu tiên. Nếu có vấn đề, liên hệ HR hoặc IT Admin.\n\nQ: Laptop bị hỏng phải báo cáo như thế nào?\nA: Tạo ticket P2 hoặc P3 tùy mức độ nghiêm trọng. Mang thiết bị đến IT Room (tầng 3) để kiểm tra.",
+      "source": "it_helpdesk_faq.txt",
+      "score": 0.6085,
+      "metadata": {
+        "department": "IT",
+        "access": "internal",
+        "section": "Section 4: Thiết bị và phần cứng",
+        "source": "it_helpdesk_faq.txt",
+        "effective_date": "2026-01-20",
+        "source_file": "it_helpdesk_faq.txt"
+      }
+    }
+  ],
+  "retrieved_sources": [
+    "access_control_sop.txt",
+    "it_helpdesk_faq.txt",
+    "policy_refund_v4.txt",
+    "sla_p1_2026.txt"
+  ],
+  "policy_result": {},
+  "mcp_tools_used": [],
+  "final_answer": "1. **Ai sẽ nhận thông báo đầu tiên và qua kênh nào?**\n   - Thông báo đầu tiên sẽ được gửi đến các stakeholder ngay khi ticket P1 được tạo. Kênh thông báo là qua email, và các stakeholder sẽ được cập nhật mỗi 30 phút cho đến khi sự cố được giải quyết [sla_p1_2026.txt].\n\n2. **Escalation xảy ra lúc mấy giờ?**\n   - Escalation sẽ xảy ra tự động lên Senior Engineer nếu không có phản hồi trong 10 phút kể từ khi ticket P1 được tạo [sla_p1_2026.txt].\n\nTóm lại, thông báo đầu tiên được gửi qua email ngay khi ticket P1 được tạo, và escalation sẽ xảy ra sau 10 phút nếu không có phản hồi.",
+  "sources": [
+    "sla_p1_2026.txt",
+    "it_helpdesk_faq.txt",
+    "policy_refund_v4.txt",
+    "access_control_sop.txt"
+  ],
+  "confidence": 0.75,
+  "history": [
+    "[supervisor] received task: Ticket P1 được tạo lúc 22:47. Ai sẽ nhận thông báo đầu tiên và qua kênh nào? Escalation xảy ra lúc mấy giờ?",
+    "[supervisor] route=retrieval_worker reason=SLA / P1 / IT ops keywords — retrieval + synthesis",
+    "[retrieval_worker] retrieved 6 chunks from ['access_control_sop.txt', 'it_helpdesk_faq.txt', 'policy_refund_v4.txt', 'sla_p1_2026.txt']",
+    "[synthesis_worker] answer generated, confidence=0.75, sources=['sla_p1_2026.txt', 'it_helpdesk_faq.txt', 'policy_refund_v4.txt', 'access_control_sop.txt']",
+    "[graph] completed in 3626ms"
+  ],
+  "workers_called": [
+    "retrieval_worker",
+    "synthesis_worker"
+  ],
+  "supervisor_route": "retrieval_worker",
+  "latency_ms": 3626,
+  "run_id": "run_20260414_174259",
+  "worker_io_logs": [
+    {
+      "worker": "retrieval_worker",
+      "input": {
+        "task": "Ticket P1 được tạo lúc 22:47. Ai sẽ nhận thông báo đầu tiên và qua kênh nào? Escalation xảy ra lúc mấy giờ?",
+        "top_k": 6
+      },
+      "output": {
+        "chunks_count": 6,
+        "sources": [
+          "access_control_sop.txt",
+          "it_helpdesk_faq.txt",
+          "policy_refund_v4.txt",
+          "sla_p1_2026.txt"
+        ],
+        "sub_queries": null
+      },
+      "error": null
+    },
+    {
+      "worker": "synthesis_worker",
+      "input": {
+        "task": "Ticket P1 được tạo lúc 22:47. Ai sẽ nhận thông báo đầu tiên và qua kênh nào? Escalation xảy ra lúc mấy giờ?",
+        "chunks_count": 6,
+        "has_policy": false
+      },
+      "output": {
+        "answer_length": 581,
+        "sources": [
+          "sla_p1_2026.txt",
+          "it_helpdesk_faq.txt",
+          "policy_refund_v4.txt",
+          "access_control_sop.txt"
+        ],
+        "confidence": 0.75
+      },
+      "error": null
+    }
+  ],
+  "retrieval_top_k": 6,
+  "question_id": "q11"
+}

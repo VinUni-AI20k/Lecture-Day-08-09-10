@@ -1,0 +1,153 @@
+{
+  "task": "SLA xử lý ticket P1 là bao lâu?",
+  "route_reason": "SLA / P1 / IT ops keywords — retrieval + synthesis",
+  "risk_high": false,
+  "needs_tool": false,
+  "hitl_triggered": false,
+  "retrieved_chunks": [
+    {
+      "text": "Q: Laptop mới được cấp sau bao lâu khi vào công ty?\nA: Laptop được cấp trong ngày onboarding đầu tiên. Nếu có vấn đề, liên hệ HR hoặc IT Admin.\n\nQ: Laptop bị hỏng phải báo cáo như thế nào?\nA: Tạo ticket P2 hoặc P3 tùy mức độ nghiêm trọng. Mang thiết bị đến IT Room (tầng 3) để kiểm tra.",
+      "source": "it_helpdesk_faq.txt",
+      "score": 0.5604,
+      "metadata": {
+        "source_file": "it_helpdesk_faq.txt",
+        "effective_date": "2026-01-20",
+        "access": "internal",
+        "source": "it_helpdesk_faq.txt",
+        "section": "Section 4: Thiết bị và phần cứng",
+        "department": "IT"
+      }
+    },
+    {
+      "text": "Ticket P1:\n- Phản hồi ban đầu (first response): 15 phút kể từ khi ticket được tạo.\n- Xử lý và khắc phục (resolution): 4 giờ.\n- Escalation: Tự động escalate lên Senior Engineer nếu không có phản hồi trong 10 phút.\n- Thông báo stakeholder: Ngay khi nhận ticket, update mỗi 30 phút cho đến khi resolve.\n\nTicket P2:\n- Phản hồi ban đầu: 2 giờ.\n- Xử lý và khắc phục: 1 ngày làm việc.\n- Escalation: Tự động escalate sau 90 phút không có phản hồi.\n\nTicket P3:\n- Phản hồi ban đầu: 1 ngày làm việc.\n- Xử lý và khắc phục: 5 ngày làm việc.\n\nTicket P4:\n- Phản hồi ban đầu: 3 ngày làm việc.\n- Xử lý và khắc phục: Theo sprint cycle (thông thường 2-4 tuần).",
+      "source": "sla_p1_2026.txt",
+      "score": 0.5597,
+      "metadata": {
+        "source": "sla_p1_2026.txt",
+        "department": "IT",
+        "access": "internal",
+        "source_file": "sla_p1_2026.txt",
+        "section": "Phần 2: SLA theo mức độ ưu tiên",
+        "effective_date": "2026-01-15"
+      }
+    },
+    {
+      "text": "Q: Hộp thư đến đầy, phải làm gì?\nA: Xóa email cũ hoặc yêu cầu tăng dung lượng qua ticket IT-ACCESS. Dung lượng tiêu chuẩn là 50GB.\n\nQ: Tôi không nhận được email từ bên ngoài?\nA: Kiểm tra thư mục Spam trước. Nếu vẫn không có, tạo ticket P2 kèm địa chỉ email gửi và thời gian gửi.",
+      "source": "it_helpdesk_faq.txt",
+      "score": 0.5402,
+      "metadata": {
+        "section": "Section 5: Email và lịch",
+        "department": "IT",
+        "source": "it_helpdesk_faq.txt",
+        "effective_date": "2026-01-20",
+        "source_file": "it_helpdesk_faq.txt",
+        "access": "internal"
+      }
+    },
+    {
+      "text": "Escalation chỉ áp dụng khi cần thay đổi quyền hệ thống ngoài quy trình thông thường.\nVí dụ: Khẩn cấp trong sự cố P1, cần cấp quyền tạm thời để fix incident.\n\nQuy trình escalation khẩn cấp:\n1. On-call IT Admin có thể cấp quyền tạm thời (max 24 giờ) sau khi được Tech Lead phê duyệt bằng lời.\n2. Sau 24 giờ, phải có ticket chính thức hoặc quyền bị thu hồi tự động.\n3. Mọi quyền tạm thời phải được ghi log vào hệ thống Security Audit.",
+      "source": "access_control_sop.txt",
+      "score": 0.4852,
+      "metadata": {
+        "source_file": "access_control_sop.txt",
+        "section": "Section 4: Escalation khi cần thay đổi quyền hệ thống",
+        "access": "internal",
+        "source": "access_control_sop.txt",
+        "department": "IT Security",
+        "effective_date": "2026-01-01"
+      }
+    },
+    {
+      "text": "v2026.1 (2026-01-15): Cập nhật SLA P1 resolution từ 6 giờ xuống 4 giờ.\nv2025.3 (2025-09-01): Thêm quy trình escalation tự động.\nv2025.1 (2025-03-01): Phiên bản đầu tiên.",
+      "source": "sla_p1_2026.txt",
+      "score": 0.4624,
+      "metadata": {
+        "access": "internal",
+        "effective_date": "2026-01-15",
+        "section": "Phần 5: Lịch sử phiên bản",
+        "source": "sla_p1_2026.txt",
+        "source_file": "sla_p1_2026.txt",
+        "department": "IT"
+      }
+    },
+    {
+      "text": "P1 — CRITICAL (Khẩn cấp):\nĐịnh nghĩa: Sự cố ảnh hưởng toàn bộ hệ thống production, không có workaround.\nVí dụ: Database sập, API gateway down, toàn bộ người dùng không thể đăng nhập.\n\nP2 — HIGH (Nghiêm trọng):\nĐịnh nghĩa: Sự cố ảnh hưởng một phần hệ thống, có workaround tạm thời.\nVí dụ: Một số tính năng không hoạt động, ảnh hưởng một nhóm người dùng.\n\nP3 — MEDIUM (Trung bình):\nĐịnh nghĩa: Lỗi ảnh hưởng không đáng kể, người dùng vẫn làm việc được.\n\nP4 — LOW (Thấp):\nĐịnh nghĩa: Yêu cầu cải tiến, gợi ý, hoặc lỗi giao diện nhỏ.",
+      "source": "sla_p1_2026.txt",
+      "score": 0.4552,
+      "metadata": {
+        "effective_date": "2026-01-15",
+        "section": "Phần 1: Định nghĩa mức độ ưu tiên",
+        "access": "internal",
+        "department": "IT",
+        "source_file": "sla_p1_2026.txt",
+        "source": "sla_p1_2026.txt"
+      }
+    }
+  ],
+  "retrieved_sources": [
+    "access_control_sop.txt",
+    "it_helpdesk_faq.txt",
+    "sla_p1_2026.txt"
+  ],
+  "policy_result": {},
+  "mcp_tools_used": [],
+  "final_answer": "Thời gian xử lý ticket P1 được quy định như sau:\n\n1. **Phản hồi ban đầu (first response)**: 15 phút kể từ khi ticket được tạo.\n2. **Xử lý và khắc phục (resolution)**: 4 giờ.\n3. **Escalation**: Tự động escalate lên Senior Engineer nếu không có phản hồi trong 10 phút.\n4. **Thông báo stakeholder**: Ngay khi nhận ticket, update mỗi 30 phút cho đến khi resolve.\n\nThông tin này được lấy từ tài liệu SLA P1 có hiệu lực từ ngày 15 tháng 1 năm 2026 [sla_p1_2026.txt].",
+  "sources": [
+    "sla_p1_2026.txt",
+    "it_helpdesk_faq.txt",
+    "access_control_sop.txt"
+  ],
+  "confidence": 0.62,
+  "history": [
+    "[supervisor] received task: SLA xử lý ticket P1 là bao lâu?",
+    "[supervisor] route=retrieval_worker reason=SLA / P1 / IT ops keywords — retrieval + synthesis",
+    "[retrieval_worker] retrieved 6 chunks from ['access_control_sop.txt', 'it_helpdesk_faq.txt', 'sla_p1_2026.txt']",
+    "[synthesis_worker] answer generated, confidence=0.62, sources=['sla_p1_2026.txt', 'it_helpdesk_faq.txt', 'access_control_sop.txt']",
+    "[graph] completed in 21459ms"
+  ],
+  "workers_called": [
+    "retrieval_worker",
+    "synthesis_worker"
+  ],
+  "supervisor_route": "retrieval_worker",
+  "latency_ms": 21459,
+  "run_id": "run_20260414_174126",
+  "worker_io_logs": [
+    {
+      "worker": "retrieval_worker",
+      "input": {
+        "task": "SLA xử lý ticket P1 là bao lâu?",
+        "top_k": 6
+      },
+      "output": {
+        "chunks_count": 6,
+        "sources": [
+          "access_control_sop.txt",
+          "it_helpdesk_faq.txt",
+          "sla_p1_2026.txt"
+        ],
+        "sub_queries": null
+      },
+      "error": null
+    },
+    {
+      "worker": "synthesis_worker",
+      "input": {
+        "task": "SLA xử lý ticket P1 là bao lâu?",
+        "chunks_count": 6,
+        "has_policy": false
+      },
+      "output": {
+        "answer_length": 460,
+        "sources": [
+          "sla_p1_2026.txt",
+          "it_helpdesk_faq.txt",
+          "access_control_sop.txt"
+        ],
+        "confidence": 0.62
+      },
+      "error": null
+    }
+  ],
+  "retrieval_top_k": 6
+}

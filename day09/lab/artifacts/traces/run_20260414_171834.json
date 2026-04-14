@@ -1,0 +1,136 @@
+{
+  "task": "Tài khoản bị khóa sau bao nhiêu lần đăng nhập sai?",
+  "route_reason": "informational question — dense retrieval + synthesis",
+  "risk_high": false,
+  "needs_tool": false,
+  "hitl_triggered": false,
+  "retrieved_chunks": [
+    {
+      "text": "Khách hàng được quyền yêu cầu hoàn tiền khi đáp ứng đủ các điều kiện sau:\n- Sản phẩm bị lỗi do nhà sản xuất, không phải do người dùng.\n- Yêu cầu được gửi trong vòng 7 ngày làm việc kể từ thời điểm xác nhận đơn hàng.\n- Đơn hàng chưa được sử dụng hoặc chưa bị mở seal.",
+      "source": "policy_refund_v4.txt",
+      "score": 0.6594,
+      "metadata": {
+        "section": "Điều 2: Điều kiện được hoàn tiền",
+        "source_file": "policy_refund_v4.txt",
+        "source": "policy_refund_v4.txt",
+        "department": "CS",
+        "access": "internal",
+        "effective_date": "2026-02-01"
+      }
+    },
+    {
+      "text": "Q: Tôi quên mật khẩu, phải làm gì?\nA: Truy cập https://sso.company.internal/reset hoặc liên hệ Helpdesk qua ext. 9000. Mật khẩu mới sẽ được gửi qua email công ty trong vòng 5 phút.\n\nQ: Tài khoản bị khóa sau bao nhiêu lần đăng nhập sai?\nA: Tài khoản bị khóa sau 5 lần đăng nhập sai liên tiếp. Để mở khóa, liên hệ IT Helpdesk hoặc tự reset qua portal SSO.\n\nQ: Mật khẩu cần thay đổi định kỳ không?\nA: Có. Mật khẩu phải được thay đổi mỗi 90 ngày. Hệ thống sẽ nhắc nhở 7 ngày trước khi hết hạn.",
+      "source": "it_helpdesk_faq.txt",
+      "score": 0.6484,
+      "metadata": {
+        "access": "internal",
+        "effective_date": "2026-01-20",
+        "department": "IT",
+        "source": "it_helpdesk_faq.txt",
+        "section": "Section 1: Tài khoản và mật khẩu",
+        "source_file": "it_helpdesk_faq.txt"
+      }
+    },
+    {
+      "text": "Hoàn tiền — Điều kiện áp dụng:\nYêu cầu được gửi trong vòng 7 ngày kể từ thời điểm xác nhận đơn hàng.\n\nNgoại lệ không được hoàn tiền:\n- Sản phẩm thuộc danh mục hàng kỹ thuật số (license key, subscription).\n- Đơn hàng đã áp dụng mã giảm giá đặc biệt theo chương trình khuyến mãi Flash Sale.\n- Sản phẩm đã được kích hoạt hoặc đăng ký tài khoản.",
+      "source": "policy_refund_v4.txt",
+      "score": 0.6464,
+      "metadata": {
+        "source": "policy_refund_v4.txt",
+        "source_file": "policy_refund_v4.txt",
+        "section": "Điều 3: Điều kiện áp dụng và ngoại lệ",
+        "department": "CS",
+        "access": "internal",
+        "effective_date": "2026-02-01"
+      }
+    },
+    {
+      "text": "Q: Laptop mới được cấp sau bao lâu khi vào công ty?\nA: Laptop được cấp trong ngày onboarding đầu tiên. Nếu có vấn đề, liên hệ HR hoặc IT Admin.\n\nQ: Laptop bị hỏng phải báo cáo như thế nào?\nA: Tạo ticket P2 hoặc P3 tùy mức độ nghiêm trọng. Mang thiết bị đến IT Room (tầng 3) để kiểm tra.",
+      "source": "it_helpdesk_faq.txt",
+      "score": 0.6393,
+      "metadata": {
+        "effective_date": "2026-01-20",
+        "source_file": "it_helpdesk_faq.txt",
+        "access": "internal",
+        "department": "IT",
+        "section": "Section 4: Thiết bị và phần cứng",
+        "source": "it_helpdesk_faq.txt"
+      }
+    },
+    {
+      "text": "Chính sách này áp dụng cho tất cả các đơn hàng được đặt trên hệ thống nội bộ kể từ ngày 01/02/2026.\nCác đơn hàng đặt trước ngày có hiệu lực sẽ áp dụng theo chính sách hoàn tiền phiên bản 3.",
+      "source": "policy_refund_v4.txt",
+      "score": 0.585,
+      "metadata": {
+        "source_file": "policy_refund_v4.txt",
+        "department": "CS",
+        "source": "policy_refund_v4.txt",
+        "effective_date": "2026-02-01",
+        "section": "Điều 1: Phạm vi áp dụng",
+        "access": "internal"
+      }
+    }
+  ],
+  "retrieved_sources": [
+    "it_helpdesk_faq.txt",
+    "policy_refund_v4.txt"
+  ],
+  "policy_result": {},
+  "mcp_tools_used": [],
+  "final_answer": "Tài khoản bị khóa sau 5 lần đăng nhập sai liên tiếp. Để mở khóa, bạn có thể liên hệ IT Helpdesk hoặc tự reset qua portal SSO [it_helpdesk_faq.txt].",
+  "sources": [
+    "it_helpdesk_faq.txt",
+    "policy_refund_v4.txt"
+  ],
+  "confidence": 0.71,
+  "history": [
+    "[supervisor] received task: Tài khoản bị khóa sau bao nhiêu lần đăng nhập sai?",
+    "[supervisor] route=retrieval_worker reason=informational question — dense retrieval + synthesis",
+    "[retrieval_worker] retrieved 5 chunks from ['it_helpdesk_faq.txt', 'policy_refund_v4.txt']",
+    "[synthesis_worker] answer generated, confidence=0.71, sources=['it_helpdesk_faq.txt', 'policy_refund_v4.txt']",
+    "[graph] completed in 1720ms"
+  ],
+  "workers_called": [
+    "retrieval_worker",
+    "synthesis_worker"
+  ],
+  "supervisor_route": "retrieval_worker",
+  "latency_ms": 1720,
+  "run_id": "run_20260414_171834",
+  "worker_io_logs": [
+    {
+      "worker": "retrieval_worker",
+      "input": {
+        "task": "Tài khoản bị khóa sau bao nhiêu lần đăng nhập sai?",
+        "top_k": 5
+      },
+      "output": {
+        "chunks_count": 5,
+        "sources": [
+          "it_helpdesk_faq.txt",
+          "policy_refund_v4.txt"
+        ]
+      },
+      "error": null
+    },
+    {
+      "worker": "synthesis_worker",
+      "input": {
+        "task": "Tài khoản bị khóa sau bao nhiêu lần đăng nhập sai?",
+        "chunks_count": 5,
+        "has_policy": false
+      },
+      "output": {
+        "answer_length": 147,
+        "sources": [
+          "it_helpdesk_faq.txt",
+          "policy_refund_v4.txt"
+        ],
+        "confidence": 0.71
+      },
+      "error": null
+    }
+  ],
+  "retrieval_top_k": 5,
+  "question_id": "q04"
+}

@@ -1,0 +1,286 @@
+{
+  "task": "Ai phải phê duyệt để cấp quyền Level 3?",
+  "route_reason": "policy/access/refund exception keywords — policy_tool uses MCP search_kb (not direct Chroma)",
+  "risk_high": false,
+  "needs_tool": true,
+  "hitl_triggered": false,
+  "retrieved_chunks": [
+    {
+      "text": "Escalation chỉ áp dụng khi cần thay đổi quyền hệ thống ngoài quy trình thông thường.\nVí dụ: Khẩn cấp trong sự cố P1, cần cấp quyền tạm thời để fix incident.\n\nQuy trình escalation khẩn cấp:\n1. On-call IT Admin có thể cấp quyền tạm thời (max 24 giờ) sau khi được Tech Lead phê duyệt bằng lời.\n2. Sau 24 giờ, phải có ticket chính thức hoặc quyền bị thu hồi tự động.\n3. Mọi quyền tạm thời phải được ghi log vào hệ thống Security Audit.",
+      "source": "access_control_sop.txt",
+      "score": 0.6395,
+      "metadata": {
+        "source": "access_control_sop.txt",
+        "source_file": "access_control_sop.txt",
+        "section": "Section 4: Escalation khi cần thay đổi quyền hệ thống",
+        "department": "IT Security",
+        "access": "internal",
+        "effective_date": "2026-01-01"
+      }
+    },
+    {
+      "text": "Q: Laptop mới được cấp sau bao lâu khi vào công ty?\nA: Laptop được cấp trong ngày onboarding đầu tiên. Nếu có vấn đề, liên hệ HR hoặc IT Admin.\n\nQ: Laptop bị hỏng phải báo cáo như thế nào?\nA: Tạo ticket P2 hoặc P3 tùy mức độ nghiêm trọng. Mang thiết bị đến IT Room (tầng 3) để kiểm tra.",
+      "source": "it_helpdesk_faq.txt",
+      "score": 0.5637,
+      "metadata": {
+        "access": "internal",
+        "source": "it_helpdesk_faq.txt",
+        "department": "IT",
+        "effective_date": "2026-01-20",
+        "section": "Section 4: Thiết bị và phần cứng",
+        "source_file": "it_helpdesk_faq.txt"
+      }
+    },
+    {
+      "text": "Tài liệu này quy định quy trình cấp phép truy cập vào các hệ thống nội bộ của công ty.\nÁp dụng cho tất cả nhân viên, contractor, và third-party vendor.",
+      "source": "access_control_sop.txt",
+      "score": 0.5597,
+      "metadata": {
+        "section": "Section 1: Phạm vi và mục đích",
+        "access": "internal",
+        "effective_date": "2026-01-01",
+        "source_file": "access_control_sop.txt",
+        "department": "IT Security",
+        "source": "access_control_sop.txt"
+      }
+    },
+    {
+      "text": "Q: Tôi cần cài phần mềm mới, phải làm gì?\nA: Gửi yêu cầu qua Jira project IT-SOFTWARE. Line Manager phải phê duyệt trước khi IT cài đặt.\n\nQ: Ai chịu trách nhiệm gia hạn license phần mềm?\nA: IT Procurement team quản lý tất cả license. Nhắc nhở sẽ được gửi 30 ngày trước khi hết hạn.",
+      "source": "it_helpdesk_faq.txt",
+      "score": 0.5563,
+      "metadata": {
+        "effective_date": "2026-01-20",
+        "source_file": "it_helpdesk_faq.txt",
+        "section": "Section 3: Phần mềm và license",
+        "department": "IT",
+        "access": "internal",
+        "source": "it_helpdesk_faq.txt"
+      }
+    },
+    {
+      "text": "v2026.1 (2026-01-15): Cập nhật SLA P1 resolution từ 6 giờ xuống 4 giờ.\nv2025.3 (2025-09-01): Thêm quy trình escalation tự động.\nv2025.1 (2025-03-01): Phiên bản đầu tiên.",
+      "source": "sla_p1_2026.txt",
+      "score": 0.5474,
+      "metadata": {
+        "effective_date": "2026-01-15",
+        "section": "Phần 5: Lịch sử phiên bản",
+        "access": "internal",
+        "department": "IT",
+        "source": "sla_p1_2026.txt",
+        "source_file": "sla_p1_2026.txt"
+      }
+    }
+  ],
+  "retrieved_sources": [
+    "access_control_sop.txt",
+    "it_helpdesk_faq.txt",
+    "sla_p1_2026.txt"
+  ],
+  "policy_result": {
+    "policy_applies": false,
+    "policy_name": "refund_policy_v4",
+    "exceptions_found": [
+      {
+        "type": "digital_product_exception",
+        "rule": "Sản phẩm kỹ thuật số (license key, subscription) không được hoàn tiền (Điều 3).",
+        "source": "policy_refund_v4.txt"
+      }
+    ],
+    "source": [
+      "access_control_sop.txt",
+      "it_helpdesk_faq.txt",
+      "sla_p1_2026.txt"
+    ],
+    "policy_version_note": "",
+    "explanation": "Analyzed via rule-based policy check. TODO: upgrade to LLM-based analysis.",
+    "access_permission": {
+      "access_level": 3,
+      "requester_role": "employee",
+      "can_grant": true,
+      "required_approvers": [
+        "Line Manager",
+        "IT Admin",
+        "IT Security"
+      ],
+      "approver_count": 3,
+      "emergency_override": false,
+      "notes": [],
+      "source": "access_control_sop.txt"
+    }
+  },
+  "mcp_tools_used": [
+    {
+      "tool": "search_kb",
+      "input": {
+        "query": "Ai phải phê duyệt để cấp quyền Level 3?",
+        "top_k": 5
+      },
+      "output": {
+        "chunks": [
+          {
+            "text": "Escalation chỉ áp dụng khi cần thay đổi quyền hệ thống ngoài quy trình thông thường.\nVí dụ: Khẩn cấp trong sự cố P1, cần cấp quyền tạm thời để fix incident.\n\nQuy trình escalation khẩn cấp:\n1. On-call IT Admin có thể cấp quyền tạm thời (max 24 giờ) sau khi được Tech Lead phê duyệt bằng lời.\n2. Sau 24 giờ, phải có ticket chính thức hoặc quyền bị thu hồi tự động.\n3. Mọi quyền tạm thời phải được ghi log vào hệ thống Security Audit.",
+            "source": "access_control_sop.txt",
+            "score": 0.6395,
+            "metadata": {
+              "source": "access_control_sop.txt",
+              "source_file": "access_control_sop.txt",
+              "section": "Section 4: Escalation khi cần thay đổi quyền hệ thống",
+              "department": "IT Security",
+              "access": "internal",
+              "effective_date": "2026-01-01"
+            }
+          },
+          {
+            "text": "Q: Laptop mới được cấp sau bao lâu khi vào công ty?\nA: Laptop được cấp trong ngày onboarding đầu tiên. Nếu có vấn đề, liên hệ HR hoặc IT Admin.\n\nQ: Laptop bị hỏng phải báo cáo như thế nào?\nA: Tạo ticket P2 hoặc P3 tùy mức độ nghiêm trọng. Mang thiết bị đến IT Room (tầng 3) để kiểm tra.",
+            "source": "it_helpdesk_faq.txt",
+            "score": 0.5637,
+            "metadata": {
+              "access": "internal",
+              "source": "it_helpdesk_faq.txt",
+              "department": "IT",
+              "effective_date": "2026-01-20",
+              "section": "Section 4: Thiết bị và phần cứng",
+              "source_file": "it_helpdesk_faq.txt"
+            }
+          },
+          {
+            "text": "Tài liệu này quy định quy trình cấp phép truy cập vào các hệ thống nội bộ của công ty.\nÁp dụng cho tất cả nhân viên, contractor, và third-party vendor.",
+            "source": "access_control_sop.txt",
+            "score": 0.5597,
+            "metadata": {
+              "section": "Section 1: Phạm vi và mục đích",
+              "access": "internal",
+              "effective_date": "2026-01-01",
+              "source_file": "access_control_sop.txt",
+              "department": "IT Security",
+              "source": "access_control_sop.txt"
+            }
+          },
+          {
+            "text": "Q: Tôi cần cài phần mềm mới, phải làm gì?\nA: Gửi yêu cầu qua Jira project IT-SOFTWARE. Line Manager phải phê duyệt trước khi IT cài đặt.\n\nQ: Ai chịu trách nhiệm gia hạn license phần mềm?\nA: IT Procurement team quản lý tất cả license. Nhắc nhở sẽ được gửi 30 ngày trước khi hết hạn.",
+            "source": "it_helpdesk_faq.txt",
+            "score": 0.5563,
+            "metadata": {
+              "effective_date": "2026-01-20",
+              "source_file": "it_helpdesk_faq.txt",
+              "section": "Section 3: Phần mềm và license",
+              "department": "IT",
+              "access": "internal",
+              "source": "it_helpdesk_faq.txt"
+            }
+          },
+          {
+            "text": "v2026.1 (2026-01-15): Cập nhật SLA P1 resolution từ 6 giờ xuống 4 giờ.\nv2025.3 (2025-09-01): Thêm quy trình escalation tự động.\nv2025.1 (2025-03-01): Phiên bản đầu tiên.",
+            "source": "sla_p1_2026.txt",
+            "score": 0.5474,
+            "metadata": {
+              "effective_date": "2026-01-15",
+              "section": "Phần 5: Lịch sử phiên bản",
+              "access": "internal",
+              "department": "IT",
+              "source": "sla_p1_2026.txt",
+              "source_file": "sla_p1_2026.txt"
+            }
+          }
+        ],
+        "sources": [
+          "access_control_sop.txt",
+          "it_helpdesk_faq.txt",
+          "sla_p1_2026.txt"
+        ],
+        "total_found": 5
+      },
+      "error": null,
+      "timestamp": "2026-04-14T17:18:32.341535"
+    },
+    {
+      "tool": "check_access_permission",
+      "input": {
+        "access_level": 3,
+        "requester_role": "employee",
+        "is_emergency": false
+      },
+      "output": {
+        "access_level": 3,
+        "requester_role": "employee",
+        "can_grant": true,
+        "required_approvers": [
+          "Line Manager",
+          "IT Admin",
+          "IT Security"
+        ],
+        "approver_count": 3,
+        "emergency_override": false,
+        "notes": [],
+        "source": "access_control_sop.txt"
+      },
+      "error": null,
+      "timestamp": "2026-04-14T17:18:32.341535"
+    }
+  ],
+  "final_answer": "Để cấp quyền Level 3, cần có sự phê duyệt từ ba bên sau:\n\n1. Line Manager\n2. IT Admin\n3. IT Security\n\nTất cả ba phê duyệt này là bắt buộc để hoàn tất quy trình cấp quyền [access_control_sop.txt]. \n\nNgoài ra, quy trình này không có ngoại lệ cho việc cấp quyền Level 3 trong trường hợp khẩn cấp [access_control_sop.txt].",
+  "sources": [
+    "sla_p1_2026.txt",
+    "it_helpdesk_faq.txt",
+    "access_control_sop.txt"
+  ],
+  "confidence": 0.65,
+  "history": [
+    "[supervisor] received task: Ai phải phê duyệt để cấp quyền Level 3?",
+    "[supervisor] route=policy_tool_worker reason=policy/access/refund exception keywords — policy_tool uses MCP search_kb (not direct Chroma)",
+    "[policy_tool_worker] called MCP search_kb",
+    "[policy_tool_worker] called MCP check_access_permission",
+    "[policy_tool_worker] policy_applies=False, exceptions=1",
+    "[policy_tool_worker] tools_used=['search_kb', 'check_access_permission']",
+    "[synthesis_worker] answer generated, confidence=0.65, sources=['sla_p1_2026.txt', 'it_helpdesk_faq.txt', 'access_control_sop.txt']",
+    "[graph] completed in 2474ms"
+  ],
+  "workers_called": [
+    "policy_tool_worker",
+    "synthesis_worker"
+  ],
+  "supervisor_route": "policy_tool_worker",
+  "latency_ms": 2474,
+  "run_id": "run_20260414_171832",
+  "worker_io_logs": [
+    {
+      "worker": "policy_tool_worker",
+      "input": {
+        "task": "Ai phải phê duyệt để cấp quyền Level 3?",
+        "chunks_count": 0,
+        "needs_tool": true
+      },
+      "output": {
+        "policy_applies": false,
+        "exceptions_count": 1,
+        "mcp_calls": 2,
+        "mcp_tools": [
+          "search_kb",
+          "check_access_permission"
+        ],
+        "mcp_error_tools": []
+      },
+      "error": null
+    },
+    {
+      "worker": "synthesis_worker",
+      "input": {
+        "task": "Ai phải phê duyệt để cấp quyền Level 3?",
+        "chunks_count": 5,
+        "has_policy": true
+      },
+      "output": {
+        "answer_length": 318,
+        "sources": [
+          "sla_p1_2026.txt",
+          "it_helpdesk_faq.txt",
+          "access_control_sop.txt"
+        ],
+        "confidence": 0.65
+      },
+      "error": null
+    }
+  ],
+  "retrieval_top_k": 5,
+  "question_id": "q03"
+}
