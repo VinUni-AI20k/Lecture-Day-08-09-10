@@ -20,32 +20,22 @@ Hệ thống được thiết kế theo mô hình **Multi-Agent Orchestration**,
 
 ## 2. Sơ đồ Pipeline
 
-Dưới đây là sơ đồ luồng dữ liệu của hệ thống:
-
 ```mermaid
 graph TD
-    User([User Request]) --> Supervisor{Supervisor Node}
-    
-    Supervisor -- "SLA/IT FAQ" --> Retrieval[Retrieval Worker]
-    Supervisor -- "Refund/Access" --> Policy[Policy Tool Worker]
-    Supervisor -- "Unknown/High Risk" --> HITL[Human Review Node]
-    
-    HITL --> Retrieval
-    
-    Retrieval --> Synthesis[Synthesis Worker]
-    Policy --> Retrieval
-    Policy --> Synthesis
-    
-    Synthesis --> Output([Final Answer])
-    
-    subgraph "MCP Infrastructure"
-        Policy -.-> MCP[MCP Server]
-        MCP -.-> search_kb
-        MCP -.-> get_ticket_info
-        MCP -.-> check_access
-    end
-```
+    User([User Question]) --> Supervisor{Supervisor Node}
 
+    Supervisor -- "retrieval_keywords" --> Retrieval[Retrieval Worker]
+    Supervisor -- "policy_keywords<br/>multi-hop" --> Policy[Policy Tool Worker]
+    Supervisor -- "unknown / err-xxx" --> HITL[Human Review<br/>(HITL)]
+
+    HITL -- "auto-approved" --> Retrieval
+    Policy -- "needs context" --> Retrieval
+    Policy -- "policy results" --> Synthesis
+
+    Retrieval -- "relevant chunks" --> Synthesis[Synthesis Worker]
+
+    Synthesis --> Output([Final Answer])
+```
 ---
 
 ## 3. Vai trò từng thành phần
@@ -66,7 +56,7 @@ graph TD
 |-----------|-------|
 | **Nhiệm vụ** | Truy xuất các đoạn văn bản (chunks) có liên quan nhất từ cơ sở dữ liệu tri thức. |
 | **Embedding model** | `all-MiniLM-L6-v2` (Sentence Transformers). |
-| **Top-k** | 3 chunks mặc định. |
+| **Top-k** | 5 chunks mặc định (để đảm bảo đủ context cho multi-hop). |
 | **Stateless?** | Yes. |
 
 ### Policy Tool Worker (`workers/policy_tool.py`)
@@ -132,7 +122,7 @@ Hệ thống Supervisor-Worker giúp giảm thiểu đáng kể tình trạng "q
 
 ## 6. Giới hạn và điểm cần cải tiến
 
-1. **Độ trễ (Latency):** Việc chia nhỏ quy trình khiến tổng thời gian xử lý tăng lên (~1-2 giây) do phải thực hiện nhiều bước trung gian và gọi LLM tuần tự. Cần cải tiến bằng cách chạy song song (async) các worker không phụ thuộc nhau.
+1. **Độ trễ (Latency):** Việc chia nhỏ quy trình khiến tổng thời gian xử lý tăng lên (~11-15 giây theo số liệu thực tế) do phải thực hiện nhiều bước trung gian và gọi LLM tuần tự. Cần cải tiến bằng cách chạy song song (async) các worker không phụ thuộc nhau.
 2. **Độ phức tạp của Supervisor:** Hiện tại Supervisor đang dùng Regex/Keyword matching đơn giản. Với tập câu hỏi lớn và nhiễu, cần chuyển sang dùng **Semantic Router** hoặc một model LLM nhỏ chuyên biệt để phân loại chính xác hơn.
 3. **Mô phỏng MCP:** Các công cụ MCP hiện đang ở dạng Mock. Để hệ thống thực sự mạnh mẽ, cần deploy các MCP server thật kết nối với Database Jira, Search Engine và IAM system của doanh nghiệp.
 4. **Khả năng tự hồi phục (Self-healing):** Hiện tại nếu một worker gặp lỗi, pipeline có thể bị dừng đột ngột. Cần bổ sung các cơ chế retry hoặc fallback node để đảm bảo hệ thống luôn trả về câu trả lời hữu ích cho người dùng.

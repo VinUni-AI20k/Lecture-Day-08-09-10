@@ -12,7 +12,14 @@ Chạy thử:
 import re
 import json
 import os
+import sys
 from datetime import datetime
+
+try:
+    from dotenv import load_dotenv
+    load_dotenv(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env"))
+except ImportError:
+    pass
 from typing import TypedDict, Literal, Optional
 
 # Uncomment nếu dùng LangGraph:
@@ -264,68 +271,25 @@ def human_review_node(state: AgentState) -> AgentState:
 # 5. Import Workers
 # ─────────────────────────────────────────────
 
-# TODO Sprint 2: Uncomment sau khi implement workers
-# from workers.retrieval import run as retrieval_run
-# from workers.policy_tool import run as policy_tool_run
-# from workers.synthesis import run as synthesis_run
+_WORKERS_DIR = os.path.dirname(os.path.abspath(__file__))
+if _WORKERS_DIR not in sys.path:
+    sys.path.insert(0, _WORKERS_DIR)
+
+from workers.retrieval import run as retrieval_run
+from workers.policy_tool import run as policy_tool_run
+from workers.synthesis import run as synthesis_run
 
 
 def retrieval_worker_node(state: AgentState) -> AgentState:
-    """Wrapper gọi retrieval worker."""
-    # TODO Sprint 2: Thay bằng retrieval_run(state)
-    state["workers_called"].append("retrieval_worker")
-    state["history"].append("[retrieval_worker] called")
-
-    # Placeholder output để test graph chạy được
-    state["retrieved_chunks"] = [
-        {
-            "text": "SLA P1: phản hồi 15 phút, xử lý 4 giờ.",
-            "source": "sla_p1_2026.txt",
-            "score": 0.92,
-        }
-    ]
-    state["retrieved_sources"] = ["sla_p1_2026.txt"]
-    state["history"].append(
-        f"[retrieval_worker] retrieved {len(state['retrieved_chunks'])} chunks"
-    )
-    return state
+    return retrieval_run(state)
 
 
 def policy_tool_worker_node(state: AgentState) -> AgentState:
-    """Wrapper gọi policy/tool worker."""
-    # TODO Sprint 2: Thay bằng policy_tool_run(state)
-    state["workers_called"].append("policy_tool_worker")
-    state["history"].append("[policy_tool_worker] called")
-
-    # Placeholder output
-    state["policy_result"] = {
-        "policy_applies": True,
-        "policy_name": "refund_policy_v4",
-        "exceptions_found": [],
-        "source": "policy_refund_v4.txt",
-    }
-    state["history"].append("[policy_tool_worker] policy check complete")
-    return state
+    return policy_tool_run(state)
 
 
 def synthesis_worker_node(state: AgentState) -> AgentState:
-    """Wrapper gọi synthesis worker."""
-    # TODO Sprint 2: Thay bằng synthesis_run(state)
-    state["workers_called"].append("synthesis_worker")
-    state["history"].append("[synthesis_worker] called")
-
-    # Placeholder output
-    chunks = state.get("retrieved_chunks", [])
-    sources = state.get("retrieved_sources", [])
-    state["final_answer"] = (
-        f"[PLACEHOLDER] Câu trả lời được tổng hợp từ {len(chunks)} chunks."
-    )
-    state["sources"] = sources
-    state["confidence"] = 0.75
-    state["history"].append(
-        f"[synthesis_worker] answer generated, confidence={state['confidence']}"
-    )
-    return state
+    return synthesis_run(state)
 
 
 # ─────────────────────────────────────────────
@@ -361,15 +325,13 @@ def build_graph():
             # After human approval, continue with retrieval
             state = retrieval_worker_node(state)
         elif route == "multi_hop":
-            # Cross-doc reasoning: cần cả retrieval context lẫn policy check
-            # Sequential trong Sprint 1 — Sprint 2 upgrade lên asyncio.gather
+            # Cross-doc reasoning: retrieval trước để policy có context phân tích
             state = retrieval_worker_node(state)
             state = policy_tool_worker_node(state)
         elif route == "policy_tool_worker":
+            # Retrieval trước để lấy chunks, sau đó policy phân tích exception trên chunks
+            state = retrieval_worker_node(state)
             state = policy_tool_worker_node(state)
-            # Policy worker cũng cần retrieval context
-            if not state["retrieved_chunks"]:
-                state = retrieval_worker_node(state)
         else:
             # Default: retrieval_worker
             state = retrieval_worker_node(state)
