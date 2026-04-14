@@ -30,6 +30,19 @@ FLASH_SALE_HINT_KEYWORDS = (
 )
 DIGITAL_PRODUCT_KEYWORDS = ("license key", "license", "subscription", "kỹ thuật số")
 ACTIVATED_PRODUCT_KEYWORDS = ("đã kích hoạt", "đã đăng ký", "đã sử dụng")
+DIGITAL_PRODUCT_HINT_KEYWORDS = (
+    "hàng kỹ thuật số",
+    "hang ky thuat so",
+    "sản phẩm kỹ thuật số",
+    "san pham ky thuat so",
+    "digital product",
+)
+ACTIVATED_PRODUCT_HINT_KEYWORDS = (
+    "đã được kích hoạt",
+    "da duoc kich hoat",
+    "đăng ký tài khoản",
+    "dang ky tai khoan",
+)
 TEMPORAL_V3_HINT_KEYWORDS = ("31/01", "30/01", "trước 01/02")
 TICKET_LOOKUP_KEYWORDS = ("ticket", "p1", "jira")
 
@@ -85,6 +98,26 @@ def _is_flash_sale_case(task_text: str, context_text: str) -> bool:
     task_has_flash_sale_hint = _contains_any(task_text, FLASH_SALE_HINT_KEYWORDS)
     context_confirms_flash_sale = _contains_any(context_text, FLASH_SALE_KEYWORDS)
     return task_has_flash_sale_hint and context_confirms_flash_sale
+
+
+def _is_digital_product_case(task_text: str, context_text: str) -> bool:
+    """Detect digital-product exception from task or retrieved context."""
+    if _contains_any(task_text, DIGITAL_PRODUCT_KEYWORDS) or _contains_any(context_text, DIGITAL_PRODUCT_KEYWORDS):
+        return True
+
+    task_has_digital_hint = _contains_any(task_text, DIGITAL_PRODUCT_HINT_KEYWORDS)
+    context_confirms_digital = _contains_any(context_text, DIGITAL_PRODUCT_KEYWORDS)
+    return task_has_digital_hint and context_confirms_digital
+
+
+def _is_activated_product_case(task_text: str, context_text: str) -> bool:
+    """Detect activated-account/product exception from task or context."""
+    if _contains_any(task_text, ACTIVATED_PRODUCT_KEYWORDS) or _contains_any(context_text, ACTIVATED_PRODUCT_KEYWORDS):
+        return True
+
+    task_has_activated_hint = _contains_any(task_text, ACTIVATED_PRODUCT_HINT_KEYWORDS)
+    context_confirms_activated = _contains_any(context_text, ACTIVATED_PRODUCT_KEYWORDS)
+    return task_has_activated_hint and context_confirms_activated
 
 
 # ─────────────────────────────────────────────
@@ -157,7 +190,7 @@ def analyze_policy(task: str, chunks: list) -> dict:
         )
 
     # Exception 2: Digital product
-    if _contains_any(task_lower, DIGITAL_PRODUCT_KEYWORDS):
+    if _is_digital_product_case(task_lower, context_text):
         exceptions_found.append(
             _make_exception(
                 "digital_product_exception",
@@ -166,7 +199,7 @@ def analyze_policy(task: str, chunks: list) -> dict:
         )
 
     # Exception 3: Activated product
-    if _contains_any(task_lower, ACTIVATED_PRODUCT_KEYWORDS):
+    if _is_activated_product_case(task_lower, context_text):
         exceptions_found.append(
             _make_exception(
                 "activated_exception",
@@ -311,6 +344,18 @@ if __name__ == "__main__":
             "task": "Khách hàng muốn hoàn tiền license key đã kích hoạt.",
             "retrieved_chunks": [
                 {"text": "Sản phẩm kỹ thuật số (license key, subscription) không được hoàn tiền.", "source": "policy_refund_v4.txt", "score": 0.88}
+            ],
+        },
+        {
+            "task": "Đơn này có hoàn tiền được không?",
+            "retrieved_chunks": [
+                {"text": "Sản phẩm thuộc danh mục hàng kỹ thuật số (license key, subscription).", "source": "policy_refund_v4.txt", "score": 0.87}
+            ],
+        },
+        {
+            "task": "Khách này xin hoàn tiền dù đã đăng ký tài khoản rồi.",
+            "retrieved_chunks": [
+                {"text": "Sản phẩm đã được kích hoạt hoặc đăng ký tài khoản thì không được hoàn tiền.", "source": "policy_refund_v4.txt", "score": 0.86}
             ],
         },
         {
