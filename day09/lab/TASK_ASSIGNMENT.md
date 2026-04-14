@@ -15,7 +15,7 @@
 | **Synthesis Worker** | 2 | Dũng | `workers/synthesis.py` |
 | **MCP Owner** | 3 | Huy | `mcp_server.py`, 2+ tools |
 | **Trace & Eval Owner** | 4 | Long | `eval_trace.py`, tracing & metrics |
-| **Docs & Reports Owner** | 4 | Thuận | Architecture, routing decisions, group/individual reports |
+| **Docs & Reports Owner** | 4 | Thuận | Architecture, routing decisions, group reports |
 
 ---
 
