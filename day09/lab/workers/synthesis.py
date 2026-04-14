@@ -42,7 +42,7 @@ def _now_iso() -> str:
 
 
 def _call_llm(messages: list) -> str:
-    """Gọi LLM với fallback chain: OpenAI → Gemini → error message."""
+    """Gọi LLM với fallback chain: OpenAI → Gemini → `LLM_ERROR_SENTINEL` (caller map thành abstain)."""
     # Option A: OpenAI
     if os.getenv("OPENAI_API_KEY"):
         try:
@@ -189,11 +189,14 @@ def synthesize(task: str, chunks: list, policy_result: dict) -> dict:
             src = chunk.get("source", "unknown")
             if src not in cited_sources:
                 cited_sources.append(src)
-    # Fallback: nếu LLM quên cite, vẫn trả về sources của chunks được đưa vào
-    if not cited_sources:
+    # Nếu LLM quên cite dù có chunks → vi phạm contract → hạ confidence, trigger HITL
+    missing_citation = not cited_sources
+    if missing_citation:
         cited_sources = list({c.get("source", "unknown") for c in chunks})
 
     confidence = _estimate_confidence(chunks, answer, policy_result)
+    if missing_citation:
+        confidence = min(confidence, 0.35)  # dưới HITL_THRESHOLD → buộc review
 
     return {
         "answer": answer,
@@ -201,6 +204,7 @@ def synthesize(task: str, chunks: list, policy_result: dict) -> dict:
         "confidence": confidence,
         "abstained": _is_abstain(answer),
         "llm_error": False,
+        "missing_citation": missing_citation,
     }
 
 
@@ -214,8 +218,8 @@ def run(state: dict) -> dict:
     state.setdefault("history", [])
     state.setdefault("worker_io_logs", [])
     state["workers_called"].append(WORKER_NAME)
-    # Reset HITL flag cho turn hiện tại (tránh leak từ worker trước hoặc lần chạy cũ)
-    state["hitl_triggered"] = False
+    # Chỉ khởi tạo nếu chưa có; không ghi đè True đã set từ worker trước trong cùng run
+    state.setdefault("hitl_triggered", False)
 
     worker_io = {
         "worker": WORKER_NAME,

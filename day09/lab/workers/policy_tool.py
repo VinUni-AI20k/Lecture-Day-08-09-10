@@ -46,6 +46,14 @@ def _llm_policy_analysis(task: str, chunks: list) -> dict:
     """
     Fallback LLM-based policy analysis (nâng cấp từ rule-based)
     """
+    # Guard: không có API key → không call, fallback conservative (không override rule-based)
+    if not os.getenv("OPENAI_API_KEY"):
+        return {
+            "policy_applies": None,
+            "exceptions_found": [],
+            "explanation": "LLM skipped: OPENAI_API_KEY not set",
+        }
+
     try:
         from openai import OpenAI
         client = OpenAI()
@@ -60,10 +68,10 @@ Task: {task}
 Context:
 {context}
 
-Hãy trả về JSON:
+Trả về JSON đúng schema contract:
 {{
   "policy_applies": true/false,
-  "exceptions_found": [{{"type": "...", "reason": "..."}}],
+  "exceptions_found": [{{"type": "...", "rule": "...", "source": "..."}}],
   "explanation": "..."
 }}
 """
@@ -71,20 +79,35 @@ Hãy trả về JSON:
         response = client.chat.completions.create(
             model="gpt-4o-mini",
             temperature=0,
+            response_format={"type": "json_object"},
             messages=[
-                {"role": "system", "content": "Return JSON only."},
+                {"role": "system", "content": "Return JSON only matching the requested schema."},
                 {"role": "user", "content": prompt},
             ],
         )
 
         import json
-        return json.loads(response.choices[0].message.content)
+        parsed = json.loads(response.choices[0].message.content)
+        # Map fields về đúng contract nếu LLM trả lệch (reason → rule)
+        normalized_exceptions = []
+        for ex in parsed.get("exceptions_found", []) or []:
+            normalized_exceptions.append({
+                "type": ex.get("type", "llm_detected"),
+                "rule": ex.get("rule") or ex.get("reason", ""),
+                "source": ex.get("source", "llm"),
+            })
+        return {
+            "policy_applies": parsed.get("policy_applies"),
+            "exceptions_found": normalized_exceptions,
+            "explanation": parsed.get("explanation", ""),
+        }
 
     except Exception as e:
+        # Conservative: không set policy_applies=True để tránh "allow" sai
         return {
-            "policy_applies": True,
+            "policy_applies": None,
             "exceptions_found": [],
-            "explanation": f"LLM fallback failed: {e}"
+            "explanation": f"LLM fallback failed: {e}",
         }
 
 # ─────────────────────────────────────────────
@@ -127,19 +150,24 @@ def analyze_policy(task: str, chunks: list) -> dict:
         })
 
     # ───────── RULE 4: Valid refund case ─────────
-    valid_case = False
-    if any(kw in task_lower for kw in ["lỗi", "hỏng"]) and \
-       any(kw in task_lower for kw in ["5 ngày", "7 ngày", "trong 7"]):
-        valid_case = True
+    # Lỗi/hỏng + trong time window → refund explicitly valid (không exception)
+    valid_refund_case = (
+        any(kw in task_lower for kw in ["lỗi", "hỏng"]) and
+        any(kw in task_lower for kw in ["5 ngày", "7 ngày", "trong 7"])
+    )
 
     # ───────── POLICY APPLY ─────────
     policy_applies = len(exceptions_found) == 0
 
-    # nếu rule-based không chắc → gọi LLM
-    if not chunks or ("?" in task and not exceptions_found):
+    # LLM chỉ gọi khi rule-based thực sự uncertain:
+    # - không có chunks để evidence, hoặc
+    # - không match rule nào VÀ không phải valid-case đã xác định
+    rule_based_uncertain = not chunks or (not exceptions_found and not valid_refund_case)
+    if rule_based_uncertain:
         llm_result = _llm_policy_analysis(task, chunks)
-        policy_applies = llm_result.get("policy_applies", policy_applies)
-
+        # Chỉ override policy_applies khi LLM trả về quyết định rõ ràng (không None)
+        if llm_result.get("policy_applies") is not None:
+            policy_applies = llm_result["policy_applies"]
         if llm_result.get("exceptions_found"):
             exceptions_found.extend(llm_result["exceptions_found"])
 

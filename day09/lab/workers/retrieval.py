@@ -18,9 +18,15 @@ Gọi độc lập để test:
 import os
 import sys
 from pathlib import Path
-from dotenv import load_dotenv
 
-load_dotenv()
+
+def _load_env():
+    """Load .env on demand (CLI / explicit init), not at import time."""
+    try:
+        from dotenv import load_dotenv
+        load_dotenv()
+    except ImportError:
+        pass
 
 # ─────────────────────────────────────────────
 # Worker Contract (xem contracts/worker_contracts.yaml)
@@ -216,7 +222,8 @@ def run(state: dict) -> dict:
         Updated AgentState với retrieved_chunks, retrieved_sources, worker_io_logs
     """
     task = state.get("task", "")
-    top_k = state.get("retrieval_top_k", DEFAULT_TOP_K)
+    # Contract-compliant: top_k is the canonical key; retrieval_top_k kept as backward-compat alias
+    top_k = state.get("top_k", state.get("retrieval_top_k", DEFAULT_TOP_K))
 
     state.setdefault("workers_called", [])
     state.setdefault("history", [])
@@ -259,6 +266,7 @@ def run(state: dict) -> dict:
 # ─────────────────────────────────────────────
 
 if __name__ == "__main__":
+    _load_env()
     if "--build" in sys.argv or "--force" in sys.argv:
         build_index(force_rebuild="--force" in sys.argv)
         sys.exit(0)
