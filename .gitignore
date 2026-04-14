@@ -12,6 +12,7 @@ day08/lab/.env
 
 # Local vector DB artifacts
 day08/lab/chroma_db/
+day09/lab/chroma_db/
 
 # Grading questions — theo SCORING, cần track khi nộp
 
