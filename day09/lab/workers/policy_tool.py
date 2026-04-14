@@ -19,6 +19,10 @@ Gọi độc lập để test:
 import os
 import sys
 from typing import Optional
+from pathlib import Path
+from dotenv import load_dotenv
+
+load_dotenv(dotenv_path=Path(__file__).parent.parent / ".env")
 
 WORKER_NAME = "policy_tool_worker"
 
@@ -117,20 +121,32 @@ def analyze_policy(task: str, chunks: list) -> dict:
     if "31/01" in task_lower or "30/01" in task_lower or "trước 01/02" in task_lower:
         policy_version_note = "Đơn hàng đặt trước 01/02/2026 áp dụng chính sách v3 (không có trong tài liệu hiện tại)."
 
-    # TODO Sprint 2: Gọi LLM để phân tích phức tạp hơn
-    # Ví dụ:
-    # from openai import OpenAI
-    # client = OpenAI()
-    # response = client.chat.completions.create(
-    #     model="gpt-4o-mini",
-    #     messages=[
-    #         {"role": "system", "content": "Bạn là policy analyst. Dựa vào context, xác định policy áp dụng và các exceptions."},
-    #         {"role": "user", "content": f"Task: {task}\n\nContext:\n" + "\n".join([c['text'] for c in chunks])}
-    #     ]
-    # )
-    # analysis = response.choices[0].message.content
-
     sources = list({c.get("source", "unknown") for c in chunks if c})
+
+    # LLM-based deeper analysis using OpenAI
+    llm_explanation = ""
+    try:
+        from openai import OpenAI
+        client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+        context_text_full = "\n".join([c.get("text", "") for c in chunks])
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": (
+                    "Bạn là policy analyst nội bộ. Dựa vào context tài liệu, hãy:\n"
+                    "1. Xác định policy nào áp dụng cho câu hỏi.\n"
+                    "2. Liệt kê các ngoại lệ (exceptions) nếu có.\n"
+                    "3. Trả lời ngắn gọn, rõ ràng.\n"
+                    "CHỈ dựa vào context đã cho, KHÔNG dùng kiến thức bên ngoài."
+                )},
+                {"role": "user", "content": f"Câu hỏi: {task}\n\nContext tài liệu:\n{context_text_full}"}
+            ],
+            temperature=0.1,
+            max_tokens=300,
+        )
+        llm_explanation = response.choices[0].message.content
+    except Exception as e:
+        llm_explanation = f"LLM analysis unavailable: {e}"
 
     return {
         "policy_applies": policy_applies,
@@ -138,7 +154,7 @@ def analyze_policy(task: str, chunks: list) -> dict:
         "exceptions_found": exceptions_found,
         "source": sources,
         "policy_version_note": policy_version_note,
-        "explanation": "Analyzed via rule-based policy check. TODO: upgrade to LLM-based analysis.",
+        "explanation": llm_explanation or "Analyzed via rule-based policy check.",
     }
 
 
