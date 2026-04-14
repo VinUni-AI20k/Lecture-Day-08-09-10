@@ -1,125 +1,145 @@
-# Group Report — Day 08 Lab
+# Báo Cáo Nhóm — Lab Day 08: Full RAG Pipeline
 
-> Nộp bởi Tech Lead hoặc Documentation Owner.
-> Mục tiêu: tóm tắt các quyết định kỹ thuật cấp nhóm, số liệu đánh giá, và kết luận cuối cùng.
-> Báo cáo nhóm nên khác với individual report: tập trung vào hệ thống và trade-off của nhóm, không kể lại công việc cá nhân.
+**Tên nhóm:** ___________  
+**Thành viên:**
+| Tên | Vai trò | Email |
+|-----|---------|-------|
+| ___ | Tech Lead | ___ |
+| ___ | Retrieval Owner | ___ |
+| ___ | Eval Owner | ___ |
+| ___ | Documentation Owner | ___ |
 
-## 1. Tổng quan dự án
+**Ngày nộp:** ___________  
+**Repo:** ___________  
+**Độ dài khuyến nghị:** 600–900 từ
 
-**Tên hệ thống:** Internal Policy RAG Assistant (Day 08)
+---
 
-**Mục tiêu:**
-> Nhóm xây dựng pipeline RAG nội bộ để tra cứu nhanh tài liệu policy/SOP/SLA/FAQ cho IT, CS và HR.
-> Mục tiêu là trả lời có căn cứ từ tài liệu nội bộ, có citation nguồn và hạn chế hallucination khi gặp câu hỏi không có trong corpus.
-> Nhóm chọn bài toán này vì phù hợp thực tế vận hành helpdesk/policy: nhiều tài liệu khác nhau, cần truy vấn nhanh và chính xác.
+> **Hướng dẫn nộp group report:**
+>
+> - File này nộp tại: `reports/group_report.md`
+> - Deadline: Được phép commit **sau 18:00** (xem SCORING.md)
+> - Tập trung vào **quyết định kỹ thuật cấp nhóm** — không trùng lặp với individual reports
+> - Phải có **bằng chứng từ code, scorecard, hoặc tuning log** — không mô tả chung chung
 
-**Phạm vi dữ liệu:**
-- 5 tài liệu đã index: `policy_refund_v4.txt`, `sla_p1_2026.txt`, `access_control_sop.txt`, `it_helpdesk_faq.txt`, `hr_leave_policy.txt`.
-- Hệ thống trả lời tốt các câu factual có số liệu/quy định cụ thể và câu multi-section trong cùng domain (SLA, refund, access control, HR policy).
+---
 
-## 2. Phân vai trong nhóm
+## 1. Pipeline nhóm đã xây dựng (150–200 từ)
 
-| Vai trò | Tên | Trách nhiệm chính |
-|---------|-----|------------------|
-| Tech Lead | Tống Tiến Mạnh | Nối pipeline end-to-end, quản lý merge và chạy demo |
-| Retrieval Owner | Nguyễn Minh Hiếu; Nguyễn Tùng Lâm | Chunking, metadata, retrieval strategy, rerank |
-| Eval Owner | Nguyễn Việt Long; Hà Huy Hoàng | Test questions, scorecard, A/B comparison |
-| Documentation Owner | Nguyễn Quang Đăng | architecture.md, tuning-log.md, report |
+> Mô tả ngắn gọn pipeline của nhóm:
+> - Chunking strategy: size, overlap, phương pháp tách (by paragraph, by section, v.v.)
+> - Embedding model đã dùng
+> - Retrieval mode: dense / hybrid / rerank (Sprint 3 variant)
 
-## 3. Kiến trúc và quyết định kỹ thuật
+**Chunking decision:**
+> VD: "Nhóm dùng chunk_size=500, overlap=50, tách theo section headers vì tài liệu có cấu trúc rõ ràng."
 
-### 3.1 Indexing
+_________________
 
-| Tham số | Giá trị cuối | Lý do |
-|---------|-------------|-------|
-| Chunk size | 400 tokens | Cân bằng giữa giữ đủ ngữ cảnh và không làm context quá dài |
-| Overlap | 80 tokens | Giữ liên tục ngữ nghĩa giữa các chunk liền kề |
-| Chunking strategy | Heading-based + fallback paragraph/size split | Ưu tiên ranh giới tự nhiên theo section để tăng chất lượng retrieve |
-| Embedding model | text-embedding-3-small (OpenAI-compatible) | Ổn định, dễ tích hợp với retrieval dense hiện tại |
-| Vector store | ChromaDB (PersistentClient, cosine) | Nhẹ, phù hợp bài lab, dễ inspect metadata/chunk |
+**Embedding model:**
 
-### 3.2 Retrieval
+_________________
 
-**Baseline:**
-- Strategy: Dense retrieval
-- Top-k search: 10
-- Top-k select: 3
-- Rerank: False
-- Query transform: None
+**Retrieval variant (Sprint 3):**
+> Nêu rõ variant đã chọn (hybrid / rerank / query transform) và lý do ngắn gọn.
 
-**Variant tốt nhất của nhóm:**
-- Strategy: Dense retrieval + LLM rerank
-- Top-k search: 10
-- Top-k select: 3
-- Rerank: True
-- Query transform: None
+_________________
 
-**Lý do chọn variant:**
-> Baseline đã có context recall cao (5.00/5), nhưng thứ tự chunk đưa vào generation chưa tối ưu ở một số câu khó.
-> Bật rerank cải thiện đồng thời Faithfulness, Relevance và Completeness trong khi giữ nguyên Context Recall.
-> Theo scorecard, variant dense + rerank là cấu hình cân bằng tốt nhất để nộp.
+---
 
-### 3.3 Generation
+## 2. Quyết định kỹ thuật quan trọng nhất (200–250 từ)
 
-| Tham số | Giá trị |
-|---------|---------|
-| LLM model | `openai-gpt-4o` (qua biến `LLM_MODEL`) |
-| Temperature | 0 |
-| Prompt strategy | Grounded prompt: evidence-only + abstain + citation + same-language response |
+> Chọn **1 quyết định thiết kế** mà nhóm thảo luận và đánh đổi nhiều nhất trong lab.
+> Phải có: (a) vấn đề gặp phải, (b) các phương án cân nhắc, (c) lý do chọn.
 
-**Grounding strategy:**
-> Prompt buộc model chỉ trả lời từ retrieved context và trích nguồn theo format [1], [2].
-> Khi context không đủ, model phải abstain (ví dụ gq07 trong grading_run trả lời "Tôi không biết.") để tránh hallucination.
+**Quyết định:** ___________________
 
-## 4. Evaluation
+**Bối cảnh vấn đề:**
 
-### 4.1 Scorecard tóm tắt
+_________________
 
-| Metric | Baseline | Variant tốt nhất | Delta |
-|--------|----------|------------------|-------|
-| Faithfulness | 4.60/5 | 4.70/5 | +0.10 |
-| Answer Relevance | 3.00/5 | 3.20/5 | +0.20 |
-| Context Recall | 5.00/5 | 5.00/5 | +0.00 |
-| Completeness | 3.50/5 | 3.60/5 | +0.10 |
+**Các phương án đã cân nhắc:**
 
-### 4.2 Câu hỏi tiêu biểu
+| Phương án | Ưu điểm | Nhược điểm |
+|-----------|---------|-----------|
+| ___ | ___ | ___ |
+| ___ | ___ | ___ |
 
-**Câu cải thiện rõ nhất:**
-- q04 (Refund): Relevant tăng từ 3 lên 4 sau khi bật rerank, cho thấy chunk có thông tin "110% store credit" được ưu tiên đúng hơn.
-- q06 (SLA + Access escalation): Complete tăng từ 2 lên 3, cho thấy rerank hỗ trợ chọn evidence gần intent câu hỏi hơn.
+**Phương án đã chọn và lý do:**
 
-**Câu còn yếu:**
-- q06 vẫn yếu ở Relevance (1/5) do câu hỏi cross-doc multi-hop dài, cần tổng hợp chính xác nhiều mảnh evidence.
-- q09 và q10 còn Completeness = 2 vì thiên về câu trả lời ngắn/an toàn, chưa mở rộng đủ ngữ cảnh phụ.
+_________________
 
-**Quan sát quan trọng:**
-- Dense baseline đã đủ mạnh cho nhiều câu factual đơn tài liệu (q03, q04, q05).
-- Rerank mang lại lợi ích rõ khi có nhiều chunk gần đúng và cần chọn đúng chunk trọng tâm trước generate.
-- Với grading_run, pipeline xử lý tốt anti-hallucination ở gq07 bằng cách abstain thay vì bịa.
+**Bằng chứng từ scorecard/tuning-log:**
 
-## 5. Kết luận nhóm
+_________________
 
-**Nhóm đã học được gì?**
-> Context recall cao chưa đồng nghĩa answer quality cao; thứ tự evidence trước generation ảnh hưởng trực tiếp relevance/completeness.
-> Rerank là biến tuning hiệu quả nhất trong bối cảnh hiện tại vì cải thiện 3/4 metric với chi phí thay đổi thấp.
-> Grounded prompt + cơ chế abstain là bắt buộc để giảm rủi ro hallucination trong các câu không có dữ liệu.
-> Evaluation theo scorecard giúp nhóm ra quyết định có bằng chứng thay vì chọn cấu hình theo cảm tính.
+---
 
-**Trade-off lớn nhất:**
-> Trade-off chính là giữa độ an toàn và độ đầy đủ: cấu hình có rerank cho câu trả lời chắc chắn và đúng nguồn hơn, nhưng một số câu dài/multi-hop vẫn cần thêm cải tiến để tăng completeness.
+## 3. Kết quả grading questions (100–150 từ)
 
-**Quyết định cuối cùng để nộp:**
-> Nhóm chọn `retrieval_mode="dense"` + `use_rerank=True` làm cấu hình nộp chính thức vì có kết quả tốt nhất trên scorecard: Faithfulness 4.70, Relevance 3.20, Context Recall 5.00, Completeness 3.60.
+> Sau khi chạy pipeline với grading_questions.json (public lúc 17:00):
+> - Câu nào pipeline xử lý tốt nhất? Tại sao?
+> - Câu nào pipeline fail? Root cause ở đâu (indexing / retrieval / generation)?
+> - Câu gq07 (abstain) — pipeline xử lý thế nào?
 
-## 6. Phụ lục ngắn
+**Ước tính điểm raw:** ___ / 98
 
-### 6.1 Files quan trọng
-- [docs/architecture.md](../docs/architecture.md)
-- [docs/tuning-log.md](../docs/tuning-log.md)
-- [results/scorecard_baseline.md](../results/scorecard_baseline.md)
-- [results/scorecard_variant.md](../results/scorecard_variant.md)
+**Câu tốt nhất:** ID: ___ — Lý do: ___________________
 
-### 6.2 Ghi chú nộp bài
-- Chỉ commit `reports/group_report.md` và `reports/individual/[ten].md` sau 18:00.
-- Ghi rõ config tốt nhất của nhóm trong report.
-- Nội dung phải khớp với scorecard và tuning log.
+**Câu fail:** ID: ___ — Root cause: ___________________
+
+**Câu gq07 (abstain):** ___________________
+
+---
+
+## 4. A/B Comparison — Baseline vs Variant (150–200 từ)
+
+> Dựa vào `docs/tuning-log.md`. Tóm tắt kết quả A/B thực tế của nhóm.
+
+**Biến đã thay đổi (chỉ 1 biến):** ___________________
+
+| Metric | Baseline | Variant | Delta |
+|--------|---------|---------|-------|
+| ___ | ___ | ___ | ___ |
+| ___ | ___ | ___ | ___ |
+
+**Kết luận:**
+> Variant tốt hơn hay kém hơn? Ở điểm nào?
+
+_________________
+
+---
+
+## 5. Phân công và đánh giá nhóm (100–150 từ)
+
+> Đánh giá trung thực về quá trình làm việc nhóm.
+
+**Phân công thực tế:**
+
+| Thành viên | Phần đã làm | Sprint |
+|------------|-------------|--------|
+| ___ | ___________________ | ___ |
+| ___ | ___________________ | ___ |
+| ___ | ___________________ | ___ |
+| ___ | ___________________ | ___ |
+
+**Điều nhóm làm tốt:**
+
+_________________
+
+**Điều nhóm làm chưa tốt:**
+
+_________________
+
+---
+
+## 6. Nếu có thêm 1 ngày, nhóm sẽ làm gì? (50–100 từ)
+
+> 1–2 cải tiến cụ thể với lý do có bằng chứng từ scorecard.
+
+_________________
+
+---
+
+*File này lưu tại: `reports/group_report.md`*  
+*Commit sau 18:00 được phép theo SCORING.md*
