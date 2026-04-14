@@ -10,8 +10,8 @@
       "source": "sla_p1_2026.txt",
       "score": 0.6376,
       "metadata": {
-        "chunk_id": "sla_p1_2026.txt__chunk1",
-        "source": "sla_p1_2026.txt"
+        "source": "sla_p1_2026.txt",
+        "chunk_id": "sla_p1_2026.txt__chunk1"
       }
     },
     {
@@ -19,8 +19,8 @@
       "source": "it_helpdesk_faq.txt",
       "score": 0.6013,
       "metadata": {
-        "source": "it_helpdesk_faq.txt",
-        "chunk_id": "it_helpdesk_faq.txt__chunk1"
+        "chunk_id": "it_helpdesk_faq.txt__chunk1",
+        "source": "it_helpdesk_faq.txt"
       }
     },
     {
@@ -31,12 +31,32 @@
         "chunk_id": "policy_refund_v4.txt__chunk0",
         "source": "policy_refund_v4.txt"
       }
+    },
+    {
+      "text": "tra compliance và cấp quyền. Bước 4: IT Security review với Level 3 và Level 4. Bước 5: Nhân viên nhận thông báo qua email khi quyền được cấp. === Section 4: Escalation khi cần thay đổi quyền hệ thống === Escalation chỉ áp dụng khi cần thay đổi quyền hệ thống ngoài quy trình thông thường. Ví dụ: Khẩn cấp trong sự cố P1, cần cấp quyền tạm thời để fix incident. Quy trình escalation khẩn cấp: 1. On-call IT Admin có thể cấp quyền tạm thời (max 24 giờ) sau khi được Tech Lead phê duyệt bằng lời. 2. Sau 24 giờ, phải có ticket chính thức hoặc quyền bị thu hồi tự động. 3. Mọi quyền tạm thời phải được ghi log vào hệ thống Security Audit. === Section 5: Thu hồi quyền truy cập === Quyền phải được thu hồi trong các trường hợp: - Nhân viên nghỉ việc: Thu hồi ngay trong ngày cuối. - Hết hạn contract: Thu hồi đúng ngày hết hạn. - Chuyển bộ phận: Điều chỉnh trong 3 ngày làm việc. === Section 6: Audit và review định kỳ === IT Security thực hiện access review mỗi 6 tháng. Mọi bất thường phải được báo cáo lên CISO trong vòng 24 giờ. === Section 7: Công cụ liên quan === Ticket system: Jira (project IT-ACCESS) IAM system: Okta Audit log: Splunk Email: it-access@company.internal",
+      "source": "access_control_sop.txt",
+      "score": 0.5535,
+      "metadata": {
+        "chunk_id": "access_control_sop.txt__chunk1",
+        "source": "access_control_sop.txt"
+      }
+    },
+    {
+      "text": "muộn hơn nhưng phải được Line Manager đồng ý qua tin nhắn trực tiếp. === Phần 3: Chính sách làm thêm giờ === 3.1 Điều kiện làm thêm: Làm thêm giờ phải được Line Manager phê duyệt trước bằng văn bản. 3.2 Hệ số lương làm thêm: - Ngày thường: 150% lương giờ tiêu chuẩn. - Ngày cuối tuần: 200% lương giờ tiêu chuẩn. - Ngày lễ: 300% lương giờ tiêu chuẩn. === Phần 4: Remote work policy === 4.1 Điều kiện remote: - Nhân viên sau probation period có thể làm remote tối đa 2 ngày/tuần. - Team Lead phải phê duyệt lịch remote qua HR Portal. - Ngày onsite bắt buộc: Thứ 3 và Thứ 5 theo lịch team. 4.2 Yêu cầu kỹ thuật khi remote: - Kết nối VPN bắt buộc khi làm việc với hệ thống nội bộ. - Camera bật trong các cuộc họp team. === Phần 5: Liên hệ HR === Email: hr@company.internal Hotline: ext. 2000 HR Portal: https://hr.company.internal Giờ làm việc: Thứ 2 - Thứ 6, 8:30 - 17:30",
+      "source": "hr_leave_policy.txt",
+      "score": 0.5342,
+      "metadata": {
+        "source": "hr_leave_policy.txt",
+        "chunk_id": "hr_leave_policy.txt__chunk1"
+      }
     }
   ],
   "retrieved_sources": [
-    "sla_p1_2026.txt",
     "it_helpdesk_faq.txt",
-    "policy_refund_v4.txt"
+    "access_control_sop.txt",
+    "policy_refund_v4.txt",
+    "sla_p1_2026.txt",
+    "hr_leave_policy.txt"
   ],
   "policy_result": {},
   "mcp_tools_used": [],
@@ -48,41 +68,43 @@
   "history": [
     "[supervisor] received task: Ticket P1 được tạo lúc 22:47. Ai sẽ nhận thông báo đầu tiên và qua kênh nào? Esc",
     "[supervisor] route=retrieval_worker reason=task contains retrieval/SLA keyword | risk_high flagged",
-    "[retrieval_worker] retrieved 3 chunks from ['sla_p1_2026.txt', 'it_helpdesk_faq.txt', 'policy_refund_v4.txt']",
+    "[retrieval_worker] retrieved 5 chunks from ['it_helpdesk_faq.txt', 'access_control_sop.txt', 'policy_refund_v4.txt', 'sla_p1_2026.txt', 'hr_leave_policy.txt']",
     "[synthesis_worker] HITL triggered (confidence=0.3 < 0.4)",
     "[synthesis_worker] answer_len=230, confidence=0.3, sources=['sla_p1_2026.txt']",
-    "[graph] completed in 10790ms"
+    "[graph] completed in 9013ms"
   ],
   "workers_called": [
     "retrieval_worker",
     "synthesis_worker"
   ],
   "supervisor_route": "retrieval_worker",
-  "latency_ms": 10790,
-  "run_id": "run_20260414_174539",
+  "latency_ms": 9013,
+  "run_id": "run_20260414_175659",
   "worker_io_logs": [
     {
       "worker": "retrieval_worker",
       "input": {
         "task": "Ticket P1 được tạo lúc 22:47. Ai sẽ nhận thông báo đầu tiên và qua kênh nào? Escalation xảy ra lúc mấy giờ?",
-        "top_k": 3
+        "top_k": 5
       },
       "output": {
-        "chunks_count": 3,
+        "chunks_count": 5,
         "sources": [
-          "sla_p1_2026.txt",
           "it_helpdesk_faq.txt",
-          "policy_refund_v4.txt"
+          "access_control_sop.txt",
+          "policy_refund_v4.txt",
+          "sla_p1_2026.txt",
+          "hr_leave_policy.txt"
         ]
       },
       "error": null
     },
     {
       "worker": "synthesis_worker",
-      "timestamp": "2026-04-14T10:45:48.041443+00:00",
+      "timestamp": "2026-04-14T10:57:05.533579+00:00",
       "input": {
         "task": "Ticket P1 được tạo lúc 22:47. Ai sẽ nhận thông báo đầu tiên và qua kênh nào? Escalation xảy ra lúc mấy giờ?",
-        "chunks_count": 3,
+        "chunks_count": 5,
         "has_policy": false,
         "exceptions_count": 0
       },

@@ -1,14 +1,14 @@
 {
-  "task": "Tài khoản bị khóa sau bao nhiêu lần đăng nhập sai?",
-  "route_reason": "task contains retrieval/SLA keyword",
+  "task": "Sản phẩm kỹ thuật số (license key) có được hoàn tiền không?",
+  "route_reason": "task contains policy/access keyword",
   "risk_high": false,
-  "needs_tool": false,
+  "needs_tool": true,
   "hitl_triggered": false,
   "retrieved_chunks": [
     {
       "text": "chịu trách nhiệm gia hạn license phần mềm? A: IT Procurement team quản lý tất cả license. Nhắc nhở sẽ được gửi 30 ngày trước khi hết hạn. === Section 4: Thiết bị và phần cứng === Q: Laptop mới được cấp sau bao lâu khi vào công ty? A: Laptop được cấp trong ngày onboarding đầu tiên. Nếu có vấn đề, liên hệ HR hoặc IT Admin. Q: Laptop bị hỏng phải báo cáo như thế nào? A: Tạo ticket P2 hoặc P3 tùy mức độ nghiêm trọng. Mang thiết bị đến IT Room (tầng 3) để kiểm tra. === Section 5: Email và lịch === Q: Hộp thư đến đầy, phải làm gì? A: Xóa email cũ hoặc yêu cầu tăng dung lượng qua ticket IT-ACCESS. Dung lượng tiêu chuẩn là 50GB. Q: Tôi không nhận được email từ bên ngoài? A: Kiểm tra thư mục Spam trước. Nếu vẫn không có, tạo ticket P2 kèm địa chỉ email gửi và thời gian gửi. === Section 6: Liên hệ IT Helpdesk === Hotline: ext. 9000 (8:00 - 18:00, Thứ 2 - Thứ 6) Email: helpdesk@company.internal Jira: project IT-SUPPORT Slack: #it-helpdesk Emergency (ngoài giờ): ext. 9999",
       "source": "it_helpdesk_faq.txt",
-      "score": 0.583,
+      "score": 0.642,
       "metadata": {
         "chunk_id": "it_helpdesk_faq.txt__chunk1",
         "source": "it_helpdesk_faq.txt"
@@ -17,84 +17,142 @@
     {
       "text": "IT HELPDESK FAQ — CÂU HỎI THƯỜNG GẶP Source: support/helpdesk-faq.md Department: IT Effective Date: 2026-01-20 Access: internal === Section 1: Tài khoản và mật khẩu === Q: Tôi quên mật khẩu, phải làm gì? A: Truy cập https://sso.company.internal/reset hoặc liên hệ Helpdesk qua ext. 9000. Mật khẩu mới sẽ được gửi qua email công ty trong vòng 5 phút. Q: Tài khoản bị khóa sau bao nhiêu lần đăng nhập sai? A: Tài khoản bị khóa sau 5 lần đăng nhập sai liên tiếp. Để mở khóa, liên hệ IT Helpdesk hoặc tự reset qua portal SSO. Q: Mật khẩu cần thay đổi định kỳ không? A: Có. Mật khẩu phải được thay đổi mỗi 90 ngày. Hệ thống sẽ nhắc nhở 7 ngày trước khi hết hạn. === Section 2: VPN và kết nối từ xa === Q: Phần mềm VPN nào công ty dùng? A: Công ty sử dụng Cisco AnyConnect. Download tại https://vpn.company.internal/download. Q: Tôi bị mất kết nối VPN liên tục, phải làm gì? A: Kiểm tra kết nối Internet trước. Nếu vẫn lỗi, tạo ticket P3 với log file VPN đính kèm. Q: VPN có giới hạn số thiết bị không? A: Mỗi tài khoản được kết nối VPN trên tối đa 2 thiết bị cùng lúc. === Section 3: Phần mềm và license === Q: Tôi cần cài phần mềm mới, phải làm gì? A: Gửi yêu cầu qua Jira project IT-SOFTWARE. Line Manager phải phê duyệt trước khi IT cài đặt. Q: Ai chịu trách nhiệm gia hạn license phần mềm? A: IT Procurement team quản lý tất cả license. Nhắc nhở sẽ được gửi 30 ngày trước khi hết hạn. === Section 4: Thiết bị và phần cứng === Q: Laptop mới được cấp sau bao lâu khi vào công ty? A:",
       "source": "it_helpdesk_faq.txt",
-      "score": 0.5791,
+      "score": 0.5562,
       "metadata": {
-        "source": "it_helpdesk_faq.txt",
-        "chunk_id": "it_helpdesk_faq.txt__chunk0"
+        "chunk_id": "it_helpdesk_faq.txt__chunk0",
+        "source": "it_helpdesk_faq.txt"
       }
     },
     {
       "text": "CHÍNH SÁCH HOÀN TIỀN - PHIÊN BẢN 4 Source: policy/refund-v4.pdf Department: CS Effective Date: 2026-02-01 Access: internal === Điều 1: Phạm vi áp dụng === Chính sách này áp dụng cho tất cả các đơn hàng được đặt trên hệ thống nội bộ kể từ ngày 01/02/2026. Các đơn hàng đặt trước ngày có hiệu lực sẽ áp dụng theo chính sách hoàn tiền phiên bản 3. === Điều 2: Điều kiện được hoàn tiền === Khách hàng được quyền yêu cầu hoàn tiền khi đáp ứng đủ các điều kiện sau: - Sản phẩm bị lỗi do nhà sản xuất, không phải do người dùng. - Yêu cầu được gửi trong vòng 7 ngày làm việc kể từ thời điểm xác nhận đơn hàng. - Đơn hàng chưa được sử dụng hoặc chưa bị mở seal. === Điều 3: Điều kiện áp dụng và ngoại lệ === Hoàn tiền — Điều kiện áp dụng: Yêu cầu được gửi trong vòng 7 ngày kể từ thời điểm xác nhận đơn hàng. Ngoại lệ không được hoàn tiền: - Sản phẩm thuộc danh mục hàng kỹ thuật số (license key, subscription). - Đơn hàng đã áp dụng mã giảm giá đặc biệt theo chương trình khuyến mãi Flash Sale. - Sản phẩm đã được kích hoạt hoặc đăng ký tài khoản. === Điều 4: Quy trình xử lý yêu cầu hoàn tiền === Bước 1: Khách hàng gửi yêu cầu qua hệ thống ticket nội bộ với category \"Refund Request\". Bước 2: CS Agent xem xét trong vòng 1 ngày làm việc và xác nhận điều kiện đủ điều kiện. Bước 3: Nếu đủ điều kiện, chuyển yêu cầu sang Finance Team để xử lý hoàn tiền. Bước 4: Finance Team xử lý trong 3-5 ngày làm việc và thông báo",
       "source": "policy_refund_v4.txt",
-      "score": 0.5612,
+      "score": 0.5428,
       "metadata": {
-        "chunk_id": "policy_refund_v4.txt__chunk0",
+        "source": "policy_refund_v4.txt",
+        "chunk_id": "policy_refund_v4.txt__chunk0"
+      }
+    },
+    {
+      "text": "2: CS Agent xem xét trong vòng 1 ngày làm việc và xác nhận điều kiện đủ điều kiện. Bước 3: Nếu đủ điều kiện, chuyển yêu cầu sang Finance Team để xử lý hoàn tiền. Bước 4: Finance Team xử lý trong 3-5 ngày làm việc và thông báo kết quả cho khách hàng. === Điều 5: Hình thức hoàn tiền === - Hoàn tiền qua phương thức thanh toán gốc: áp dụng trong 100% trường hợp đủ điều kiện. - Hoàn tiền qua credit nội bộ (store credit): khách hàng có thể chọn nhận store credit thay thế với giá trị 110% so với số tiền hoàn. === Điều 6: Liên hệ và hỗ trợ === Email: cs-refund@company.internal Hotline nội bộ: ext. 1234 Giờ làm việc: Thứ 2 - Thứ 6, 8:00 - 17:30",
+      "source": "policy_refund_v4.txt",
+      "score": 0.5302,
+      "metadata": {
+        "chunk_id": "policy_refund_v4.txt__chunk1",
         "source": "policy_refund_v4.txt"
+      }
+    },
+    {
+      "text": "làm việc. Ticket P4: - Phản hồi ban đầu: 3 ngày làm việc. - Xử lý và khắc phục: Theo sprint cycle (thông thường 2-4 tuần). === Phần 3: Quy trình xử lý sự cố P1 === Bước 1: Tiếp nhận On-call engineer nhận alert hoặc ticket, xác nhận severity trong 5 phút. Bước 2: Thông báo Gửi thông báo tới Slack #incident-p1 và email incident@company.internal ngay lập tức. Bước 3: Triage và phân công Lead Engineer phân công engineer xử lý trong 10 phút. Bước 4: Xử lý Engineer cập nhật tiến độ lên ticket mỗi 30 phút. Nếu cần hỗ trợ thêm, escalate ngay. Bước 5: Resolution Sau khi khắc phục, viết incident report trong vòng 24 giờ. === Phần 4: Công cụ và kênh liên lạc === Ticket system: Jira (project IT-SUPPORT) Slack channel: #incident-p1, #incident-p2 PagerDuty: Tự động nhắn on-call khi P1 ticket mới Hotline on-call: ext. 9999 (24/7) === Phần 5: Lịch sử phiên bản === v2026.1 (2026-01-15): Cập nhật SLA P1 resolution từ 6 giờ xuống 4 giờ. v2025.3 (2025-09-01): Thêm quy trình escalation tự động. v2025.1 (2025-03-01): Phiên bản đầu tiên.",
+      "source": "sla_p1_2026.txt",
+      "score": 0.5252,
+      "metadata": {
+        "chunk_id": "sla_p1_2026.txt__chunk1",
+        "source": "sla_p1_2026.txt"
       }
     }
   ],
   "retrieved_sources": [
-    "it_helpdesk_faq.txt",
-    "policy_refund_v4.txt"
-  ],
-  "policy_result": {},
-  "mcp_tools_used": [],
-  "final_answer": "Tài khoản bị khóa sau 5 lần đăng nhập sai liên tiếp. Để mở khóa, bạn có thể liên hệ IT Helpdesk hoặc tự reset qua portal SSO [2].",
-  "sources": [
+    "policy_refund_v4.txt",
+    "sla_p1_2026.txt",
     "it_helpdesk_faq.txt"
   ],
-  "confidence": 0.77,
+  "policy_result": {
+    "policy_applies": false,
+    "policy_name": "refund_policy_v4",
+    "exceptions_found": [
+      {
+        "type": "flash_sale_exception",
+        "rule": "Flash Sale không được hoàn tiền",
+        "source": "policy_refund_v4.txt"
+      },
+      {
+        "type": "digital_product_exception",
+        "rule": "Sản phẩm digital không được hoàn tiền",
+        "source": "policy_refund_v4.txt"
+      }
+    ],
+    "source": [
+      "policy_refund_v4.txt",
+      "sla_p1_2026.txt",
+      "it_helpdesk_faq.txt"
+    ],
+    "policy_version_note": "",
+    "explanation": "Hybrid rule-based + LLM analysis"
+  },
+  "mcp_tools_used": [],
+  "final_answer": "Sản phẩm kỹ thuật số (license key) không được hoàn tiền theo chính sách hiện hành. Điều này được nêu rõ trong các ngoại lệ của chính sách hoàn tiền: \"Sản phẩm thuộc danh mục hàng kỹ thuật số (license key, subscription) không được hoàn tiền\" [3].",
+  "sources": [
+    "policy_refund_v4.txt"
+  ],
+  "confidence": 0.66,
   "history": [
-    "[supervisor] received task: Tài khoản bị khóa sau bao nhiêu lần đăng nhập sai?",
-    "[supervisor] route=retrieval_worker reason=task contains retrieval/SLA keyword",
-    "[retrieval_worker] retrieved 3 chunks from ['it_helpdesk_faq.txt', 'policy_refund_v4.txt']",
-    "[synthesis_worker] answer_len=129, confidence=0.77, sources=['it_helpdesk_faq.txt']",
-    "[graph] completed in 23623ms"
+    "[supervisor] received task: Sản phẩm kỹ thuật số (license key) có được hoàn tiền không?",
+    "[supervisor] route=policy_tool_worker reason=task contains policy/access keyword",
+    "[retrieval_worker] retrieved 5 chunks from ['policy_refund_v4.txt', 'sla_p1_2026.txt', 'it_helpdesk_faq.txt']",
+    "[policy_tool_worker] policy_applies=False, exceptions=2",
+    "[synthesis_worker] answer_len=245, confidence=0.66, sources=['policy_refund_v4.txt']",
+    "[graph] completed in 7957ms"
   ],
   "workers_called": [
     "retrieval_worker",
+    "policy_tool_worker",
     "synthesis_worker"
   ],
-  "supervisor_route": "retrieval_worker",
-  "latency_ms": 23623,
-  "run_id": "run_20260414_173912",
+  "supervisor_route": "policy_tool_worker",
+  "latency_ms": 7957,
+  "run_id": "run_20260414_175623",
   "worker_io_logs": [
     {
       "worker": "retrieval_worker",
       "input": {
-        "task": "Tài khoản bị khóa sau bao nhiêu lần đăng nhập sai?",
-        "top_k": 3
+        "task": "Sản phẩm kỹ thuật số (license key) có được hoàn tiền không?",
+        "top_k": 5
       },
       "output": {
-        "chunks_count": 3,
+        "chunks_count": 5,
         "sources": [
-          "it_helpdesk_faq.txt",
-          "policy_refund_v4.txt"
+          "policy_refund_v4.txt",
+          "sla_p1_2026.txt",
+          "it_helpdesk_faq.txt"
         ]
       },
       "error": null
     },
     {
-      "worker": "synthesis_worker",
-      "timestamp": "2026-04-14T10:39:33.622425+00:00",
+      "worker": "policy_tool_worker",
       "input": {
-        "task": "Tài khoản bị khóa sau bao nhiêu lần đăng nhập sai?",
-        "chunks_count": 3,
-        "has_policy": false,
-        "exceptions_count": 0
+        "task": "Sản phẩm kỹ thuật số (license key) có được hoàn tiền không?",
+        "chunks_count": 5,
+        "needs_tool": true
       },
       "output": {
-        "answer_length": 129,
+        "policy_applies": false,
+        "exceptions_count": 2,
+        "mcp_calls": 0
+      },
+      "error": null
+    },
+    {
+      "worker": "synthesis_worker",
+      "timestamp": "2026-04-14T10:56:29.917452+00:00",
+      "input": {
+        "task": "Sản phẩm kỹ thuật số (license key) có được hoàn tiền không?",
+        "chunks_count": 5,
+        "has_policy": true,
+        "exceptions_count": 2
+      },
+      "output": {
+        "answer_length": 245,
         "sources": [
-          "it_helpdesk_faq.txt"
+          "policy_refund_v4.txt"
         ],
         "sources_count": 1,
-        "confidence": 0.77,
+        "confidence": 0.66,
         "abstained": false,
         "hitl_triggered": false
       },
       "error": null
     }
   ],
-  "question_id": "q04"
+  "question_id": "q07"
 }

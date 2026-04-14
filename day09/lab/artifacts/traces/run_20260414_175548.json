@@ -10,8 +10,8 @@
       "source": "access_control_sop.txt",
       "score": 0.6294,
       "metadata": {
-        "chunk_id": "access_control_sop.txt__chunk1",
-        "source": "access_control_sop.txt"
+        "source": "access_control_sop.txt",
+        "chunk_id": "access_control_sop.txt__chunk1"
       }
     },
     {
@@ -19,8 +19,8 @@
       "source": "access_control_sop.txt",
       "score": 0.527,
       "metadata": {
-        "source": "access_control_sop.txt",
-        "chunk_id": "access_control_sop.txt__chunk0"
+        "chunk_id": "access_control_sop.txt__chunk0",
+        "source": "access_control_sop.txt"
       }
     },
     {
@@ -31,19 +31,41 @@
         "source": "it_helpdesk_faq.txt",
         "chunk_id": "it_helpdesk_faq.txt__chunk1"
       }
+    },
+    {
+      "text": "muộn hơn nhưng phải được Line Manager đồng ý qua tin nhắn trực tiếp. === Phần 3: Chính sách làm thêm giờ === 3.1 Điều kiện làm thêm: Làm thêm giờ phải được Line Manager phê duyệt trước bằng văn bản. 3.2 Hệ số lương làm thêm: - Ngày thường: 150% lương giờ tiêu chuẩn. - Ngày cuối tuần: 200% lương giờ tiêu chuẩn. - Ngày lễ: 300% lương giờ tiêu chuẩn. === Phần 4: Remote work policy === 4.1 Điều kiện remote: - Nhân viên sau probation period có thể làm remote tối đa 2 ngày/tuần. - Team Lead phải phê duyệt lịch remote qua HR Portal. - Ngày onsite bắt buộc: Thứ 3 và Thứ 5 theo lịch team. 4.2 Yêu cầu kỹ thuật khi remote: - Kết nối VPN bắt buộc khi làm việc với hệ thống nội bộ. - Camera bật trong các cuộc họp team. === Phần 5: Liên hệ HR === Email: hr@company.internal Hotline: ext. 2000 HR Portal: https://hr.company.internal Giờ làm việc: Thứ 2 - Thứ 6, 8:30 - 17:30",
+      "source": "hr_leave_policy.txt",
+      "score": 0.5133,
+      "metadata": {
+        "source": "hr_leave_policy.txt",
+        "chunk_id": "hr_leave_policy.txt__chunk1"
+      }
+    },
+    {
+      "text": "làm việc. Ticket P4: - Phản hồi ban đầu: 3 ngày làm việc. - Xử lý và khắc phục: Theo sprint cycle (thông thường 2-4 tuần). === Phần 3: Quy trình xử lý sự cố P1 === Bước 1: Tiếp nhận On-call engineer nhận alert hoặc ticket, xác nhận severity trong 5 phút. Bước 2: Thông báo Gửi thông báo tới Slack #incident-p1 và email incident@company.internal ngay lập tức. Bước 3: Triage và phân công Lead Engineer phân công engineer xử lý trong 10 phút. Bước 4: Xử lý Engineer cập nhật tiến độ lên ticket mỗi 30 phút. Nếu cần hỗ trợ thêm, escalate ngay. Bước 5: Resolution Sau khi khắc phục, viết incident report trong vòng 24 giờ. === Phần 4: Công cụ và kênh liên lạc === Ticket system: Jira (project IT-SUPPORT) Slack channel: #incident-p1, #incident-p2 PagerDuty: Tự động nhắn on-call khi P1 ticket mới Hotline on-call: ext. 9999 (24/7) === Phần 5: Lịch sử phiên bản === v2026.1 (2026-01-15): Cập nhật SLA P1 resolution từ 6 giờ xuống 4 giờ. v2025.3 (2025-09-01): Thêm quy trình escalation tự động. v2025.1 (2025-03-01): Phiên bản đầu tiên.",
+      "source": "sla_p1_2026.txt",
+      "score": 0.5036,
+      "metadata": {
+        "chunk_id": "sla_p1_2026.txt__chunk1",
+        "source": "sla_p1_2026.txt"
+      }
     }
   ],
   "retrieved_sources": [
+    "sla_p1_2026.txt",
     "access_control_sop.txt",
-    "it_helpdesk_faq.txt"
+    "it_helpdesk_faq.txt",
+    "hr_leave_policy.txt"
   ],
   "policy_result": {
     "policy_applies": true,
     "policy_name": "refund_policy_v4",
     "exceptions_found": [],
     "source": [
+      "sla_p1_2026.txt",
       "access_control_sop.txt",
-      "it_helpdesk_faq.txt"
+      "it_helpdesk_faq.txt",
+      "hr_leave_policy.txt"
     ],
     "policy_version_note": "",
     "explanation": "Hybrid rule-based + LLM analysis"
@@ -53,14 +75,14 @@
   "sources": [
     "access_control_sop.txt"
   ],
-  "confidence": 0.76,
+  "confidence": 0.75,
   "history": [
     "[supervisor] received task: Ai phải phê duyệt để cấp quyền Level 3?",
     "[supervisor] route=policy_tool_worker reason=task contains policy/access keyword",
-    "[retrieval_worker] retrieved 3 chunks from ['access_control_sop.txt', 'it_helpdesk_faq.txt']",
+    "[retrieval_worker] retrieved 5 chunks from ['sla_p1_2026.txt', 'access_control_sop.txt', 'it_helpdesk_faq.txt', 'hr_leave_policy.txt']",
     "[policy_tool_worker] policy_applies=True, exceptions=0",
-    "[synthesis_worker] answer_len=88, confidence=0.76, sources=['access_control_sop.txt']",
-    "[graph] completed in 44042ms"
+    "[synthesis_worker] answer_len=88, confidence=0.75, sources=['access_control_sop.txt']",
+    "[graph] completed in 10984ms"
   ],
   "workers_called": [
     "retrieval_worker",
@@ -68,20 +90,22 @@
     "synthesis_worker"
   ],
   "supervisor_route": "policy_tool_worker",
-  "latency_ms": 44042,
-  "run_id": "run_20260414_173828",
+  "latency_ms": 10984,
+  "run_id": "run_20260414_175548",
   "worker_io_logs": [
     {
       "worker": "retrieval_worker",
       "input": {
         "task": "Ai phải phê duyệt để cấp quyền Level 3?",
-        "top_k": 3
+        "top_k": 5
       },
       "output": {
-        "chunks_count": 3,
+        "chunks_count": 5,
         "sources": [
+          "sla_p1_2026.txt",
           "access_control_sop.txt",
-          "it_helpdesk_faq.txt"
+          "it_helpdesk_faq.txt",
+          "hr_leave_policy.txt"
         ]
       },
       "error": null
@@ -90,7 +114,7 @@
       "worker": "policy_tool_worker",
       "input": {
         "task": "Ai phải phê duyệt để cấp quyền Level 3?",
-        "chunks_count": 3,
+        "chunks_count": 5,
         "needs_tool": true
       },
       "output": {
@@ -102,10 +126,10 @@
     },
     {
       "worker": "synthesis_worker",
-      "timestamp": "2026-04-14T10:39:05.398052+00:00",
+      "timestamp": "2026-04-14T10:55:56.425817+00:00",
       "input": {
         "task": "Ai phải phê duyệt để cấp quyền Level 3?",
-        "chunks_count": 3,
+        "chunks_count": 5,
         "has_policy": true,
         "exceptions_count": 0
       },
@@ -115,7 +139,7 @@
           "access_control_sop.txt"
         ],
         "sources_count": 1,
-        "confidence": 0.76,
+        "confidence": 0.75,
         "abstained": false,
         "hitl_triggered": false
       },

@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-04-14T17:46:49.742724",
+  "generated_at": "2026-04-14T17:58:09.316005",
   "day08_single_agent": {
     "total_questions": 15,
     "avg_confidence": 0.82,
@@ -13,30 +13,30 @@
       "retrieval_worker": "8/15 (53%)",
       "policy_tool_worker": "7/15 (46%)"
     },
-    "avg_confidence": 0.656,
-    "avg_latency_ms": 39323,
+    "avg_confidence": 0.643,
+    "avg_latency_ms": 11542,
     "mcp_usage_rate": "2/15 (13%)",
     "hitl_rate": "3/15 (20%)",
     "top_sources": [
       [
         "it_helpdesk_faq.txt",
-        10
+        15
       ],
       [
         "policy_refund_v4.txt",
-        9
+        12
       ],
       [
         "hr_leave_policy.txt",
-        5
-      ],
-      [
-        "access_control_sop.txt",
-        5
+        12
       ],
       [
         "sla_p1_2026.txt",
-        4
+        8
+      ],
+      [
+        "access_control_sop.txt",
+        8
       ]
     ]
   },

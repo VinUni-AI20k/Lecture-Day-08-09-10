@@ -31,62 +31,84 @@
         "source": "policy_refund_v4.txt",
         "chunk_id": "policy_refund_v4.txt__chunk0"
       }
+    },
+    {
+      "text": "làm việc. Ticket P4: - Phản hồi ban đầu: 3 ngày làm việc. - Xử lý và khắc phục: Theo sprint cycle (thông thường 2-4 tuần). === Phần 3: Quy trình xử lý sự cố P1 === Bước 1: Tiếp nhận On-call engineer nhận alert hoặc ticket, xác nhận severity trong 5 phút. Bước 2: Thông báo Gửi thông báo tới Slack #incident-p1 và email incident@company.internal ngay lập tức. Bước 3: Triage và phân công Lead Engineer phân công engineer xử lý trong 10 phút. Bước 4: Xử lý Engineer cập nhật tiến độ lên ticket mỗi 30 phút. Nếu cần hỗ trợ thêm, escalate ngay. Bước 5: Resolution Sau khi khắc phục, viết incident report trong vòng 24 giờ. === Phần 4: Công cụ và kênh liên lạc === Ticket system: Jira (project IT-SUPPORT) Slack channel: #incident-p1, #incident-p2 PagerDuty: Tự động nhắn on-call khi P1 ticket mới Hotline on-call: ext. 9999 (24/7) === Phần 5: Lịch sử phiên bản === v2026.1 (2026-01-15): Cập nhật SLA P1 resolution từ 6 giờ xuống 4 giờ. v2025.3 (2025-09-01): Thêm quy trình escalation tự động. v2025.1 (2025-03-01): Phiên bản đầu tiên.",
+      "source": "sla_p1_2026.txt",
+      "score": 0.5331,
+      "metadata": {
+        "source": "sla_p1_2026.txt",
+        "chunk_id": "sla_p1_2026.txt__chunk1"
+      }
+    },
+    {
+      "text": "chịu trách nhiệm gia hạn license phần mềm? A: IT Procurement team quản lý tất cả license. Nhắc nhở sẽ được gửi 30 ngày trước khi hết hạn. === Section 4: Thiết bị và phần cứng === Q: Laptop mới được cấp sau bao lâu khi vào công ty? A: Laptop được cấp trong ngày onboarding đầu tiên. Nếu có vấn đề, liên hệ HR hoặc IT Admin. Q: Laptop bị hỏng phải báo cáo như thế nào? A: Tạo ticket P2 hoặc P3 tùy mức độ nghiêm trọng. Mang thiết bị đến IT Room (tầng 3) để kiểm tra. === Section 5: Email và lịch === Q: Hộp thư đến đầy, phải làm gì? A: Xóa email cũ hoặc yêu cầu tăng dung lượng qua ticket IT-ACCESS. Dung lượng tiêu chuẩn là 50GB. Q: Tôi không nhận được email từ bên ngoài? A: Kiểm tra thư mục Spam trước. Nếu vẫn không có, tạo ticket P2 kèm địa chỉ email gửi và thời gian gửi. === Section 6: Liên hệ IT Helpdesk === Hotline: ext. 9000 (8:00 - 18:00, Thứ 2 - Thứ 6) Email: helpdesk@company.internal Jira: project IT-SUPPORT Slack: #it-helpdesk Emergency (ngoài giờ): ext. 9999",
+      "source": "it_helpdesk_faq.txt",
+      "score": 0.5019,
+      "metadata": {
+        "source": "it_helpdesk_faq.txt",
+        "chunk_id": "it_helpdesk_faq.txt__chunk1"
+      }
     }
   ],
   "retrieved_sources": [
+    "policy_refund_v4.txt",
+    "sla_p1_2026.txt",
     "hr_leave_policy.txt",
-    "policy_refund_v4.txt"
+    "it_helpdesk_faq.txt"
   ],
   "policy_result": {},
   "mcp_tools_used": [],
-  "final_answer": "Quy trình xử lý sự cố P1 gồm 4 bước. Bước đầu tiên là khách hàng gửi yêu cầu qua hệ thống ticket nội bộ với category \"Refund Request\" [3].",
+  "final_answer": "Quy trình xử lý sự cố P1 gồm 5 bước. Bước đầu tiên là tiếp nhận, On-call engineer nhận alert hoặc ticket, xác nhận severity trong 5 phút [4].",
   "sources": [
-    "policy_refund_v4.txt"
+    "sla_p1_2026.txt"
   ],
   "confidence": 0.75,
   "history": [
     "[supervisor] received task: Quy trình xử lý sự cố P1 gồm mấy bước và bước đầu tiên là gì?",
     "[supervisor] route=retrieval_worker reason=task contains retrieval/SLA keyword | risk_high flagged",
-    "[retrieval_worker] retrieved 3 chunks from ['hr_leave_policy.txt', 'policy_refund_v4.txt']",
-    "[synthesis_worker] answer_len=138, confidence=0.75, sources=['policy_refund_v4.txt']",
-    "[graph] completed in 19123ms"
+    "[retrieval_worker] retrieved 5 chunks from ['policy_refund_v4.txt', 'sla_p1_2026.txt', 'hr_leave_policy.txt', 'it_helpdesk_faq.txt']",
+    "[synthesis_worker] answer_len=141, confidence=0.75, sources=['sla_p1_2026.txt']",
+    "[graph] completed in 9534ms"
   ],
   "workers_called": [
     "retrieval_worker",
     "synthesis_worker"
   ],
   "supervisor_route": "retrieval_worker",
-  "latency_ms": 19123,
-  "run_id": "run_20260414_174456",
+  "latency_ms": 9534,
+  "run_id": "run_20260414_175631",
   "worker_io_logs": [
     {
       "worker": "retrieval_worker",
       "input": {
         "task": "Quy trình xử lý sự cố P1 gồm mấy bước và bước đầu tiên là gì?",
-        "top_k": 3
+        "top_k": 5
       },
       "output": {
-        "chunks_count": 3,
+        "chunks_count": 5,
         "sources": [
+          "policy_refund_v4.txt",
+          "sla_p1_2026.txt",
           "hr_leave_policy.txt",
-          "policy_refund_v4.txt"
+          "it_helpdesk_faq.txt"
         ]
       },
       "error": null
     },
     {
       "worker": "synthesis_worker",
-      "timestamp": "2026-04-14T10:45:13.144008+00:00",
+      "timestamp": "2026-04-14T10:56:38.051080+00:00",
       "input": {
         "task": "Quy trình xử lý sự cố P1 gồm mấy bước và bước đầu tiên là gì?",
-        "chunks_count": 3,
+        "chunks_count": 5,
         "has_policy": false,
         "exceptions_count": 0
       },
       "output": {
-        "answer_length": 138,
+        "answer_length": 141,
         "sources": [
-          "policy_refund_v4.txt"
+          "sla_p1_2026.txt"
         ],
         "sources_count": 1,
         "confidence": 0.75,

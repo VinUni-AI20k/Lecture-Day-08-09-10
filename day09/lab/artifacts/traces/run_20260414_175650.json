@@ -10,8 +10,8 @@
       "source": "policy_refund_v4.txt",
       "score": 0.6363,
       "metadata": {
-        "source": "policy_refund_v4.txt",
-        "chunk_id": "policy_refund_v4.txt__chunk1"
+        "chunk_id": "policy_refund_v4.txt__chunk1",
+        "source": "policy_refund_v4.txt"
       }
     },
     {
@@ -28,14 +28,34 @@
       "source": "policy_refund_v4.txt",
       "score": 0.4509,
       "metadata": {
-        "source": "policy_refund_v4.txt",
-        "chunk_id": "policy_refund_v4.txt__chunk0"
+        "chunk_id": "policy_refund_v4.txt__chunk0",
+        "source": "policy_refund_v4.txt"
+      }
+    },
+    {
+      "text": "muộn hơn nhưng phải được Line Manager đồng ý qua tin nhắn trực tiếp. === Phần 3: Chính sách làm thêm giờ === 3.1 Điều kiện làm thêm: Làm thêm giờ phải được Line Manager phê duyệt trước bằng văn bản. 3.2 Hệ số lương làm thêm: - Ngày thường: 150% lương giờ tiêu chuẩn. - Ngày cuối tuần: 200% lương giờ tiêu chuẩn. - Ngày lễ: 300% lương giờ tiêu chuẩn. === Phần 4: Remote work policy === 4.1 Điều kiện remote: - Nhân viên sau probation period có thể làm remote tối đa 2 ngày/tuần. - Team Lead phải phê duyệt lịch remote qua HR Portal. - Ngày onsite bắt buộc: Thứ 3 và Thứ 5 theo lịch team. 4.2 Yêu cầu kỹ thuật khi remote: - Kết nối VPN bắt buộc khi làm việc với hệ thống nội bộ. - Camera bật trong các cuộc họp team. === Phần 5: Liên hệ HR === Email: hr@company.internal Hotline: ext. 2000 HR Portal: https://hr.company.internal Giờ làm việc: Thứ 2 - Thứ 6, 8:30 - 17:30",
+      "source": "hr_leave_policy.txt",
+      "score": 0.4476,
+      "metadata": {
+        "chunk_id": "hr_leave_policy.txt__chunk1",
+        "source": "hr_leave_policy.txt"
+      }
+    },
+    {
+      "text": "QUY TRÌNH KIỂM SOÁT TRUY CẬP HỆ THỐNG (ACCESS CONTROL SOP) Source: it/access-control-sop.md Department: IT Security Effective Date: 2026-01-01 Access: internal Ghi chú: Tài liệu này trước đây có tên \"Approval Matrix for System Access\". === Section 1: Phạm vi và mục đích === Tài liệu này quy định quy trình cấp phép truy cập vào các hệ thống nội bộ của công ty. Áp dụng cho tất cả nhân viên, contractor, và third-party vendor. === Section 2: Phân cấp quyền truy cập === Level 1 — Read Only: Áp dụng cho: Tất cả nhân viên mới trong 30 ngày đầu. Phê duyệt: Line Manager. Thời gian xử lý: 1 ngày làm việc. Level 2 — Standard Access: Áp dụng cho: Nhân viên chính thức đã qua thử việc. Phê duyệt: Line Manager + IT Admin. Thời gian xử lý: 2 ngày làm việc. Level 3 — Elevated Access: Áp dụng cho: Team Lead, Senior Engineer, Manager. Phê duyệt: Line Manager + IT Admin + IT Security. Thời gian xử lý: 3 ngày làm việc. Level 4 — Admin Access: Áp dụng cho: DevOps, SRE, IT Admin. Phê duyệt: IT Manager + CISO. Thời gian xử lý: 5 ngày làm việc. Yêu cầu thêm: Training bắt buộc về security policy. === Section 3: Quy trình yêu cầu cấp quyền === Bước 1: Nhân viên tạo Access Request ticket trên Jira (project IT-ACCESS). Bước 2: Line Manager phê duyệt yêu cầu trong 1 ngày làm việc. Bước 3: IT Admin kiểm tra compliance và cấp quyền. Bước 4: IT Security review với Level 3 và Level 4. Bước 5: Nhân viên nhận thông báo qua email khi quyền được cấp. === Section 4: Escalation khi cần thay đổi quyền hệ thống === Escalation chỉ áp dụng khi cần thay đổi quyền",
+      "source": "access_control_sop.txt",
+      "score": 0.4269,
+      "metadata": {
+        "source": "access_control_sop.txt",
+        "chunk_id": "access_control_sop.txt__chunk0"
       }
     }
   ],
   "retrieved_sources": [
-    "it_helpdesk_faq.txt",
-    "policy_refund_v4.txt"
+    "policy_refund_v4.txt",
+    "access_control_sop.txt",
+    "hr_leave_policy.txt",
+    "it_helpdesk_faq.txt"
   ],
   "policy_result": {
     "policy_applies": false,
@@ -48,25 +68,27 @@
       }
     ],
     "source": [
-      "it_helpdesk_faq.txt",
-      "policy_refund_v4.txt"
+      "policy_refund_v4.txt",
+      "access_control_sop.txt",
+      "hr_leave_policy.txt",
+      "it_helpdesk_faq.txt"
     ],
     "policy_version_note": "",
     "explanation": "Hybrid rule-based + LLM analysis"
   },
   "mcp_tools_used": [],
-  "final_answer": "Giá trị store credit khi hoàn tiền là 110% so với số tiền gốc mà khách hàng đã thanh toán. Khách hàng có thể chọn nhận store credit thay thế trong trường hợp đủ điều kiện hoàn tiền [1]. \n\nKhông có ngoại lệ nào liên quan đến giá trị store credit trong tài liệu nội bộ.",
+  "final_answer": "Store credit khi hoàn tiền có giá trị 110% so với số tiền gốc nếu khách hàng chọn nhận store credit thay thế [1].",
   "sources": [
     "policy_refund_v4.txt"
   ],
-  "confidence": 0.68,
+  "confidence": 0.67,
   "history": [
     "[supervisor] received task: Store credit khi hoàn tiền có giá trị bao nhiêu so với tiền gốc?",
     "[supervisor] route=policy_tool_worker reason=task contains policy/access keyword",
-    "[retrieval_worker] retrieved 3 chunks from ['it_helpdesk_faq.txt', 'policy_refund_v4.txt']",
+    "[retrieval_worker] retrieved 5 chunks from ['policy_refund_v4.txt', 'access_control_sop.txt', 'hr_leave_policy.txt', 'it_helpdesk_faq.txt']",
     "[policy_tool_worker] policy_applies=False, exceptions=1",
-    "[synthesis_worker] answer_len=267, confidence=0.68, sources=['policy_refund_v4.txt']",
-    "[graph] completed in 12470ms"
+    "[synthesis_worker] answer_len=113, confidence=0.67, sources=['policy_refund_v4.txt']",
+    "[graph] completed in 8893ms"
   ],
   "workers_called": [
     "retrieval_worker",
@@ -74,20 +96,22 @@
     "synthesis_worker"
   ],
   "supervisor_route": "policy_tool_worker",
-  "latency_ms": 12470,
-  "run_id": "run_20260414_174527",
+  "latency_ms": 8893,
+  "run_id": "run_20260414_175650",
   "worker_io_logs": [
     {
       "worker": "retrieval_worker",
       "input": {
         "task": "Store credit khi hoàn tiền có giá trị bao nhiêu so với tiền gốc?",
-        "top_k": 3
+        "top_k": 5
       },
       "output": {
-        "chunks_count": 3,
+        "chunks_count": 5,
         "sources": [
-          "it_helpdesk_faq.txt",
-          "policy_refund_v4.txt"
+          "policy_refund_v4.txt",
+          "access_control_sop.txt",
+          "hr_leave_policy.txt",
+          "it_helpdesk_faq.txt"
         ]
       },
       "error": null
@@ -96,7 +120,7 @@
       "worker": "policy_tool_worker",
       "input": {
         "task": "Store credit khi hoàn tiền có giá trị bao nhiêu so với tiền gốc?",
-        "chunks_count": 3,
+        "chunks_count": 5,
         "needs_tool": true
       },
       "output": {
@@ -108,20 +132,20 @@
     },
     {
       "worker": "synthesis_worker",
-      "timestamp": "2026-04-14T10:45:36.495248+00:00",
+      "timestamp": "2026-04-14T10:56:57.714792+00:00",
       "input": {
         "task": "Store credit khi hoàn tiền có giá trị bao nhiêu so với tiền gốc?",
-        "chunks_count": 3,
+        "chunks_count": 5,
         "has_policy": true,
         "exceptions_count": 1
       },
       "output": {
-        "answer_length": 267,
+        "answer_length": 113,
         "sources": [
           "policy_refund_v4.txt"
         ],
         "sources_count": 1,
-        "confidence": 0.68,
+        "confidence": 0.67,
         "abstained": false,
         "hitl_triggered": false
       },

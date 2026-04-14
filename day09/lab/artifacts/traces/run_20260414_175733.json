@@ -10,8 +10,8 @@
       "source": "hr_leave_policy.txt",
       "score": 0.6413,
       "metadata": {
-        "source": "hr_leave_policy.txt",
-        "chunk_id": "hr_leave_policy.txt__chunk1"
+        "chunk_id": "hr_leave_policy.txt__chunk1",
+        "source": "hr_leave_policy.txt"
       }
     },
     {
@@ -19,8 +19,8 @@
       "source": "access_control_sop.txt",
       "score": 0.555,
       "metadata": {
-        "chunk_id": "access_control_sop.txt__chunk1",
-        "source": "access_control_sop.txt"
+        "source": "access_control_sop.txt",
+        "chunk_id": "access_control_sop.txt__chunk1"
       }
     },
     {
@@ -31,44 +31,64 @@
         "source": "it_helpdesk_faq.txt",
         "chunk_id": "it_helpdesk_faq.txt__chunk1"
       }
+    },
+    {
+      "text": "2: CS Agent xem xét trong vòng 1 ngày làm việc và xác nhận điều kiện đủ điều kiện. Bước 3: Nếu đủ điều kiện, chuyển yêu cầu sang Finance Team để xử lý hoàn tiền. Bước 4: Finance Team xử lý trong 3-5 ngày làm việc và thông báo kết quả cho khách hàng. === Điều 5: Hình thức hoàn tiền === - Hoàn tiền qua phương thức thanh toán gốc: áp dụng trong 100% trường hợp đủ điều kiện. - Hoàn tiền qua credit nội bộ (store credit): khách hàng có thể chọn nhận store credit thay thế với giá trị 110% so với số tiền hoàn. === Điều 6: Liên hệ và hỗ trợ === Email: cs-refund@company.internal Hotline nội bộ: ext. 1234 Giờ làm việc: Thứ 2 - Thứ 6, 8:00 - 17:30",
+      "source": "policy_refund_v4.txt",
+      "score": 0.5478,
+      "metadata": {
+        "chunk_id": "policy_refund_v4.txt__chunk1",
+        "source": "policy_refund_v4.txt"
+      }
+    },
+    {
+      "text": "CHÍNH SÁCH NGHỈ PHÉP VÀ PHÚC LỢI NHÂN SỰ Source: hr/leave-policy-2026.pdf Department: HR Effective Date: 2026-01-01 Access: internal === Phần 1: Các loại nghỉ phép === 1.1 Nghỉ phép năm (Annual Leave): - Số ngày: 12 ngày/năm cho nhân viên dưới 3 năm kinh nghiệm. - Số ngày: 15 ngày/năm cho nhân viên từ 3-5 năm kinh nghiệm. - Số ngày: 18 ngày/năm cho nhân viên trên 5 năm kinh nghiệm. - Chuyển năm sau: Tối đa 5 ngày phép năm chưa dùng được chuyển sang năm tiếp theo. 1.2 Nghỉ ốm (Sick Leave): - Số ngày: 10 ngày/năm có trả lương. - Yêu cầu: Thông báo cho Line Manager trước 9:00 sáng ngày nghỉ. - Nếu nghỉ trên 3 ngày liên tiếp: Cần giấy tờ y tế từ bệnh viện. 1.3 Nghỉ thai sản: - Nghỉ sinh con: 6 tháng theo quy định Luật Lao động. - Nghỉ nuôi con nhỏ: 1 tiếng/ngày trong 12 tháng đầu sau sinh. 1.4 Nghỉ lễ tết: Theo lịch nghỉ lễ quốc gia do HR công bố hàng năm vào tháng 12. === Phần 2: Quy trình xin nghỉ phép === Bước 1: Nhân viên gửi yêu cầu nghỉ phép qua hệ thống HR Portal (https://hr.company.internal) ít nhất 3 ngày làm việc trước ngày nghỉ. Bước 2: Line Manager phê duyệt hoặc từ chối trong vòng 1 ngày làm việc. Bước 3: Nhân viên nhận thông báo qua email sau khi được phê duyệt. Trường hợp khẩn cấp: Có thể gửi yêu cầu muộn hơn nhưng phải được Line Manager đồng ý qua tin nhắn trực tiếp. === Phần 3: Chính sách làm thêm giờ === 3.1 Điều kiện làm thêm: Làm thêm giờ phải được Line Manager phê duyệt trước bằng văn bản. 3.2 Hệ số lương làm thêm: - Ngày thường:",
+      "source": "hr_leave_policy.txt",
+      "score": 0.5445,
+      "metadata": {
+        "source": "hr_leave_policy.txt",
+        "chunk_id": "hr_leave_policy.txt__chunk0"
+      }
     }
   ],
   "retrieved_sources": [
+    "policy_refund_v4.txt",
     "access_control_sop.txt",
     "hr_leave_policy.txt",
     "it_helpdesk_faq.txt"
   ],
   "policy_result": {},
   "mcp_tools_used": [],
-  "final_answer": "Nhân viên trong thời gian thử việc (probation period) không đủ điều kiện để làm remote. Chính sách remote chỉ áp dụng cho nhân viên sau khi hoàn thành probation period, với điều kiện là Team Lead phải phê duyệt lịch remote qua HR Portal và có ngày onsite bắt buộc vào thứ 3 và thứ 5 theo lịch team [1].",
+  "final_answer": "Nhân viên vừa vào thử việc (trong probation period) không đủ điều kiện để làm remote. Chính sách chỉ cho phép nhân viên sau probation period làm remote tối đa 2 ngày/tuần, với sự phê duyệt của Team Lead qua HR Portal [1].",
   "sources": [
     "hr_leave_policy.txt"
   ],
-  "confidence": 0.77,
+  "confidence": 0.76,
   "history": [
     "[supervisor] received task: Nhân viên vừa vào thử việc (trong probation period) muốn làm remote vì lý do cá ",
     "[supervisor] route=retrieval_worker reason=task contains retrieval/SLA keyword",
-    "[retrieval_worker] retrieved 3 chunks from ['access_control_sop.txt', 'hr_leave_policy.txt', 'it_helpdesk_faq.txt']",
-    "[synthesis_worker] answer_len=302, confidence=0.77, sources=['hr_leave_policy.txt']",
-    "[graph] completed in 11138ms"
+    "[retrieval_worker] retrieved 5 chunks from ['policy_refund_v4.txt', 'access_control_sop.txt', 'hr_leave_policy.txt', 'it_helpdesk_faq.txt']",
+    "[synthesis_worker] answer_len=221, confidence=0.76, sources=['hr_leave_policy.txt']",
+    "[graph] completed in 13408ms"
   ],
   "workers_called": [
     "retrieval_worker",
     "synthesis_worker"
   ],
   "supervisor_route": "retrieval_worker",
-  "latency_ms": 11138,
-  "run_id": "run_20260414_174619",
+  "latency_ms": 13408,
+  "run_id": "run_20260414_175733",
   "worker_io_logs": [
     {
       "worker": "retrieval_worker",
       "input": {
         "task": "Nhân viên vừa vào thử việc (trong probation period) muốn làm remote vì lý do cá nhân. Điều kiện là gì?",
-        "top_k": 3
+        "top_k": 5
       },
       "output": {
-        "chunks_count": 3,
+        "chunks_count": 5,
         "sources": [
+          "policy_refund_v4.txt",
           "access_control_sop.txt",
           "hr_leave_policy.txt",
           "it_helpdesk_faq.txt"
@@ -78,20 +98,20 @@
     },
     {
       "worker": "synthesis_worker",
-      "timestamp": "2026-04-14T10:46:27.913398+00:00",
+      "timestamp": "2026-04-14T10:57:44.477957+00:00",
       "input": {
         "task": "Nhân viên vừa vào thử việc (trong probation period) muốn làm remote vì lý do cá nhân. Điều kiện là gì?",
-        "chunks_count": 3,
+        "chunks_count": 5,
         "has_policy": false,
         "exceptions_count": 0
       },
       "output": {
-        "answer_length": 302,
+        "answer_length": 221,
         "sources": [
           "hr_leave_policy.txt"
         ],
         "sources_count": 1,
-        "confidence": 0.77,
+        "confidence": 0.76,
         "abstained": false,
         "hitl_triggered": false
       },

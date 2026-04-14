@@ -28,14 +28,33 @@
       "source": "hr_leave_policy.txt",
       "score": 0.6098,
       "metadata": {
-        "source": "hr_leave_policy.txt",
-        "chunk_id": "hr_leave_policy.txt__chunk0"
+        "chunk_id": "hr_leave_policy.txt__chunk0",
+        "source": "hr_leave_policy.txt"
+      }
+    },
+    {
+      "text": "muộn hơn nhưng phải được Line Manager đồng ý qua tin nhắn trực tiếp. === Phần 3: Chính sách làm thêm giờ === 3.1 Điều kiện làm thêm: Làm thêm giờ phải được Line Manager phê duyệt trước bằng văn bản. 3.2 Hệ số lương làm thêm: - Ngày thường: 150% lương giờ tiêu chuẩn. - Ngày cuối tuần: 200% lương giờ tiêu chuẩn. - Ngày lễ: 300% lương giờ tiêu chuẩn. === Phần 4: Remote work policy === 4.1 Điều kiện remote: - Nhân viên sau probation period có thể làm remote tối đa 2 ngày/tuần. - Team Lead phải phê duyệt lịch remote qua HR Portal. - Ngày onsite bắt buộc: Thứ 3 và Thứ 5 theo lịch team. 4.2 Yêu cầu kỹ thuật khi remote: - Kết nối VPN bắt buộc khi làm việc với hệ thống nội bộ. - Camera bật trong các cuộc họp team. === Phần 5: Liên hệ HR === Email: hr@company.internal Hotline: ext. 2000 HR Portal: https://hr.company.internal Giờ làm việc: Thứ 2 - Thứ 6, 8:30 - 17:30",
+      "source": "hr_leave_policy.txt",
+      "score": 0.5975,
+      "metadata": {
+        "chunk_id": "hr_leave_policy.txt__chunk1",
+        "source": "hr_leave_policy.txt"
+      }
+    },
+    {
+      "text": "chịu trách nhiệm gia hạn license phần mềm? A: IT Procurement team quản lý tất cả license. Nhắc nhở sẽ được gửi 30 ngày trước khi hết hạn. === Section 4: Thiết bị và phần cứng === Q: Laptop mới được cấp sau bao lâu khi vào công ty? A: Laptop được cấp trong ngày onboarding đầu tiên. Nếu có vấn đề, liên hệ HR hoặc IT Admin. Q: Laptop bị hỏng phải báo cáo như thế nào? A: Tạo ticket P2 hoặc P3 tùy mức độ nghiêm trọng. Mang thiết bị đến IT Room (tầng 3) để kiểm tra. === Section 5: Email và lịch === Q: Hộp thư đến đầy, phải làm gì? A: Xóa email cũ hoặc yêu cầu tăng dung lượng qua ticket IT-ACCESS. Dung lượng tiêu chuẩn là 50GB. Q: Tôi không nhận được email từ bên ngoài? A: Kiểm tra thư mục Spam trước. Nếu vẫn không có, tạo ticket P2 kèm địa chỉ email gửi và thời gian gửi. === Section 6: Liên hệ IT Helpdesk === Hotline: ext. 9000 (8:00 - 18:00, Thứ 2 - Thứ 6) Email: helpdesk@company.internal Jira: project IT-SUPPORT Slack: #it-helpdesk Emergency (ngoài giờ): ext. 9999",
+      "source": "it_helpdesk_faq.txt",
+      "score": 0.5929,
+      "metadata": {
+        "chunk_id": "it_helpdesk_faq.txt__chunk1",
+        "source": "it_helpdesk_faq.txt"
       }
     }
   ],
   "retrieved_sources": [
+    "policy_refund_v4.txt",
     "hr_leave_policy.txt",
-    "policy_refund_v4.txt"
+    "it_helpdesk_faq.txt"
   ],
   "policy_result": {
     "policy_applies": false,
@@ -48,27 +67,29 @@
       }
     ],
     "source": [
+      "policy_refund_v4.txt",
       "hr_leave_policy.txt",
-      "policy_refund_v4.txt"
+      "it_helpdesk_faq.txt"
     ],
     "policy_version_note": "Order trước 01/02/2026 → dùng policy v3",
     "explanation": "Hybrid rule-based + LLM analysis"
   },
   "mcp_tools_used": [],
-  "final_answer": "Khách hàng đặt đơn ngày 31/01/2026, yêu cầu hoàn tiền ngày 07/02/2026. Tuy nhiên, chính sách hoàn tiền áp dụng cho các đơn hàng được đặt từ ngày 01/02/2026 trở đi. Đơn hàng này thuộc về chính sách hoàn tiền phiên bản 3, không đủ thông tin để xác định điều kiện hoàn tiền theo phiên bản này. \n\nDo đó, không đủ thông tin trong tài liệu nội bộ.",
+  "final_answer": "Khách hàng đặt đơn ngày 31/01/2026, tức là trước ngày hiệu lực của chính sách hoàn tiền phiên bản 4 (01/02/2026) và sẽ áp dụng theo chính sách hoàn tiền phiên bản 3. \n\nTheo chính sách hoàn tiền phiên bản 3, khách hàng được quyền yêu cầu hoàn tiền nếu sản phẩm bị lỗi do nhà sản xuất, chưa kích hoạt và yêu cầu được gửi trong vòng 7 ngày làm việc kể từ thời điểm xác nhận đơn hàng. Trong trường hợp này, yêu cầu hoàn tiền được gửi vào ngày 07/02/2026, tức là trong khoảng thời gian hợp lệ.\n\nDo đó, khách hàng được hoàn tiền cho sản phẩm lỗi nhà sản xuất, chưa kích hoạt và không thuộc danh mục Flash Sale. \n\nKết luận: Khách hàng được hoàn tiền.",
   "sources": [
+    "policy_refund_v4.txt",
     "hr_leave_policy.txt",
-    "policy_refund_v4.txt"
+    "it_helpdesk_faq.txt"
   ],
-  "confidence": 0.3,
+  "confidence": 0.35,
   "history": [
     "[supervisor] received task: Khách hàng đặt đơn ngày 31/01/2026 và yêu cầu hoàn tiền ngày 07/02/2026. Sản phẩ",
     "[supervisor] route=policy_tool_worker reason=task contains policy/access keyword",
-    "[retrieval_worker] retrieved 3 chunks from ['hr_leave_policy.txt', 'policy_refund_v4.txt']",
+    "[retrieval_worker] retrieved 5 chunks from ['policy_refund_v4.txt', 'hr_leave_policy.txt', 'it_helpdesk_faq.txt']",
     "[policy_tool_worker] policy_applies=False, exceptions=1",
-    "[synthesis_worker] HITL triggered (confidence=0.3 < 0.4)",
-    "[synthesis_worker] answer_len=341, confidence=0.3, sources=['hr_leave_policy.txt', 'policy_refund_v4.txt']",
-    "[graph] completed in 14836ms"
+    "[synthesis_worker] HITL triggered (confidence=0.35 < 0.4)",
+    "[synthesis_worker] answer_len=643, confidence=0.35, sources=['policy_refund_v4.txt', 'hr_leave_policy.txt', 'it_helpdesk_faq.txt']",
+    "[graph] completed in 11054ms"
   ],
   "workers_called": [
     "retrieval_worker",
@@ -76,20 +97,21 @@
     "synthesis_worker"
   ],
   "supervisor_route": "policy_tool_worker",
-  "latency_ms": 14836,
-  "run_id": "run_20260414_174550",
+  "latency_ms": 11054,
+  "run_id": "run_20260414_175708",
   "worker_io_logs": [
     {
       "worker": "retrieval_worker",
       "input": {
         "task": "Khách hàng đặt đơn ngày 31/01/2026 và yêu cầu hoàn tiền ngày 07/02/2026. Sản phẩm lỗi nhà sản xuất, chưa kích hoạt, không phải Flash Sale. Được hoàn tiền không?",
-        "top_k": 3
+        "top_k": 5
       },
       "output": {
-        "chunks_count": 3,
+        "chunks_count": 5,
         "sources": [
+          "policy_refund_v4.txt",
           "hr_leave_policy.txt",
-          "policy_refund_v4.txt"
+          "it_helpdesk_faq.txt"
         ]
       },
       "error": null
@@ -98,7 +120,7 @@
       "worker": "policy_tool_worker",
       "input": {
         "task": "Khách hàng đặt đơn ngày 31/01/2026 và yêu cầu hoàn tiền ngày 07/02/2026. Sản phẩm lỗi nhà sản xuất, chưa kích hoạt, không phải Flash Sale. Được hoàn tiền không?",
-        "chunks_count": 3,
+        "chunks_count": 5,
         "needs_tool": true
       },
       "output": {
@@ -110,22 +132,23 @@
     },
     {
       "worker": "synthesis_worker",
-      "timestamp": "2026-04-14T10:46:02.525711+00:00",
+      "timestamp": "2026-04-14T10:57:15.287411+00:00",
       "input": {
         "task": "Khách hàng đặt đơn ngày 31/01/2026 và yêu cầu hoàn tiền ngày 07/02/2026. Sản phẩm lỗi nhà sản xuất, chưa kích hoạt, không phải Flash Sale. Được hoàn tiền không?",
-        "chunks_count": 3,
+        "chunks_count": 5,
         "has_policy": true,
         "exceptions_count": 1
       },
       "output": {
-        "answer_length": 341,
+        "answer_length": 643,
         "sources": [
+          "policy_refund_v4.txt",
           "hr_leave_policy.txt",
-          "policy_refund_v4.txt"
+          "it_helpdesk_faq.txt"
         ],
-        "sources_count": 2,
-        "confidence": 0.3,
-        "abstained": true,
+        "sources_count": 3,
+        "confidence": 0.35,
+        "abstained": false,
         "hitl_triggered": true
       },
       "error": null

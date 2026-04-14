@@ -19,8 +19,8 @@
       "source": "access_control_sop.txt",
       "score": 0.6427,
       "metadata": {
-        "source": "access_control_sop.txt",
-        "chunk_id": "access_control_sop.txt__chunk0"
+        "chunk_id": "access_control_sop.txt__chunk0",
+        "source": "access_control_sop.txt"
       }
     },
     {
@@ -28,28 +28,53 @@
       "source": "access_control_sop.txt",
       "score": 0.6373,
       "metadata": {
-        "chunk_id": "access_control_sop.txt__chunk1",
-        "source": "access_control_sop.txt"
+        "source": "access_control_sop.txt",
+        "chunk_id": "access_control_sop.txt__chunk1"
+      }
+    },
+    {
+      "text": "chịu trách nhiệm gia hạn license phần mềm? A: IT Procurement team quản lý tất cả license. Nhắc nhở sẽ được gửi 30 ngày trước khi hết hạn. === Section 4: Thiết bị và phần cứng === Q: Laptop mới được cấp sau bao lâu khi vào công ty? A: Laptop được cấp trong ngày onboarding đầu tiên. Nếu có vấn đề, liên hệ HR hoặc IT Admin. Q: Laptop bị hỏng phải báo cáo như thế nào? A: Tạo ticket P2 hoặc P3 tùy mức độ nghiêm trọng. Mang thiết bị đến IT Room (tầng 3) để kiểm tra. === Section 5: Email và lịch === Q: Hộp thư đến đầy, phải làm gì? A: Xóa email cũ hoặc yêu cầu tăng dung lượng qua ticket IT-ACCESS. Dung lượng tiêu chuẩn là 50GB. Q: Tôi không nhận được email từ bên ngoài? A: Kiểm tra thư mục Spam trước. Nếu vẫn không có, tạo ticket P2 kèm địa chỉ email gửi và thời gian gửi. === Section 6: Liên hệ IT Helpdesk === Hotline: ext. 9000 (8:00 - 18:00, Thứ 2 - Thứ 6) Email: helpdesk@company.internal Jira: project IT-SUPPORT Slack: #it-helpdesk Emergency (ngoài giờ): ext. 9999",
+      "source": "it_helpdesk_faq.txt",
+      "score": 0.5948,
+      "metadata": {
+        "source": "it_helpdesk_faq.txt",
+        "chunk_id": "it_helpdesk_faq.txt__chunk1"
+      }
+    },
+    {
+      "text": "IT HELPDESK FAQ — CÂU HỎI THƯỜNG GẶP Source: support/helpdesk-faq.md Department: IT Effective Date: 2026-01-20 Access: internal === Section 1: Tài khoản và mật khẩu === Q: Tôi quên mật khẩu, phải làm gì? A: Truy cập https://sso.company.internal/reset hoặc liên hệ Helpdesk qua ext. 9000. Mật khẩu mới sẽ được gửi qua email công ty trong vòng 5 phút. Q: Tài khoản bị khóa sau bao nhiêu lần đăng nhập sai? A: Tài khoản bị khóa sau 5 lần đăng nhập sai liên tiếp. Để mở khóa, liên hệ IT Helpdesk hoặc tự reset qua portal SSO. Q: Mật khẩu cần thay đổi định kỳ không? A: Có. Mật khẩu phải được thay đổi mỗi 90 ngày. Hệ thống sẽ nhắc nhở 7 ngày trước khi hết hạn. === Section 2: VPN và kết nối từ xa === Q: Phần mềm VPN nào công ty dùng? A: Công ty sử dụng Cisco AnyConnect. Download tại https://vpn.company.internal/download. Q: Tôi bị mất kết nối VPN liên tục, phải làm gì? A: Kiểm tra kết nối Internet trước. Nếu vẫn lỗi, tạo ticket P3 với log file VPN đính kèm. Q: VPN có giới hạn số thiết bị không? A: Mỗi tài khoản được kết nối VPN trên tối đa 2 thiết bị cùng lúc. === Section 3: Phần mềm và license === Q: Tôi cần cài phần mềm mới, phải làm gì? A: Gửi yêu cầu qua Jira project IT-SOFTWARE. Line Manager phải phê duyệt trước khi IT cài đặt. Q: Ai chịu trách nhiệm gia hạn license phần mềm? A: IT Procurement team quản lý tất cả license. Nhắc nhở sẽ được gửi 30 ngày trước khi hết hạn. === Section 4: Thiết bị và phần cứng === Q: Laptop mới được cấp sau bao lâu khi vào công ty? A:",
+      "source": "it_helpdesk_faq.txt",
+      "score": 0.5359,
+      "metadata": {
+        "source": "it_helpdesk_faq.txt",
+        "chunk_id": "it_helpdesk_faq.txt__chunk0"
       }
     }
   ],
   "retrieved_sources": [
+    "sla_p1_2026.txt",
     "access_control_sop.txt",
-    "sla_p1_2026.txt"
+    "it_helpdesk_faq.txt"
   ],
   "policy_result": {
     "policy_applies": true,
     "policy_name": "refund_policy_v4",
     "exceptions_found": [
       {
-        "type": "Emergency Access",
-        "rule": "Temporary Level 2 access for contractor",
-        "source": "Access Control SOP"
+        "type": "Access Control",
+        "rule": "Cấp quyền tạm thời cho contractor",
+        "source": "Quy trình kiểm soát truy cập hệ thống"
+      },
+      {
+        "type": "Incident Notification",
+        "rule": "Notify stakeholders theo SLA",
+        "source": "Quy trình xử lý sự cố P1"
       }
     ],
     "source": [
+      "sla_p1_2026.txt",
       "access_control_sop.txt",
-      "sla_p1_2026.txt"
+      "it_helpdesk_faq.txt"
     ],
     "policy_version_note": "",
     "explanation": "Hybrid rule-based + LLM analysis"
@@ -77,23 +102,23 @@
         ]
       },
       "error": null,
-      "timestamp": "2026-04-14T17:46:43.109026"
+      "timestamp": "2026-04-14T17:57:59.272615"
     }
   ],
-  "final_answer": "Để cấp Level 2 access tạm thời cho contractor và notify stakeholders theo SLA cho Ticket P1, thực hiện theo quy trình sau:\n\n### Quy trình cấp Level 2 access tạm thời:\n1. **On-call IT Admin** có thể cấp quyền tạm thời (max 24 giờ) sau khi được **Tech Lead** phê duyệt bằng lời [3].\n2. Sau 24 giờ, phải có ticket chính thức hoặc quyền sẽ bị thu hồi tự động [3].\n3. Mọi quyền tạm thời phải được ghi log vào hệ thống Security Audit [3].\n\n### Quy trình notify stakeholders theo SLA cho Ticket P1:\n1. **Tiếp nhận**: On-call engineer nhận alert hoặc ticket, xác nhận severity trong 5 phút [1].\n2. **Thông báo**: Gửi thông báo tới Slack #incident-p1 và email incident@company.internal ngay lập tức [1].\n3. **Triage**: Phân công Lead Engineer phân công engineer xử lý trong 10 phút [1].\n4. **Xử lý**: Engineer cập nhật tiến độ lên ticket mỗi 30 phút. Nếu cần hỗ trợ thêm, escalate ngay [1].\n5. **Resolution**: Sau khi khắc phục, viết incident report trong vòng 24 giờ [1].\n\n### Lưu ý:\n- Cấp quyền tạm thời cho contractor là một **Policy Exception** [3].",
+  "final_answer": "Để xử lý Ticket P1 lúc 2am, cần thực hiện hai quy trình như sau:\n\n### 1. Cấp Level 2 access tạm thời cho contractor\n- **Bước 1**: On-call IT Admin nhận yêu cầu cấp quyền tạm thời.\n- **Bước 2**: Phê duyệt bằng lời từ Tech Lead.\n- **Bước 3**: Cấp quyền tạm thời (max 24 giờ).\n- **Bước 4**: Ghi log vào hệ thống Security Audit.\n- **Lưu ý**: Sau 24 giờ, phải có ticket chính thức hoặc quyền sẽ bị thu hồi tự động [3].\n\n### 2. Notify stakeholders theo SLA\n- **Bước 1**: Gửi thông báo tới Slack #incident-p1 và email incident@company.internal ngay lập tức [1].\n\n### Policy Exceptions\n- Cấp quyền tạm thời cho contractor.\n- Notify stakeholders theo SLA.",
   "sources": [
     "sla_p1_2026.txt",
     "access_control_sop.txt"
   ],
-  "confidence": 0.75,
+  "confidence": 0.69,
   "history": [
     "[supervisor] received task: Ticket P1 lúc 2am. Cần cấp Level 2 access tạm thời cho contractor để thực hiện e",
     "[supervisor] route=policy_tool_worker reason=multi-hop: access control + SLA context | risk_high flagged",
-    "[retrieval_worker] retrieved 3 chunks from ['access_control_sop.txt', 'sla_p1_2026.txt']",
+    "[retrieval_worker] retrieved 5 chunks from ['sla_p1_2026.txt', 'access_control_sop.txt', 'it_helpdesk_faq.txt']",
     "[policy_tool_worker] called get_ticket_info",
-    "[policy_tool_worker] policy_applies=True, exceptions=1",
-    "[synthesis_worker] answer_len=1044, confidence=0.75, sources=['sla_p1_2026.txt', 'access_control_sop.txt']",
-    "[graph] completed in 18869ms"
+    "[policy_tool_worker] policy_applies=True, exceptions=2",
+    "[synthesis_worker] answer_len=646, confidence=0.69, sources=['sla_p1_2026.txt', 'access_control_sop.txt']",
+    "[graph] completed in 22543ms"
   ],
   "workers_called": [
     "retrieval_worker",
@@ -101,20 +126,21 @@
     "synthesis_worker"
   ],
   "supervisor_route": "policy_tool_worker",
-  "latency_ms": 18869,
-  "run_id": "run_20260414_174630",
+  "latency_ms": 22543,
+  "run_id": "run_20260414_175746",
   "worker_io_logs": [
     {
       "worker": "retrieval_worker",
       "input": {
         "task": "Ticket P1 lúc 2am. Cần cấp Level 2 access tạm thời cho contractor để thực hiện emergency fix. Đồng thời cần notify stakeholders theo SLA. Nêu đủ cả hai quy trình.",
-        "top_k": 3
+        "top_k": 5
       },
       "output": {
-        "chunks_count": 3,
+        "chunks_count": 5,
         "sources": [
+          "sla_p1_2026.txt",
           "access_control_sop.txt",
-          "sla_p1_2026.txt"
+          "it_helpdesk_faq.txt"
         ]
       },
       "error": null
@@ -123,33 +149,33 @@
       "worker": "policy_tool_worker",
       "input": {
         "task": "Ticket P1 lúc 2am. Cần cấp Level 2 access tạm thời cho contractor để thực hiện emergency fix. Đồng thời cần notify stakeholders theo SLA. Nêu đủ cả hai quy trình.",
-        "chunks_count": 3,
+        "chunks_count": 5,
         "needs_tool": true
       },
       "output": {
         "policy_applies": true,
-        "exceptions_count": 1,
+        "exceptions_count": 2,
         "mcp_calls": 1
       },
       "error": null
     },
     {
       "worker": "synthesis_worker",
-      "timestamp": "2026-04-14T10:46:43.109026+00:00",
+      "timestamp": "2026-04-14T10:57:59.272615+00:00",
       "input": {
         "task": "Ticket P1 lúc 2am. Cần cấp Level 2 access tạm thời cho contractor để thực hiện emergency fix. Đồng thời cần notify stakeholders theo SLA. Nêu đủ cả hai quy trình.",
-        "chunks_count": 3,
+        "chunks_count": 5,
         "has_policy": true,
-        "exceptions_count": 1
+        "exceptions_count": 2
       },
       "output": {
-        "answer_length": 1044,
+        "answer_length": 646,
         "sources": [
           "sla_p1_2026.txt",
           "access_control_sop.txt"
         ],
         "sources_count": 2,
-        "confidence": 0.75,
+        "confidence": 0.69,
         "abstained": false,
         "hitl_triggered": false
       },

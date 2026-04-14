@@ -19,8 +19,8 @@
       "source": "access_control_sop.txt",
       "score": 0.3854,
       "metadata": {
-        "source": "access_control_sop.txt",
-        "chunk_id": "access_control_sop.txt__chunk0"
+        "chunk_id": "access_control_sop.txt__chunk0",
+        "source": "access_control_sop.txt"
       }
     },
     {
@@ -28,31 +28,53 @@
       "source": "policy_refund_v4.txt",
       "score": 0.3846,
       "metadata": {
-        "chunk_id": "policy_refund_v4.txt__chunk1",
-        "source": "policy_refund_v4.txt"
+        "source": "policy_refund_v4.txt",
+        "chunk_id": "policy_refund_v4.txt__chunk1"
+      }
+    },
+    {
+      "text": "muộn hơn nhưng phải được Line Manager đồng ý qua tin nhắn trực tiếp. === Phần 3: Chính sách làm thêm giờ === 3.1 Điều kiện làm thêm: Làm thêm giờ phải được Line Manager phê duyệt trước bằng văn bản. 3.2 Hệ số lương làm thêm: - Ngày thường: 150% lương giờ tiêu chuẩn. - Ngày cuối tuần: 200% lương giờ tiêu chuẩn. - Ngày lễ: 300% lương giờ tiêu chuẩn. === Phần 4: Remote work policy === 4.1 Điều kiện remote: - Nhân viên sau probation period có thể làm remote tối đa 2 ngày/tuần. - Team Lead phải phê duyệt lịch remote qua HR Portal. - Ngày onsite bắt buộc: Thứ 3 và Thứ 5 theo lịch team. 4.2 Yêu cầu kỹ thuật khi remote: - Kết nối VPN bắt buộc khi làm việc với hệ thống nội bộ. - Camera bật trong các cuộc họp team. === Phần 5: Liên hệ HR === Email: hr@company.internal Hotline: ext. 2000 HR Portal: https://hr.company.internal Giờ làm việc: Thứ 2 - Thứ 6, 8:30 - 17:30",
+      "source": "hr_leave_policy.txt",
+      "score": 0.3713,
+      "metadata": {
+        "source": "hr_leave_policy.txt",
+        "chunk_id": "hr_leave_policy.txt__chunk1"
+      }
+    },
+    {
+      "text": "chịu trách nhiệm gia hạn license phần mềm? A: IT Procurement team quản lý tất cả license. Nhắc nhở sẽ được gửi 30 ngày trước khi hết hạn. === Section 4: Thiết bị và phần cứng === Q: Laptop mới được cấp sau bao lâu khi vào công ty? A: Laptop được cấp trong ngày onboarding đầu tiên. Nếu có vấn đề, liên hệ HR hoặc IT Admin. Q: Laptop bị hỏng phải báo cáo như thế nào? A: Tạo ticket P2 hoặc P3 tùy mức độ nghiêm trọng. Mang thiết bị đến IT Room (tầng 3) để kiểm tra. === Section 5: Email và lịch === Q: Hộp thư đến đầy, phải làm gì? A: Xóa email cũ hoặc yêu cầu tăng dung lượng qua ticket IT-ACCESS. Dung lượng tiêu chuẩn là 50GB. Q: Tôi không nhận được email từ bên ngoài? A: Kiểm tra thư mục Spam trước. Nếu vẫn không có, tạo ticket P2 kèm địa chỉ email gửi và thời gian gửi. === Section 6: Liên hệ IT Helpdesk === Hotline: ext. 9000 (8:00 - 18:00, Thứ 2 - Thứ 6) Email: helpdesk@company.internal Jira: project IT-SUPPORT Slack: #it-helpdesk Emergency (ngoài giờ): ext. 9999",
+      "source": "it_helpdesk_faq.txt",
+      "score": 0.3519,
+      "metadata": {
+        "chunk_id": "it_helpdesk_faq.txt__chunk1",
+        "source": "it_helpdesk_faq.txt"
       }
     }
   ],
   "retrieved_sources": [
+    "policy_refund_v4.txt",
     "access_control_sop.txt",
-    "policy_refund_v4.txt"
+    "it_helpdesk_faq.txt",
+    "hr_leave_policy.txt"
   ],
   "policy_result": {},
   "mcp_tools_used": [],
   "final_answer": "Không đủ thông tin trong tài liệu nội bộ.",
   "sources": [
+    "policy_refund_v4.txt",
     "access_control_sop.txt",
-    "policy_refund_v4.txt"
+    "it_helpdesk_faq.txt",
+    "hr_leave_policy.txt"
   ],
   "confidence": 0.3,
   "history": [
     "[supervisor] received task: ERR-403-AUTH là lỗi gì và cách xử lý?",
     "[supervisor] route=human_review reason=unknown error code + risk_high → human review",
     "[human_review] HITL triggered — awaiting human input",
-    "[retrieval_worker] retrieved 3 chunks from ['access_control_sop.txt', 'policy_refund_v4.txt']",
+    "[retrieval_worker] retrieved 5 chunks from ['policy_refund_v4.txt', 'access_control_sop.txt', 'it_helpdesk_faq.txt', 'hr_leave_policy.txt']",
     "[synthesis_worker] HITL triggered (confidence=0.3 < 0.4)",
-    "[synthesis_worker] answer_len=41, confidence=0.3, sources=['access_control_sop.txt', 'policy_refund_v4.txt']",
-    "[graph] completed in 11589ms"
+    "[synthesis_worker] answer_len=41, confidence=0.3, sources=['policy_refund_v4.txt', 'access_control_sop.txt', 'it_helpdesk_faq.txt', 'hr_leave_policy.txt']",
+    "[graph] completed in 9002ms"
   ],
   "workers_called": [
     "human_review",
@@ -60,40 +82,44 @@
     "synthesis_worker"
   ],
   "supervisor_route": "retrieval_worker",
-  "latency_ms": 11589,
-  "run_id": "run_20260414_174515",
+  "latency_ms": 9002,
+  "run_id": "run_20260414_175641",
   "worker_io_logs": [
     {
       "worker": "retrieval_worker",
       "input": {
         "task": "ERR-403-AUTH là lỗi gì và cách xử lý?",
-        "top_k": 3
+        "top_k": 5
       },
       "output": {
-        "chunks_count": 3,
+        "chunks_count": 5,
         "sources": [
+          "policy_refund_v4.txt",
           "access_control_sop.txt",
-          "policy_refund_v4.txt"
+          "it_helpdesk_faq.txt",
+          "hr_leave_policy.txt"
         ]
       },
       "error": null
     },
     {
       "worker": "synthesis_worker",
-      "timestamp": "2026-04-14T10:45:24.626843+00:00",
+      "timestamp": "2026-04-14T10:56:49.070934+00:00",
       "input": {
         "task": "ERR-403-AUTH là lỗi gì và cách xử lý?",
-        "chunks_count": 3,
+        "chunks_count": 5,
         "has_policy": false,
         "exceptions_count": 0
       },
       "output": {
         "answer_length": 41,
         "sources": [
+          "policy_refund_v4.txt",
           "access_control_sop.txt",
-          "policy_refund_v4.txt"
+          "it_helpdesk_faq.txt",
+          "hr_leave_policy.txt"
         ],
-        "sources_count": 2,
+        "sources_count": 4,
         "confidence": 0.3,
         "abstained": true,
         "hitl_triggered": true
