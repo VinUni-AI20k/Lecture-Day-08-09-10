@@ -175,7 +175,6 @@ Retrieval Worker     Policy Tool Worker                  human_review
 
 
 ## 6. Giới hạn và điểm cần cải tiến
-## 6. Giới hạn và điểm cần cải tiến
 
 > Nhóm mô tả những điểm hạn chế của kiến trúc hiện tại.
 
