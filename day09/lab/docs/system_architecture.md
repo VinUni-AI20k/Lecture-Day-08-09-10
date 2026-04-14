@@ -52,9 +52,9 @@ Retrieval Worker     Policy Tool Worker
 
 **Sơ đồ thực tế của nhóm:**
 
-```
-[Sơ đồ kiến trúc](Architecture_graph.png)
-```
+
+![Sơ đồ kiến trúc](Architecture_graph.png)
+
 
 ---
 
