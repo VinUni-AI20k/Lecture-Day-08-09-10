@@ -106,7 +106,7 @@ TOOL_SCHEMAS = {
     },
     "create_ticket": {
         "name": "create_ticket",
-        "description": "Tạo ticket mới trong hệ thống Jira (MOCK — không tạo thật trong lab).",
+        "description": "Tạo ticket mới trong hệ thống Jira (Lưu trữ thực tế vào tickets_db.json).",
         "inputSchema": {
             "type": "object",
             "properties": {
@@ -132,27 +132,57 @@ TOOL_SCHEMAS = {
 # Tool Implementations
 # ─────────────────────────────────────────────
 
+_KB_MODEL = None
+_KB_COLLECTION = None
+
+def _get_kb_resources():
+    """Lazy load embedding model và ChromaDB collection."""
+    global _KB_MODEL, _KB_COLLECTION
+    if _KB_MODEL is None:
+        from sentence_transformers import SentenceTransformer
+        _KB_MODEL = SentenceTransformer("all-MiniLM-L6-v2")
+    if _KB_COLLECTION is None:
+        import chromadb
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        db_path = os.path.join(current_dir, "chroma_db")
+        client = chromadb.PersistentClient(path=db_path)
+        _KB_COLLECTION = client.get_collection("day09_docs")
+    return _KB_MODEL, _KB_COLLECTION
+
 def tool_search_kb(query: str, top_k: int = 3) -> dict:
     """
-    Tìm kiếm Knowledge Base bằng semantic search từ ChromaDB.
+    Tìm kiếm Knowledge Base bằng semantic search trực tiếp từ ChromaDB.
     """
     try:
-        # Tái dùng retrieval logic từ workers/retrieval.py
-        import sys
-        # Thêm đường dẫn thư mục hiện tại vào sys.path để import được workers
-        current_dir = os.path.dirname(os.path.abspath(__file__))
-        if current_dir not in sys.path:
-            sys.path.insert(0, current_dir)
-            
-        from workers.retrieval import retrieve_dense
-        chunks = retrieve_dense(query, top_k=top_k)
+        model, collection = _get_kb_resources()
+        
+        # 1. Embed query
+        query_embedding = model.encode(query).tolist()
+        
+        # 2. Query ChromaDB
+        results = collection.query(
+            query_embeddings=[query_embedding],
+            n_results=top_k,
+            include=["documents", "distances", "metadatas"]
+        )
+        
+        # 3. Format results
+        chunks = []
+        if results["documents"] and len(results["documents"]) > 0:
+            for i in range(len(results["documents"][0])):
+                chunks.append({
+                    "text": results["documents"][0][i],
+                    "source": results["metadatas"][0][i].get("source", "unknown"),
+                    "score": round(1 - results["distances"][0][i], 4),
+                    "metadata": results["metadatas"][0][i],
+                })
         
         if not chunks:
             return {
                 "chunks": [],
                 "sources": [],
                 "total_found": 0,
-                "note": "Không tìm thấy kết quả phù hợp trong ChromaDB. Hãy đảm bảo bạn đã chạy index script."
+                "note": "Không tìm thấy kết quả phù hợp trong ChromaDB."
             }
             
         sources = list({c["source"] for c in chunks})
@@ -163,7 +193,7 @@ def tool_search_kb(query: str, top_k: int = 3) -> dict:
         }
     except Exception as e:
         return {
-            "error": f"Lỗi khi truy vấn ChromaDB: {str(e)}",
+            "error": f"Lỗi khi truy vấn ChromaDB trực tiếp: {str(e)}",
             "chunks": [],
             "sources": [],
             "total_found": 0,
@@ -199,11 +229,25 @@ MOCK_TICKETS = {
 
 def tool_get_ticket_info(ticket_id: str) -> dict:
     """
-    Tra cứu thông tin ticket (mock data).
+    Tra cứu thông tin ticket (đọc từ MOCK_TICKETS và tickets_db.json).
     """
+    # 1. Tìm trong MOCK_TICKETS trước
     ticket = MOCK_TICKETS.get(ticket_id.upper())
     if ticket:
         return ticket
+    
+    # 2. Tìm trong tickets_db.json
+    db_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "tickets_db.json")
+    if os.path.exists(db_path):
+        try:
+            with open(db_path, "r", encoding="utf-8") as f:
+                tickets = json.load(f)
+                for t in tickets:
+                    if t.get("ticket_id") == ticket_id.upper():
+                        return t
+        except (json.JSONDecodeError, IOError):
+            pass
+            
     # Không tìm thấy
     return {
         "error": f"Ticket '{ticket_id}' không tìm thấy trong hệ thống.",
@@ -264,7 +308,8 @@ def tool_create_ticket(priority: str, title: str, description: str = "") -> dict
     """
     Tạo ticket mới và lưu vào database (JSON file).
     """
-    db_path = "tickets_db.json"
+    # Đường dẫn file JSON nằm ở thư mục cha của lab/
+    db_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "tickets_db.json")
     mock_id = f"IT-{9900 + hash(title) % 99}"
     ticket = {
         "ticket_id": mock_id,

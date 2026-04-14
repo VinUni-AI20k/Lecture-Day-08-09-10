@@ -1,0 +1,20 @@
+[
+    {
+        "ticket_id": "IT-9938",
+        "priority": "P2",
+        "title": "Lỗi kết nối database",
+        "description": "Không thể kết nối đến DB từ server ứng dụng.",
+        "status": "open",
+        "created_at": "2026-04-14T17:00:30.814406",
+        "url": "https://jira.company.internal/browse/IT-9938"
+    },
+    {
+        "ticket_id": "IT-9964",
+        "priority": "P2",
+        "title": "Lỗi kết nối database",
+        "description": "Không thể kết nối đến DB từ server ứng dụng.",
+        "status": "open",
+        "created_at": "2026-04-14T17:07:35.558080",
+        "url": "https://jira.company.internal/browse/IT-9964"
+    }
+]
