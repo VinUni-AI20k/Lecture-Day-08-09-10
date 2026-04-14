@@ -36,6 +36,7 @@ from typing import Any, Dict, List, Optional
 
 # ─────────────────────────────────────────────
 # Tool Definitions (Schema Discovery)
+#
 # Giống với cách MCP server expose tool list cho client
 # ─────────────────────────────────────────────
 
