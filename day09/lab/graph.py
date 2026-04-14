@@ -13,6 +13,7 @@ import json
 import os
 from datetime import datetime
 from typing import TypedDict, Literal, Optional
+from langgraph.graph import StateGraph, START, END
 
 # Uncomment nếu dùng LangGraph:
 # from langgraph.graph import StateGraph, END
@@ -192,15 +193,20 @@ def human_review_node(state: AgentState) -> AgentState:
 
     return state
 
+def post_policy_route(state: AgentState) -> str:
+    """Quyết định bước tiếp theo sau khi Policy Tool chạy xong."""
+    if not state.get("retrieved_chunks"):
+        return "retrieval_worker"
+    return "synthesis_worker"
 
 # ─────────────────────────────────────────────
 # 5. Import Workers
 # ─────────────────────────────────────────────
 
 # TODO Sprint 2: Uncomment sau khi implement workers
-# from workers.retrieval import run as retrieval_run
-# from workers.policy_tool import run as policy_tool_run
-# from workers.synthesis import run as synthesis_run
+from workers.retrieval import run as retrieval_run
+from workers.policy_tool import run as policy_tool_run
+from workers.synthesis import run as synthesis_run
 
 
 def retrieval_worker_node(state: AgentState) -> AgentState:
@@ -210,12 +216,10 @@ def retrieval_worker_node(state: AgentState) -> AgentState:
     state["history"].append("[retrieval_worker] called")
 
     # Placeholder output để test graph chạy được
-    state["retrieved_chunks"] = [
-        {"text": "SLA P1: phản hồi 15 phút, xử lý 4 giờ.", "source": "sla_p1_2026.txt", "score": 0.92}
-    ]
-    state["retrieved_sources"] = ["sla_p1_2026.txt"]
-    state["history"].append(f"[retrieval_worker] retrieved {len(state['retrieved_chunks'])} chunks")
-    return state
+    # state["retrieved_chunks"] = [{"text": "SLA P1: phản hồi 15 phút, xử lý 4 giờ.", "source": "sla_p1_2026.txt", "score": 0.92}]
+    # state["retrieved_sources"] = ["sla_p1_2026.txt"]
+    # state["history"].append(f"[retrieval_worker] retrieved {len(state['retrieved_chunks'])} chunks")
+    return retrieval_run(state)
 
 
 def policy_tool_worker_node(state: AgentState) -> AgentState:
@@ -225,14 +229,9 @@ def policy_tool_worker_node(state: AgentState) -> AgentState:
     state["history"].append("[policy_tool_worker] called")
 
     # Placeholder output
-    state["policy_result"] = {
-        "policy_applies": True,
-        "policy_name": "refund_policy_v4",
-        "exceptions_found": [],
-        "source": "policy_refund_v4.txt",
-    }
-    state["history"].append("[policy_tool_worker] policy check complete")
-    return state
+    # state["policy_result"] = {"policy_applies": True, "policy_name": "refund_policy_v4", "exceptions_found": [], "source": "policy_refund_v4.txt",}
+    # state["history"].append("[policy_tool_worker] policy check complete")
+    return policy_tool_run(state)
 
 
 def synthesis_worker_node(state: AgentState) -> AgentState:
@@ -242,13 +241,13 @@ def synthesis_worker_node(state: AgentState) -> AgentState:
     state["history"].append("[synthesis_worker] called")
 
     # Placeholder output
-    chunks = state.get("retrieved_chunks", [])
-    sources = state.get("retrieved_sources", [])
-    state["final_answer"] = f"[PLACEHOLDER] Câu trả lời được tổng hợp từ {len(chunks)} chunks."
-    state["sources"] = sources
-    state["confidence"] = 0.75
-    state["history"].append(f"[synthesis_worker] answer generated, confidence={state['confidence']}")
-    return state
+    # chunks = state.get("retrieved_chunks", [])
+    # sources = state.get("retrieved_sources", [])
+    # state["final_answer"] = f"[PLACEHOLDER] Câu trả lời được tổng hợp từ {len(chunks)} chunks."
+    # state["sources"] = sources
+    # state["confidence"] = 0.75
+    # state["history"].append(f"[synthesis_worker] answer generated, confidence={state['confidence']}")
+    return synthesis_run(state)
 
 
 # ─────────────────────────────────────────────
@@ -257,68 +256,87 @@ def synthesis_worker_node(state: AgentState) -> AgentState:
 
 def build_graph():
     """
-    Xây dựng graph với supervisor-worker pattern.
-
-    Option A (đơn giản — Python thuần): Dùng if/else, không cần LangGraph.
-    Option B (nâng cao): Dùng LangGraph StateGraph với conditional edges.
-
-    Lab này implement Option A theo mặc định.
-    TODO Sprint 1: Có thể chuyển sang LangGraph nếu muốn.
+    Xây dựng graph bằng LangGraph.
     """
-    # Option A: Simple Python orchestrator
-    def run(state: AgentState) -> AgentState:
-        import time
-        start = time.time()
+    # 1. Khởi tạo đồ thị với cấu trúc State của chúng ta
+    workflow = StateGraph(AgentState)
 
-        # Step 1: Supervisor decides route
-        state = supervisor_node(state)
+    # 2. Khai báo các Nodes (Các hàm xử lý)
+    workflow.add_node("supervisor", supervisor_node)
+    workflow.add_node("retrieval_worker", retrieval_worker_node)
+    workflow.add_node("policy_tool_worker", policy_tool_worker_node)
+    workflow.add_node("human_review", human_review_node)
+    workflow.add_node("synthesis_worker", synthesis_worker_node)
 
-        # Step 2: Route to appropriate worker
-        route = route_decision(state)
+    # 3. Định nghĩa Edges (Luồng chảy của data)
+    
+    # Điểm bắt đầu luôn đi vào Supervisor
+    workflow.add_edge(START, "supervisor")
 
-        if route == "human_review":
-            state = human_review_node(state)
-            # After human approval, continue with retrieval
-            state = retrieval_worker_node(state)
-        elif route == "policy_tool_worker":
-            state = policy_tool_worker_node(state)
-            # Policy worker may need retrieval context first
-            if not state["retrieved_chunks"]:
-                state = retrieval_worker_node(state)
-        else:
-            # Default: retrieval_worker
-            state = retrieval_worker_node(state)
+    # Supervisor chia nhánh dựa trên hàm route_decision
+    workflow.add_conditional_edges(
+        "supervisor",
+        route_decision, 
+        {
+            "retrieval_worker": "retrieval_worker",
+            "policy_tool_worker": "policy_tool_worker",
+            "human_review": "human_review"
+        }
+    )
 
-        # Step 3: Always synthesize
-        state = synthesis_worker_node(state)
+    # Nếu vào Human Review, sau khi duyệt xong thì đi tới Retrieval
+    workflow.add_edge("human_review", "retrieval_worker")
 
-        state["latency_ms"] = int((time.time() - start) * 1000)
-        state["history"].append(f"[graph] completed in {state['latency_ms']}ms")
-        return state
+    # Nếu vào Policy Tool, dùng hàm phụ để xét xem có cần sang Retrieval không
+    workflow.add_conditional_edges(
+        "policy_tool_worker",
+        post_policy_route,
+        {
+            "retrieval_worker": "retrieval_worker",
+            "synthesis_worker": "synthesis_worker"
+        }
+    )
 
-    return run
+    # Retrieval xong thì luôn gom lại về Synthesis
+    workflow.add_edge("retrieval_worker", "synthesis_worker")
+
+    # Synthesis xong là Kết thúc (END)
+    workflow.add_edge("synthesis_worker", END)
+
+    # 4. Compile đồ thị thành một ứng dụng chạy được
+    app = workflow.compile()
+    return app
 
 
 # ─────────────────────────────────────────────
 # 7. Public API
 # ─────────────────────────────────────────────
 
-_graph = build_graph()
+# ─────────────────────────────────────────────
+# 7. Public API
+# ─────────────────────────────────────────────
 
+# Đổi tên biến cho chuẩn với LangGraph (tùy chọn)
+_app = build_graph()
 
 def run_graph(task: str) -> AgentState:
     """
     Entry point: nhận câu hỏi, trả về AgentState với full trace.
-
-    Args:
-        task: Câu hỏi từ user
-
-    Returns:
-        AgentState với final_answer, trace, routing info, v.v.
     """
-    state = make_initial_state(task)
-    result = _graph(state)
-    return result
+    import time
+    start = time.time()
+    
+    # Khởi tạo state ban đầu
+    initial_state = make_initial_state(task)
+    
+    # SỬA Ở ĐÂY: Dùng .invoke() thay vì gọi trực tiếp
+    final_state = _app.invoke(initial_state)
+    
+    # Cập nhật thời gian chạy
+    final_state["latency_ms"] = int((time.time() - start) * 1000)
+    final_state["history"].append(f"[graph] completed in {final_state['latency_ms']}ms")
+    
+    return final_state
 
 
 def save_trace(state: AgentState, output_dir: str = "./artifacts/traces") -> str:
