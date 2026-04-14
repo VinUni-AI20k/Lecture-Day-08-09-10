@@ -1,0 +1,573 @@
+** Bạn hãy là một AI Engineer để đánh giá kết quả và điền vào báo cáo file markdow này nhé ** 
+
+*Kết quả chạy với Test case 1 sau 17:00 :
+id,category,query,answer,expected_answer,faithfulness,faithfulness_notes,relevance,relevance_notes,context_recall,context_recall_notes,completeness,completeness_notes,config_label
+gq01,SLA,SLA xử lý ticket P1 đã thay đổi như thế nào so với phiên bản trước?,SLA xử lý ticket P1 đã thay đổi từ 6 giờ xuống 4 giờ so với phiên bản trước [1].,"Phiên bản hiện tại (v2026.1, có hiệu lực từ 2026-01-15) đã cập nhật SLA P1 resolution từ 6 giờ xuống còn 4 giờ. Phiên bản trước (v2025.3) không thay đổi SLA này.",5,"The answer accurately reflects the change in the SLA for ticket P1 resolution time from 6 hours to 4 hours as stated in the context. It does not introduce any external facts or exaggerations, making it fully supported by the provided information.",5,"The answer directly addresses the user's query by stating the specific change in the SLA for P1 tickets, indicating that it has been reduced from 6 hours to 4 hours. This provides a clear and relevant response to the question asked.",5,Retrieved: 2/1 expected sources,3,"The actual answer provides the key information about the change in SLA for P1 tickets, specifically stating that it has changed from 6 hours to 4 hours. However, it lacks details about the current version (v2026.1), the effective date (2026-01-15), and the mention of the previous version (v2025.3) not having changes. These omissions are significant for a complete understanding of the context.",baseline_dense
+gq02,Cross-Document,"Khi làm việc remote, tôi phải dùng VPN và được kết nối trên tối đa bao nhiêu thiết bị?","Khi làm việc remote, bạn phải sử dụng VPN và mỗi tài khoản được kết nối VPN trên tối đa 2 thiết bị cùng lúc [1].","Khi làm việc remote và truy cập hệ thống nội bộ, VPN là bắt buộc (theo HR Leave Policy). Phần mềm VPN là Cisco AnyConnect và mỗi tài khoản được kết nối VPN trên tối đa 2 thiết bị cùng lúc (theo IT Helpdesk FAQ).",5,"The answer accurately reflects the requirements for remote work as stated in the context, specifically mentioning the necessity of using VPN and the limit of 2 devices per account. It does not introduce any external facts or exaggerations, making it fully supported by the context.",5,"The answer directly addresses the user's query about the maximum number of devices that can be connected to a VPN while working remotely, providing a specific number (2 devices). Therefore, it is relevant and fully answers the question.",5,Retrieved: 4/2 expected sources,3,"The actual answer contains the essential information about using VPN while working remotely and the limit of 2 devices per account. However, it lacks the specific mention of the HR Leave Policy and the name of the VPN software (Cisco AnyConnect), which are important details in the expected answer.",baseline_dense
+gq03,Refund,Đơn hàng mua trong chương trình Flash Sale và đã kích hoạt sản phẩm có được hoàn tiền không?,"Đơn hàng mua trong chương trình Flash Sale và đã kích hoạt sản phẩm sẽ không được hoàn tiền. Điều này nằm trong ngoại lệ không được hoàn tiền, bao gồm cả sản phẩm đã được kích hoạt hoặc đăng ký tài khoản và đơn hàng đã áp dụng mã giảm giá đặc biệt theo chương trình khuyến mãi Flash Sale [1].",Không được hoàn tiền. Đơn hàng rơi vào hai ngoại lệ cùng lúc: (1) đơn hàng áp dụng mã giảm giá chương trình Flash Sale và (2) sản phẩm đã được kích hoạt — cả hai đều thuộc danh sách ngoại lệ không được hoàn tiền theo Điều 3 của chính sách.,5,"The answer accurately reflects the conditions outlined in the context regarding refunds for orders made during a Flash Sale and the activation of products. It correctly states that such orders are not eligible for refunds, aligning with the exceptions listed. There are no external facts or exaggerations present in the answer.",5,"The answer directly addresses the user's query about whether orders from the Flash Sale program that have activated products can be refunded. It clearly states that such orders are not eligible for refunds, providing relevant details about the exceptions involved. Therefore, it fully answers the question without any unnecessary information.",5,Retrieved: 2/1 expected sources,3,"The actual answer conveys the core message that the order is not eligible for a refund due to the conditions specified. It mentions both the activation of the product and the application of the discount code as reasons for the refund ineligibility, which aligns with the expected answer. However, it lacks the explicit reference to 'Điều 3 của chính sách' that is present in the expected answer, which is a significant detail. Therefore, it is missing some important details but still captures the main point.",baseline_dense
+gq04,Refund,"Nếu chọn nhận store credit thay vì hoàn tiền, tôi được bao nhiêu phần trăm so với số tiền gốc?","Nếu chọn nhận store credit thay vì hoàn tiền, bạn sẽ nhận được giá trị 110% so với số tiền gốc [1].","Khách hàng có thể chọn nhận store credit (credit nội bộ) thay thế với giá trị 110% so với số tiền hoàn gốc. Đây là tùy chọn, không phải bắt buộc.",5,"The answer accurately reflects the information provided in the context regarding the option to receive store credit at 110% of the original amount. It does not introduce any external facts or exaggerations, making it fully supported by the context.",5,The answer directly addresses the user's query by stating that they will receive 110% of the original amount if they choose store credit instead of a refund. This is a clear and relevant response to the question asked.,5,Retrieved: 2/1 expected sources,4,"The actual answer provides the key information that customers can receive store credit at 110% of the original amount, which aligns with the expected answer. However, it lacks the detail that this option is not mandatory, which is a significant point in the expected answer.",baseline_dense
+gq05,Access Control,"Contractor từ bên ngoài công ty có thể được cấp quyền Admin Access không? Nếu có, cần bao nhiêu ngày và có yêu cầu đặc biệt gì?",Không đủ dữ liệu.,"Có. Theo Access Control SOP, quy trình áp dụng cho tất cả nhân viên, contractor và third-party vendor. Admin Access (Level 4) cần phê duyệt từ IT Manager và CISO, thời gian xử lý 5 ngày làm việc, và có yêu cầu thêm: training bắt buộc về security policy.",3,Abstain nhưng có context → retrieval có thể lỗi,5,"The answer 'Không đủ dữ liệu' indicates that there is insufficient information to provide a definitive response to the user's query about whether external contractors can be granted Admin Access, the time required, and any special requirements. Since the query genuinely lacks context, this response is appropriate and relevant.",5,Retrieved: 2/1 expected sources,1,"The actual answer does not provide any relevant information regarding the possibility of granting Admin Access to external contractors, nor does it address the approval process, time frame, or any special requirements. It completely misses the core point of the query.",baseline_dense
+gq06,Cross-Document,"Lúc 2 giờ sáng xảy ra sự cố P1, on-call engineer cần cấp quyền tạm thời cho một engineer xử lý incident. Quy trình cụ thể như thế nào và quyền này tồn tại bao lâu?","Quy trình cấp quyền tạm thời cho engineer trong sự cố P1 như sau:
+
+1. On-call IT Admin có thể cấp quyền tạm thời (tối đa 24 giờ) sau khi được Tech Lead phê duyệt bằng lời.
+2. Sau 24 giờ, phải có ticket chính thức hoặc quyền sẽ bị thu hồi tự động.
+3. Mọi quyền tạm thời phải được ghi log vào hệ thống Security Audit [1]. 
+
+Quyền này tồn tại tối đa 24 giờ [1].","On-call IT Admin có thể cấp quyền tạm thời (tối đa 24 giờ) sau khi được Tech Lead phê duyệt bằng lời. Sau 24 giờ, phải có ticket chính thức hoặc quyền bị thu hồi tự động. Mọi quyền tạm thời phải được ghi log vào hệ thống Security Audit. Liên hệ on-call qua hotline ext. 9999 (24/7) theo SLA P1.",5,"The answer accurately reflects the process for granting temporary permissions to engineers during a P1 incident as outlined in the context. It includes all relevant steps and conditions without introducing any external facts or exaggerations. Therefore, it is fully supported by the context.",5,"The answer directly addresses the user's query by outlining the specific process for granting temporary permissions to an engineer during a P1 incident, including the approval requirement, duration of the permissions, and logging requirements. It provides clear and relevant information without unnecessary tangents.",5,Retrieved: 4/2 expected sources,5,"The actual answer contains all the key information present in the expected answer, including the process for granting temporary access, the maximum duration of the access, the requirement for a formal ticket after 24 hours, the logging of temporary permissions, and the mention of contacting the on-call engineer. Therefore, it fully meets the criteria outlined in the expected answer.",baseline_dense
+gq07,Insufficient Context,Công ty sẽ phạt bao nhiêu nếu team IT vi phạm cam kết SLA P1?,Không đủ dữ liệu.,"Tài liệu hiện có không quy định mức phạt hay hình thức xử lý khi vi phạm SLA P1. Tài liệu sla-p1-2026.pdf chỉ mô tả quy trình xử lý và SLA target, không có điều khoản về penalty.",3,Abstain nhưng có context → retrieval có thể lỗi,5,"The answer 'Không đủ dữ liệu' indicates that there is insufficient information to determine the penalty for violating the SLA commitment. Since the query asks for a specific consequence related to a potential violation, and the answer acknowledges the lack of data, it is relevant in the context of the query's requirements.",,No expected sources,1,"The actual answer states that there is insufficient data, which does not provide any information about the absence of penalties or the content of the SLA document. It fails to address the core point regarding the lack of specified penalties for SLA P1 violations, which is a critical detail in the expected answer.",baseline_dense
+gq08,HR Policy,Nhân viên phải báo trước bao nhiêu ngày để xin nghỉ phép năm? Con số này có giống với số ngày cần giấy tờ khi nghỉ ốm không?,"Nhân viên phải báo trước ít nhất 3 ngày làm việc để xin nghỉ phép năm [2]. Số ngày này không giống với số ngày cần giấy tờ khi nghỉ ốm, vì khi nghỉ ốm, nhân viên chỉ cần thông báo cho Line Manager trước 9:00 sáng ngày nghỉ, và nếu nghỉ trên 3 ngày liên tiếp thì cần giấy tờ y tế từ bệnh viện [1].",Nghỉ phép năm cần báo trước ít nhất 3 ngày làm việc qua HR Portal. Nghỉ ốm cũng liên quan đến mốc 3 ngày: nếu nghỉ TRÊN 3 ngày liên tiếp thì cần giấy tờ y tế từ bệnh viện. Hai con số '3 ngày' này áp dụng cho hai tình huống khác nhau.,5,"The answer accurately reflects the requirements for requesting annual leave and sick leave as outlined in the context. It correctly states that employees must notify at least 3 working days in advance for annual leave and that for sick leave, notification must be given before 9:00 AM on the day of absence. Additionally, it distinguishes between the two types of leave regarding the need for medical documentation after 3 consecutive sick days. There are no external facts or significant inaccuracies present in the answer.",5,"The answer directly addresses both parts of the user query by specifying the notice period required for annual leave and clarifying the difference in requirements for sick leave. It provides relevant details about the notification process and documentation needed, making it highly relevant to the query.",5,Retrieved: 2/1 expected sources,3,"The actual answer provides the key information about the notice period for annual leave (3 working days) and the requirement for medical documentation when taking sick leave for more than 3 consecutive days. However, it incorrectly states that the notice for sick leave is only to inform the Line Manager, which is not mentioned in the expected answer. The core points are mostly covered, but the comparison of the two situations is not as clear as in the expected answer.",baseline_dense
+gq09,IT Helpdesk,"Mật khẩu tài khoản công ty cần đổi định kỳ không? Nếu có, hệ thống sẽ nhắc nhở trước bao nhiêu ngày và đổi qua đâu?","Có, mật khẩu tài khoản công ty cần được thay đổi định kỳ mỗi 90 ngày. Hệ thống sẽ nhắc nhở 7 ngày trước khi hết hạn [1]. Mật khẩu mới có thể được đổi qua portal SSO [1].","Có. Mật khẩu phải được thay đổi mỗi 90 ngày. Hệ thống sẽ nhắc nhở 7 ngày trước khi hết hạn. Để đổi mật khẩu, truy cập https://sso.company.internal/reset hoặc liên hệ Helpdesk qua ext. 9000.",5,"The answer accurately reflects the information provided in the context regarding the need to change the company account password every 90 days and the reminder system in place. It does not introduce any external facts or exaggerations, making it fully supported by the context.",1,"Lỗi gọi LLM Evaluator: Error code: 429 - {'error': {'code': 'RateLimitReached', 'message': 'Rate limit of 150 per 86400s exceeded for UserByModelByDay. Please wait 78417 seconds before retrying.', 'details': 'Rate limit of 150 per 86400s exceeded for UserByModelByDay. Please wait 78417 seconds before retrying.'}}",5,Retrieved: 2/1 expected sources,1,"Lỗi gọi LLM Evaluator: Error code: 429 - {'error': {'code': 'RateLimitReached', 'message': 'Rate limit of 150 per 86400s exceeded for UserByModelByDay. Please wait 78408 seconds before retrying.', 'details': 'Rate limit of 150 per 86400s exceeded for UserByModelByDay. Please wait 78408 seconds before retrying.'}}",baseline_dense
+gq10,Refund,Chính sách hoàn tiền hiện tại áp dụng cho đơn hàng đặt trước ngày 01/02/2026 không?,"ERROR: Error code: 429 - {'error': {'code': 'RateLimitReached', 'message': 'Rate limit of 150 per 86400s exceeded for UserByModelByDay. Please wait 78378 seconds before retrying.', 'details': 'Rate limit of 150 per 86400s exceeded for UserByModelByDay. Please wait 78378 seconds before retrying.'}}",Không. Chính sách hoàn tiền phiên bản 4 có hiệu lực từ ngày 01/02/2026 và chỉ áp dụng cho các đơn hàng được đặt kể từ ngày đó. Các đơn hàng đặt trước ngày này sẽ áp dụng theo chính sách hoàn tiền phiên bản 3.,1,"Lỗi gọi LLM Evaluator: Error code: 429 - {'error': {'code': 'RateLimitReached', 'message': 'Rate limit of 150 per 86400s exceeded for UserByModelByDay. Please wait 78372 seconds before retrying.', 'details': 'Rate limit of 150 per 86400s exceeded for UserByModelByDay. Please wait 78372 seconds before retrying.'}}",1,"Lỗi gọi LLM Evaluator: Error code: 429 - {'error': {'code': 'RateLimitReached', 'message': 'Rate limit of 150 per 86400s exceeded for UserByModelByDay. Please wait 78364 seconds before retrying.', 'details': 'Rate limit of 150 per 86400s exceeded for UserByModelByDay. Please wait 78364 seconds before retrying.'}}",0,"Retrieved: 0/1 expected sources. Missing: ['policy/refund-v4.pdf', 'policy/refund-v4.pdf']",1,The actual answer does not address the query at all and instead provides an error message related to rate limiting. It fails to provide any information regarding the refund policy or the specific date mentioned in the query.,baseline_dense
+gq01,SLA,SLA xử lý ticket P1 đã thay đổi như thế nào so với phiên bản trước?,Không đủ dữ liệu,"Phiên bản hiện tại (v2026.1, có hiệu lực từ 2026-01-15) đã cập nhật SLA P1 resolution từ 6 giờ xuống còn 4 giờ. Phiên bản trước (v2025.3) không thay đổi SLA này.",3,Abstain nhưng có context → retrieval có thể lỗi,5,"The answer 'Không đủ dữ liệu' indicates that there is insufficient information to address the query about changes in the SLA for P1 tickets compared to the previous version. Since the query genuinely lacks context, this response is appropriate and directly acknowledges the limitation in available information.",5,Retrieved: 2/1 expected sources,1,"The actual answer does not provide any information regarding the changes in SLA for P1 tickets, which is the core point of the query. It simply states that there is not enough data, failing to address the specifics of the SLA changes mentioned in the expected answer.",variant_hybrid
+gq02,Cross-Document,"Khi làm việc remote, tôi phải dùng VPN và được kết nối trên tối đa bao nhiêu thiết bị?",Không đủ dữ liệu,"Khi làm việc remote và truy cập hệ thống nội bộ, VPN là bắt buộc (theo HR Leave Policy). Phần mềm VPN là Cisco AnyConnect và mỗi tài khoản được kết nối VPN trên tối đa 2 thiết bị cùng lúc (theo IT Helpdesk FAQ).",3,Abstain nhưng có context → retrieval có thể lỗi,5,"The answer 'Không đủ dữ liệu' indicates that there is insufficient information to provide a specific response to the user's query about VPN usage and device connection limits while working remotely. Since the query genuinely lacks context, this response is appropriate.",5,Retrieved: 4/2 expected sources,1,"The actual answer does not provide any relevant information regarding the use of VPN, the software used, or the maximum number of devices that can be connected. It simply states 'Không đủ dữ liệu', which indicates a lack of information rather than addressing the query.",variant_hybrid
+gq03,Refund,Đơn hàng mua trong chương trình Flash Sale và đã kích hoạt sản phẩm có được hoàn tiền không?,Không đủ dữ liệu,Không được hoàn tiền. Đơn hàng rơi vào hai ngoại lệ cùng lúc: (1) đơn hàng áp dụng mã giảm giá chương trình Flash Sale và (2) sản phẩm đã được kích hoạt — cả hai đều thuộc danh sách ngoại lệ không được hoàn tiền theo Điều 3 của chính sách.,3,Abstain nhưng có context → retrieval có thể lỗi,5,"The answer 'Không đủ dữ liệu' indicates that there is insufficient information to provide a definitive response to the user's query about refunds for purchases made during a Flash Sale. Since the query genuinely lacks context, this response is appropriate and relevant.",5,Retrieved: 2/1 expected sources,1,"The actual answer does not address the question about whether the order can be refunded. Instead, it states that there is insufficient data, which completely misses the core point of the expected answer. The expected answer clearly states that refunds are not allowed due to specific exceptions, which the actual answer fails to mention.",variant_hybrid
+gq04,Refund,"Nếu chọn nhận store credit thay vì hoàn tiền, tôi được bao nhiêu phần trăm so với số tiền gốc?",Không đủ dữ liệu,"Khách hàng có thể chọn nhận store credit (credit nội bộ) thay thế với giá trị 110% so với số tiền hoàn gốc. Đây là tùy chọn, không phải bắt buộc.",3,Abstain nhưng có context → retrieval có thể lỗi,1,"Lỗi gọi LLM Evaluator: Error code: 429 - {'error': {'code': 'RateLimitReached', 'message': 'Rate limit of 150 per 86400s exceeded for UserByModelByDay. Please wait 78272 seconds before retrying.', 'details': 'Rate limit of 150 per 86400s exceeded for UserByModelByDay. Please wait 78272 seconds before retrying.'}}",5,Retrieved: 2/1 expected sources,1,"Lỗi gọi LLM Evaluator: Error code: 429 - {'error': {'code': 'RateLimitReached', 'message': 'Rate limit of 150 per 86400s exceeded for UserByModelByDay. Please wait 78266 seconds before retrying.', 'details': 'Rate limit of 150 per 86400s exceeded for UserByModelByDay. Please wait 78266 seconds before retrying.'}}",variant_hybrid
+gq05,Access Control,"Contractor từ bên ngoài công ty có thể được cấp quyền Admin Access không? Nếu có, cần bao nhiêu ngày và có yêu cầu đặc biệt gì?",Không đủ dữ liệu,"Có. Theo Access Control SOP, quy trình áp dụng cho tất cả nhân viên, contractor và third-party vendor. Admin Access (Level 4) cần phê duyệt từ IT Manager và CISO, thời gian xử lý 5 ngày làm việc, và có yêu cầu thêm: training bắt buộc về security policy.",3,Abstain nhưng có context → retrieval có thể lỗi,5,"The answer 'Không đủ dữ liệu' indicates that there is insufficient information to provide a response to the query about whether external contractors can be granted Admin Access, the time required, and any special requirements. Since the query genuinely lacks context, this response is appropriate and relevant.",5,Retrieved: 2/1 expected sources,1,"The actual answer states 'Không đủ dữ liệu' which indicates a lack of information and does not address the query regarding whether external contractors can be granted Admin Access, the processing time, or any special requirements. It completely misses the core points outlined in the expected answer.",variant_hybrid
+gq06,Cross-Document,"Lúc 2 giờ sáng xảy ra sự cố P1, on-call engineer cần cấp quyền tạm thời cho một engineer xử lý incident. Quy trình cụ thể như thế nào và quyền này tồn tại bao lâu?",Không đủ dữ liệu,"On-call IT Admin có thể cấp quyền tạm thời (tối đa 24 giờ) sau khi được Tech Lead phê duyệt bằng lời. Sau 24 giờ, phải có ticket chính thức hoặc quyền bị thu hồi tự động. Mọi quyền tạm thời phải được ghi log vào hệ thống Security Audit. Liên hệ on-call qua hotline ext. 9999 (24/7) theo SLA P1.",3,Abstain nhưng có context → retrieval có thể lỗi,5,"The answer 'Không đủ dữ liệu' indicates that there is insufficient information to provide a specific response to the query about the process for granting temporary permissions and the duration of those permissions. Since the query genuinely lacks context, this response is appropriate and relevant.",5,Retrieved: 4/2 expected sources,1,The actual answer states 'Không đủ dữ liệu' which indicates a lack of information and does not address any part of the query regarding the process for granting temporary access or the duration of that access. It completely misses the core points outlined in the expected answer.,variant_hybrid
+gq07,Insufficient Context,Công ty sẽ phạt bao nhiêu nếu team IT vi phạm cam kết SLA P1?,Không đủ dữ liệu,"Tài liệu hiện có không quy định mức phạt hay hình thức xử lý khi vi phạm SLA P1. Tài liệu sla-p1-2026.pdf chỉ mô tả quy trình xử lý và SLA target, không có điều khoản về penalty.",3,Abstain nhưng có context → retrieval có thể lỗi,5,"The answer 'Không đủ dữ liệu' indicates that there is insufficient information to determine the penalty for violating the SLA commitment. Since the query asks for a specific consequence related to a potential violation, and the answer acknowledges the lack of data, it is relevant in the context of the query's requirements.",,No expected sources,1,"The actual answer states 'Không đủ dữ liệu' which indicates a lack of information but does not provide any details about the absence of penalty clauses or the content of the SLA document, which are key points in the expected answer. Therefore, it misses the core point of the expected answer.",variant_hybrid
+gq08,HR Policy,Nhân viên phải báo trước bao nhiêu ngày để xin nghỉ phép năm? Con số này có giống với số ngày cần giấy tờ khi nghỉ ốm không?,Không đủ dữ liệu,Nghỉ phép năm cần báo trước ít nhất 3 ngày làm việc qua HR Portal. Nghỉ ốm cũng liên quan đến mốc 3 ngày: nếu nghỉ TRÊN 3 ngày liên tiếp thì cần giấy tờ y tế từ bệnh viện. Hai con số '3 ngày' này áp dụng cho hai tình huống khác nhau.,3,Abstain nhưng có context → retrieval có thể lỗi,5,"The answer 'Không đủ dữ liệu' indicates a lack of sufficient information to address the user's query about the number of days required for requesting annual leave and whether it is the same as for sick leave documentation. Since the query genuinely lacks context, this response is appropriate and relevant.",5,Retrieved: 2/1 expected sources,1,The actual answer does not provide any relevant information regarding the number of days required for annual leave notification or the requirements for sick leave documentation. It completely misses the core points addressed in the expected answer.,variant_hybrid
+gq09,IT Helpdesk,"Mật khẩu tài khoản công ty cần đổi định kỳ không? Nếu có, hệ thống sẽ nhắc nhở trước bao nhiêu ngày và đổi qua đâu?",Không đủ dữ liệu,"Có. Mật khẩu phải được thay đổi mỗi 90 ngày. Hệ thống sẽ nhắc nhở 7 ngày trước khi hết hạn. Để đổi mật khẩu, truy cập https://sso.company.internal/reset hoặc liên hệ Helpdesk qua ext. 9000.",3,Abstain nhưng có context → retrieval có thể lỗi,1,"The answer 'Không đủ dữ liệu' indicates a lack of sufficient information to address the user's query about company password policies, reminders, and procedures. Since the query is specific and the answer does not provide any relevant information, it is not helpful.",5,Retrieved: 2/1 expected sources,1,"The actual answer does not provide any information regarding the password change policy, reminder period, or the method for changing the password. It completely misses the core points addressed in the expected answer.",variant_hybrid
+gq10,Refund,Chính sách hoàn tiền hiện tại áp dụng cho đơn hàng đặt trước ngày 01/02/2026 không?,Không đủ dữ liệu,Không. Chính sách hoàn tiền phiên bản 4 có hiệu lực từ ngày 01/02/2026 và chỉ áp dụng cho các đơn hàng được đặt kể từ ngày đó. Các đơn hàng đặt trước ngày này sẽ áp dụng theo chính sách hoàn tiền phiên bản 3.,3,Abstain nhưng có context → retrieval có thể lỗi,1,"Lỗi gọi LLM Evaluator: Error code: 429 - {'error': {'code': 'RateLimitReached', 'message': 'Rate limit of 150 per 86400s exceeded for UserByModelByDay. Please wait 78170 seconds before retrying.', 'details': 'Rate limit of 150 per 86400s exceeded for UserByModelByDay. Please wait 78170 seconds before retrying.'}}",5,Retrieved: 2/1 expected sources,1,"Lỗi gọi LLM Evaluator: Error code: 429 - {'error': {'code': 'RateLimitReached', 'message': 'Rate limit of 150 per 86400s exceeded for UserByModelByDay. Please wait 78163 seconds before retrying.', 'details': 'Rate limit of 150 per 86400s exceeded for UserByModelByDay. Please wait 78163 seconds before retrying.'}}",variant_hybrid
+
+
+# Scorecard: baseline_dense
+Generated: 2026-04-13 17:28
+
+## Summary
+
+| Metric | Average Score |
+|--------|--------------|
+| Faithfulness | 4.20/5 |
+| Relevance | 4.20/5 |
+| Context Recall | 4.44/5 |
+| Completeness | 2.50/5 |
+
+## Per-Question Results
+
+| ID | Category | Faithful | Relevant | Recall | Complete | Notes |
+|----|----------|----------|----------|--------|----------|-------|
+| gq01 | SLA | 5 | 5 | 5 | 3 | The answer accurately reflects the change in the S |
+| gq02 | Cross-Document | 5 | 5 | 5 | 3 | The answer accurately reflects the requirements fo |
+| gq03 | Refund | 5 | 5 | 5 | 3 | The answer accurately reflects the conditions outl |
+| gq04 | Refund | 5 | 5 | 5 | 4 | The answer accurately reflects the information pro |
+| gq05 | Access Control | 3 | 5 | 5 | 1 | Abstain nhưng có context → retrieval có thể lỗi |
+| gq06 | Cross-Document | 5 | 5 | 5 | 5 | The answer accurately reflects the process for gra |
+| gq07 | Insufficient Context | 3 | 5 | None | 1 | Abstain nhưng có context → retrieval có thể lỗi |
+| gq08 | HR Policy | 5 | 5 | 5 | 3 | The answer accurately reflects the requirements fo |
+| gq09 | IT Helpdesk | 5 | 1 | 5 | 1 | The answer accurately reflects the information pro |
+| gq10 | Refund | 1 | 1 | 0 | 1 | Lỗi gọi LLM Evaluator: Error code: 429 - {'error': |
+
+
+# Scorecard: variant_hybrid
+Generated: 2026-04-13 17:31
+
+## Summary
+
+| Metric | Average Score |
+|--------|--------------|
+| Faithfulness | 3.00/5 |
+| Relevance | 3.80/5 |
+| Context Recall | 5.00/5 |
+| Completeness | 1.00/5 |
+
+## Per-Question Results
+
+| ID | Category | Faithful | Relevant | Recall | Complete | Notes |
+|----|----------|----------|----------|--------|----------|-------|
+| gq01 | SLA | 3 | 5 | 5 | 1 | Abstain nhưng có context → retrieval có thể lỗi |
+| gq02 | Cross-Document | 3 | 5 | 5 | 1 | Abstain nhưng có context → retrieval có thể lỗi |
+| gq03 | Refund | 3 | 5 | 5 | 1 | Abstain nhưng có context → retrieval có thể lỗi |
+| gq04 | Refund | 3 | 1 | 5 | 1 | Abstain nhưng có context → retrieval có thể lỗi |
+| gq05 | Access Control | 3 | 5 | 5 | 1 | Abstain nhưng có context → retrieval có thể lỗi |
+| gq06 | Cross-Document | 3 | 5 | 5 | 1 | Abstain nhưng có context → retrieval có thể lỗi |
+| gq07 | Insufficient Context | 3 | 5 | None | 1 | Abstain nhưng có context → retrieval có thể lỗi |
+| gq08 | HR Policy | 3 | 5 | 5 | 1 | Abstain nhưng có context → retrieval có thể lỗi |
+| gq09 | IT Helpdesk | 3 | 1 | 5 | 1 | Abstain nhưng có context → retrieval có thể lỗi |
+| gq10 | Refund | 3 | 1 | 5 | 1 | Abstain nhưng có context → retrieval có thể lỗi |
+
+
+
+*Kết quả chạy với testcase Trước 17:00 :
+id,category,query,answer,expected_answer,faithfulness,faithfulness_notes,relevance,relevance_notes,context_recall,context_recall_notes,completeness,completeness_notes,config_label
+q01,SLA,SLA xử lý ticket P1 là bao lâu?,SLA xử lý ticket P1 là 15 phút cho phản hồi ban đầu và 4 giờ cho việc xử lý và khắc phục [1].,Ticket P1 có SLA phản hồi ban đầu 15 phút và thời gian xử lý (resolution) là 4 giờ.,5,"The answer accurately reflects the SLA for ticket P1 as stated in the context, specifically mentioning the initial response time of 15 minutes and the resolution time of 4 hours. There are no external facts or exaggerations present in the answer.",5,"The answer directly addresses the query by providing specific information about the SLA for handling P1 tickets, including both the initial response time and the resolution time. This is exactly what the user is asking for.",5,Retrieved: 2/1 expected sources,5,"The actual answer contains all the key information present in the expected answer, including the initial response time of 15 minutes and the resolution time of 4 hours. The phrasing is slightly different, but the essential details are intact.",baseline_dense
+q02,Refund,Khách hàng có thể yêu cầu hoàn tiền trong bao nhiêu ngày?,Khách hàng có thể yêu cầu hoàn tiền trong vòng 7 ngày làm việc kể từ thời điểm xác nhận đơn hàng [1][2].,Khách hàng có thể yêu cầu hoàn tiền trong vòng 7 ngày làm việc kể từ thời điểm xác nhận đơn hàng.,5,"The answer accurately reflects the information provided in the context regarding the timeframe for requesting a refund, which is within 7 working days from the order confirmation. It does not include any external facts or exaggerations, making it fully supported by the context.",5,"The answer directly addresses the user's query by specifying that customers can request a refund within 7 working days from the order confirmation. It provides a clear and relevant timeframe, which is exactly what the user is asking for.",5,Retrieved: 2/1 expected sources,5,"The actual answer contains all the key information present in the expected answer, including the time frame of 7 working days from the order confirmation. The additional references [1][2] do not detract from the completeness of the answer.",baseline_dense
+q03,Access Control,Ai phải phê duyệt để cấp quyền Level 3?,"Để cấp quyền Level 3, yêu cầu phải được phê duyệt bởi Line Manager, IT Admin và IT Security [1].","Level 3 (Elevated Access) cần phê duyệt từ Line Manager, IT Admin, và IT Security.",5,"The answer accurately reflects the requirements for granting Level 3 access, stating that approval is needed from the Line Manager, IT Admin, and IT Security, which is consistent with the context provided. There are no external facts or exaggerations present in the answer.",5,"The answer directly addresses the query by specifying who must approve the granting of Level 3 access rights, which is exactly what the user is asking for.",5,Retrieved: 2/1 expected sources,5,"The actual answer contains all the key information present in the expected answer, including the requirement for approval from Line Manager, IT Admin, and IT Security for Level 3 access. The phrasing is slightly different, but the essential details are intact.",baseline_dense
+q04,Refund,Sản phẩm kỹ thuật số có được hoàn tiền không?,Sản phẩm kỹ thuật số không được hoàn tiền. Các ngoại lệ không được hoàn tiền bao gồm sản phẩm thuộc danh mục hàng kỹ thuật số như license key và subscription [1].,"Không. Theo chính sách hoàn tiền, sản phẩm thuộc danh mục hàng kỹ thuật số (license key, subscription) là ngoại lệ không được hoàn tiền.",5,"The answer accurately reflects the information provided in the context regarding the non-refundable status of digital products, specifically mentioning license keys and subscriptions as exceptions. It does not introduce any external facts or exaggerations, making it fully supported by the context.",5,The answer directly addresses the user's query about whether digital products can be refunded by stating that they cannot be refunded and providing examples of exceptions. This is a clear and relevant response to the question asked.,5,Retrieved: 2/1 expected sources,5,"The actual answer conveys the same core message as the expected answer, stating that digital products are non-refundable and providing examples of exceptions (license key and subscription). It includes all key information present in the expected answer, albeit with slightly different wording.",baseline_dense
+q05,IT Helpdesk,Tài khoản bị khóa sau bao nhiêu lần đăng nhập sai?,"Tài khoản bị khóa sau 5 lần đăng nhập sai liên tiếp. Để mở khóa, bạn có thể liên hệ IT Helpdesk hoặc tự reset qua portal SSO [1].",Tài khoản bị khóa sau 5 lần đăng nhập sai liên tiếp.,5,"The answer accurately reflects the information provided in the context regarding the account lockout policy and the methods to unlock the account. It does not introduce any external facts or exaggerations, making it fully supported by the context.",5,"The answer directly addresses the user's query by stating that an account is locked after 5 consecutive failed login attempts. It also provides additional relevant information on how to unlock the account, which is useful but not strictly necessary to answer the original question. Overall, it is a complete and relevant response.",5,Retrieved: 2/1 expected sources,5,"The actual answer contains all the key information present in the expected answer, including the number of failed login attempts before the account is locked. Additionally, it provides extra information on how to unlock the account, which is not part of the expected answer but does not detract from the core response.",baseline_dense
+q06,SLA,Escalation trong sự cố P1 diễn ra như thế nào?,"Quy trình escalation trong sự cố P1 diễn ra như sau:
+
+1. On-call engineer nhận alert hoặc ticket và xác nhận severity trong 5 phút.
+2. Nếu không có phản hồi trong 10 phút, ticket sẽ tự động escalate lên Senior Engineer.
+3. Lead Engineer phân công engineer xử lý trong 10 phút.
+4. Engineer cập nhật tiến độ lên ticket mỗi 30 phút và nếu cần hỗ trợ thêm, sẽ thực hiện escalation ngay.
+
+Ngoài ra, trong trường hợp cần cấp quyền tạm thời để khắc phục sự cố P1, quy trình escalation khẩn cấp được thực hiện như sau:
+1. On-call IT Admin có thể cấp quyền tạm thời (tối đa 24 giờ) sau khi được Tech Lead phê duyệt bằng lời.
+2. Sau 24 giờ, phải có ticket chính thức hoặc quyền sẽ bị thu hồi tự động.
+3. Mọi quyền tạm thời phải được ghi log vào hệ thống Security Audit [1][2][3].",Ticket P1 tự động escalate lên Senior Engineer nếu không có phản hồi trong 10 phút sau khi tạo ticket.,5,"The answer accurately summarizes the escalation process for P1 incidents as outlined in the context, including the steps for on-call engineers and the protocol for temporary privilege escalation. It does not introduce any external facts or significant exaggerations, making it fully supported by the context provided.",5,"The answer provides a detailed and structured explanation of the escalation process for a P1 incident, addressing the user's query directly and thoroughly. It outlines the steps involved, the roles of different engineers, and additional procedures for temporary permissions, which are all relevant to understanding how escalation occurs in a P1 incident.",5,Retrieved: 2/1 expected sources,4,"The actual answer provides a detailed escalation process for P1 incidents, including the initial response time, escalation to a Senior Engineer, and additional procedures for temporary permissions. However, it includes more information than the expected answer, which only mentions the automatic escalation after 10 minutes. The core point of automatic escalation is present, but the additional details may distract from the simplicity of the expected answer. Therefore, it is not a perfect match but still contains the essential information.",baseline_dense
+q07,Access Control,Approval Matrix để cấp quyền hệ thống là tài liệu nào?,"Approval Matrix để cấp quyền hệ thống là tài liệu quy định quy trình cấp phép truy cập vào các hệ thống nội bộ của công ty, áp dụng cho tất cả nhân viên, contractor, và third-party vendor [1].",Tài liệu 'Approval Matrix for System Access' hiện tại có tên mới là 'Access Control SOP' (access-control-sop.md).,5,"The answer accurately reflects the context by stating that the Approval Matrix governs the access permission process for internal systems and applies to all employees, contractors, and third-party vendors. It does not introduce any external facts or exaggerations, remaining faithful to the provided information.",5,"The answer directly addresses the query by explaining what an Approval Matrix is in the context of granting system access rights. It specifies that it is a document that outlines the process for granting access to internal systems for various types of users, which is relevant to the user's question about the document related to the Approval Matrix.",5,Retrieved: 2/1 expected sources,3,"The actual answer provides a general description of the Approval Matrix and its purpose but does not mention the specific name change to 'Access Control SOP' or the document reference (access-control-sop.md) as stated in the expected answer. Therefore, it is missing key information.",baseline_dense
+q08,HR Policy,Nhân viên được làm remote tối đa mấy ngày mỗi tuần?,"Nhân viên được làm remote tối đa 2 ngày mỗi tuần sau khi đã qua thời gian thử việc, và lịch remote cần được phê duyệt bởi Team Lead qua HR Portal [1].","Nhân viên sau probation period có thể làm remote tối đa 2 ngày/tuần, với điều kiện được Team Lead phê duyệt.",5,"The answer accurately reflects the information provided in the context regarding remote work conditions, including the maximum number of remote days allowed and the requirement for approval from the Team Lead through the HR Portal. There are no external facts or exaggerations present in the answer.",5,"The answer directly addresses the user's query about the maximum number of remote work days allowed per week for employees, providing specific information about the policy and the approval process. It is relevant and informative.",5,Retrieved: 2/1 expected sources,5,"The actual answer contains all the key information present in the expected answer, including the maximum number of remote days (2 days/week), the condition of having completed the probation period, and the requirement for Team Lead approval. Additionally, it mentions the HR Portal for the approval process, which adds clarity. Therefore, it fully aligns with the expected answer.",baseline_dense
+q09,Insufficient Context,ERR-403-AUTH là lỗi gì và cách xử lý?,Không đủ dữ liệu.,"Không tìm thấy thông tin về ERR-403-AUTH trong tài liệu hiện có. Đây có thể là lỗi liên quan đến xác thực (authentication), hãy liên hệ IT Helpdesk.",3,Abstain nhưng có context → retrieval có thể lỗi,1,"The answer 'Không đủ dữ liệu' does not provide any information about the ERR-403-AUTH error or how to handle it, making it completely irrelevant to the user's query.",,No expected sources,1,"The actual answer does not provide any relevant information about the ERR-403-AUTH error or its potential relation to authentication, nor does it suggest contacting IT Helpdesk. It simply states 'Không đủ dữ liệu,' which does not address the query effectively.",baseline_dense
+q10,Refund,"Nếu cần hoàn tiền khẩn cấp cho khách hàng VIP, quy trình có khác không?",Không đủ dữ liệu.,"Tài liệu chính sách hoàn tiền không đề cập đến quy trình đặc biệt cho khách hàng VIP. Theo chính sách hiện hành, tất cả yêu cầu hoàn tiền đều theo cùng quy trình tiêu chuẩn trong 3-5 ngày làm việc.",3,Abstain nhưng có context → retrieval có thể lỗi,5,"The answer 'Không đủ dữ liệu' indicates that there is insufficient information to provide a relevant response to the query about the process for urgent refunds for VIP customers. Since the query genuinely lacks context, this response is appropriate.",5,Retrieved: 2/1 expected sources,1,"The actual answer does not provide any information regarding the refund process for VIP customers, nor does it address the standard procedure mentioned in the expected answer. It simply states that there is insufficient data, which fails to answer the query effectively.",baseline_dense
+q01,SLA,SLA xử lý ticket P1 là bao lâu?,"SLA xử lý ticket P1 bao gồm các thời gian sau:
+- Phản hồi ban đầu: 15 phút kể từ khi ticket được tạo.
+- Xử lý và khắc phục: 4 giờ [1].",Ticket P1 có SLA phản hồi ban đầu 15 phút và thời gian xử lý (resolution) là 4 giờ.,5,"The answer accurately reflects the SLA for ticket P1 as provided in the context, including the initial response time and resolution time. There are no external facts or exaggerations present in the answer.",5,"The answer directly addresses the query by providing specific details about the SLA for handling P1 tickets, including the initial response time and the processing and resolution time. This information is relevant and directly answers the user's question.",5,Retrieved: 2/1 expected sources,5,"The actual answer provides all the key information present in the expected answer, including the initial response time of 15 minutes and the resolution time of 4 hours. It also clarifies that the initial response time starts from when the ticket is created, which adds context without detracting from the core information. Therefore, it meets the criteria for a perfect score.",variant_hybrid
+q02,Refund,Khách hàng có thể yêu cầu hoàn tiền trong bao nhiêu ngày?,Khách hàng có thể yêu cầu hoàn tiền trong vòng 7 ngày làm việc kể từ thời điểm xác nhận đơn hàng [1].,Khách hàng có thể yêu cầu hoàn tiền trong vòng 7 ngày làm việc kể từ thời điểm xác nhận đơn hàng.,5,"The answer accurately reflects the information provided in the context regarding the timeframe for requesting a refund, which is within 7 working days from the order confirmation. It does not include any external facts or exaggerations.",5,The answer directly addresses the user's query by specifying that customers can request a refund within 7 working days from the order confirmation. This provides a clear and relevant response to the question asked.,5,Retrieved: 2/1 expected sources,5,"The actual answer contains all the key information present in the expected answer, including the time frame of 7 working days from the order confirmation. The additional reference '[1]' does not detract from the completeness of the answer.",variant_hybrid
+q03,Access Control,Ai phải phê duyệt để cấp quyền Level 3?,"Để cấp quyền Level 3, yêu cầu phải được phê duyệt bởi Line Manager, IT Admin và IT Security [2].","Level 3 (Elevated Access) cần phê duyệt từ Line Manager, IT Admin, và IT Security.",5,"The answer accurately reflects the approval requirements for Level 3 access as stated in the context, which specifies that it must be approved by the Line Manager, IT Admin, and IT Security. There are no external facts or exaggerations present in the answer.",5,"The answer directly addresses the query by specifying who must approve the granting of Level 3 permissions, which is exactly what the user is asking for.",5,Retrieved: 2/1 expected sources,5,"The actual answer contains all the key information present in the expected answer, including the requirement for approval from Line Manager, IT Admin, and IT Security for Level 3 access. The phrasing is slightly different, but the essential details are intact.",variant_hybrid
+q04,Refund,Sản phẩm kỹ thuật số có được hoàn tiền không?,"Sản phẩm kỹ thuật số không được hoàn tiền. Các ngoại lệ không được hoàn tiền bao gồm sản phẩm thuộc danh mục hàng kỹ thuật số (license key, subscription) [1].","Không. Theo chính sách hoàn tiền, sản phẩm thuộc danh mục hàng kỹ thuật số (license key, subscription) là ngoại lệ không được hoàn tiền.",5,"The answer accurately reflects the information provided in the context regarding the non-refundable status of digital products. It correctly identifies that products in the digital category, such as license keys and subscriptions, are not eligible for refunds. There are no external facts or exaggerations present in the answer.",5,"The answer directly addresses the user's query about whether digital products can be refunded by stating that they cannot be refunded, along with examples of exceptions. This provides a clear and relevant response to the question asked.",5,Retrieved: 2/1 expected sources,5,"The actual answer conveys the core message that digital products are non-refundable and specifies that exceptions include items like license keys and subscriptions. It closely aligns with the expected answer, providing all key information without omitting any important details.",variant_hybrid
+q05,IT Helpdesk,Tài khoản bị khóa sau bao nhiêu lần đăng nhập sai?,"Tài khoản bị khóa sau 5 lần đăng nhập sai liên tiếp. Để mở khóa, bạn có thể liên hệ IT Helpdesk hoặc tự reset qua portal SSO [1].",Tài khoản bị khóa sau 5 lần đăng nhập sai liên tiếp.,5,The answer accurately reflects the information provided in the context regarding the account lockout policy after 5 consecutive failed login attempts and the options for unlocking the account. It does not introduce any external facts or exaggerations.,5,"The answer directly addresses the user's query by stating that the account is locked after 5 consecutive failed login attempts. It also provides additional information on how to unlock the account, which is relevant and helpful.",5,Retrieved: 2/1 expected sources,5,"The actual answer contains all the key information present in the expected answer, including the number of failed login attempts before the account is locked. Additionally, it provides extra information on how to unlock the account, which is not part of the expected answer but does not detract from the core response.",variant_hybrid
+q06,SLA,Escalation trong sự cố P1 diễn ra như thế nào?,"Quy trình escalation trong sự cố P1 diễn ra như sau:
+
+1. Nếu không có phản hồi trong 10 phút kể từ khi ticket được tạo, sự cố sẽ tự động được escalate lên Senior Engineer.
+2. Phản hồi ban đầu phải được thực hiện trong vòng 15 phút và xử lý, khắc phục sự cố phải hoàn thành trong 4 giờ [2]. 
+
+Ngoài ra, trong trường hợp cần cấp quyền tạm thời để khắc phục sự cố P1, quy trình escalation khẩn cấp cũng được áp dụng, cho phép On-call IT Admin cấp quyền tạm thời (tối đa 24 giờ) sau khi được Tech Lead phê duyệt bằng lời [1].",Ticket P1 tự động escalate lên Senior Engineer nếu không có phản hồi trong 10 phút sau khi tạo ticket.,5,"The answer accurately describes the escalation process for P1 incidents as outlined in the context. It correctly states the automatic escalation to a Senior Engineer if there is no response within 10 minutes and the required initial response and resolution times. Additionally, it appropriately mentions the emergency escalation process for granting temporary permissions, which is also detailed in the context. There are no external facts or significant inaccuracies present in the answer.",5,"The answer provides a clear and detailed explanation of the escalation process for a P1 incident, addressing the user's query directly. It outlines specific timeframes for responses and actions, as well as additional procedures for temporary permissions, which are relevant to the escalation process. Therefore, it fully answers the query.",5,Retrieved: 2/1 expected sources,5,"The actual answer provides a detailed explanation of the escalation process for P1 incidents, including the automatic escalation to a Senior Engineer if there is no response within 10 minutes, which is the key point from the expected answer. However, it also includes additional information about initial response times and emergency escalation procedures, which, while relevant, are not part of the expected answer. Therefore, it contains all key information but adds extra details that were not requested.",variant_hybrid
+q07,Access Control,Approval Matrix để cấp quyền hệ thống là tài liệu nào?,Không đủ dữ liệu.,Tài liệu 'Approval Matrix for System Access' hiện tại có tên mới là 'Access Control SOP' (access-control-sop.md).,3,Abstain nhưng có context → retrieval có thể lỗi,5,"The answer 'Không đủ dữ liệu' indicates a lack of sufficient information to provide a relevant response to the query about the 'Approval Matrix' for system access rights. Since the query genuinely lacks context and the answer acknowledges this, it is appropriate to score it as fully relevant.",5,Retrieved: 2/1 expected sources,1,"The actual answer does not provide any relevant information regarding the Approval Matrix or its current name, which is a critical part of the expected answer. It fails to address the query entirely.",variant_hybrid
+q08,HR Policy,Nhân viên được làm remote tối đa mấy ngày mỗi tuần?,"Nhân viên được làm remote tối đa 2 ngày mỗi tuần sau khi hoàn thành thời gian thử việc, và lịch remote phải được Team Lead phê duyệt qua HR Portal. Ngày onsite bắt buộc là Thứ 3 và Thứ 5 theo lịch team [1].","Nhân viên sau probation period có thể làm remote tối đa 2 ngày/tuần, với điều kiện được Team Lead phê duyệt.",5,"The answer accurately reflects the information provided in the context regarding remote work conditions, including the maximum number of remote days allowed, the requirement for Team Lead approval, and the mandatory onsite days. There are no external facts or exaggerations present in the answer.",5,"The answer directly addresses the user's query about the maximum number of remote work days per week, providing specific details about the policy and conditions for remote work. It clearly states that employees can work remotely for a maximum of 2 days per week after completing their probation period, and it includes additional relevant information about the approval process and mandatory onsite days.",5,Retrieved: 2/1 expected sources,5,"The actual answer contains all the key information present in the expected answer, including the maximum number of remote days (2 days/week), the condition of completing the probation period, and the requirement for Team Lead approval. Additionally, it provides extra details about the scheduling of onsite days, which is relevant but not part of the expected answer. Therefore, it fully addresses the query with all necessary details.",variant_hybrid
+q09,Insufficient Context,ERR-403-AUTH là lỗi gì và cách xử lý?,Không đủ dữ liệu.,"Không tìm thấy thông tin về ERR-403-AUTH trong tài liệu hiện có. Đây có thể là lỗi liên quan đến xác thực (authentication), hãy liên hệ IT Helpdesk.",3,Abstain nhưng có context → retrieval có thể lỗi,5,"The answer 'Không đủ dữ liệu' indicates a lack of information regarding the specific error code ERR-403-AUTH and how to handle it. However, since the query genuinely lacks context and the answer acknowledges this, it can be considered relevant in that it does not provide incorrect information.",,No expected sources,1,"The actual answer does not provide any relevant information about the ERR-403-AUTH error or its potential relation to authentication, nor does it suggest contacting IT Helpdesk. It simply states 'Không đủ dữ liệu,' which is vague and unhelpful.",variant_hybrid
+q10,Refund,"Nếu cần hoàn tiền khẩn cấp cho khách hàng VIP, quy trình có khác không?",Không đủ dữ liệu.,"Tài liệu chính sách hoàn tiền không đề cập đến quy trình đặc biệt cho khách hàng VIP. Theo chính sách hiện hành, tất cả yêu cầu hoàn tiền đều theo cùng quy trình tiêu chuẩn trong 3-5 ngày làm việc.",3,Abstain nhưng có context → retrieval có thể lỗi,5,"The answer 'Không đủ dữ liệu' indicates that there is insufficient information to provide a relevant response to the query about the process for urgent refunds for VIP customers. Since the query genuinely lacks context, this response is appropriate.",5,Retrieved: 2/1 expected sources,1,"The actual answer does not provide any information regarding the refund process for VIP customers, nor does it address the standard procedure mentioned in the expected answer. It simply states that there is insufficient data, which completely misses the core point of the query.",variant_hybrid
+
+# Scorecard: baseline_dense
+Generated: 2026-04-13 16:21
+
+## Summary
+
+| Metric | Average Score |
+|--------|--------------|
+| Faithfulness | 4.60/5 |
+| Relevance | 4.60/5 |
+| Context Recall | 5.00/5 |
+| Completeness | 3.90/5 |
+
+## Per-Question Results
+
+| ID | Category | Faithful | Relevant | Recall | Complete | Notes |
+|----|----------|----------|----------|--------|----------|-------|
+| q01 | SLA | 5 | 5 | 5 | 5 | The answer accurately reflects the SLA for ticket  |
+| q02 | Refund | 5 | 5 | 5 | 5 | The answer accurately reflects the information pro |
+| q03 | Access Control | 5 | 5 | 5 | 5 | The answer accurately reflects the requirements fo |
+| q04 | Refund | 5 | 5 | 5 | 5 | The answer accurately reflects the information pro |
+| q05 | IT Helpdesk | 5 | 5 | 5 | 5 | The answer accurately reflects the information pro |
+| q06 | SLA | 5 | 5 | 5 | 4 | The answer accurately summarizes the escalation pr |
+| q07 | Access Control | 5 | 5 | 5 | 3 | The answer accurately reflects the context by stat |
+| q08 | HR Policy | 5 | 5 | 5 | 5 | The answer accurately reflects the information pro |
+| q09 | Insufficient Context | 3 | 1 | None | 1 | Abstain nhưng có context → retrieval có thể lỗi |
+| q10 | Refund | 3 | 5 | 5 | 1 | Abstain nhưng có context → retrieval có thể lỗi |
+
+# Scorecard: variant_hybrid
+Generated: 2026-04-13 16:23
+
+## Summary
+
+| Metric | Average Score |
+|--------|--------------|
+| Faithfulness | 4.40/5 |
+| Relevance | 5.00/5 |
+| Context Recall | 5.00/5 |
+| Completeness | 3.80/5 |
+
+## Per-Question Results
+
+| ID | Category | Faithful | Relevant | Recall | Complete | Notes |
+|----|----------|----------|----------|--------|----------|-------|
+| q01 | SLA | 5 | 5 | 5 | 5 | The answer accurately reflects the SLA for ticket  |
+| q02 | Refund | 5 | 5 | 5 | 5 | The answer accurately reflects the information pro |
+| q03 | Access Control | 5 | 5 | 5 | 5 | The answer accurately reflects the approval requir |
+| q04 | Refund | 5 | 5 | 5 | 5 | The answer accurately reflects the information pro |
+| q05 | IT Helpdesk | 5 | 5 | 5 | 5 | The answer accurately reflects the information pro |
+| q06 | SLA | 5 | 5 | 5 | 5 | The answer accurately describes the escalation pro |
+| q07 | Access Control | 3 | 5 | 5 | 1 | Abstain nhưng có context → retrieval có thể lỗi |
+| q08 | HR Policy | 5 | 5 | 5 | 5 | The answer accurately reflects the information pro |
+| q09 | Insufficient Context | 3 | 5 | None | 1 | Abstain nhưng có context → retrieval có thể lỗi |
+| q10 | Refund | 3 | 5 | 5 | 1 | Abstain nhưng có context → retrieval có thể lỗi |
+
+
+
+* File cấu trúc điểm: 
+# SCORING — Lab Day 08: RAG Pipeline
+
+> **Tổng điểm: 100 điểm**  
+> Điểm nhóm: **60 điểm** (60%) · Điểm cá nhân: **40 điểm** (40%)
+
+---
+
+## Timeline nộp bài
+
+| Thời điểm | Sự kiện |
+|-----------|---------|
+| 17:00 | **`grading_questions.json` được public** — các nhóm bắt đầu chạy hệ thống |
+| 17:00–18:00 | Chạy pipeline với 10 câu hỏi ẩn, hoàn thiện log và tài liệu |
+| **18:00** | **Deadline code & kết quả** — commit liên quan đến code và log query bị lock |
+| Sau 18:00 | Vẫn được commit **report** (group report và individual report) |
+
+> **Quy tắc commit theo loại file:**
+>
+> | Loại file | Deadline |
+> |-----------|----------|
+> | `index.py`, `rag_answer.py`, `eval.py` và mọi file `.py` | **18:00** — commit sau không tính |
+> | `logs/grading_run.json` và `results/scorecard_*.md` | **18:00** — commit sau không tính |
+> | `docs/architecture.md`, `docs/tuning-log.md` | **18:00** — commit sau không tính |
+> | `reports/group_report.md` | Sau 18:00 **được phép** |
+> | `reports/individual/[ten].md` | Sau 18:00 **được phép** |
+
+---
+
+## Yêu cầu nộp bài
+
+Mỗi nhóm nộp **1 repo** chứa đủ các thành phần sau:
+
+```
+repo/
+├── index.py                          # Bắt buộc — chạy được
+├── rag_answer.py                     # Bắt buộc — chạy được
+├── eval.py                           # Bắt buộc — chạy được
+├── data/
+│   ├── docs/                         # Bắt buộc — đủ 5 tài liệu
+│   └── test_questions.json           # Bắt buộc
+├── logs/
+│   └── grading_run.json              # Bắt buộc — log chạy grading_questions
+├── results/
+│   ├── scorecard_baseline.md         # Bắt buộc
+│   └── scorecard_variant.md          # Bắt buộc
+├── docs/
+│   ├── architecture.md               # Bắt buộc
+│   └── tuning-log.md                 # Bắt buộc
+└── reports/
+    ├── group_report.md               # Bắt buộc
+    └── individual/
+        └── [ten_thanh_vien].md       # Bắt buộc — mỗi người 1 file
+```
+
+> **`logs/grading_run.json`** là output khi chạy pipeline với `grading_questions.json`. Xem format tại [mục 3](#3-grading-questions--log-kết-quả-30-điểm-nhóm).
+
+---
+
+## Phần Nhóm — 60 điểm
+
+### 1. Sprint Deliverables — Code chạy được (20 điểm)
+
+Chấm theo **khả năng chạy thực tế**, không chỉ nhìn code.
+
+| Sprint | Tiêu chí | Điểm |
+|--------|----------|------|
+| **Sprint 1** | `python index.py` chạy không lỗi, tạo ra ChromaDB index | 3 |
+| **Sprint 1** | Mỗi chunk có ít nhất **3 metadata fields** (source, section, effective_date) | 2 |
+| **Sprint 2** | `rag_answer("SLA ticket P1?")` trả về answer có **citation `[1]`** | 3 |
+| **Sprint 2** | Query không có trong docs → pipeline trả về **abstain** (không bịa) | 2 |
+| **Sprint 3** | Có ít nhất **1 variant implement** (hybrid / rerank / query transform) | 3 |
+| **Sprint 3** | `results/scorecard_baseline.md` và `scorecard_variant.md` đều có số liệu thực | 2 |
+| **Sprint 4** | `python eval.py` chạy end-to-end với 10 test questions không crash | 3 |
+| **Sprint 4** | A/B comparison có **delta rõ ràng** và **giải thích vì sao chọn biến đó** | 2 |
+
+> **Không có điểm thưởng cho code phức tạp.** Code đơn giản nhưng chạy được và giải thích được luôn tốt hơn code phức tạp nhưng không demo được.
+
+---
+
+### 2. Group Documentation (10 điểm)
+
+#### `docs/architecture.md` — 5 điểm
+
+| Tiêu chí | Điểm |
+|----------|------|
+| Mô tả chunking decision: chunk size, overlap, strategy, lý do | 2 |
+| Mô tả retrieval config baseline và variant (retrieval_mode, top_k, rerank) | 2 |
+| Có sơ đồ pipeline (text, Mermaid, hoặc ASCII art) | 1 |
+
+#### `docs/tuning-log.md` — 5 điểm
+
+| Tiêu chí | Điểm |
+|----------|------|
+| Ghi đúng **một biến thay đổi** và lý do chọn biến đó | 2 |
+| Bảng so sánh baseline vs variant theo ít nhất 2 metrics | 2 |
+| Kết luận rõ ràng: variant tốt hơn/kém hơn baseline ở điểm nào, bằng chứng là gì | 1 |
+
+---
+
+### 3. Grading Questions — Log kết quả (30 điểm)
+
+`grading_questions.json` được public lúc **17:00**. Nhóm có **1 tiếng** để chạy pipeline và nộp log.
+
+#### Format log bắt buộc (`logs/grading_run.json`)
+
+```json
+[
+  {
+    "id": "gq01",
+    "question": "SLA xử lý ticket P1 đã thay đổi như thế nào so với phiên bản trước?",
+    "answer": "Câu trả lời của pipeline...",
+    "sources": ["support/sla-p1-2026.pdf"],
+    "chunks_retrieved": 3,
+    "retrieval_mode": "hybrid",
+    "timestamp": "2026-04-12T17:23:45"
+  },
+  ...
+]
+```
+
+> Script gợi ý để tạo log (thêm vào `eval.py` hoặc tạo file riêng):
+> ```python
+> import json
+> from datetime import datetime
+> from rag_answer import rag_answer
+>
+> with open("data/grading_questions.json") as f:
+>     questions = json.load(f)
+>
+> log = []
+> for q in questions:
+>     result = rag_answer(q["question"], retrieval_mode="hybrid", verbose=False)
+>     log.append({
+>         "id": q["id"],
+>         "question": q["question"],
+>         "answer": result["answer"],
+>         "sources": result["sources"],
+>         "chunks_retrieved": len(result["chunks_used"]),
+>         "retrieval_mode": result["config"]["retrieval_mode"],
+>         "timestamp": datetime.now().isoformat(),
+>     })
+>
+> with open("logs/grading_run.json", "w", encoding="utf-8") as f:
+>     json.dump(log, f, ensure_ascii=False, indent=2)
+> ```
+
+#### Cách chấm từng câu
+
+Mỗi câu được chấm theo thang **Full / Partial / Zero / Penalty**:
+
+| Mức | Điều kiện | Điểm nhận |
+|-----|-----------|-----------|
+| **Full** | Đáp ứng **tất cả** `grading_criteria` của câu đó | 100% điểm câu |
+| **Partial** | Đáp ứng **≥50%** criteria, **không** hallucinate | 50% điểm câu |
+| **Zero** | Đáp ứng **<50%** criteria, không hallucinate | 0 |
+| **Penalty** | **Bịa thông tin** không có trong tài liệu | **−50%** điểm câu |
+
+> **Hallucination = bịa ra con số, tên, quy trình, hoặc kết luận không có trong bất kỳ tài liệu nào.** Đây là lỗi nghiêm trọng nhất của RAG pipeline.
+
+#### Điểm từng câu và kỹ năng kiểm tra
+
+| ID | Câu hỏi tóm tắt | Điểm raw | Kỹ năng RAG |
+|----|----------------|----------|-------------|
+| gq01 | SLA P1 thay đổi thế nào so với phiên bản trước? | 10 | Freshness & version reasoning |
+| gq02 | Remote + VPN + giới hạn thiết bị? | 10 | Multi-document synthesis |
+| gq03 | Flash Sale + đã kích hoạt → hoàn tiền không? | 10 | Exception completeness |
+| gq04 | Store credit được bao nhiêu %? | 8 | Specific numeric fact |
+| gq05 | Contractor cần Admin Access — điều kiện? | 10 | Multi-section retrieval |
+| gq06 | P1 lúc 2am → cấp quyền tạm thời thế nào? | 12 | Cross-doc multi-hop |
+| gq07 | Mức phạt vi phạm SLA P1 là bao nhiêu? | 10 | Abstain / anti-hallucination |
+| gq08 | Báo nghỉ phép 3 ngày = nghỉ ốm 3 ngày không? | 10 | Disambiguation |
+| gq09 | Mật khẩu đổi mấy ngày, nhắc trước mấy ngày? | 8 | Multi-detail FAQ |
+| gq10 | Chính sách v4 áp dụng đơn trước 01/02 không? | 10 | Temporal scoping |
+| **Tổng raw** | | **98** | |
+
+#### Quy đổi sang 30 điểm nhóm
+
+```
+Điểm grading = (tổng điểm raw đạt được / 98) × 30
+```
+
+**Ví dụ:**
+- Nhóm đạt 78/98 raw → 78/98 × 30 = **23.9 điểm**
+- Nhóm hallucinate gq07 (−5) và đạt 60 raw các câu còn lại → (60 − 5)/98 × 30 = **16.8 điểm**
+
+#### Lưu ý chấm gq07 — câu abstain
+
+gq07 hỏi về thông tin **không có trong tài liệu**. Chấm theo quy tắc đặc biệt:
+
+| Câu trả lời của pipeline | Điểm |
+|--------------------------|------|
+| Nêu rõ không có thông tin trong tài liệu → abstain | **10/10** |
+| Abstain nhưng mơ hồ, không nêu rõ lý do | 5/10 |
+| Trả lời có vẻ hợp lý nhưng từ model knowledge (không cite nguồn) | 0/10 |
+| Bịa ra con số hoặc quy định cụ thể | **−5 điểm** (penalty) |
+
+---
+
+## Phần Cá Nhân — 40 điểm
+
+### 4. Individual Report (30 điểm)
+
+File: `reports/individual/[ten_ban].md` · Độ dài: **500–800 từ**
+
+| Mục | Tiêu chí | Điểm |
+|-----|----------|------|
+| **Đóng góp cụ thể** | Mô tả rõ phần mình làm trong pipeline (không chỉ nói "tôi làm sprint X") | 8 |
+| **Phân tích 1 câu grading** | Chọn 1 câu trong grading_questions, phân tích pipeline xử lý đúng/sai ở đâu | 10 |
+| **Rút kinh nghiệm** | Nêu điều ngạc nhiên/khó khăn thực tế, không copy từ slide | 7 |
+| **Đề xuất cải tiến** | 1–2 cải tiến cụ thể có evidence từ scorecard (không chỉ "cải thiện chung") | 5 |
+
+> **Điểm 0 cho mục nào nếu:** nội dung chỉ paraphrase lại slide, không có ví dụ cụ thể từ code/output của nhóm, hoặc dưới 50 từ.
+
+#### Rubric chi tiết: mục "Phân tích 1 câu grading" (10 điểm)
+
+| Mức | Mô tả | Điểm |
+|-----|-------|------|
+| **Xuất sắc** | Xác định đúng failure mode, trace được root cause (indexing/retrieval/generation), đề xuất fix cụ thể | 9–10 |
+| **Tốt** | Xác định đúng failure mode, giải thích được tại sao pipeline fail ở điểm đó | 7–8 |
+| **Đạt** | Nhận ra pipeline đúng/sai nhưng chưa giải thích được nguyên nhân | 5–6 |
+| **Yếu** | Chỉ copy câu hỏi và câu trả lời mà không phân tích | 1–4 |
+| **Không làm** | | 0 |
+
+---
+
+### 5. Code Contribution Evidence (10 điểm)
+
+Chấm dựa trên **sự khớp giữa vai trò khai báo và bằng chứng thực tế trong repo**:
+
+| Tiêu chí | Điểm |
+|----------|------|
+| Vai trò khai báo trong report khớp với phần code có comment tên/initials hoặc commit message | 4 |
+| Có thể giải thích được quyết định kỹ thuật trong phần mình phụ trách (kiểm tra qua report) | 4 |
+| Không có mâu thuẫn giữa claim trong report và thực tế trong code | 2 |
+
+> **Lưu ý:** Không nhất thiết mọi người đều phải code. Documentation Owner và Eval Owner vẫn được điểm đầy đủ nếu architecture.md/tuning-log.md/scorecard phản ánh đúng công việc của họ.
+
+---
+
+### ⚠️ Luật phạt nặng — Mất toàn bộ điểm cá nhân (0/40)
+
+Bất kỳ một trong các trường hợp dưới đây đều dẫn đến **0 điểm cá nhân** (cả Individual Report lẫn Code Contribution Evidence):
+
+| Trường hợp | Mô tả | Hệ quả |
+|-----------|-------|--------|
+| **Report không khớp với code** | Report khai báo làm Sprint X / implement Y, nhưng trong repo không có bằng chứng nào (comment, commit, diff) xác nhận điều đó | **0/40 điểm cá nhân** |
+| **Nhận công lao của người khác** | Khai báo đã implement một phần mà thực tế do thành viên khác làm, có thể xác minh qua commit history hoặc phỏng vấn nhanh | **0/40 điểm cá nhân** |
+| **Report sao chép nhau** | Nội dung phân tích, ví dụ, hoặc rút kinh nghiệm trùng lặp đáng kể với report của thành viên khác trong cùng nhóm | **0/40 điểm cá nhân** của tất cả người liên quan |
+| **Không thể giải thích phần mình khai báo** | Khi được hỏi về quyết định kỹ thuật trong phần mình phụ trách, không giải thích được dù đã khai báo là người thực hiện | **0/40 điểm cá nhân** |
+
+> **Nguyên tắc:** Điểm cá nhân đo năng lực và đóng góp thực tế, không phải năng lực viết báo cáo hay năng lực của nhóm. Report là bằng chứng — nếu bằng chứng mâu thuẫn với thực tế, toàn bộ phần cá nhân không có giá trị.
+
+> **Quy trình xác minh:** Giảng viên có thể đặt câu hỏi trực tiếp về bất kỳ nội dung nào trong report cá nhân hoặc commit của từng thành viên trong buổi review sau lab.
+
+---
+
+## Tổng kết điểm
+
+| Hạng mục | Tối đa | Người chấm |
+|----------|--------|-----------|
+| Sprint Deliverables | 20 | Giảng viên (chạy trực tiếp) |
+| Group Documentation | 10 | Giảng viên |
+| Grading Questions | 30 | Giảng viên (theo rubric) |
+| **Tổng nhóm** | **60** | |
+| Individual Report | 30 | Giảng viên |
+| Code Contribution | 10 | Giảng viên |
+| **Tổng cá nhân** | **40** | |
+| **TỔNG** | **100** | |
+
+> Mọi thành viên trong nhóm nhận **cùng điểm nhóm (60 điểm)**. Điểm cá nhân (40 điểm) chấm **độc lập** theo report từng người.
+
+---
+
+## Điểm thưởng (Bonus — tối đa +5)
+
+| Hành động | Thưởng |
+|-----------|--------|
+| Implement LLM-as-Judge trong `eval.py` thay vì chấm thủ công | +2 |
+| Grading questions log có **đủ 10 câu** và **timestamp hợp lệ** (trong 17:00–18:00) | +1 |
+| Câu gq06 (câu khó nhất, 12 điểm) đạt **Full marks** | +2 |
+
+---
+
+## Tóm tắt các hình phạt
+
+| Vi phạm | Hình phạt |
+|---------|-----------|
+| Hallucinate trong grading questions | −50% điểm câu đó |
+| Report cá nhân không khớp với code/commit | **0/40 điểm cá nhân** |
+| Nhận công lao của người khác | **0/40 điểm cá nhân** |
+| Report cá nhân sao chép nhau | **0/40 điểm cá nhân** tất cả người liên quan |
+| Không giải thích được phần mình khai báo | **0/40 điểm cá nhân** |
+| Commit code sau 18:00 | Commit đó không được tính |
+
+> *Hình phạt "0/40 điểm cá nhân" được áp dụng độc lập — không ảnh hưởng đến điểm nhóm của các thành viên còn lại.*
+
+---
+
+## FAQ
+
+**Nhóm chỉ có 3 người, ai làm report nhóm?**  
+Tech Lead hoặc Documentation Owner nộp `group_report.md`. Nội dung tập trung vào quyết định kỹ thuật cấp nhóm (không trùng với individual report).
+
+**Nếu pipeline crash khi chạy grading_questions?**  
+Nộp log với các câu đã chạy được. Câu nào crash ghi rõ `"answer": "PIPELINE_ERROR: [mô tả lỗi]"`. Không bị phạt thêm ngoài việc câu đó nhận 0 điểm.
+
+**Dùng pipeline baseline hay variant cho grading_questions?**  
+Dùng cấu hình **tốt nhất** của nhóm. Ghi rõ `retrieval_mode` và `use_rerank` trong log.
+
+**Có được thêm tài liệu vào `data/docs/` sau 17:00 không?**  
+Không. Index phải được build từ trước. Sau 17:00 chỉ được chạy query, không được re-index.
+
+**Sau 18:00 còn được commit gì?**  
+Chỉ được commit `reports/group_report.md` và `reports/individual/[ten].md`. Mọi thay đổi khác sau 18:00 không được tính vào điểm.
+
+
+
+** Các file cần hoàn thành : 
+
+# Báo Cáo Cá Nhân — Lab Day 08: RAG Pipeline
+
+**Họ và tên:** ___________  
+**Vai trò trong nhóm:** Tech Lead / Retrieval Owner / Eval Owner / Documentation Owner  
+**Ngày nộp:** ___________  
+**Độ dài yêu cầu:** 500–800 từ
+
+---
+
+## 1. Tôi đã làm gì trong lab này? (100-150 từ)
+
+> Mô tả cụ thể phần bạn đóng góp vào pipeline:
+> - Sprint nào bạn chủ yếu làm?
+> - Cụ thể bạn implement hoặc quyết định điều gì?
+> - Công việc của bạn kết nối với phần của người khác như thế nào?
+
+_________________
+
+---
+
+## 2. Điều tôi hiểu rõ hơn sau lab này (100-150 từ)
+
+> Chọn 1-2 concept từ bài học mà bạn thực sự hiểu rõ hơn sau khi làm lab.
+> Ví dụ: chunking, hybrid retrieval, grounded prompt, evaluation loop.
+> Giải thích bằng ngôn ngữ của bạn — không copy từ slide.
+
+_________________
+
+---
+
+## 3. Điều tôi ngạc nhiên hoặc gặp khó khăn (100-150 từ)
+
+> Điều gì xảy ra không đúng kỳ vọng?
+> Lỗi nào mất nhiều thời gian debug nhất?
+> Giả thuyết ban đầu của bạn là gì và thực tế ra sao?
+
+_________________
+
+---
+
+## 4. Phân tích một câu hỏi trong scorecard (150-200 từ)
+
+> Chọn 1 câu hỏi trong test_questions.json mà nhóm bạn thấy thú vị.
+> Phân tích:
+> - Baseline trả lời đúng hay sai? Điểm như thế nào?
+> - Lỗi nằm ở đâu: indexing / retrieval / generation?
+> - Variant có cải thiện không? Tại sao có/không?
+
+**Câu hỏi:** ___________
+
+**Phân tích:**
+
+_________________
+
+---
+
+## 5. Nếu có thêm thời gian, tôi sẽ làm gì? (50-100 từ)
+
+> 1-2 cải tiến cụ thể bạn muốn thử.
+> Không phải "làm tốt hơn chung chung" mà phải là:
+> "Tôi sẽ thử X vì kết quả eval cho thấy Y."
+
+_________________
+
+---
+
+*Lưu file này với tên: `reports/individual/[ten_ban].md`*
+*Ví dụ: `reports/individual/nguyen_van_a.md`*

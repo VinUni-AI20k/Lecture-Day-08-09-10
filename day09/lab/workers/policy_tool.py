@@ -110,9 +110,15 @@ def analyze_policy(task: str, chunks: list) -> dict:
     # Determine policy_applies
     policy_applies = len(exceptions_found) == 0
 
+    access_keywords = ["cấp quyền", "access", "level 2", "level 3", "admin access", "contractor"]
+    access_request = any(kw in task_lower for kw in access_keywords)
+    if access_request:
+        policy_name = "access_control_sop"
+    else:
+        policy_name = "refund_policy_v4"
+
     # Determine which policy version applies (temporal scoping)
     # TODO: Check nếu đơn hàng trước 01/02/2026 → v3 applies (không có docs, nên flag cho synthesis)
-    policy_name = "refund_policy_v4"
     policy_version_note = ""
     if "31/01" in task_lower or "30/01" in task_lower or "trước 01/02" in task_lower:
         policy_version_note = "Đơn hàng đặt trước 01/02/2026 áp dụng chính sách v3 (không có trong tài liệu hiện tại)."
@@ -197,6 +203,20 @@ def run(state: dict) -> dict:
             mcp_result = _call_mcp_tool("get_ticket_info", {"ticket_id": "P1-LATEST"})
             state["mcp_tools_used"].append(mcp_result)
             state["history"].append(f"[{WORKER_NAME}] called MCP get_ticket_info")
+            state["policy_result"]["ticket_info"] = mcp_result.get("output") or mcp_result.get("error")
+
+        if needs_tool and any(kw in task.lower() for kw in ["cấp quyền", "access", "level 2", "level 3", "contractor"]):
+            access_level = 3 if "level 3" in task.lower() else 2 if "level 2" in task.lower() else 1
+            requester_role = "contractor" if "contractor" in task.lower() else "employee"
+            is_emergency = any(kw in task.lower() for kw in ["khẩn cấp", "emergency"])
+            mcp_result = _call_mcp_tool("check_access_permission", {
+                "access_level": access_level,
+                "requester_role": requester_role,
+                "is_emergency": is_emergency,
+            })
+            state["mcp_tools_used"].append(mcp_result)
+            state["history"].append(f"[{WORKER_NAME}] called MCP check_access_permission")
+            state["policy_result"]["access_control"] = mcp_result.get("output") or mcp_result.get("error")
 
         worker_io["output"] = {
             "policy_applies": policy_result["policy_applies"],

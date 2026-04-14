@@ -1,7 +1,7 @@
 # Routing Decisions Log — Lab Day 09
 
-**Nhóm:** ___________  
-**Ngày:** ___________
+**Nhóm:** X03-C401
+**Ngày:** 14/04/2026
 
 > **Hướng dẫn:** Ghi lại ít nhất **3 quyết định routing** thực tế từ trace của nhóm.
 > Không ghi giả định — phải từ trace thật (`artifacts/traces/`).

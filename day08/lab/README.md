@@ -36,6 +36,8 @@ lab/
 ├── rag_answer.py         # Sprint 2+3: Retrieve → (Rerank) → Generate
 ├── eval.py               # Sprint 4: Scorecard + A/B Comparison
 │
+|__ results           # testcase có sẵn
+|__ results_2        # testcase đề 17:00
 ├── data/
 │   ├── docs/             # Policy documents để index
 │   │   ├── policy_refund_v4.txt
