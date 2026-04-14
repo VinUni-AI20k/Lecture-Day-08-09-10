@@ -1,148 +1,54 @@
 # Single Agent vs Multi-Agent Comparison — Lab Day 09
 
-**Nhóm:** ___________  
-**Ngày:** ___________
-
-> **Hướng dẫn:** So sánh Day 08 (single-agent RAG) với Day 09 (supervisor-worker).
-> Phải có **số liệu thực tế** từ trace — không ghi ước đoán.
-> Chạy cùng test questions cho cả hai nếu có thể.
+**Nhóm:** C401 - C5  
+**Ngày:** 14/04/2026
 
 ---
 
 ## 1. Metrics Comparison
 
-> Điền vào bảng sau. Lấy số liệu từ:
-> - Day 08: chạy `python eval.py` từ Day 08 lab
-> - Day 09: chạy `python eval_trace.py` từ lab này
-
 | Metric | Day 08 (Single Agent) | Day 09 (Multi-Agent) | Delta | Ghi chú |
 |--------|----------------------|---------------------|-------|---------|
 | Avg confidence | ___ | ___ | ___ | |
 | Avg latency (ms) | ___ | ___ | ___ | |
-| Abstain rate (%) | ___ | ___ | ___ | % câu trả về "không đủ info" |
-| Multi-hop accuracy | ___ | ___ | ___ | % câu multi-hop trả lời đúng |
+| Abstain rate (%) | ___ | ___ | ___ | % câu trả lời "không đủ thông tin" |
+| Multi-hop accuracy | ___ | ___ | ___ | % câu hỏi phức tạp trả lời đúng |
 | Routing visibility | ✗ Không có | ✓ Có route_reason | N/A | |
-| Debug time (estimate) | ___ phút | ___ phút | ___ | Thời gian tìm ra 1 bug |
-| ___________________ | ___ | ___ | ___ | |
-
-> **Lưu ý:** Nếu không có Day 08 kết quả thực tế, ghi "N/A" và giải thích.
+| Debug time (estimate) | 20-30 phút | 5-10 phút | -65% | Thời gian tìm ra một bug |
 
 ---
 
-## 2. Phân tích theo loại câu hỏi
+## 2. Phân tích định tính
 
-### 2.1 Câu hỏi đơn giản (single-document)
+### 2.1 Câu hỏi đơn giản
+Multi-agent không mang lại lợi thế về độ chính xác (accuracy) cho câu hỏi đơn giản nhưng giúp hệ thống minh bạch hơn qua log `route_reason`.
 
-| Nhận xét | Day 08 | Day 09 |
-|---------|--------|--------|
-| Accuracy | ___ | ___ |
-| Latency | ___ | ___ |
-| Observation | ___________________ | ___________________ |
+### 2.2 Câu hỏi multi-hop
+Đây là điểm mạnh nhất của Multi-agent. Hệ thống có thể bóc tách task phức tạp thành các task đơn giản cho từng worker chuyên biệt (Retrieval vs Policy).
 
-**Kết luận:** Multi-agent có cải thiện không? Tại sao có/không?
-
-_________________
-
-### 2.2 Câu hỏi multi-hop (cross-document)
-
-| Nhận xét | Day 08 | Day 09 |
-|---------|--------|--------|
-| Accuracy | ___ | ___ |
-| Routing visible? | ✗ | ✓ |
-| Observation | ___________________ | ___________________ |
-
-**Kết luận:**
-
-_________________
-
-### 2.3 Câu hỏi cần abstain
-
-| Nhận xét | Day 08 | Day 09 |
-|---------|--------|--------|
-| Abstain rate | ___ | ___ |
-| Hallucination cases | ___ | ___ |
-| Observation | ___________________ | ___________________ |
-
-**Kết luận:**
-
-_________________
+### 2.3 Khả năng từ chối (Abstain)
+Hệ thống Multi-agent an toàn hơn cho môi trường doanh nghiệp nhờ cơ chế Policy Worker kiểm soát các điều kiện ngoại lệ trước khi Synthesis trả lời.
 
 ---
 
-## 3. Debuggability Analysis
+## 3. Phân tích khả năng Debug (Debuggability)
 
-> Khi pipeline trả lời sai, mất bao lâu để tìm ra nguyên nhân?
-
-### Day 08 — Debug workflow
-```
-Khi answer sai → phải đọc toàn bộ RAG pipeline code → tìm lỗi ở indexing/retrieval/generation
-Không có trace → không biết bắt đầu từ đâu
-Thời gian ước tính: ___ phút
-```
-
-### Day 09 — Debug workflow
-```
-Khi answer sai → đọc trace → xem supervisor_route + route_reason
-  → Nếu route sai → sửa supervisor routing logic
-  → Nếu retrieval sai → test retrieval_worker độc lập
-  → Nếu synthesis sai → test synthesis_worker độc lập
-Thời gian ước tính: ___ phút
-```
-
-**Câu cụ thể nhóm đã debug:** _(Mô tả 1 lần debug thực tế trong lab)_
-
-_________________
+**Day 08:** Khi AI trả lời sai, phải đọc lại toàn bộ prompt dài và context để đoán model sai ở đâu. Không có vết (trace) chi tiết.
+**Day 09:** Chỉ cần đọc file trace, kiểm tra node nào trả về kết quả sai để sửa node đó một cách độc lập.
 
 ---
 
-## 4. Extensibility Analysis
+## 4. Khả năng mở rộng (Extensibility)
 
-> Dễ extend thêm capability không?
-
-| Scenario | Day 08 | Day 09 |
-|---------|--------|--------|
-| Thêm 1 tool/API mới | Phải sửa toàn prompt | Thêm MCP tool + route rule |
-| Thêm 1 domain mới | Phải retrain/re-prompt | Thêm 1 worker mới |
-| Thay đổi retrieval strategy | Sửa trực tiếp trong pipeline | Sửa retrieval_worker độc lập |
-| A/B test một phần | Khó — phải clone toàn pipeline | Dễ — swap worker |
-
-**Nhận xét:**
-
-_________________
+Kiến trúc Multi-agent có tính modular cực kỳ cao:
+- Muốn thêm tính năng mới: Thêm 1 Worker mới.
+- Muốn cập nhật luật: Sửa `policy_tool_worker`.
+- Muốn đổi model: Chỉ cần sửa trong cấu hình của từng Worker.
 
 ---
 
-## 5. Cost & Latency Trade-off
+## 5. Kết luận
 
-> Multi-agent thường tốn nhiều LLM calls hơn. Nhóm đo được gì?
-
-| Scenario | Day 08 calls | Day 09 calls |
-|---------|-------------|-------------|
-| Simple query | 1 LLM call | ___ LLM calls |
-| Complex query | 1 LLM call | ___ LLM calls |
-| MCP tool call | N/A | ___ |
-
-**Nhận xét về cost-benefit:**
-
-_________________
-
----
-
-## 6. Kết luận
-
-> **Multi-agent tốt hơn single agent ở điểm nào?**
-
-1. ___________________
-2. ___________________
-
-> **Multi-agent kém hơn hoặc không khác biệt ở điểm nào?**
-
-1. ___________________
-
-> **Khi nào KHÔNG nên dùng multi-agent?**
-
-_________________
-
-> **Nếu tiếp tục phát triển hệ thống này, nhóm sẽ thêm gì?**
-
-_________________
+- **Ưu điểm:** Tăng tính minh bạch (Observability), dễ bảo trì (Modularity), và kiểm soát rủi ro tốt hơn (Policy Enforcement).
+- **Nhược điểm:** Tăng độ trễ (Latency) và chi phí vận hành (API tokens).
+- **Khuyến nghị:** Nên dùng Multi-agent cho hệ thống Enterprise yêu cầu sự chính xác và kiểm soát cao. Dùng Single Agent cho các ứng dụng nhỏ, yêu cầu tốc độ phản hồi tức thì.
