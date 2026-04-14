@@ -85,30 +85,31 @@ Retrieval Worker     Policy Tool Worker                  human_review
 
 | Thuộc tính | Mô tả |
 |-----------|-------|
-| **Nhiệm vụ** | Nhận input user phân tích input bằng Supervisor đưa vào route decision(LLM) và đưa cho các worker xử lý |
-| **Input** | test_queries |
+| **Nhiệm vụ** | Supervisor Orchestrator |
+| **Input** | user's query |
 | **Output** | supervisor_route, route_reason, risk_high, needs_tool |
-| **Routing logic** | Gọi LLM phân tích đua ra lựa chọn với 3 workers|
-| **HITL condition** | True/False |
+| **Routing logic** | Trả về tên worker tiếp theo dựa vào supervisor_route trong state.|
+| **HITL condition** | route == "human_review" |
 
 ### Retrieval Worker (`workers/retrieval.py`)
 
 | Thuộc tính | Mô tả |
 |-----------|-------|
-| **Nhiệm vụ** | ___________________ |
-| **Embedding model** | ___________________ |
-| **Top-k** | ___________________ |
-| **Stateless?** | Yes / No |
+| **Nhiệm vụ** | Truy vấn data từ ChromaDB, trả về chunk và source |
+| **Embedding model** | gpt-text-embedding-3-small |
+| **Top-k** | 3 |
+| **Stateless?** | Yes  |
 
 ### Policy Tool Worker (`workers/policy_tool.py`)
 
 | Thuộc tính | Mô tả |
 |-----------|-------|
-| **Nhiệm vụ** | ___________________ |
-| **MCP tools gọi** | ___________________ |
-| **Exception cases xử lý** | ___________________ |
+| **Nhiệm vụ** | Kiểm tra policy dựa vào context vào gọi MCP khi cần  |
+| **MCP tools gọi** | check_access_permission |
+| **Exception cases xử lý** | Flash Sale, Digital product, Sản phẩm đã kích hoạt, Đơn hàng trước 01/02/2026 |
 
 ### Synthesis Worker (`workers/synthesis.py`)
+**Không làm**
 
 | Thuộc tính | Mô tả |
 |-----------|-------|
@@ -121,9 +122,8 @@ Retrieval Worker     Policy Tool Worker                  human_review
 
 | Tool | Input | Output |
 |------|-------|--------|
-| search_kb | query, top_k | chunks, sources |
-| get_ticket_info | ticket_id | ticket details |
-| check_access_permission | access_level, requester_role | can_grant, approvers |
+| search_kb | query, top_k | chunks, sources, total_found |
+| check_access_permission | access_level, requester_role, is_emergency | can_grant, required_approvers, approver_count, emergency_override, source |
 | ___________________ | ___________________ | ___________________ |
 
 ---
