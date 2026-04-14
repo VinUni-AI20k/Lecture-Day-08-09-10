@@ -1,0 +1,102 @@
+{
+  "task": "ERR-403-AUTH là lỗi gì và cách xử lý?",
+  "route_reason": "Yêu cầu chứa mã lỗi hệ thống không rõ ràng, cần xem xét thêm. | human approved → retrieval",
+  "risk_high": true,
+  "needs_tool": false,
+  "hitl_triggered": true,
+  "retrieved_chunks": [
+    {
+      "text": "Q: Tôi quên mật khẩu, phải làm gì?\nA: Truy cập https://sso.company.internal/reset hoặc liên hệ Helpdesk qua ext. 9000. Mật khẩu mới sẽ được gửi qua email công ty trong vòng 5 phút.",
+      "source": "it_helpdesk_faq.txt",
+      "score": 0.4192265272140503,
+      "metadata": {
+        "source": "it_helpdesk_faq.txt"
+      }
+    },
+    {
+      "text": "Q: Tôi bị mất kết nối VPN liên tục, phải làm gì?\nA: Kiểm tra kết nối Internet trước. Nếu vẫn lỗi, tạo ticket P3 với log file VPN đính kèm.",
+      "source": "it_helpdesk_faq.txt",
+      "score": 0.41596901416778564,
+      "metadata": {
+        "source": "it_helpdesk_faq.txt"
+      }
+    },
+    {
+      "text": "Bước 1: Tiếp nhận\nOn-call engineer nhận alert hoặc ticket, xác nhận severity trong 5 phút.",
+      "source": "sla_p1_2026.txt",
+      "score": 0.4039347171783447,
+      "metadata": {
+        "source": "sla_p1_2026.txt"
+      }
+    }
+  ],
+  "retrieved_sources": [
+    "it_helpdesk_faq.txt",
+    "sla_p1_2026.txt"
+  ],
+  "policy_result": {},
+  "mcp_tools_used": [],
+  "final_answer": "Không đủ thông tin trong tài liệu nội bộ.",
+  "sources": [
+    "it_helpdesk_faq.txt",
+    "sla_p1_2026.txt"
+  ],
+  "confidence": 0.3,
+  "history": [
+    "[supervisor_llm] received task: ERR-403-AUTH là lỗi gì và cách xử lý?",
+    "[supervisor_llm] route=human_review reason=Yêu cầu chứa mã lỗi hệ thống không rõ ràng, cần xem xét thêm.",
+    "[human_review] HITL triggered — awaiting human input",
+    "[retrieval_worker] called",
+    "[retrieval_worker] retrieved 3 chunks from ['it_helpdesk_faq.txt', 'sla_p1_2026.txt']",
+    "[retrieval_worker] retrieved 3 chunks",
+    "[synthesis_worker] called",
+    "[synthesis_worker] answer generated, confidence=0.3, sources=['it_helpdesk_faq.txt', 'sla_p1_2026.txt']",
+    "[synthesis_worker] answer generated, confidence=0.3",
+    "[graph] completed in 3602ms"
+  ],
+  "workers_called": [
+    "human_review",
+    "retrieval_worker",
+    "retrieval_worker",
+    "synthesis_worker",
+    "synthesis_worker"
+  ],
+  "supervisor_route": "retrieval_worker",
+  "latency_ms": 3602,
+  "run_id": "run_20260414_173514",
+  "worker_io_logs": [
+    {
+      "worker": "retrieval_worker",
+      "input": {
+        "task": "ERR-403-AUTH là lỗi gì và cách xử lý?",
+        "top_k": 3
+      },
+      "output": {
+        "chunks_count": 3,
+        "sources": [
+          "it_helpdesk_faq.txt",
+          "sla_p1_2026.txt"
+        ]
+      },
+      "error": null
+    },
+    {
+      "worker": "synthesis_worker",
+      "input": {
+        "task": "ERR-403-AUTH là lỗi gì và cách xử lý?",
+        "chunks_count": 3,
+        "has_policy": false
+      },
+      "output": {
+        "answer_length": 41,
+        "sources": [
+          "it_helpdesk_faq.txt",
+          "sla_p1_2026.txt"
+        ],
+        "confidence": 0.3
+      },
+      "error": null
+    }
+  ],
+  "question_id": "q09"
+}

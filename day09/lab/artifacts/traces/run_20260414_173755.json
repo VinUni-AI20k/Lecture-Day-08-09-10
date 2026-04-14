@@ -1,0 +1,98 @@
+{
+  "task": "Ticket P1 không được phản hồi sau 10 phút. Hệ thống tự động làm gì?",
+  "route_reason": "Yêu cầu liên quan đến sự cố P1 nghiêm trọng và không được phản hồi kịp thời. | human approved → retrieval",
+  "risk_high": true,
+  "needs_tool": false,
+  "hitl_triggered": true,
+  "retrieved_chunks": [
+    {
+      "text": "Ticket P2:\n- Phản hồi ban đầu: 2 giờ.\n- Xử lý và khắc phục: 1 ngày làm việc.\n- Escalation: Tự động escalate sau 90 phút không có phản hồi.",
+      "source": "sla_p1_2026.txt",
+      "score": 0.6478696465492249,
+      "metadata": {
+        "source": "sla_p1_2026.txt"
+      }
+    },
+    {
+      "text": "Ticket P1:\n- Phản hồi ban đầu (first response): 15 phút kể từ khi ticket được tạo.\n- Xử lý và khắc phục (resolution): 4 giờ.\n- Escalation: Tự động escalate lên Senior Engineer nếu không có phản hồi trong 10 phút.\n- Thông báo stakeholder: Ngay khi nhận ticket, update mỗi 30 phút cho đến khi resolve.",
+      "source": "sla_p1_2026.txt",
+      "score": 0.638404905796051,
+      "metadata": {
+        "source": "sla_p1_2026.txt"
+      }
+    },
+    {
+      "text": "Ticket P4:\n- Phản hồi ban đầu: 3 ngày làm việc.\n- Xử lý và khắc phục: Theo sprint cycle (thông thường 2-4 tuần).",
+      "source": "sla_p1_2026.txt",
+      "score": 0.5768368244171143,
+      "metadata": {
+        "source": "sla_p1_2026.txt"
+      }
+    }
+  ],
+  "retrieved_sources": [
+    "sla_p1_2026.txt"
+  ],
+  "policy_result": {},
+  "mcp_tools_used": [],
+  "final_answer": "Nếu ticket P1 không được phản hồi sau 10 phút, hệ thống sẽ tự động escalate lên Senior Engineer. [2]",
+  "sources": [
+    "sla_p1_2026.txt"
+  ],
+  "confidence": 0.62,
+  "history": [
+    "[supervisor_llm] received task: Ticket P1 không được phản hồi sau 10 phút. Hệ thống tự động làm gì?",
+    "[supervisor_llm] route=human_review reason=Yêu cầu liên quan đến sự cố P1 nghiêm trọng và không được phản hồi kịp thời.",
+    "[human_review] HITL triggered — awaiting human input",
+    "[retrieval_worker] called",
+    "[retrieval_worker] retrieved 3 chunks from ['sla_p1_2026.txt']",
+    "[retrieval_worker] retrieved 3 chunks",
+    "[synthesis_worker] called",
+    "[synthesis_worker] answer generated, confidence=0.62, sources=['sla_p1_2026.txt']",
+    "[synthesis_worker] answer generated, confidence=0.62",
+    "[graph] completed in 3690ms"
+  ],
+  "workers_called": [
+    "human_review",
+    "retrieval_worker",
+    "retrieval_worker",
+    "synthesis_worker",
+    "synthesis_worker"
+  ],
+  "supervisor_route": "retrieval_worker",
+  "latency_ms": 3690,
+  "run_id": "run_20260414_173755",
+  "worker_io_logs": [
+    {
+      "worker": "retrieval_worker",
+      "input": {
+        "task": "Ticket P1 không được phản hồi sau 10 phút. Hệ thống tự động làm gì?",
+        "top_k": 3
+      },
+      "output": {
+        "chunks_count": 3,
+        "sources": [
+          "sla_p1_2026.txt"
+        ]
+      },
+      "error": null
+    },
+    {
+      "worker": "synthesis_worker",
+      "input": {
+        "task": "Ticket P1 không được phản hồi sau 10 phút. Hệ thống tự động làm gì?",
+        "chunks_count": 3,
+        "has_policy": false
+      },
+      "output": {
+        "answer_length": 100,
+        "sources": [
+          "sla_p1_2026.txt"
+        ],
+        "confidence": 0.62
+      },
+      "error": null
+    }
+  ],
+  "question_id": "q06"
+}
