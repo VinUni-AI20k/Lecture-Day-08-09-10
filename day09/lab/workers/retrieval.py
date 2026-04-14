@@ -26,8 +26,11 @@ import sys
 
 WORKER_NAME = "retrieval_worker"
 DEFAULT_TOP_K = 3
+DEFAULT_TOP_K_SEARCH = 9       # retrieve more candidates before reranking
+RERANK_MODEL = "cross-encoder/ms-marco-MiniLM-L-6-v2"
 
 _model = None
+_reranker = None
 
 def _get_embedding_fn():
     global _model
@@ -70,6 +73,37 @@ def _get_collection():
         )
         print(f"⚠️  Collection 'day09_docs' chưa có data. Chạy index script trong README trước.")
     return collection
+
+
+def _get_reranker():
+    """Lazy-load cross-encoder reranker."""
+    global _reranker
+    if _reranker is None:
+        from sentence_transformers import CrossEncoder
+        _reranker = CrossEncoder(RERANK_MODEL)
+    return _reranker
+
+
+def rerank_chunks(query: str, chunks: list, top_k: int = DEFAULT_TOP_K) -> list:
+    """
+    Rerank chunks using a cross-encoder, return top_k results.
+
+    Fixes the tied-score problem: when two chunks have nearly identical cosine
+    similarity (e.g. 0.5604 vs 0.5597), embedding order is unreliable.
+    The cross-encoder reads (query, chunk) pairs and scores relevance directly.
+    """
+    if not chunks:
+        return chunks
+
+    reranker = _get_reranker()
+    pairs = [(query, c["text"]) for c in chunks]
+    scores = reranker.predict(pairs)
+
+    for chunk, score in zip(chunks, scores):
+        chunk["rerank_score"] = round(float(score), 4)
+
+    reranked = sorted(chunks, key=lambda c: c["rerank_score"], reverse=True)
+    return reranked[:top_k]
 
 
 def retrieve_dense(query: str, top_k: int = DEFAULT_TOP_K) -> list:
@@ -127,7 +161,10 @@ def run(state: dict) -> dict:
         Updated AgentState với retrieved_chunks và retrieved_sources
     """
     task = state.get("task", "")
-    top_k = state.get("retrieval_top_k", DEFAULT_TOP_K)
+    top_k_select = state.get("retrieval_top_k", DEFAULT_TOP_K)
+    use_rerank = state.get("use_rerank", False)
+    # Fetch more candidates when reranking so the reranker has room to reorder
+    top_k_search = DEFAULT_TOP_K_SEARCH if use_rerank else top_k_select
 
     state.setdefault("workers_called", [])
     state.setdefault("history", [])
@@ -137,13 +174,18 @@ def run(state: dict) -> dict:
     # Log worker IO (theo contract)
     worker_io = {
         "worker": WORKER_NAME,
-        "input": {"task": task, "top_k": top_k},
+        "input": {"task": task, "top_k": top_k_select, "use_rerank": use_rerank},
         "output": None,
         "error": None,
     }
 
     try:
-        chunks = retrieve_dense(task, top_k=top_k)
+        chunks = retrieve_dense(task, top_k=top_k_search)
+
+        if use_rerank and chunks:
+            chunks = rerank_chunks(task, chunks, top_k=top_k_select)
+        else:
+            chunks = chunks[:top_k_select]
 
         sources = list({c["source"] for c in chunks})
 
@@ -153,9 +195,11 @@ def run(state: dict) -> dict:
         worker_io["output"] = {
             "chunks_count": len(chunks),
             "sources": sources,
+            "reranked": use_rerank,
         }
         state["history"].append(
             f"[{WORKER_NAME}] retrieved {len(chunks)} chunks from {sources}"
+            + (" (reranked)" if use_rerank else "")
         )
 
     except Exception as e:
