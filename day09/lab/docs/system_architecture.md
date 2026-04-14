@@ -20,63 +20,22 @@ Hệ thống được thiết kế theo mô hình **Multi-Agent Orchestration**,
 
 ## 2. Sơ đồ Pipeline
 
-Dưới đây là sơ đồ luồng dữ liệu của hệ thống:
-
 ```mermaid
-graph TB
-    %% Node Definitions
-    User([User Request])
-    
-    subgraph Orchestrator [1. Orchestration Layer]
-        Supervisor{Supervisor Node}
-        HITL[Human Review Node]
-    end
+graph TD
+    User([User Question]) --> Supervisor{Supervisor Node}
 
-    subgraph Workers [2. Intelligence Workers]
-        Retrieval[Retrieval Worker]
-        Policy[Policy & Tool Worker]
-    end
+    Supervisor -- "retrieval_keywords" --> Retrieval[Retrieval Worker]
+    Supervisor -- "policy_keywords<br/>multi-hop" --> Policy[Policy Tool Worker]
+    Supervisor -- "unknown / err-xxx" --> HITL[Human Review<br/>(HITL)]
 
-    subgraph LLM_Service [3. Synthesis Layer]
-        Synthesis[Synthesis Worker]
-    end
+    HITL -- "auto-approved" --> Retrieval
+    Policy -- "needs context" --> Retrieval
+    Policy -- "policy results" --> Synthesis
 
-    subgraph External [External Infrastructure]
-        Chroma[(ChromaDB)]
-        MCP_Server[MCP Server]
-    end
+    Retrieval -- "relevant chunks" --> Synthesis[Synthesis Worker]
 
-    %% Flow Connections
-    User --> Supervisor
-    
-    Supervisor -- "SLA/IT FAQ" --> Retrieval
-    Supervisor -- "Refund/Access" --> Policy
-    Supervisor -- "High Risk/Unknown" --> HITL
-    
-    HITL -- "Approved" --> Retrieval
-    
-    Retrieval <--> Chroma
-    
-    Policy --> Retrieval
-    Policy <--> MCP_Server
-    
-    Retrieval --> Synthesis
-    Policy --> Synthesis
-    
     Synthesis --> Output([Final Answer])
-
-    %% Styling
-    style Orchestrator fill:#f9f,stroke:#333,stroke-width:2px
-    style Workers fill:#bbf,stroke:#333,stroke-width:2px
-    style LLM_Service fill:#bfb,stroke:#333,stroke-width:2px
-    style External fill:#eee,stroke:#333,stroke-dasharray: 5 5
-    
-    style Supervisor fill:#FFD700,stroke:#DAA520,color:#000
-    style Synthesis fill:#90EE90,stroke:#006400,color:#000
-    style HITL fill:#FF6347,stroke:#8B0000,color:#fff
-    style MCP_Server fill:#87CEEB,stroke:#4682B4,color:#000
 ```
-
 ---
 
 ## 3. Vai trò từng thành phần
@@ -97,7 +56,7 @@ graph TB
 |-----------|-------|
 | **Nhiệm vụ** | Truy xuất các đoạn văn bản (chunks) có liên quan nhất từ cơ sở dữ liệu tri thức. |
 | **Embedding model** | `all-MiniLM-L6-v2` (Sentence Transformers). |
-| **Top-k** | 3 chunks mặc định. |
+| **Top-k** | 5 chunks mặc định (để đảm bảo đủ context cho multi-hop). |
 | **Stateless?** | Yes. |
 
 ### Policy Tool Worker (`workers/policy_tool.py`)
@@ -163,7 +122,7 @@ Hệ thống Supervisor-Worker giúp giảm thiểu đáng kể tình trạng "q
 
 ## 6. Giới hạn và điểm cần cải tiến
 
-1. **Độ trễ (Latency):** Việc chia nhỏ quy trình khiến tổng thời gian xử lý tăng lên (~1-2 giây) do phải thực hiện nhiều bước trung gian và gọi LLM tuần tự. Cần cải tiến bằng cách chạy song song (async) các worker không phụ thuộc nhau.
+1. **Độ trễ (Latency):** Việc chia nhỏ quy trình khiến tổng thời gian xử lý tăng lên (~11-15 giây theo số liệu thực tế) do phải thực hiện nhiều bước trung gian và gọi LLM tuần tự. Cần cải tiến bằng cách chạy song song (async) các worker không phụ thuộc nhau.
 2. **Độ phức tạp của Supervisor:** Hiện tại Supervisor đang dùng Regex/Keyword matching đơn giản. Với tập câu hỏi lớn và nhiễu, cần chuyển sang dùng **Semantic Router** hoặc một model LLM nhỏ chuyên biệt để phân loại chính xác hơn.
 3. **Mô phỏng MCP:** Các công cụ MCP hiện đang ở dạng Mock. Để hệ thống thực sự mạnh mẽ, cần deploy các MCP server thật kết nối với Database Jira, Search Engine và IAM system của doanh nghiệp.
 4. **Khả năng tự hồi phục (Self-healing):** Hiện tại nếu một worker gặp lỗi, pipeline có thể bị dừng đột ngột. Cần bổ sung các cơ chế retry hoặc fallback node để đảm bảo hệ thống luôn trả về câu trả lời hữu ích cho người dùng.

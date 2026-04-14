@@ -13,9 +13,7 @@
 
 **Ngày nộp:** 14/04/2026 
 
-**Repo:** https://github.com nam-k-nguyen/Day_08_09_10_C401_C5 
-
-**Độ dài khuyến nghị:** 600–1000 từ
+**Repo:** https://github.com/nam-k-nguyen/Lecture-Day-08-09-10
 
 ---
 
@@ -35,7 +33,7 @@
 Nhóm đã xây dựng hệ thống theo mô hình **Supervisor-Worker**, chia nhỏ quy trình RAG thành các thành phần chuyên biệt. Hệ thống gồm 1 Supervisor điều phối và 3 Workers chính: `retrieval_worker` (truy xuất DB), `policy_tool_worker` (kiểm tra luật & ngoại lệ qua MCP), và `synthesis_worker` (tổng hợp câu trả lời). Kiến trúc này giúp tách biệt logic xử lý tài liệu khỏi logic kiểm tra chính sách nghiệp vụ.
 
 **Routing logic cốt lõi:**
-Supervisor sử dụng **Keyword & Regex matching** để đưa ra quyết định routing. Các từ khóa về SLA/Ticket được route sang `retrieval_worker`. Các từ khóa về hoàn tiền/cấp quyền được route sang `policy_tool_worker`. Đặc biệt, hệ thống có khả năng nhận diện các mã lỗi chưa xác định (`err-xxx`) để kích hoạt cơ chế `human_review` (HITL), đảm bảo tính an toàn cho hệ thống.
+Supervisor sử dụng **Keyword & Regex matching** để đưa ra quyết định routing. Các từ khóa về SLA/Ticket được route sang `retrieval_worker`. Các từ khóa về hoàn tiền/cấp quyền được route sang `policy_tool_worker`. Trường hợp câu hỏi multi-hop (vừa có access control + SLA) được nhận diện riêng và gọi cả 2 workers. Hệ thống nhận diện mã lỗi không xác định (`err-xxx`) để route sang `human_review` node — node này auto-approve trong lab mode rồi tiếp tục về `retrieval_worker`, đồng thời đặt `hitl_triggered = True` trong trace.
 
 **MCP tools đã tích hợp:**
 - `search_kb`: Công cụ tìm kiếm Knowledge Base nội bộ, cho phép `policy_tool_worker` tự động truy xuất thêm thông tin mà không phụ thuộc vào `retrieval_worker`.
@@ -75,24 +73,55 @@ if is_multi_hop:
 
 ## 3. Kết quả grading questions (150–200 từ)
 
-> [BỎ QUA THEO YÊU CẦU — Đợi kết quả sau 17:00]
+Nhóm đã chạy pipeline với **10 câu grading questions** (gq01–gq10) trong khung 17:00–18:00. Kết quả được lưu tại `artifacts/grading_run.jsonl`.
+
+**Tổng quan kết quả:**
+
+| Câu | Supervisor Route | Confidence | HITL | MCP Tool | Latency (ms) |
+|-----|-----------------|-----------|------|----------|--------------|
+| gq01 | retrieval_worker | 0.77 | ✗ | — | 15,938 |
+| gq02 | policy_tool_worker | 0.71 | ✗ | — | 11,246 |
+| gq03 | policy_tool_worker | 0.77 | ✗ | get_ticket_info | 10,639 |
+| gq04 | policy_tool_worker | 0.72 | ✗ | — | 7,853 |
+| gq05 | retrieval_worker | 0.80 | ✗ | — | 8,360 |
+| gq06 | retrieval_worker | 0.79 | ✗ | — | 10,074 |
+| gq07 | retrieval_worker | **0.30** | ✅ | — | 7,776 |
+| gq08 | retrieval_worker | 0.77 | ✗ | — | 9,508 |
+| gq09 | policy_tool_worker | 0.80 | ✗ | get_ticket_info | 14,504 |
+| gq10 | policy_tool_worker | 0.74 | ✗ | — | 8,727 |
+
+**Điểm nổi bật:**
+- **gq07 (anti-hallucination):** Pipeline trả lời đúng "Không đủ thông tin trong tài liệu nội bộ." với confidence = 0.30, kích hoạt HITL. Không bịa mức phạt tài chính — tránh được penalty −50%.
+- **gq09 (multi-hop, 16 điểm):** Supervisor nhận diện đúng `"multi-hop: access control + SLA context | risk_high flagged"`, gọi cả 3 workers + MCP tool `get_ticket_info`. Câu trả lời nêu đủ cả 2 phần (SLA notification + Level 2 emergency access).
+- **gq02 (temporal policy scoping):** Policy worker xác định đúng phiên bản chính sách v3 (đơn đặt trước 01/02/2026), không áp nhầm policy v4.
+- **Avg confidence:** 0.717 (trên 10 câu grading).
+- **Avg latency:** 10,467ms — cao hơn Day 08 nhưng đổi lại độ chính xác và traceability.
 
 ---
+
 
 ## 4. So sánh Day 08 vs Day 09 — Điều nhóm quan sát được (150–200 từ)
 
-**Metric thay đổi rõ nhất (có số liệu):**
-> [BỎ QUA KẾT QUẢ SỐ LIỆU — Chỉ ghi nhận xét định tính]
+**Metric thay đổi rõ nhất (số liệu từ `artifacts/eval_report.json`):**
 
-Thông qua quan sát `eval_trace.py`, nhóm nhận thấy **Routing Visibility** là cải thiện rõ rệt nhất. Trong khi Day 08 chúng tôi chỉ nhận được 1 câu trả lời cuối cùng, Day 09 cung cấp một lộ trình chi tiết các Nodes và Workers đã tham gia, giúp việc tìm lỗi sai (root cause analysis) diễn ra nhanh gấp đôi.
+| Metric | Day 08 (Single Agent) | Day 09 (Multi-Agent) | Thay đổi |
+|--------|----------------------|---------------------|----------|
+| Avg confidence | 0.82 | 0.643 | −22% (thận trọng hơn) |
+| Avg latency | 1,850ms | 11,542ms | +524% |
+| HITL / Abstain rate | 13% | 20% (3/15 traces) | +7% |
+| Multi-hop accuracy | ~20% | ~80%+ (gq09 Full) | +60% |
+| Routing visibility | ✗ Không có | ✓ `route_reason` mọi câu | N/A |
 
-**Điều nhóm bất ngờ nhất khi chuyển từ single sang multi-agent:**
-Khả năng "từ chối" (Abstain) của hệ thống Multi-Agent tốt hơn hẳn. Nhờ có `policy_tool_worker` kiểm tra điều kiện trước khi `synthesis_worker` viết câu trả lời, các câu hỏi mẹo hoặc thiếu thông tin được xử lý một cách chuyên nghiệp, ít bị tình trạng LLM tự "bịa" ra thông tin (hallucination) hơn so với prompt gộp của Day 08.
+**Metric thay đổi rõ nhất:** Routing Visibility là cải thiện rõ rệt nhất về mặt vận hành. Trong khi Day 08 chỉ trả về 1 câu trả lời cuối cùng, Day 09 cung cấp `worker_io_logs` chi tiết từng node — cho phép nhóm xác định ngay lỗi ở `retrieval_worker` hay `synthesis_worker` mà không cần đọc lại toàn bộ prompt.
 
-**Trường hợp multi-agent KHÔNG giúp ích hoặc làm chậm hệ thống:**
-Đối với các câu hỏi rất đơn giản (ví dụ: "SLA P1 là bao lâu?"), việc phải đi qua Supervisor rồi mới đến Retrieval Worker là không cần thiết và làm tăng latency lên khoảng 800ms–1200ms mà chất lượng câu trả lời không đổi so với Single Agent.
+**Điều nhóm bất ngờ nhất khi chuyển sang multi-agent:**
+Khả năng abstain (từ chối trả lời) của Multi-Agent tốt hơn hẳn. Cụ thể: câu **gq07** hỏi về mức phạt tài chính — thông tin **không có trong bất kỳ tài liệu nào**. Day 09 pipeline trả confidence = 0.30 và kích hoạt HITL, trả lời "Không đủ thông tin trong tài liệu nội bộ." thay vì bịa số liệu. Đây là hành vi mà Single Agent (Day 08) rất dễ mắc phải do không có cơ chế kiểm tra confidence theo ngưỡng.
+
+**Trường hợp multi-agent KHÔNG giúp ích:**
+Với các câu hỏi đơn giản như **gq08** ("Mật khẩu đổi sau bao nhiêu ngày?"), pipeline phải đi qua supervisor → retrieval_worker → synthesis_worker với latency = 9,508ms — trong khi Day 08 trả lời tương đương chỉ ~1,850ms. Với loại câu này, overhead của multi-agent không mang lại giá trị thêm.
 
 ---
+
 
 ## 5. Phân công và đánh giá nhóm (100–150 từ)
 
@@ -112,7 +141,7 @@ Nhóm phối hợp rất tốt về những mặt sau:
 **Interface Contract**. Nhờ thống nhất `AgentState` từ sớm, các Worker của các thành viên khác nhau khi lắp ghép vào `graph.py` hoạt động ngay lập tức mà không gặp lỗi tương thích dữ liệu. Việc phân chia 3 Worker Owner giúp chuyên môn hóa sâu vào từng khía cạnh: Retrieval, Policy và Suy luận, từ đó tối ưu hóa được chất lượng của từng module độc lập.
 
 **Điều nhóm làm chưa tốt hoặc gặp vấn đề về phối hợp:**
-Việc debug MCP tool call tốn nhiều thời gian hơn dự kiến do các thành viên ban đầu chưa nắm vững giao thức MCP, dẫn đến việc tích hợp ở Sprint 3 bị chậm so với timeline. Ngoài ra, việc đồng đồng bộ giữa 3 Worker Owner đôi khi cần nhiều thời gian thảo luận để đảm bảo các cạnh nối trong graph hoạt động trơn tru.
+Việc debug MCP tool call tốn nhiều thời gian hơn dự kiến do các thành viên ban đầu chưa nắm vững giao thức MCP, dẫn đến việc tích hợp ở Sprint 3 bị chậm so với timeline. Ngoài ra, việc đồng bộ giữa 3 Worker Owner đôi khi cần nhiều thời gian thảo luận để đảm bảo các cạnh nối trong graph hoạt động trơn tru.
 
 ---
 
