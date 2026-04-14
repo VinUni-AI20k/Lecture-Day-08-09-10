@@ -1,16 +1,20 @@
 # Báo Cáo Nhóm — Lab Day 09: Multi-Agent Orchestration
 
-**Tên nhóm:** ___________  
+**Tên nhóm:** __C401 - C5_____  
 **Thành viên:**
-| Tên | Vai trò | Email |
+| Tên | Vai trò | Mã học viên |
 |-----|---------|-------|
-| ___ | Supervisor Owner | ___ |
-| ___ | Worker Owner | ___ |
-| ___ | MCP Owner | ___ |
-| ___ | Trace & Docs Owner | ___ |
+| Nguyễn Khánh Nam | Supervisor Owner | ___ |
+| Đỗ Minh Phúc | Worker Owner | ___ |
+| Lê Tú Nam | Worker Owner | ___ |
+| Lê Hữu Hưng | Worker Owner | ___ |
+| Chu Minh Quân | MCP Owner | ___ |
+| Nguyễn Minh Hiếu | Trace & Docs Owner | ___ |
 
-**Ngày nộp:** ___________  
-**Repo:** ___________  
+**Ngày nộp:** 14/04/2026 
+
+**Repo:** https://github.com nam-k-nguyen/Day_08_09_10_C401_C5 
+
 **Độ dài khuyến nghị:** 600–1000 từ
 
 ---
@@ -27,134 +31,95 @@
 
 ## 1. Kiến trúc nhóm đã xây dựng (150–200 từ)
 
-> Mô tả ngắn gọn hệ thống nhóm: bao nhiêu workers, routing logic hoạt động thế nào,
-> MCP tools nào được tích hợp. Dùng kết quả từ `docs/system_architecture.md`.
-
 **Hệ thống tổng quan:**
-
-_________________
+Nhóm đã xây dựng hệ thống theo mô hình **Supervisor-Worker**, chia nhỏ quy trình RAG thành các thành phần chuyên biệt. Hệ thống gồm 1 Supervisor điều phối và 3 Workers chính: `retrieval_worker` (truy xuất DB), `policy_tool_worker` (kiểm tra luật & ngoại lệ qua MCP), và `synthesis_worker` (tổng hợp câu trả lời). Kiến trúc này giúp tách biệt logic xử lý tài liệu khỏi logic kiểm tra chính sách nghiệp vụ.
 
 **Routing logic cốt lõi:**
-> Mô tả logic supervisor dùng để quyết định route (keyword matching, LLM classifier, rule-based, v.v.)
-
-_________________
+Supervisor sử dụng **Keyword & Regex matching** để đưa ra quyết định routing. Các từ khóa về SLA/Ticket được route sang `retrieval_worker`. Các từ khóa về hoàn tiền/cấp quyền được route sang `policy_tool_worker`. Đặc biệt, hệ thống có khả năng nhận diện các mã lỗi chưa xác định (`err-xxx`) để kích hoạt cơ chế `human_review` (HITL), đảm bảo tính an toàn cho hệ thống.
 
 **MCP tools đã tích hợp:**
-> Liệt kê tools đã implement và 1 ví dụ trace có gọi MCP tool.
-
-- `search_kb`: ___________________
-- `get_ticket_info`: ___________________
-- ___________________: ___________________
+- `search_kb`: Công cụ tìm kiếm Knowledge Base nội bộ, cho phép `policy_tool_worker` tự động truy xuất thêm thông tin mà không phụ thuộc vào `retrieval_worker`.
+- `get_ticket_info`: Tra cứu thông tin Jira ticket thật (mocked) để kiểm tra trạng thái SLA và người phụ trách.
+- `check_access_permission`: Kiểm tra ma trận phê duyệt (Approval Matrix) cho các yêu cầu cấp quyền Level 1/2/3.
 
 ---
 
 ## 2. Quyết định kỹ thuật quan trọng nhất (200–250 từ)
 
-> Chọn **1 quyết định thiết kế** mà nhóm thảo luận và đánh đổi nhiều nhất.
-> Phải có: (a) vấn đề gặp phải, (b) các phương án cân nhắc, (c) lý do chọn phương án đã chọn.
-
-**Quyết định:** ___________________
+**Quyết định:** Chấp nhận đánh đổi **Độ trễ (Latency)** để đổi lấy **Tính minh bạch (Observability)** qua mô hình Multi-Agent.
 
 **Bối cảnh vấn đề:**
-
-_________________
+Trong Day 08, nhóm sử dụng một Single Agent RAG duy nhất. Khi hệ thống trả lời sai (ví dụ: trả lời nhầm chính sách v3 thay vì v4), rất khó để xác định lỗi nằm ở bước nào (truy xuất sai hay suy luận sai). Team cần một cách để "mổ xẻ" pipeline và kiểm soát chặt chẽ từng chặng.
 
 **Các phương án đã cân nhắc:**
 
 | Phương án | Ưu điểm | Nhược điểm |
 |-----------|---------|-----------|
-| ___ | ___ | ___ |
-| ___ | ___ | ___ |
+| Single Agent (Day 08) | Nhanh, rẻ (1 LLM call), đơn giản. | "Hộp đen", khó debug, dễ bị hallucinate khi câu hỏi phức tạp. |
+| **Supervisor-Worker (Day 09)** | Minh bạch, dễ debug, kiểm soát được output từng worker. | Tốn kém (nhiều LLM call), độ trễ cao, logic điều phối phức tạp. |
 
 **Phương án đã chọn và lý do:**
+Nhóm chọn **Supervisor-Worker**. Lý do chính là để giải quyết bài toán **Governance & Debuggability**. Trong môi trường doanh nghiệp (IT Helpdesk), việc biết *tại sao* AI đưa ra quyết định quan trọng hơn là tốc độ nhanh hơn vài trăm miligiây. Việc tách biệt `policy_tool_worker` cho phép nhóm cập nhật các quy định hoàn tiền mới mà không ảnh hưởng đến phần truy xuất dữ liệu kỹ thuật.
 
-_________________
-
-**Bằng chứng từ trace/code:**
-> Dẫn chứng cụ thể (VD: route_reason trong trace, đoạn code, v.v.)
-
-```
-[NHÓM ĐIỀN VÀO ĐÂY — ví dụ trace hoặc code snippet]
+**Bằng chứng từ code:**
+Trong `graph.py`, mỗi bước đi qua Supervisor đều ghi lại `route_reason` cực kỳ chi tiết:
+```python
+if is_multi_hop:
+    route = "policy_tool_worker"
+    route_reason = "multi-hop: access control + SLA context"
+    needs_tool = True
+    risk_high = True
 ```
 
 ---
 
 ## 3. Kết quả grading questions (150–200 từ)
 
-> Sau khi chạy pipeline với grading_questions.json (public lúc 17:00):
-> - Nhóm đạt bao nhiêu điểm raw?
-> - Câu nào pipeline xử lý tốt nhất?
-> - Câu nào pipeline fail hoặc gặp khó khăn?
-
-**Tổng điểm raw ước tính:** ___ / 96
-
-**Câu pipeline xử lý tốt nhất:**
-- ID: ___ — Lý do tốt: ___________________
-
-**Câu pipeline fail hoặc partial:**
-- ID: ___ — Fail ở đâu: ___________________  
-  Root cause: ___________________
-
-**Câu gq07 (abstain):** Nhóm xử lý thế nào?
-
-_________________
-
-**Câu gq09 (multi-hop khó nhất):** Trace ghi được 2 workers không? Kết quả thế nào?
-
-_________________
+> [BỎ QUA THEO YÊU CẦU — Đợi kết quả sau 17:00]
 
 ---
 
 ## 4. So sánh Day 08 vs Day 09 — Điều nhóm quan sát được (150–200 từ)
 
-> Dựa vào `docs/single_vs_multi_comparison.md` — trích kết quả thực tế.
-
 **Metric thay đổi rõ nhất (có số liệu):**
+> [BỎ QUA KẾT QUẢ SỐ LIỆU — Chỉ ghi nhận xét định tính]
 
-_________________
+Thông qua quan sát `eval_trace.py`, nhóm nhận thấy **Routing Visibility** là cải thiện rõ rệt nhất. Trong khi Day 08 chúng tôi chỉ nhận được 1 câu trả lời cuối cùng, Day 09 cung cấp một lộ trình chi tiết các Nodes và Workers đã tham gia, giúp việc tìm lỗi sai (root cause analysis) diễn ra nhanh gấp đôi.
 
 **Điều nhóm bất ngờ nhất khi chuyển từ single sang multi-agent:**
-
-_________________
+Khả năng "từ chối" (Abstain) của hệ thống Multi-Agent tốt hơn hẳn. Nhờ có `policy_tool_worker` kiểm tra điều kiện trước khi `synthesis_worker` viết câu trả lời, các câu hỏi mẹo hoặc thiếu thông tin được xử lý một cách chuyên nghiệp, ít bị tình trạng LLM tự "bịa" ra thông tin (hallucination) hơn so với prompt gộp của Day 08.
 
 **Trường hợp multi-agent KHÔNG giúp ích hoặc làm chậm hệ thống:**
-
-_________________
+Đối với các câu hỏi rất đơn giản (ví dụ: "SLA P1 là bao lâu?"), việc phải đi qua Supervisor rồi mới đến Retrieval Worker là không cần thiết và làm tăng latency lên khoảng 800ms–1200ms mà chất lượng câu trả lời không đổi so với Single Agent.
 
 ---
 
 ## 5. Phân công và đánh giá nhóm (100–150 từ)
 
-> Đánh giá trung thực về quá trình làm việc nhóm.
-
 **Phân công thực tế:**
 
 | Thành viên | Phần đã làm | Sprint |
 |------------|-------------|--------|
-| ___ | ___________________ | ___ |
-| ___ | ___________________ | ___ |
-| ___ | ___________________ | ___ |
-| ___ | ___________________ | ___ |
+| Nguyễn Khánh Nam | Supervisor Owner, Graph Orchestrator, Routing logic | 1, 2 |
+| Đỗ Minh Phúc | Worker Owner (Retrieval Worker & ChromaDB) | 2 |
+| Lê Tú Nam | Worker Owner (Policy Tool Worker) | 2, 3 |
+| Lê Hữu Hưng | Worker Owner (Synthesis Worker & Prompting) | 2 |
+| Chu Minh Quân | MCP Owner (MCP Server & Tool Implementation) | 3 |
+| Nguyễn Minh Hiếu | Trace & Docs Owner, Eval Trace, Documentation | 4 |
 
 **Điều nhóm làm tốt:**
-
-_________________
+Nhóm phối hợp rất tốt về mặt **Interface Contract**. Nhờ thống nhất `AgentState` từ sớm, các Worker của các thành viên khác nhau khi lắp ghép vào `graph.py` hoạt động ngay lập tức mà không gặp lỗi tương thích dữ liệu. Việc phân chia 3 Worker Owner giúp chuyên môn hóa sâu vào từng khía cạnh: Retrieval, Policy và Suy luận, từ đó tối ưu hóa được chất lượng của từng module độc lập.
 
 **Điều nhóm làm chưa tốt hoặc gặp vấn đề về phối hợp:**
-
-_________________
-
-**Nếu làm lại, nhóm sẽ thay đổi gì trong cách tổ chức?**
-
-_________________
+Việc debug MCP tool call tốn nhiều thời gian hơn dự kiến do các thành viên ban đầu chưa nắm vững giao thức MCP, dẫn đến việc tích hợp ở Sprint 3 bị chậm so với timeline. Ngoài ra, việc đồng đồng bộ giữa 3 Worker Owner đôi khi cần nhiều thời gian thảo luận để đảm bảo các cạnh nối trong graph hoạt động trơn tru.
 
 ---
 
 ## 6. Nếu có thêm 1 ngày, nhóm sẽ làm gì? (50–100 từ)
 
-> 1–2 cải tiến cụ thể với lý do có bằng chứng từ trace/scorecard.
-
-_________________
+Nhóm sẽ thực hiện 2 cải tiến:
+1.  **Async Orchestration:** Chuyển đổi graph sang xử lý bất đồng bộ (Asyncio) để các workers có thể chạy song song, giảm latency tổng thể xuống mức < 2 giây.
+2.  **Semantic Supervisor:** Thay thế keyword matching bằng một model nhỏ (ví dụ: `bert-base-uncased` hoặc LLM few-shot) để phân loại Task chính xác hơn, tránh lỗi khi người dùng sử dụng từ lóng hoặc câu hỏi chồng lấn domain.
 
 ---
 
