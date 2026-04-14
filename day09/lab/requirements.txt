@@ -9,7 +9,7 @@ chromadb>=0.4.22
 
 # ─── Embeddings ─────────────────────────
 # Option A: Sentence Transformers (offline, không cần API key)
-sentence-transformers>=2.6.0
+# sentence-transformers>=2.6.0
 
 # ─── LLM ────────────────────────────────
 # Option A: OpenAI

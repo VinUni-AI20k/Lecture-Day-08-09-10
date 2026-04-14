@@ -33,6 +33,8 @@ import json
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
+from dotenv import load_dotenv
+load_dotenv()
 
 # ─────────────────────────────────────────────
 # Tool Definitions (Schema Discovery)
@@ -60,28 +62,6 @@ TOOL_SCHEMAS = {
             },
         },
     },
-    "get_ticket_info": {
-        "name": "get_ticket_info",
-        "description": "Tra cứu thông tin ticket từ hệ thống Jira nội bộ.",
-        "inputSchema": {
-            "type": "object",
-            "properties": {
-                "ticket_id": {"type": "string", "description": "ID ticket (VD: IT-1234, P1-LATEST)"},
-            },
-            "required": ["ticket_id"],
-        },
-        "outputSchema": {
-            "type": "object",
-            "properties": {
-                "ticket_id": {"type": "string"},
-                "priority": {"type": "string"},
-                "status": {"type": "string"},
-                "assignee": {"type": "string"},
-                "created_at": {"type": "string"},
-                "sla_deadline": {"type": "string"},
-            },
-        },
-    },
     "check_access_permission": {
         "name": "check_access_permission",
         "description": "Kiểm tra điều kiện cấp quyền truy cập theo Access Control SOP.",
@@ -103,28 +83,7 @@ TOOL_SCHEMAS = {
                 "source": {"type": "string"},
             },
         },
-    },
-    "create_ticket": {
-        "name": "create_ticket",
-        "description": "Tạo ticket mới trong hệ thống Jira (MOCK — không tạo thật trong lab).",
-        "inputSchema": {
-            "type": "object",
-            "properties": {
-                "priority": {"type": "string", "enum": ["P1", "P2", "P3", "P4"]},
-                "title": {"type": "string"},
-                "description": {"type": "string"},
-            },
-            "required": ["priority", "title"],
-        },
-        "outputSchema": {
-            "type": "object",
-            "properties": {
-                "ticket_id": {"type": "string"},
-                "url": {"type": "string"},
-                "created_at": {"type": "string"},
-            },
-        },
-    },
+    }
 }
 
 
@@ -132,26 +91,58 @@ TOOL_SCHEMAS = {
 # Tool Implementations
 # ─────────────────────────────────────────────
 
+from openai import OpenAI
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+
+def _get_embedding(text:str):
+    resp = client.embeddings.create(input=text, model="text-embedding-3-small")
+    return resp.data[0].embedding
+
+
 def tool_search_kb(query: str, top_k: int = 3) -> dict:
     """
     Tìm kiếm Knowledge Base bằng semantic search.
 
     TODO Sprint 3: Kết nối với ChromaDB thực.
     Hiện tại: Delegate sang retrieval worker.
+
+    Implement by Phuoc
     """
     try:
-        # Tái dùng retrieval logic từ workers/retrieval.py
-        import sys
-        sys.path.insert(0, os.path.dirname(__file__))
-        from workers.retrieval import retrieve_dense
-        chunks = retrieve_dense(query, top_k=top_k)
-        sources = list({c["source"] for c in chunks})
+        import chromadb
+        
+        client = chromadb.PersistentClient(path=os.getenv("CHROMA_DB_PATH"))
+        collection = client.get_or_create_collection(os.getenv("CHROMA_COLLECTION"))
+        query_embedding = _get_embedding(text = query)
+
+        results = collection.query(
+            query_embeddings=[query_embedding],
+            n_results=top_k,
+            include=["documents", "distances", "metadatas"]
+        )
+
+        chunks = []
+        for i, (doc, dist, meta) in enumerate(zip(
+            results["documents"][0],
+            results["distances"][0],
+            results["metadatas"][0]
+        )):
+            chunks.append({
+                "text": doc,
+                "source": meta.get("source", "unknown"),
+                "score": round(1 - dist, 4),  # cosine similarity
+                "metadata": meta,
+            })
+
+        sources = list({c["source"] for c in chunks})            
         return {
             "chunks": chunks,
             "sources": sources,
             "total_found": len(chunks),
         }
+    
     except Exception as e:
+        print(e)
         # Fallback: return mock data nếu ChromaDB chưa setup
         return {
             "chunks": [
@@ -167,63 +158,73 @@ def tool_search_kb(query: str, top_k: int = 3) -> dict:
 
 
 # Mock ticket database
-MOCK_TICKETS = {
-    "P1-LATEST": {
-        "ticket_id": "IT-9847",
-        "priority": "P1",
-        "title": "API Gateway down — toàn bộ người dùng không đăng nhập được",
-        "status": "in_progress",
-        "assignee": "nguyen.van.a@company.internal",
-        "created_at": "2026-04-13T22:47:00",
-        "sla_deadline": "2026-04-14T02:47:00",
-        "escalated": True,
-        "escalated_to": "senior_engineer_team",
-        "notifications_sent": ["slack:#incident-p1", "email:incident@company.internal", "pagerduty:oncall"],
-    },
-    "IT-1234": {
-        "ticket_id": "IT-1234",
-        "priority": "P2",
-        "title": "Feature login chậm cho một số user",
-        "status": "open",
-        "assignee": None,
-        "created_at": "2026-04-13T09:15:00",
-        "sla_deadline": "2026-04-14T09:15:00",
-        "escalated": False,
-    },
-}
+# MOCK_TICKETS = {
+#     "P1-LATEST": {
+#         "ticket_id": "IT-9847",
+#         "priority": "P1",
+#         "title": "API Gateway down — toàn bộ người dùng không đăng nhập được",
+#         "status": "in_progress",
+#         "assignee": "nguyen.van.a@company.internal",
+#         "created_at": "2026-04-13T22:47:00",
+#         "sla_deadline": "2026-04-14T02:47:00",
+#         "escalated": True,
+#         "escalated_to": "senior_engineer_team",
+#         "notifications_sent": ["slack:#incident-p1", "email:incident@company.internal", "pagerduty:oncall"],
+#     },
+#     "IT-1234": {
+#         "ticket_id": "IT-1234",
+#         "priority": "P2",
+#         "title": "Feature login chậm cho một số user",
+#         "status": "open",
+#         "assignee": None,
+#         "created_at": "2026-04-13T09:15:00",
+#         "sla_deadline": "2026-04-14T09:15:00",
+#         "escalated": False,
+#     },
+# }
 
 
-def tool_get_ticket_info(ticket_id: str) -> dict:
-    """
-    Tra cứu thông tin ticket (mock data).
-    """
-    ticket = MOCK_TICKETS.get(ticket_id.upper())
-    if ticket:
-        return ticket
-    # Không tìm thấy
-    return {
-        "error": f"Ticket '{ticket_id}' không tìm thấy trong hệ thống.",
-        "available_mock_ids": list(MOCK_TICKETS.keys()),
-    }
+# def tool_get_ticket_info(ticket_id: str) -> dict:
+#     """
+#     Tra cứu thông tin ticket (mock data).
+#     """
+#     ticket = MOCK_TICKETS.get(ticket_id.upper())
+#     if ticket:
+#         return ticket
+#     # Không tìm thấy
+#     return {
+#         "error": f"Ticket '{ticket_id}' không tìm thấy trong hệ thống.",
+#         "available_mock_ids": list(MOCK_TICKETS.keys()),
+#     }
 
 
-# Mock access control rules
+# Mock access control rules, implement addition rule #4, `apply_for` key
+# for each level
 ACCESS_RULES = {
     1: {
         "required_approvers": ["Line Manager"],
         "emergency_can_bypass": False,
-        "note": "Standard user access",
+        "note": "Read Only",
+        "apply_for": ["Staff", "contractor"]
     },
     2: {
         "required_approvers": ["Line Manager", "IT Admin"],
         "emergency_can_bypass": True,
         "emergency_bypass_note": "Level 2 có thể cấp tạm thời với approval đồng thời của Line Manager và IT Admin on-call.",
-        "note": "Elevated access",
+        "note": "Standard user access",
+        "apply_for": ["Staff"]
     },
     3: {
         "required_approvers": ["Line Manager", "IT Admin", "IT Security"],
         "emergency_can_bypass": False,
+        "note": "Elevated access",
+        "apply_for": ["Team Lead", "Senior Engineer", "Manager"]
+    },
+    4: {
+        "required_approvers": ["IT Manager", "CISO"],
+        "emergency_can_bypass": False,
         "note": "Admin access — không có emergency bypass",
+        "apply_for": ["DevOps", "SRE", "IT Admin"]
     },
 }
 
@@ -239,6 +240,9 @@ def tool_check_access_permission(access_level: int, requester_role: str, is_emer
     can_grant = True
     notes = []
 
+    if requester_role not in rule['required_approvers']:
+        can_grant = False
+
     if is_emergency and rule.get("emergency_can_bypass"):
         notes.append(rule.get("emergency_bypass_note", ""))
         can_grant = True
@@ -246,33 +250,31 @@ def tool_check_access_permission(access_level: int, requester_role: str, is_emer
         notes.append(f"Level {access_level} KHÔNG có emergency bypass. Phải follow quy trình chuẩn.")
 
     return {
-        "access_level": access_level,
         "can_grant": can_grant,
         "required_approvers": rule["required_approvers"],
         "approver_count": len(rule["required_approvers"]),
         "emergency_override": is_emergency and rule.get("emergency_can_bypass", False),
-        "notes": notes,
         "source": "access_control_sop.txt",
     }
 
 
-def tool_create_ticket(priority: str, title: str, description: str = "") -> dict:
-    """
-    Tạo ticket mới (MOCK — in log, không tạo thật).
-    """
-    mock_id = f"IT-{9900 + hash(title) % 99}"
-    ticket = {
-        "ticket_id": mock_id,
-        "priority": priority,
-        "title": title,
-        "description": description[:200],
-        "status": "open",
-        "created_at": datetime.now().isoformat(),
-        "url": f"https://jira.company.internal/browse/{mock_id}",
-        "note": "MOCK ticket — không tồn tại trong hệ thống thật",
-    }
-    print(f"  [MCP create_ticket] MOCK: {mock_id} | {priority} | {title[:50]}")
-    return ticket
+# def tool_create_ticket(priority: str, title: str, description: str = "") -> dict:
+#     """
+#     Tạo ticket mới (MOCK — in log, không tạo thật).
+#     """
+#     mock_id = f"IT-{9900 + hash(title) % 99}"
+#     ticket = {
+#         "ticket_id": mock_id,
+#         "priority": priority,
+#         "title": title,
+#         "description": description[:200],
+#         "status": "open",
+#         "created_at": datetime.now().isoformat(),
+#         "url": f"https://jira.company.internal/browse/{mock_id}",
+#         "note": "MOCK ticket — không tồn tại trong hệ thống thật",
+#     }
+#     print(f"  [MCP create_ticket] MOCK: {mock_id} | {priority} | {title[:50]}")
+#     return ticket
 
 
 # ─────────────────────────────────────────────
@@ -281,9 +283,7 @@ def tool_create_ticket(priority: str, title: str, description: str = "") -> dict
 
 TOOL_REGISTRY = {
     "search_kb": tool_search_kb,
-    "get_ticket_info": tool_get_ticket_info,
-    "check_access_permission": tool_check_access_permission,
-    "create_ticket": tool_create_ticket,
+    "check_access_permission": tool_check_access_permission
 }
 
 
@@ -350,12 +350,12 @@ if __name__ == "__main__":
     else:
         print(f"  Result: {result}")
 
-    # 3. Test get_ticket_info
-    print("\n🎫 Test: get_ticket_info")
-    ticket = dispatch_tool("get_ticket_info", {"ticket_id": "P1-LATEST"})
-    print(f"  Ticket: {ticket.get('ticket_id')} | {ticket.get('priority')} | {ticket.get('status')}")
-    if ticket.get("notifications_sent"):
-        print(f"  Notifications: {ticket['notifications_sent']}")
+    # # 3. Test get_ticket_info
+    # print("\n🎫 Test: get_ticket_info")
+    # ticket = dispatch_tool("get_ticket_info", {"ticket_id": "P1-LATEST"})
+    # print(f"  Ticket: {ticket.get('ticket_id')} | {ticket.get('priority')} | {ticket.get('status')}")
+    # if ticket.get("notifications_sent"):
+    #     print(f"  Notifications: {ticket['notifications_sent']}")
 
     # 4. Test check_access_permission
     print("\n🔐 Test: check_access_permission (Level 3, emergency)")
@@ -368,6 +368,7 @@ if __name__ == "__main__":
     print(f"  required_approvers: {perm.get('required_approvers')}")
     print(f"  emergency_override: {perm.get('emergency_override')}")
     print(f"  notes: {perm.get('notes')}")
+
 
     # 5. Test invalid tool
     print("\n❌ Test: invalid tool")
