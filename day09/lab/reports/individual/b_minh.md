@@ -1,9 +1,8 @@
 # Báo Cáo Cá Nhân — Lab Day 09: Multi-Agent Orchestration
 
-**Họ và tên:** B. Minh
-**Vai trò trong nhóm:** MCP Owner (Chuyên viên Tích hợp MCP - External Capability)
+**Họ và tên:** Nguyễn Bình Minh
+**Vai trò trong nhóm:** MCP Owner (Tích hợp MCP - External Capability)
 **Ngày nộp:** 14/04/2026
-**Độ dài yêu cầu:** 500–800 từ
 
 ---
 
