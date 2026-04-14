@@ -1,0 +1,114 @@
+[
+  {
+    "id": "gq01",
+    "question": "Ticket P1 được tạo lúc 22:47. Đúng theo SLA, ai nhận thông báo đầu tiên và qua kênh nào? Deadline escalation là mấy giờ?",
+    "grading_criteria": [
+      "Nêu đúng kênh thông báo: Slack #incident-p1 VÀ email incident@company.internal VÀ PagerDuty",
+      "Nêu đúng thời gian escalation: 10 phút sau khi tạo ticket = 22:57",
+      "Nêu đúng đối tượng escalation: Senior Engineer"
+    ],
+    "points": 10,
+    "skill": "SLA detail retrieval — multi-detail extraction"
+  },
+  {
+    "id": "gq02",
+    "question": "Khách hàng đặt đơn ngày 31/01/2026 và gửi yêu cầu hoàn tiền ngày 07/02/2026 vì lỗi nhà sản xuất. Sản phẩm chưa kích hoạt, không phải Flash Sale, không phải kỹ thuật số. Chính sách nào áp dụng và có được hoàn tiền không?",
+    "grading_criteria": [
+      "Nhận ra rằng đơn đặt trước 01/02/2026 áp dụng chính sách phiên bản 3 (không phải v4)",
+      "Nêu rõ rằng tài liệu hiện có chỉ có chính sách v4 — không thể confirm theo v3",
+      "KHÔNG tự bịa nội dung của chính sách v3"
+    ],
+    "points": 10,
+    "skill": "Temporal policy scoping — abstain khi thiếu version history"
+  },
+  {
+    "id": "gq03",
+    "question": "Engineer cần Level 3 access để khắc phục P1 đang active. Bao nhiêu người phải phê duyệt? Ai là người phê duyệt cuối cùng (người phê duyệt có thẩm quyền cao nhất)?",
+    "grading_criteria": [
+      "Nêu đúng số người phê duyệt: 3 người",
+      "Nêu đúng tên 3 người: Line Manager, IT Admin, IT Security",
+      "Nêu đúng người cuối cùng/cao nhất: IT Security"
+    ],
+    "points": 10,
+    "skill": "Multi-section access control retrieval"
+  },
+  {
+    "id": "gq04",
+    "question": "Khi khách hàng chọn nhận store credit thay vì hoàn tiền, họ nhận được bao nhiêu phần trăm so với số tiền gốc cần hoàn?",
+    "grading_criteria": [
+      "Nêu đúng con số: 110%",
+      "Giải thích đúng: thêm 10% bonus so với hoàn tiền gốc"
+    ],
+    "points": 6,
+    "skill": "Specific numeric fact extraction"
+  },
+  {
+    "id": "gq05",
+    "question": "Ticket P1 được tạo và on-call engineer không phản hồi sau 10 phút. Theo đúng SLA, hệ thống sẽ làm gì tiếp theo?",
+    "grading_criteria": [
+      "Nêu đúng hành động: tự động escalate",
+      "Nêu đúng đối tượng: Senior Engineer",
+      "Không nêu sai thời gian hoặc đối tượng escalation"
+    ],
+    "points": 8,
+    "skill": "SLA escalation rule — triggered condition"
+  },
+  {
+    "id": "gq06",
+    "question": "Một nhân viên mới đang trong probation period muốn làm remote vì lý do cá nhân. Yêu cầu này có được chấp thuận không? Điều kiện để được làm remote là gì?",
+    "grading_criteria": [
+      "Kết luận đúng: nhân viên trong probation period KHÔNG được làm remote",
+      "Nêu điều kiện đúng: phải qua probation period mới được phép",
+      "Nêu giới hạn đúng: tối đa 2 ngày/tuần và cần Team Lead phê duyệt"
+    ],
+    "points": 8,
+    "skill": "HR policy — eligibility condition with negative case"
+  },
+  {
+    "id": "gq07",
+    "question": "Mức phạt tài chính cụ thể khi đội IT vi phạm SLA P1 resolution time (không resolve trong 4 giờ) là bao nhiêu?",
+    "grading_criteria": [
+      "Nêu rõ ràng rằng thông tin này KHÔNG có trong tài liệu SLA hiện có",
+      "KHÔNG bịa ra bất kỳ con số phạt nào",
+      "Có thể gợi ý liên hệ bộ phận liên quan để tra cứu"
+    ],
+    "points": 10,
+    "skill": "Anti-hallucination / abstain — thông tin không có trong tài liệu"
+  },
+  {
+    "id": "gq08",
+    "question": "Theo quy định IT nội bộ, nhân viên phải đổi mật khẩu sau bao nhiêu ngày? Và hệ thống cảnh báo trước bao nhiêu ngày?",
+    "grading_criteria": [
+      "Nêu đúng chu kỳ đổi mật khẩu (số ngày cụ thể)",
+      "Nêu đúng số ngày cảnh báo trước",
+      "Cite đúng nguồn: it_helpdesk_faq.txt"
+    ],
+    "points": 8,
+    "skill": "Multi-detail FAQ retrieval"
+  },
+  {
+    "id": "gq09",
+    "question": "Sự cố P1 xảy ra lúc 2am. Đồng thời cần cấp Level 2 access tạm thời cho contractor để thực hiện emergency fix. Hãy nêu đầy đủ: (1) các bước SLA P1 notification phải làm ngay, và (2) điều kiện để cấp Level 2 emergency access.",
+    "grading_criteria": [
+      "SLA P1: nêu đủ 3 kênh notification (Slack #incident-p1, email incident@company.internal, PagerDuty)",
+      "SLA P1: nêu đúng escalation deadline nếu không phản hồi (10 phút → Senior Engineer)",
+      "Level 2 access: nêu đúng rằng Level 2 CÓ emergency bypass",
+      "Level 2 access: nêu đúng điều kiện emergency bypass: approval đồng thời của Line Manager VÀ IT Admin on-call",
+      "Level 2 access: nêu đúng rằng KHÔNG cần IT Security cho Level 2 emergency (khác Level 3)"
+    ],
+    "points": 16,
+    "skill": "Cross-doc multi-hop — SLA + Access Control, 2 tài liệu"
+  },
+  {
+    "id": "gq10",
+    "question": "Khách hàng mua sản phẩm trong chương trình Flash Sale, nhưng phát hiện sản phẩm bị lỗi từ nhà sản xuất và yêu cầu hoàn tiền trong vòng 5 ngày. Có được hoàn tiền không? Giải thích theo đúng chính sách.",
+    "grading_criteria": [
+      "Kết luận đúng: KHÔNG được hoàn tiền",
+      "Nêu đúng lý do: đơn Flash Sale là ngoại lệ không được hoàn tiền theo Điều 3 chính sách v4",
+      "Không bị đánh lừa bởi 'lỗi nhà sản xuất' — exception Flash Sale override điều kiện lỗi",
+      "Cite đúng nguồn: policy_refund_v4.txt"
+    ],
+    "points": 10,
+    "skill": "Policy exception completeness — exception override normal condition"
+  }
+]
