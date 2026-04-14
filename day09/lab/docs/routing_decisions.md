@@ -10,75 +10,77 @@
 
 ---
 
-## Routing Decision #1 — Retrieval (SLA Query)
+## Routing Decision #1
 
 **Task đầu vào:**
-> "SLA xử lý ticket P1 là bao lâu?"
-
-**Worker được chọn:** `retrieval_worker`  
-**Route reason (từ trace):** `sla / ticket query`  
-**MCP tools được gọi:** Không có  
-**Workers called sequence:** `retrieval_worker → synthesis_worker`
-
-**Kết quả thực tế:**
-- final_answer: `[Evidence] SLA P1: phản hồi 15 phút, xử lý 4 giờ. Escalation P1 cần notify team lead ngay lập tức.`
-- confidence: 0.80
-- Correct routing? **Yes** ✓
-
-**Nhận xét:** Routing đúng — câu hỏi chứa keyword "SLA" và "ticket P1" → supervisor nhận diện đúng là retrieval task. Retrieval worker trả về 3 chunks liên quan từ SLA docs. Confidence 0.80 phù hợp vì có nhiều evidence support.
-
----
-
-## Routing Decision #2 — Policy (Refund + Flash Sale Exception)
-
-**Task đầu vào:**
-> "Sản phẩm kỹ thuật số (license key) có được hoàn tiền không?"
+> Ticket P1 lúc 2am. Cần cấp Level 2 access tạm thời cho contractor để thực hiện emergency fix. Đồng thời cần notify stakeholders theo SLA. Nêu đủ cả hai quy trình.
 
 **Worker được chọn:** `policy_tool_worker`  
 **Route reason (từ trace):** `policy / access task`  
 **MCP tools được gọi:** Không có  
-**Workers called sequence:** `policy_tool_worker → retrieval_worker → synthesis_worker`
+**Workers called sequence:** policy_tool_worker → retrieval_worker → synthesis_worker  
 
 **Kết quả thực tế:**
-- final_answer: `[Policy Decision] refund_policy_v4 → allowed. Lý do: Refund tiêu chuẩn` + Evidence từ retrieval
-- confidence: 0.90
-- Correct routing? **Yes** ✓
+- final_answer (ngắn): Yêu cầu cấp quyền Level 2 cần approval theo policy access_control_v2, đồng thời cung cấp SLA và escalation P1  
+- confidence: 0.95  
+- Correct routing? Yes  
 
-**Nhận xét:** Routing đúng — keyword "license" match policy_keywords trong supervisor. Policy worker phát hiện đây là câu hỏi về digital product refund. Confidence cao (0.90) vì có cả policy result lẫn retrieved chunks. Tuy nhiên, mock policy worker chưa detect đúng exception "digital_product" ở graph.py level (chỉ detect ở workers/policy_tool.py thật).
+**Nhận xét:**  
+Routing đúng vì task liên quan trực tiếp đến cấp quyền (access control) và policy. Supervisor đã ưu tiên policy_tool_worker là hợp lý. Kết quả đầy đủ cả policy + SLA evidence.
 
 ---
 
-## Routing Decision #3 — Human Review (Error Code + Risk)
+## Routing Decision #2
 
 **Task đầu vào:**
-> "ERR-403-AUTH là lỗi gì và cách xử lý?"
-
-**Worker được chọn:** `human_review` → (auto-approve) → `retrieval_worker`  
-**Route reason (từ trace):** `error + risk_high → human review | human approved → retrieval`  
-**MCP tools được gọi:** Không có  
-**Workers called sequence:** `human_review → retrieval_worker → synthesis_worker`
-
-**Kết quả thực tế:**
-- final_answer: "Không tìm thấy dữ liệu phù hợp." (fallback)
-- confidence: 0.70
-- hitl_triggered: **true**
-- Correct routing? **Yes** ✓
-
-**Nhận xét:** Đây là trường hợp routing phức tạp nhất. Supervisor phát hiện cả `risk_high` (keyword "err-") lẫn error code → route sang `human_review`. Sau khi HITL auto-approve, pipeline chuyển về `retrieval_worker` nhưng không tìm thấy evidence → trả fallback. Routing logic đúng: câu hỏi chứa mã lỗi unknown cần human review trước khi xử lý.
-
----
-
-## Routing Decision #4 — Multi-hop (Access Control + SLA)
-
-**Task đầu vào:**
-> "Contractor cần Admin Access (Level 3) để khắc phục sự cố P1 đang active. Quy trình cấp quyền tạm thời như thế nào?"
+> Cần cấp quyền Level 3 để khắc phục P1 khẩn cấp. Quy trình là gì?
 
 **Worker được chọn:** `policy_tool_worker`  
-**Route reason:** `policy / access task`
+**Route reason (từ trace):** `task contains policy/access keyword | risk_high flagged`  
+**MCP tools được gọi:** search_kb, get_ticket_info  
+**Workers called sequence:** policy_tool_worker → synthesis_worker  
 
-**Nhận xét: Đây là trường hợp routing khó nhất trong lab. Tại sao?**
+**Kết quả thực tế:**
+- final_answer (ngắn): Cho phép cấp quyền tạm thời 24h sau khi Tech Lead approve, cần log audit và tạo ticket sau đó  
+- confidence: 0.53  
+- Correct routing? Yes  
 
-Câu hỏi này yêu cầu cross-document reasoning: cần thông tin từ cả `access_control_sop.txt` (quy trình cấp quyền Level 3) và `sla_p1_2026.txt` (context P1 escalation). Supervisor chọn `policy_tool_worker` vì keyword "cấp quyền" + "access" + "level 3", sau đó policy worker cũng gọi `retrieval_worker` để lấy evidence → cả hai nguồn đều được sử dụng. Confidence đạt 0.95 — cao nhất trong tất cả câu hỏi.
+**Nhận xét:**  
+Routing đúng vì đây là case high-risk liên quan đến quyền Level 3. Tuy nhiên confidence thấp do retrieval chưa mạnh và nội dung phụ thuộc nhiều vào policy chunk. Có thể cải thiện bằng retrieval tốt hơn.
+
+---
+
+## Routing Decision #3
+
+**Task đầu vào:**
+> Khách hàng Flash Sale yêu cầu hoàn tiền vì sản phẩm lỗi — được không?
+
+**Worker được chọn:** `policy_tool_worker`  
+**Route reason (từ trace):** `task contains policy/access keyword`  
+**MCP tools được gọi:** search_kb  
+**Workers called sequence:** policy_tool_worker → synthesis_worker  
+
+**Kết quả thực tế:**
+- final_answer (ngắn): Không được hoàn tiền do thuộc Flash Sale exception  
+- confidence: 0.56  
+- Correct routing? Yes  
+
+**Nhận xét:**  
+Routing đúng vì đây là bài toán policy (refund policy). Policy_tool_worker xử lý exception chính xác. Tuy nhiên confidence trung bình do phụ thuộc vào chunk retrieval.
+
+
+---
+
+## Routing Decision #4 (tuỳ chọn — bonus)
+
+**Task đầu vào:**
+> SLA xử lý ticket P1 là bao lâu?
+
+**Worker được chọn:** `retrieval_worker`  
+**Route reason:** `default route`
+
+**Nhận xét: Đây là trường hợp routing khó nhất trong lab. Tại sao?**  
+Đây là case đơn giản nhưng dễ bị nhầm sang policy_worker nếu logic keyword không tốt. Supervisor đã route đúng sang retrieval_worker vì không cần policy reasoning, chỉ cần lookup thông tin.
 
 ---
 
@@ -88,8 +90,8 @@ Câu hỏi này yêu cầu cross-document reasoning: cần thông tin từ cả 
 
 | Worker | Số câu được route | % tổng |
 |--------|------------------|--------|
-| retrieval_worker | 8 | 53% |
-| policy_tool_worker | 7 | 47% |
+| retrieval_worker | 2 | 15% |
+| policy_tool_worker | 13 | 86% |
 | human_review | 1 (→ reroute về retrieval) | 7% |
 
 ### Routing Accuracy
@@ -104,14 +106,17 @@ Câu hỏi này yêu cầu cross-document reasoning: cần thông tin từ cả 
 
 > Quyết định kỹ thuật quan trọng nhất nhóm đưa ra về routing logic là gì?
 
-1. **Keyword matching đủ tốt cho lab scope** — với 15 câu test, rule-based routing bằng keyword lists đạt 87% accuracy. Không cần LLM classifier cho use case này.
-2. **Fallback về retrieval_worker là an toàn** — khi supervisor không tự tin về route, default retrieval luôn cho kết quả hợp lý (dù có thể không optimal). Tốt hơn là raise error.
+1. Sử dụng keyword-based routing kết hợp flag `risk_high` để ưu tiên policy_tool_worker  
+2. Không route sang retrieval_worker nếu task có yếu tố access control hoặc policy critical  
 
 ### Route Reason Quality
 
-> Nhìn lại các `route_reason` trong trace — chúng có đủ thông tin để debug không?
+> Nhìn lại các `route_reason` trong trace — chúng có đủ thông tin để debug không?  
+> Nếu chưa, nhóm sẽ cải tiến format route_reason thế nào?
 
-Route reason hiện tại khá generic ("policy / access task", "sla / ticket query", "fallback retrieval"). Để cải thiện, nhóm sẽ:
-- Thêm **matched keywords** vào route_reason: `"policy / access task [matched: 'cấp quyền', 'level 3']"`
-- Thêm **confidence score của routing decision**: `"sla query (confidence=0.92, matched 2/3 keywords)"`
-- Ghi rõ **tại sao không chọn route khác**: `"retrieval (not policy: no refund/access keyword)"`
+Route_reason hiện tại còn khá ngắn (vd: "default route", "policy/access task"), chưa đủ để debug sâu.  
+Cần cải tiến theo format:
+
+- Bao gồm: keyword match + risk flag + decision logic  
+- Ví dụ tốt hơn:  
+  `matched_keywords=[access, level3] | risk_high=True → route=policy_tool_worker`
