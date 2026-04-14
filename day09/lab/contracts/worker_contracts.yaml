@@ -8,7 +8,7 @@
 # TODO Sprint 2: Cập nhật "actual_implementation" khi đã implement xong.
 
 version: "1.0"
-updated_at: "2026-04-13"
+updated_at: "2026-04-14"
 
 # ─────────────────────────────────────────────
 # Supervisor
@@ -37,19 +37,41 @@ supervisor:
     needs_tool:
       type: boolean
       required: true
+      description: "True nếu query thuộc nhóm policy/access hoặc có dấu hiệu cần tra ticket/tool"
   routing_rules:
-    - condition: "task chứa 'hoàn tiền', 'refund', 'flash sale', 'license', 'cấp quyền', 'access level'"
-      route: "policy_tool_worker"
-    - condition: "task chứa 'P1', 'SLA', 'ticket', 'escalation', 'sự cố'"
-      route: "retrieval_worker"
-    - condition: "task chứa mã lỗi không rõ (ERR-xxx) VÀ không có context"
+    - condition: "task chứa 'ERR-'"
       route: "human_review"
-    - condition: "default"
+      notes: "Trong graph.py, supervisor route sang human_review ngay khi match unknown error keyword."
+    - condition: "task chứa một trong các keyword policy/access như 'hoàn tiền', 'refund', 'flash sale', 'license', 'subscription', 'cấp quyền', 'access', 'level 3', 'level 4', 'contractor', 'admin access', 'approval', 'quy trình', 'security'"
+      route: "policy_tool_worker"
+      notes: "Nếu đồng thời có keyword incident thì vẫn ưu tiên policy_tool_worker và ghi rõ trong route_reason."
+    - condition: "task chứa một trong các keyword incident/SLA như 'P1', 'SLA', 'ticket', 'escalation', 'incident', 'on-call', 'sự cố', 'hotline', 'pagerduty'"
       route: "retrieval_worker"
+    - condition: "không match keyword nào ở trên"
+      route: "retrieval_worker"
+      notes: "Fallback mặc định là retrieval_worker với route_reason kiểu 'no explicit policy/error keyword → fallback retrieval'."
+  risk_rules:
+    - condition: "task chứa 'ERR-', 'emergency', 'khẩn cấp', '2am', 'ngoài giờ'"
+      sets:
+        risk_high: true
+    - condition: "ngược lại"
+      sets:
+        risk_high: false
+  tool_rules:
+    - condition: "task chứa keyword policy/access"
+      sets:
+        needs_tool: true
+    - condition: "task chứa 'ticket', 'P1', hoặc 'jira'"
+      sets:
+        needs_tool: true
+    - condition: "ngược lại"
+      sets:
+        needs_tool: false
   constraints:
     - "Supervisor không được tự trả lời policy questions"
     - "route_reason KHÔNG được là chuỗi rỗng hoặc 'unknown'"
     - "Nếu risk_high=True → luôn ghi lý do cụ thể"
+    - "Nếu route='human_review' do ERR-* thì human_review placeholder sẽ chuyển tiếp sang retrieval_worker sau khi approve trong lab mode"
 
 # ─────────────────────────────────────────────
 # Retrieval Worker
@@ -97,7 +119,7 @@ retrieval_worker:
     - "Stateless: không đọc hoặc ghi state ngoài những gì được khai báo ở trên"
   actual_implementation:
     status: "TODO Sprint 2"  # Update to "done" khi xong
-    notes: ""
+    notes: "Runtime không auto-create collection. Field input chuẩn là top_k; retrieval_top_k chỉ giữ tạm để tương thích."
 
 # ─────────────────────────────────────────────
 # Policy Tool Worker
@@ -106,7 +128,7 @@ retrieval_worker:
 policy_tool_worker:
   name: policy_tool_worker
   file: workers/policy_tool.py
-  description: "Kiểm tra policy và xử lý exceptions. Có thể gọi MCP tools khi cần."
+  description: "Kiểm tra policy theo domain refund hoặc access/security. Có thể gọi MCP tools khi cần."
   input:
     task:
       type: string
@@ -120,17 +142,25 @@ policy_tool_worker:
       required: false
       default: false
       description: "True → worker được phép gọi MCP tools"
+    risk_high:
+      type: boolean
+      required: false
+      default: false
+      description: "Flag từ supervisor để worker biết query có rủi ro cao"
   output:
     policy_result:
       type: object
       required: true
       properties:
+        domain:
+          type: string
+          example: "refund | access | incident_access | unknown"
         policy_applies:
           type: boolean
           description: "True nếu policy cho phép, False nếu bị chặn"
         policy_name:
           type: string
-          example: "refund_policy_v4"
+          example: "refund_policy_v4 | access_control_sop | incident_access_composite"
         exceptions_found:
           type: array
           description: "Danh sách exceptions tìm thấy"
@@ -146,6 +176,12 @@ policy_tool_worker:
         policy_version_note:
           type: string
           description: "Note về version nếu có vấn đề temporal scoping"
+        explanation:
+          type: string
+          description: "Giải thích ngắn về cách worker kết luận"
+        tool_findings:
+          type: object
+          description: "Dữ liệu quan trọng tổng hợp từ MCP tools, ví dụ approvers, emergency override, ticket summary"
     mcp_tools_used:
       type: array
       description: "Danh sách MCP tool calls thực hiện"
@@ -162,8 +198,10 @@ policy_tool_worker:
     code: "POLICY_CHECK_FAILED"
     reason: string
   constraints:
-    - "Phải detect exception cases: flash_sale, digital_product, activated_product"
+    - "Phải hỗ trợ ít nhất 2 domain chính: refund và access/security"
+    - "Phải detect exception cases: flash_sale, digital_product, activated_product cho refund domain"
     - "Phải ghi tên MCP tool đã gọi vào mcp_tools_used"
+    - "Nếu domain là access/security và parse được access level thì nên gọi check_access_permission"
     - "Không được tự bịa policy rules không có trong tài liệu"
   actual_implementation:
     status: "TODO Sprint 2"

@@ -94,25 +94,20 @@ cp .env.example .env
 # Điền OPENAI_API_KEY hoặc GOOGLE_API_KEY
 ```
 
-### 3. Build index từ Day 08 (nếu chưa có)
+### 3. Dùng lại index từ Day 08 (khuyến nghị)
 ```bash
-# Copy ChromaDB index từ Day 08, hoặc chạy lại:
-python -c "
-import chromadb, os
-from sentence_transformers import SentenceTransformer
+# Day 09 được thiết kế để orchestration trên cùng knowledge base của Day 08.
+# Vì vậy nên reuse index cũ thay vì index lại.
+cp .env.example .env
 
-client = chromadb.PersistentClient(path='./chroma_db')
-col = client.get_or_create_collection('day09_docs')
-model = SentenceTransformer('all-MiniLM-L6-v2')
-
-docs_dir = './data/docs'
-for fname in os.listdir(docs_dir):
-    with open(os.path.join(docs_dir, fname)) as f:
-        content = f.read()
-    print(f'Indexed: {fname}')
-print('Index ready.')
-"
+# .env mặc định đã trỏ tới:
+# CHROMA_DB_PATH=../../day08/lab/chroma_db
+# CHROMA_COLLECTION=rag_lab
 ```
+
+`workers/retrieval.py` của Day 09 sẽ tự query vào collection này bằng embedding
+tương thích với Day 08. Tức là Day 09 chỉ dùng lại index đã build, không phụ thuộc
+vào code retrieval của project Day 08.
 
 ### 4. Kiểm tra setup
 ```bash

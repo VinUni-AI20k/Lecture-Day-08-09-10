@@ -26,6 +26,30 @@ sys.path.insert(0, os.path.dirname(__file__))
 from graph import run_graph, save_trace
 
 
+def _extract_generation_mode(result: dict) -> str:
+    for log in reversed(result.get("worker_io_logs", [])):
+        if log.get("worker") == "synthesis_worker":
+            output = log.get("output") or {}
+            mode = output.get("generation_mode")
+            if mode:
+                return mode
+    return "unknown"
+
+
+def _extract_final_sources(result: dict) -> list:
+    sources = result.get("sources")
+    if sources:
+        return sources
+    return result.get("retrieved_sources", [])
+
+
+def _get_worker_error(logs: list, worker_name: str) -> Optional[dict]:
+    for log in logs:
+        if log.get("worker") == worker_name and log.get("error"):
+            return log["error"]
+    return None
+
+
 # ─────────────────────────────────────────────
 # 1. Run Pipeline on Test Questions
 # ─────────────────────────────────────────────
@@ -121,14 +145,19 @@ def run_grading_questions(questions_file: str = "data/grading_questions.json") -
                     "id": q_id,
                     "question": question_text,
                     "answer": result.get("final_answer", "PIPELINE_ERROR: no answer"),
-                    "sources": result.get("retrieved_sources", []),
+                    "sources": _extract_final_sources(result),
+                    "retrieved_sources": result.get("retrieved_sources", []),
                     "supervisor_route": result.get("supervisor_route", ""),
                     "route_reason": result.get("route_reason", ""),
                     "workers_called": result.get("workers_called", []),
                     "mcp_tools_used": [t.get("tool") for t in result.get("mcp_tools_used", [])],
+                    "mcp_call_count": len(result.get("mcp_tools_used", [])),
                     "confidence": result.get("confidence", 0.0),
+                    "generation_mode": _extract_generation_mode(result),
                     "hitl_triggered": result.get("hitl_triggered", False),
                     "latency_ms": result.get("latency_ms"),
+                    "error": result.get("error"),
+                    "worker_io_logs": result.get("worker_io_logs", []),
                     "timestamp": datetime.now().isoformat(),
                 }
                 print(f"  ✓ route={record['supervisor_route']}, conf={record['confidence']:.2f}")
@@ -142,9 +171,13 @@ def run_grading_questions(questions_file: str = "data/grading_questions.json") -
                     "route_reason": str(e),
                     "workers_called": [],
                     "mcp_tools_used": [],
+                    "mcp_call_count": 0,
                     "confidence": 0.0,
+                    "generation_mode": "unknown",
                     "hitl_triggered": False,
                     "latency_ms": None,
+                    "error": {"worker": "pipeline", "code": "PIPELINE_ERROR", "reason": str(e)},
+                    "worker_io_logs": [],
                     "timestamp": datetime.now().isoformat(),
                 }
                 print(f"  ✗ ERROR: {e}")
@@ -195,10 +228,17 @@ def analyze_traces(traces_dir: str = "artifacts/traces") -> dict:
     mcp_calls = 0
     hitl_triggers = 0
     source_counts = {}
+    retrieval_error_count = 0
+    pipeline_error_count = 0
 
     for t in traces:
-        route = t.get("supervisor_route", "unknown")
-        routing_counts[route] = routing_counts.get(route, 0) + 1
+        workers_called = t.get("workers_called", [])
+        if workers_called:
+            for worker in workers_called:
+                routing_counts[worker] = routing_counts.get(worker, 0) + 1
+        else:
+            route = t.get("supervisor_route", "unknown")
+            routing_counts[route] = routing_counts.get(route, 0) + 1
 
         conf = t.get("confidence", 0)
         if conf:
@@ -214,8 +254,20 @@ def analyze_traces(traces_dir: str = "artifacts/traces") -> dict:
         if t.get("hitl_triggered"):
             hitl_triggers += 1
 
-        for src in t.get("retrieved_sources", []):
+        final_sources = t.get("sources") or t.get("retrieved_sources", [])
+        for src in final_sources:
             source_counts[src] = source_counts.get(src, 0) + 1
+
+        error = t.get("error")
+        if error:
+            if error.get("worker") == "retrieval_worker":
+                retrieval_error_count += 1
+            else:
+                pipeline_error_count += 1
+        else:
+            retrieval_error = _get_worker_error(t.get("worker_io_logs", []), "retrieval_worker")
+            if retrieval_error:
+                retrieval_error_count += 1
 
     total = len(traces)
     metrics = {
@@ -225,6 +277,8 @@ def analyze_traces(traces_dir: str = "artifacts/traces") -> dict:
         "avg_latency_ms": round(sum(latencies) / len(latencies)) if latencies else 0,
         "mcp_usage_rate": f"{mcp_calls}/{total} ({100*mcp_calls//total}%)" if total else "0%",
         "hitl_rate": f"{hitl_triggers}/{total} ({100*hitl_triggers//total}%)" if total else "0%",
+        "retrieval_error_count": retrieval_error_count,
+        "pipeline_error_count": pipeline_error_count,
         "top_sources": sorted(source_counts.items(), key=lambda x: -x[1])[:5],
     }
 

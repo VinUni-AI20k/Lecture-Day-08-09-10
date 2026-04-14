@@ -1,0 +1,111 @@
+{
+  "task": "Một nhân viên mới đang trong probation period muốn làm remote vì lý do cá nhân. Yêu cầu này có được chấp thuận không? Điều kiện để được làm remote là gì?",
+  "route_reason": "no explicit policy/error keyword → fallback retrieval",
+  "risk_high": false,
+  "needs_tool": false,
+  "hitl_triggered": false,
+  "retrieved_chunks": [
+    {
+      "text": "4.1 Điều kiện remote:\n- Nhân viên sau probation period có thể làm remote tối đa 2 ngày/tuần.\n- Team Lead phải phê duyệt lịch remote qua HR Portal.\n- Ngày onsite bắt buộc: Thứ 3 và Thứ 5 theo lịch team.\n\n4.2 Yêu cầu kỹ thuật khi remote:\n- Kết nối VPN bắt buộc khi làm việc với hệ thống nội bộ.\n- Camera bật trong các cuộc họp team.",
+      "source": "hr/leave-policy-2026.pdf",
+      "score": 0.7648,
+      "metadata": {
+        "access": "internal",
+        "effective_date": "2026-01-01",
+        "section": "Phần 4: Remote work policy",
+        "department": "HR",
+        "source": "hr/leave-policy-2026.pdf"
+      }
+    },
+    {
+      "text": "Bước 1: Nhân viên gửi yêu cầu nghỉ phép qua hệ thống HR Portal (https://hr.company.internal) ít nhất 3 ngày làm việc trước ngày nghỉ.\nBước 2: Line Manager phê duyệt hoặc từ chối trong vòng 1 ngày làm việc.\nBước 3: Nhân viên nhận thông báo qua email sau khi được phê duyệt.\n\nTrường hợp khẩn cấp: Có thể gửi yêu cầu muộn hơn nhưng phải được Line Manager đồng ý qua tin nhắn trực tiếp.",
+      "source": "hr/leave-policy-2026.pdf",
+      "score": 0.5349,
+      "metadata": {
+        "access": "internal",
+        "section": "Phần 2: Quy trình xin nghỉ phép",
+        "effective_date": "2026-01-01",
+        "department": "HR",
+        "source": "hr/leave-policy-2026.pdf"
+      }
+    },
+    {
+      "text": "1.1 Nghỉ phép năm (Annual Leave):\n- Số ngày: 12 ngày/năm cho nhân viên dưới 3 năm kinh nghiệm.\n- Số ngày: 15 ngày/năm cho nhân viên từ 3-5 năm kinh nghiệm.\n- Số ngày: 18 ngày/năm cho nhân viên trên 5 năm kinh nghiệm.\n- Chuyển năm sau: Tối đa 5 ngày phép năm chưa dùng được chuyển sang năm tiếp theo.\n\n1.2 Nghỉ ốm (Sick Leave):\n- Số ngày: 10 ngày/năm có trả lương.\n- Yêu cầu: Thông báo cho Line Manager trước 9:00 sáng ngày nghỉ.\n- Nếu nghỉ trên 3 ngày liên tiếp: Cần giấy tờ y tế từ bệnh viện.\n\n1.3 Nghỉ thai sản:\n- Nghỉ sinh con: 6 tháng theo quy định Luật Lao động.\n- Nghỉ nuôi con nhỏ: 1 tiếng/ngày trong 12 tháng đầu sau sinh.\n\n1.4 Nghỉ lễ tết:\nTheo lịch nghỉ lễ quốc gia do HR công bố hàng năm vào tháng 12.",
+      "source": "hr/leave-policy-2026.pdf",
+      "score": 0.4235,
+      "metadata": {
+        "access": "internal",
+        "department": "HR",
+        "effective_date": "2026-01-01",
+        "source": "hr/leave-policy-2026.pdf",
+        "section": "Phần 1: Các loại nghỉ phép"
+      }
+    }
+  ],
+  "retrieved_sources": [
+    "hr/leave-policy-2026.pdf"
+  ],
+  "policy_result": {},
+  "mcp_tools_used": [],
+  "worker_io_logs": [
+    {
+      "worker": "retrieval_worker",
+      "input": {
+        "task": "Một nhân viên mới đang trong probation period muốn làm remote vì lý do cá nhân. Yêu cầu này có được chấp thuận không? Điều kiện để được làm remote là gì?",
+        "top_k": 3
+      },
+      "output": {
+        "chunks_count": 3,
+        "sources": [
+          "hr/leave-policy-2026.pdf"
+        ],
+        "retrieval_backend": "local_day09_on_day08_index",
+        "retrieval_mode": "dense",
+        "search_top_k": 8,
+        "db_path": "/Users/quanliver/Projects/AI_Vin_Learner/Lecture-Day-08-09-10/day08/lab/chroma_db",
+        "collection": "rag_lab"
+      },
+      "error": null
+    },
+    {
+      "worker": "synthesis_worker",
+      "input": {
+        "task": "Một nhân viên mới đang trong probation period muốn làm remote vì lý do cá nhân. Yêu cầu này có được chấp thuận không? Điều kiện để được làm remote là gì?",
+        "chunks_count": 3,
+        "has_policy": false
+      },
+      "output": {
+        "answer_length": 367,
+        "sources": [
+          "hr/leave-policy-2026.pdf"
+        ],
+        "confidence": 0.95,
+        "generation_mode": "llm"
+      },
+      "error": null
+    }
+  ],
+  "error": null,
+  "final_answer": "Yêu cầu làm remote của nhân viên mới trong probation period không được chấp thuận, vì chỉ nhân viên sau probation period mới có quyền làm remote tối đa 2 ngày/tuần. Điều kiện để được làm remote bao gồm:\n\n1. Nhân viên phải hoàn thành probation period.\n2. Team Lead phải phê duyệt lịch remote qua HR Portal.\n3. Ngày onsite bắt buộc là Thứ 3 và Thứ 5 theo lịch team [1].",
+  "sources": [
+    "hr/leave-policy-2026.pdf"
+  ],
+  "confidence": 0.95,
+  "history": [
+    "[supervisor] received task: Một nhân viên mới đang trong probation period muốn làm remote vì lý do cá nhân. Yêu cầu này có được chấp thuận không? Đi",
+    "[supervisor] route=retrieval_worker reason=no explicit policy/error keyword → fallback retrieval",
+    "[graph] dispatch -> retrieval_worker",
+    "[retrieval_worker] retrieved 3 chunks from ['hr/leave-policy-2026.pdf'] via local_day09_on_day08_index mode=dense collection=rag_lab",
+    "[graph] dispatch -> synthesis_worker",
+    "[synthesis_worker] answer generated via llm, confidence=0.95, sources=['hr/leave-policy-2026.pdf']",
+    "[graph] completed in 5091ms"
+  ],
+  "workers_called": [
+    "retrieval_worker",
+    "synthesis_worker"
+  ],
+  "supervisor_route": "retrieval_worker",
+  "latency_ms": 5091,
+  "run_id": "run_20260414_173818",
+  "question_id": "gq06"
+}

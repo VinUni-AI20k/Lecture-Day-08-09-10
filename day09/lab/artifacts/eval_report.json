@@ -1,0 +1,53 @@
+{
+  "generated_at": "2026-04-14T17:38:36.806607",
+  "day08_single_agent": {
+    "total_questions": 15,
+    "avg_confidence": 0.0,
+    "avg_latency_ms": 0,
+    "abstain_rate": "?",
+    "multi_hop_accuracy": "?"
+  },
+  "day09_multi_agent": {
+    "total_traces": 10,
+    "routing_distribution": {
+      "retrieval_worker": "5/10 (50%)",
+      "synthesis_worker": "10/10 (100%)",
+      "policy_tool_worker": "5/10 (50%)"
+    },
+    "avg_confidence": 0.49,
+    "avg_latency_ms": 4429,
+    "mcp_usage_rate": "5/10 (50%)",
+    "hitl_rate": "0/10 (0%)",
+    "retrieval_error_count": 0,
+    "pipeline_error_count": 0,
+    "top_sources": [
+      [
+        "support/sla-p1-2026.pdf",
+        3
+      ],
+      [
+        "policy_refund_v4.txt",
+        2
+      ],
+      [
+        "support/helpdesk-faq.md",
+        1
+      ],
+      [
+        "it/access-control-sop.md",
+        1
+      ],
+      [
+        "hr/leave-policy-2026.pdf",
+        1
+      ]
+    ]
+  },
+  "analysis": {
+    "routing_visibility": "Day 09 có route_reason cho từng câu → dễ debug hơn Day 08",
+    "latency_delta": "TODO: Điền delta latency thực tế",
+    "accuracy_delta": "TODO: Điền delta accuracy thực tế từ grading",
+    "debuggability": "Multi-agent: có thể test từng worker độc lập. Single-agent: không thể.",
+    "mcp_benefit": "Day 09 có thể extend capability qua MCP không cần sửa core. Day 08 phải hard-code."
+  }
+}
