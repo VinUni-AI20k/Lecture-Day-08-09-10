@@ -531,7 +531,8 @@ def rag_answer(
         "top_k_select": top_k_select,
         "use_rerank": use_rerank,
     }
-
+    import time
+    start_time = time.perf_counter()
     # --- Bước 1: Retrieve ---
     if retrieval_mode == "dense":
         candidates = retrieve_dense(query, top_k=top_k_search)
@@ -572,13 +573,18 @@ def rag_answer(
         c["metadata"].get("source", "unknown")
         for c in candidates
     })
-
+    
+    confidence = round(
+    sum(c.get("score", 0) for c in candidates) / len(candidates),3) if candidates else 0.0
+    latency_ms = round((time.perf_counter() - start_time) * 1000)
     return {
         "query": query,
         "answer": answer,
         "sources": sources,
         "chunks_used": candidates,
         "config": config,
+        "latency_ms": latency_ms,
+        "confidence":confidence,
     }
 
 

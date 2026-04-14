@@ -23,6 +23,7 @@ import os
 from pathlib import Path
 from typing import List, Dict, Any, Optional
 from datetime import datetime
+from unittest import result
 
 from dotenv import load_dotenv
 import openai
@@ -305,7 +306,8 @@ def run_scorecard(
         relevance = score_answer_relevance(query, answer)
         recall = score_context_recall(chunks_used, expected_sources)
         complete = score_completeness(query, answer, expected_answer)
-
+        latency_ms = result.get("latency_ms")
+        confidence = result.get("confidence")
         row = {
             "id": question_id,
             "category": category,
@@ -321,6 +323,8 @@ def run_scorecard(
             "completeness": complete["score"],
             "completeness_notes": complete["notes"],
             "config_label": label,
+            "latency_ms":latency_ms,
+            "confidence": confidence,
         }
         results.append(row)
 
@@ -493,6 +497,9 @@ def save_raw_logs(results: List[Dict[str, Any]], filename: str):
             "answer": r["answer"],
             "config": r["config_label"],
             "timestamp": datetime.now().isoformat(),
+            "latency_ms":r["latency_ms"],
+            "confidence": r["confidence"]
+
         })
     
     log_path = LOGS_DIR / filename
