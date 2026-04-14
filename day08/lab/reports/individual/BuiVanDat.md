@@ -1,7 +1,7 @@
 # Báo Cáo Cá Nhân — Lab Day 08: RAG Pipeline
 
 **Họ và tên:** Bùi Văn Đạt  
-**Vai trò trong nhóm:** Tech Lead / Retrieval Owner / Documentation Owner  
+**Vai trò trong nhóm:** Retrieval Owner / Documentation Owner  
 **Ngày nộp:** 13/4/2026 
 **Độ dài yêu cầu:** 500–800 từ
 
