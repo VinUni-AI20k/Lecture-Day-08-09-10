@@ -8,3 +8,7 @@
 day08/lab/data/grading_questions.json
 day08/lab/venv/
 venv/
+
+__pycache__/
+*.pyc
+*.pyo
