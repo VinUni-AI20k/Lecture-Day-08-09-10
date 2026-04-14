@@ -1,0 +1,105 @@
+{
+  "task": "SLA xử lý ticket P1 là bao lâu?",
+  "route_reason": "task relates to IT/CS documentation search",
+  "risk_high": true,
+  "needs_tool": false,
+  "hitl_triggered": false,
+  "retrieved_chunks": [
+    {
+      "text": "Ticket P1:\n- Phản hồi ban đầu (first response): 15 phút kể từ khi ticket được tạo.\n- Xử lý và khắc phục (resolution): 4 giờ.\n- Escalation: Tự động escalate lên Senior Engineer nếu không có phản hồi trong 10 phút.\n- Thông báo stakeholder: Ngay khi nhận ticket, update mỗi 30 phút cho đến khi resolve.\n\nTicket P2:\n- Phản hồi ban đầu: 2 giờ.\n- Xử lý và khắc phục: 1 ngày làm việc.\n- Escalation: Tự động escalate sau 90 phút không có phản hồi.\n\nTicket P3:\n- Phản hồi ban đầu: 1 ngày làm việc.\n- Xử lý và khắc phục: 5 ngày làm việc.\n\nTicket P4:\n- Phản hồi ban đầu: 3 ngày làm việc.\n- Xử lý và khắc phục: Theo sprint cycle (thông thường 2-4 tuần).",
+      "source": "support/sla-p1-2026.pdf",
+      "score": 0.3797,
+      "metadata": {
+        "department": "IT",
+        "effective_date": "2026-01-15",
+        "source": "support/sla-p1-2026.pdf",
+        "access": "internal",
+        "section": "Phần 2: SLA theo mức độ ưu tiên"
+      }
+    },
+    {
+      "text": "Bước 1: Tiếp nhận\nOn-call engineer nhận alert hoặc ticket, xác nhận severity trong 5 phút.\n\nBước 2: Thông báo\nGửi thông báo tới Slack #incident-p1 và email incident@company.internal ngay lập tức.\n\nBước 3: Triage và phân công\nLead Engineer phân công engineer xử lý trong 10 phút.\n\nBước 4: Xử lý\nEngineer cập nhật tiến độ lên ticket mỗi 30 phút. Nếu cần hỗ trợ thêm, escalate ngay.\n\nBước 5: Resolution\nSau khi khắc phục, viết incident report trong vòng 24 giờ.",
+      "source": "support/sla-p1-2026.pdf",
+      "score": 0.0759,
+      "metadata": {
+        "effective_date": "2026-01-15",
+        "department": "IT",
+        "section": "Phần 3: Quy trình xử lý sự cố P1",
+        "source": "support/sla-p1-2026.pdf",
+        "access": "internal"
+      }
+    },
+    {
+      "text": "Escalation chỉ áp dụng khi cần thay đổi quyền hệ thống ngoài quy trình thông thường.\nVí dụ: Khẩn cấp trong sự cố P1, cần cấp quyền tạm thời để fix incident.\n\nQuy trình escalation khẩn cấp:\n1. On-call IT Admin có thể cấp quyền tạm thời (max 24 giờ) sau khi được Tech Lead phê duyệt bằng lời.\n2. Sau 24 giờ, phải có ticket chính thức hoặc quyền bị thu hồi tự động.\n3. Mọi quyền tạm thời phải được ghi log vào hệ thống Security Audit.",
+      "source": "it/access-control-sop.md",
+      "score": -0.0984,
+      "metadata": {
+        "access": "internal",
+        "source": "it/access-control-sop.md",
+        "effective_date": "2026-01-01",
+        "department": "IT Security",
+        "section": "Section 4: Escalation khi cần thay đổi quyền hệ thống"
+      }
+    }
+  ],
+  "retrieved_sources": [
+    "it/access-control-sop.md",
+    "support/sla-p1-2026.pdf"
+  ],
+  "policy_result": {},
+  "mcp_tools_used": [],
+  "final_answer": "[SYNTHESIS ERROR] Không thể gọi LLM. Kiểm tra API key trong .env.",
+  "sources": [
+    "it/access-control-sop.md",
+    "support/sla-p1-2026.pdf"
+  ],
+  "confidence": 0.12,
+  "history": [
+    "[supervisor] received task: SLA xử lý ticket P1 là bao lâu?",
+    "[supervisor] route=retrieval_worker reason=task relates to IT/CS documentation search",
+    "[retrieval_worker] retrieved 3 chunks from ['it/access-control-sop.md', 'support/sla-p1-2026.pdf']",
+    "[synthesis_worker] answer generated, confidence=0.12, sources=['it/access-control-sop.md', 'support/sla-p1-2026.pdf']",
+    "[graph] completed in 25665ms"
+  ],
+  "workers_called": [
+    "retrieval_worker",
+    "synthesis_worker"
+  ],
+  "supervisor_route": "retrieval_worker",
+  "latency_ms": 25665,
+  "run_id": "run_20260414_154546",
+  "worker_io_logs": [
+    {
+      "worker": "retrieval_worker",
+      "input": {
+        "task": "SLA xử lý ticket P1 là bao lâu?",
+        "top_k": 3
+      },
+      "output": {
+        "chunks_count": 3,
+        "sources": [
+          "it/access-control-sop.md",
+          "support/sla-p1-2026.pdf"
+        ]
+      },
+      "error": null
+    },
+    {
+      "worker": "synthesis_worker",
+      "input": {
+        "task": "SLA xử lý ticket P1 là bao lâu?",
+        "chunks_count": 3,
+        "has_policy": false
+      },
+      "output": {
+        "answer_length": 65,
+        "sources": [
+          "it/access-control-sop.md",
+          "support/sla-p1-2026.pdf"
+        ],
+        "confidence": 0.12
+      },
+      "error": null
+    }
+  ]
+}

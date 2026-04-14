@@ -1,0 +1,109 @@
+{
+  "task": "ERR-403-AUTH là lỗi gì và cách xử lý?",
+  "route_reason": "unknown error code + risk_high → human review | human approved → retrieval",
+  "risk_high": true,
+  "needs_tool": false,
+  "hitl_triggered": true,
+  "retrieved_chunks": [
+    {
+      "text": "Q: Tôi quên mật khẩu, phải làm gì?\nA: Truy cập https://sso.company.internal/reset hoặc liên hệ Helpdesk qua ext. 9000. Mật khẩu mới sẽ được gửi qua email công ty trong vòng 5 phút.\n\nQ: Tài khoản bị khóa sau bao nhiêu lần đăng nhập sai?\nA: Tài khoản bị khóa sau 5 lần đăng nhập sai liên tiếp. Để mở khóa, liên hệ IT Helpdesk hoặc tự reset qua portal SSO.\n\nQ: Mật khẩu cần thay đổi định kỳ không?\nA: Có. Mật khẩu phải được thay đổi mỗi 90 ngày. Hệ thống sẽ nhắc nhở 7 ngày trước khi hết hạn.",
+      "source": "support/helpdesk-faq.md",
+      "score": -0.1373,
+      "metadata": {
+        "access": "internal",
+        "effective_date": "2026-01-20",
+        "department": "IT",
+        "section": "Section 1: Tài khoản và mật khẩu",
+        "source": "support/helpdesk-faq.md"
+      }
+    },
+    {
+      "text": "Tài liệu này quy định quy trình cấp phép truy cập vào các hệ thống nội bộ của công ty.\nÁp dụng cho tất cả nhân viên, contractor, và third-party vendor.",
+      "source": "it/access-control-sop.md",
+      "score": -0.1448,
+      "metadata": {
+        "department": "IT Security",
+        "section": "Section 1: Phạm vi và mục đích",
+        "effective_date": "2026-01-01",
+        "source": "it/access-control-sop.md",
+        "access": "internal"
+      }
+    },
+    {
+      "text": "Bước 1: Nhân viên tạo Access Request ticket trên Jira (project IT-ACCESS).\nBước 2: Line Manager phê duyệt yêu cầu trong 1 ngày làm việc.\nBước 3: IT Admin kiểm tra compliance và cấp quyền.\nBước 4: IT Security review với Level 3 và Level 4.\nBước 5: Nhân viên nhận thông báo qua email khi quyền được cấp.",
+      "source": "it/access-control-sop.md",
+      "score": -0.1482,
+      "metadata": {
+        "department": "IT Security",
+        "source": "it/access-control-sop.md",
+        "access": "internal",
+        "section": "Section 3: Quy trình yêu cầu cấp quyền",
+        "effective_date": "2026-01-01"
+      }
+    }
+  ],
+  "retrieved_sources": [
+    "support/helpdesk-faq.md",
+    "it/access-control-sop.md"
+  ],
+  "policy_result": {},
+  "mcp_tools_used": [],
+  "final_answer": "Không đủ thông tin trong tài liệu nội bộ.",
+  "sources": [
+    "support/helpdesk-faq.md",
+    "it/access-control-sop.md"
+  ],
+  "confidence": 0.3,
+  "history": [
+    "[supervisor] received task: ERR-403-AUTH là lỗi gì và cách xử lý?",
+    "[supervisor] route=human_review reason=unknown error code + risk_high → human review",
+    "[human_review] HITL triggered — awaiting human input",
+    "[retrieval_worker] retrieved 3 chunks from ['support/helpdesk-faq.md', 'it/access-control-sop.md']",
+    "[synthesis_worker] answer generated, confidence=0.3, sources=['support/helpdesk-faq.md', 'it/access-control-sop.md']",
+    "[graph] completed in 18356ms"
+  ],
+  "workers_called": [
+    "human_review",
+    "retrieval_worker",
+    "synthesis_worker"
+  ],
+  "supervisor_route": "retrieval_worker",
+  "latency_ms": 18356,
+  "run_id": "run_20260414_172300",
+  "worker_io_logs": [
+    {
+      "worker": "retrieval_worker",
+      "input": {
+        "task": "ERR-403-AUTH là lỗi gì và cách xử lý?",
+        "top_k": 3
+      },
+      "output": {
+        "chunks_count": 3,
+        "sources": [
+          "support/helpdesk-faq.md",
+          "it/access-control-sop.md"
+        ]
+      },
+      "error": null
+    },
+    {
+      "worker": "synthesis_worker",
+      "input": {
+        "task": "ERR-403-AUTH là lỗi gì và cách xử lý?",
+        "chunks_count": 3,
+        "has_policy": false,
+        "mcp_tools_count": 0
+      },
+      "output": {
+        "answer_length": 41,
+        "sources": [
+          "support/helpdesk-faq.md",
+          "it/access-control-sop.md"
+        ],
+        "confidence": 0.3
+      },
+      "error": null
+    }
+  ],
+  "question_id": "q09"
+}

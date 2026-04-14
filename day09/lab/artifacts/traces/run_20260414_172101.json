@@ -1,0 +1,190 @@
+{
+  "task": "Ticket P1 không được phản hồi sau 10 phút. Hệ thống tự động làm gì?",
+  "route_reason": "task relates to policy, access or requires external tool (MCP)",
+  "risk_high": false,
+  "needs_tool": true,
+  "hitl_triggered": false,
+  "retrieved_chunks": [
+    {
+      "text": "Ticket P1:\n- Phản hồi ban đầu (first response): 15 phút kể từ khi ticket được tạo.\n- Xử lý và khắc phục (resolution): 4 giờ.\n- Escalation: Tự động escalate lên Senior Engineer nếu không có phản hồi trong 10 phút.\n- Thông báo stakeholder: Ngay khi nhận ticket, update mỗi 30 phút cho đến khi resolve.\n\nTicket P2:\n- Phản hồi ban đầu: 2 giờ.\n- Xử lý và khắc phục: 1 ngày làm việc.\n- Escalation: Tự động escalate sau 90 phút không có phản hồi.\n\nTicket P3:\n- Phản hồi ban đầu: 1 ngày làm việc.\n- Xử lý và khắc phục: 5 ngày làm việc.\n\nTicket P4:\n- Phản hồi ban đầu: 3 ngày làm việc.\n- Xử lý và khắc phục: Theo sprint cycle (thông thường 2-4 tuần).",
+      "source": "support/sla-p1-2026.pdf",
+      "score": 0.241,
+      "metadata": {
+        "section": "Phần 2: SLA theo mức độ ưu tiên",
+        "department": "IT",
+        "effective_date": "2026-01-15",
+        "access": "internal",
+        "source": "support/sla-p1-2026.pdf"
+      }
+    },
+    {
+      "text": "P1 — CRITICAL (Khẩn cấp):\nĐịnh nghĩa: Sự cố ảnh hưởng toàn bộ hệ thống production, không có workaround.\nVí dụ: Database sập, API gateway down, toàn bộ người dùng không thể đăng nhập.\n\nP2 — HIGH (Nghiêm trọng):\nĐịnh nghĩa: Sự cố ảnh hưởng một phần hệ thống, có workaround tạm thời.\nVí dụ: Một số tính năng không hoạt động, ảnh hưởng một nhóm người dùng.\n\nP3 — MEDIUM (Trung bình):\nĐịnh nghĩa: Lỗi ảnh hưởng không đáng kể, người dùng vẫn làm việc được.\n\nP4 — LOW (Thấp):\nĐịnh nghĩa: Yêu cầu cải tiến, gợi ý, hoặc lỗi giao diện nhỏ.",
+      "source": "support/sla-p1-2026.pdf",
+      "score": -0.0249,
+      "metadata": {
+        "access": "internal",
+        "section": "Phần 1: Định nghĩa mức độ ưu tiên",
+        "source": "support/sla-p1-2026.pdf",
+        "department": "IT",
+        "effective_date": "2026-01-15"
+      }
+    },
+    {
+      "text": "Ticket system: Jira (project IT-SUPPORT)\nSlack channel: #incident-p1, #incident-p2\nPagerDuty: Tự động nhắn on-call khi P1 ticket mới\nHotline on-call: ext. 9999 (24/7)",
+      "source": "support/sla-p1-2026.pdf",
+      "score": -0.0257,
+      "metadata": {
+        "section": "Phần 4: Công cụ và kênh liên lạc",
+        "source": "support/sla-p1-2026.pdf",
+        "effective_date": "2026-01-15",
+        "access": "internal",
+        "department": "IT"
+      }
+    }
+  ],
+  "retrieved_sources": [],
+  "policy_result": {
+    "policy_applies": true,
+    "policy_name": "refund_policy_v4",
+    "exceptions_found": [],
+    "source": [
+      "support/sla-p1-2026.pdf"
+    ],
+    "policy_version_note": "",
+    "explanation": "Analyzed via rule-based policy check. TODO: upgrade to LLM-based analysis."
+  },
+  "mcp_tools_used": [
+    {
+      "tool": "search_kb",
+      "input": {
+        "query": "Ticket P1 không được phản hồi sau 10 phút. Hệ thống tự động làm gì?",
+        "top_k": 3
+      },
+      "output": {
+        "chunks": [
+          {
+            "text": "Ticket P1:\n- Phản hồi ban đầu (first response): 15 phút kể từ khi ticket được tạo.\n- Xử lý và khắc phục (resolution): 4 giờ.\n- Escalation: Tự động escalate lên Senior Engineer nếu không có phản hồi trong 10 phút.\n- Thông báo stakeholder: Ngay khi nhận ticket, update mỗi 30 phút cho đến khi resolve.\n\nTicket P2:\n- Phản hồi ban đầu: 2 giờ.\n- Xử lý và khắc phục: 1 ngày làm việc.\n- Escalation: Tự động escalate sau 90 phút không có phản hồi.\n\nTicket P3:\n- Phản hồi ban đầu: 1 ngày làm việc.\n- Xử lý và khắc phục: 5 ngày làm việc.\n\nTicket P4:\n- Phản hồi ban đầu: 3 ngày làm việc.\n- Xử lý và khắc phục: Theo sprint cycle (thông thường 2-4 tuần).",
+            "source": "support/sla-p1-2026.pdf",
+            "score": 0.241,
+            "metadata": {
+              "section": "Phần 2: SLA theo mức độ ưu tiên",
+              "department": "IT",
+              "effective_date": "2026-01-15",
+              "access": "internal",
+              "source": "support/sla-p1-2026.pdf"
+            }
+          },
+          {
+            "text": "P1 — CRITICAL (Khẩn cấp):\nĐịnh nghĩa: Sự cố ảnh hưởng toàn bộ hệ thống production, không có workaround.\nVí dụ: Database sập, API gateway down, toàn bộ người dùng không thể đăng nhập.\n\nP2 — HIGH (Nghiêm trọng):\nĐịnh nghĩa: Sự cố ảnh hưởng một phần hệ thống, có workaround tạm thời.\nVí dụ: Một số tính năng không hoạt động, ảnh hưởng một nhóm người dùng.\n\nP3 — MEDIUM (Trung bình):\nĐịnh nghĩa: Lỗi ảnh hưởng không đáng kể, người dùng vẫn làm việc được.\n\nP4 — LOW (Thấp):\nĐịnh nghĩa: Yêu cầu cải tiến, gợi ý, hoặc lỗi giao diện nhỏ.",
+            "source": "support/sla-p1-2026.pdf",
+            "score": -0.0249,
+            "metadata": {
+              "access": "internal",
+              "section": "Phần 1: Định nghĩa mức độ ưu tiên",
+              "source": "support/sla-p1-2026.pdf",
+              "department": "IT",
+              "effective_date": "2026-01-15"
+            }
+          },
+          {
+            "text": "Ticket system: Jira (project IT-SUPPORT)\nSlack channel: #incident-p1, #incident-p2\nPagerDuty: Tự động nhắn on-call khi P1 ticket mới\nHotline on-call: ext. 9999 (24/7)",
+            "source": "support/sla-p1-2026.pdf",
+            "score": -0.0257,
+            "metadata": {
+              "section": "Phần 4: Công cụ và kênh liên lạc",
+              "source": "support/sla-p1-2026.pdf",
+              "effective_date": "2026-01-15",
+              "access": "internal",
+              "department": "IT"
+            }
+          }
+        ],
+        "sources": [
+          "support/sla-p1-2026.pdf"
+        ],
+        "total_found": 3
+      },
+      "error": null,
+      "timestamp": "2026-04-14T17:21:20.962403"
+    },
+    {
+      "tool": "get_ticket_info",
+      "input": {
+        "ticket_id": "P1-LATEST"
+      },
+      "output": {
+        "ticket_id": "IT-9847",
+        "priority": "P1",
+        "title": "API Gateway down - toan bo nguoi dung khong dang nhap duoc",
+        "status": "in_progress",
+        "assignee": "nguyen.van.a@company.internal",
+        "created_at": "2026-04-13T22:47:00",
+        "sla_deadline": "2026-04-14T02:47:00",
+        "escalated": true,
+        "escalated_to": "senior_engineer_team",
+        "notifications_sent": [
+          "slack:#incident-p1",
+          "email:incident@company.internal",
+          "pagerduty:oncall"
+        ]
+      },
+      "error": null,
+      "timestamp": "2026-04-14T17:21:20.962445"
+    }
+  ],
+  "final_answer": "Khi ticket P1 không được phản hồi sau 10 phút, hệ thống sẽ tự động escalate lên Senior Engineer. [1]",
+  "sources": [
+    "support/sla-p1-2026.pdf"
+  ],
+  "confidence": 0.1,
+  "history": [
+    "[supervisor] received task: Ticket P1 không được phản hồi sau 10 phút. Hệ thống tự động làm gì?",
+    "[supervisor] route=policy_tool_worker reason=task relates to policy, access or requires external tool (MCP)",
+    "[policy_tool_worker] called MCP search_kb",
+    "[policy_tool_worker] called MCP get_ticket_info",
+    "[policy_tool_worker] policy_applies=True, exceptions=0",
+    "[synthesis_worker] answer generated, confidence=0.1, sources=['support/sla-p1-2026.pdf']",
+    "[graph] completed in 21825ms"
+  ],
+  "workers_called": [
+    "policy_tool_worker",
+    "synthesis_worker"
+  ],
+  "supervisor_route": "policy_tool_worker",
+  "latency_ms": 21825,
+  "run_id": "run_20260414_172101",
+  "worker_io_logs": [
+    {
+      "worker": "policy_tool_worker",
+      "input": {
+        "task": "Ticket P1 không được phản hồi sau 10 phút. Hệ thống tự động làm gì?",
+        "chunks_count": 0,
+        "needs_tool": true
+      },
+      "output": {
+        "policy_applies": true,
+        "exceptions_count": 0,
+        "mcp_calls": 2
+      },
+      "error": null
+    },
+    {
+      "worker": "synthesis_worker",
+      "input": {
+        "task": "Ticket P1 không được phản hồi sau 10 phút. Hệ thống tự động làm gì?",
+        "chunks_count": 3,
+        "has_policy": true,
+        "mcp_tools_count": 2
+      },
+      "output": {
+        "answer_length": 100,
+        "sources": [
+          "support/sla-p1-2026.pdf"
+        ],
+        "confidence": 0.1
+      },
+      "error": null
+    }
+  ],
+  "question_id": "q06"
+}

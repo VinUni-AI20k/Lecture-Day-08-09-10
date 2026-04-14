@@ -1,0 +1,107 @@
+{
+  "task": "Tài khoản bị khóa sau bao nhiêu lần đăng nhập sai?",
+  "route_reason": "default retrieval",
+  "risk_high": false,
+  "needs_tool": false,
+  "hitl_triggered": false,
+  "retrieved_chunks": [
+    {
+      "text": "Q: Tôi quên mật khẩu, phải làm gì?\nA: Truy cập https://sso.company.internal/reset hoặc liên hệ Helpdesk qua ext. 9000. Mật khẩu mới sẽ được gửi qua email công ty trong vòng 5 phút.\n\nQ: Tài khoản bị khóa sau bao nhiêu lần đăng nhập sai?\nA: Tài khoản bị khóa sau 5 lần đăng nhập sai liên tiếp. Để mở khóa, liên hệ IT Helpdesk hoặc tự reset qua portal SSO.\n\nQ: Mật khẩu cần thay đổi định kỳ không?\nA: Có. Mật khẩu phải được thay đổi mỗi 90 ngày. Hệ thống sẽ nhắc nhở 7 ngày trước khi hết hạn.",
+      "source": "support/helpdesk-faq.md",
+      "score": 0.3446,
+      "metadata": {
+        "access": "internal",
+        "section": "Section 1: Tài khoản và mật khẩu",
+        "department": "IT",
+        "source": "support/helpdesk-faq.md",
+        "effective_date": "2026-01-20"
+      }
+    },
+    {
+      "text": "Q: Phần mềm VPN nào công ty dùng?\nA: Công ty sử dụng Cisco AnyConnect. Download tại https://vpn.company.internal/download.\n\nQ: Tôi bị mất kết nối VPN liên tục, phải làm gì?\nA: Kiểm tra kết nối Internet trước. Nếu vẫn lỗi, tạo ticket P3 với log file VPN đính kèm.\n\nQ: VPN có giới hạn số thiết bị không?\nA: Mỗi tài khoản được kết nối VPN trên tối đa 2 thiết bị cùng lúc.",
+      "source": "support/helpdesk-faq.md",
+      "score": -0.1455,
+      "metadata": {
+        "effective_date": "2026-01-20",
+        "access": "internal",
+        "section": "Section 2: VPN và kết nối từ xa",
+        "source": "support/helpdesk-faq.md",
+        "department": "IT"
+      }
+    },
+    {
+      "text": "IT Security thực hiện access review mỗi 6 tháng.\nMọi bất thường phải được báo cáo lên CISO trong vòng 24 giờ.",
+      "source": "it/access-control-sop.md",
+      "score": -0.2175,
+      "metadata": {
+        "source": "it/access-control-sop.md",
+        "department": "IT Security",
+        "effective_date": "2026-01-01",
+        "section": "Section 6: Audit và review định kỳ",
+        "access": "internal"
+      }
+    }
+  ],
+  "retrieved_sources": [
+    "support/helpdesk-faq.md",
+    "it/access-control-sop.md"
+  ],
+  "policy_result": {},
+  "mcp_tools_used": [],
+  "final_answer": "Tài khoản bị khóa sau 5 lần đăng nhập sai liên tiếp. Để mở khóa, bạn có thể liên hệ IT Helpdesk hoặc tự reset qua portal SSO [1].",
+  "sources": [
+    "support/helpdesk-faq.md",
+    "it/access-control-sop.md"
+  ],
+  "confidence": 0.1,
+  "history": [
+    "[supervisor] received task: Tài khoản bị khóa sau bao nhiêu lần đăng nhập sai?",
+    "[supervisor] route=retrieval_worker reason=default retrieval",
+    "[retrieval_worker] retrieved 3 chunks from ['support/helpdesk-faq.md', 'it/access-control-sop.md']",
+    "[synthesis_worker] answer generated, confidence=0.1, sources=['support/helpdesk-faq.md', 'it/access-control-sop.md']",
+    "[graph] completed in 16083ms"
+  ],
+  "workers_called": [
+    "retrieval_worker",
+    "synthesis_worker"
+  ],
+  "supervisor_route": "retrieval_worker",
+  "latency_ms": 16083,
+  "run_id": "run_20260414_172029",
+  "worker_io_logs": [
+    {
+      "worker": "retrieval_worker",
+      "input": {
+        "task": "Tài khoản bị khóa sau bao nhiêu lần đăng nhập sai?",
+        "top_k": 3
+      },
+      "output": {
+        "chunks_count": 3,
+        "sources": [
+          "support/helpdesk-faq.md",
+          "it/access-control-sop.md"
+        ]
+      },
+      "error": null
+    },
+    {
+      "worker": "synthesis_worker",
+      "input": {
+        "task": "Tài khoản bị khóa sau bao nhiêu lần đăng nhập sai?",
+        "chunks_count": 3,
+        "has_policy": false,
+        "mcp_tools_count": 0
+      },
+      "output": {
+        "answer_length": 129,
+        "sources": [
+          "support/helpdesk-faq.md",
+          "it/access-control-sop.md"
+        ],
+        "confidence": 0.1
+      },
+      "error": null
+    }
+  ],
+  "question_id": "q04"
+}

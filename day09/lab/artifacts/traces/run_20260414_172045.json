@@ -1,0 +1,103 @@
+{
+  "task": "Nhân viên được làm remote tối đa mấy ngày mỗi tuần?",
+  "route_reason": "default retrieval",
+  "risk_high": false,
+  "needs_tool": false,
+  "hitl_triggered": false,
+  "retrieved_chunks": [
+    {
+      "text": "4.1 Điều kiện remote:\n- Nhân viên sau probation period có thể làm remote tối đa 2 ngày/tuần.\n- Team Lead phải phê duyệt lịch remote qua HR Portal.\n- Ngày onsite bắt buộc: Thứ 3 và Thứ 5 theo lịch team.\n\n4.2 Yêu cầu kỹ thuật khi remote:\n- Kết nối VPN bắt buộc khi làm việc với hệ thống nội bộ.\n- Camera bật trong các cuộc họp team.",
+      "source": "hr/leave-policy-2026.pdf",
+      "score": 0.533,
+      "metadata": {
+        "source": "hr/leave-policy-2026.pdf",
+        "effective_date": "2026-01-01",
+        "section": "Phần 4: Remote work policy",
+        "access": "internal",
+        "department": "HR"
+      }
+    },
+    {
+      "text": "3.1 Điều kiện làm thêm:\nLàm thêm giờ phải được Line Manager phê duyệt trước bằng văn bản.\n\n3.2 Hệ số lương làm thêm:\n- Ngày thường: 150% lương giờ tiêu chuẩn.\n- Ngày cuối tuần: 200% lương giờ tiêu chuẩn.\n- Ngày lễ: 300% lương giờ tiêu chuẩn.",
+      "source": "hr/leave-policy-2026.pdf",
+      "score": 0.0594,
+      "metadata": {
+        "effective_date": "2026-01-01",
+        "source": "hr/leave-policy-2026.pdf",
+        "access": "internal",
+        "section": "Phần 3: Chính sách làm thêm giờ",
+        "department": "HR"
+      }
+    },
+    {
+      "text": "Email: hr@company.internal\nHotline: ext. 2000\nHR Portal: https://hr.company.internal\nGiờ làm việc: Thứ 2 - Thứ 6, 8:30 - 17:30",
+      "source": "hr/leave-policy-2026.pdf",
+      "score": 0.0475,
+      "metadata": {
+        "section": "Phần 5: Liên hệ HR",
+        "source": "hr/leave-policy-2026.pdf",
+        "access": "internal",
+        "department": "HR",
+        "effective_date": "2026-01-01"
+      }
+    }
+  ],
+  "retrieved_sources": [
+    "hr/leave-policy-2026.pdf"
+  ],
+  "policy_result": {},
+  "mcp_tools_used": [],
+  "final_answer": "Nhân viên được làm remote tối đa 2 ngày mỗi tuần sau khi hoàn thành probation period. Lịch remote phải được Team Lead phê duyệt qua HR Portal. Ngày onsite bắt buộc là Thứ 3 và Thứ 5 theo lịch team [1].",
+  "sources": [
+    "hr/leave-policy-2026.pdf"
+  ],
+  "confidence": 0.21,
+  "history": [
+    "[supervisor] received task: Nhân viên được làm remote tối đa mấy ngày mỗi tuần?",
+    "[supervisor] route=retrieval_worker reason=default retrieval",
+    "[retrieval_worker] retrieved 3 chunks from ['hr/leave-policy-2026.pdf']",
+    "[synthesis_worker] answer generated, confidence=0.21, sources=['hr/leave-policy-2026.pdf']",
+    "[graph] completed in 15959ms"
+  ],
+  "workers_called": [
+    "retrieval_worker",
+    "synthesis_worker"
+  ],
+  "supervisor_route": "retrieval_worker",
+  "latency_ms": 15959,
+  "run_id": "run_20260414_172045",
+  "worker_io_logs": [
+    {
+      "worker": "retrieval_worker",
+      "input": {
+        "task": "Nhân viên được làm remote tối đa mấy ngày mỗi tuần?",
+        "top_k": 3
+      },
+      "output": {
+        "chunks_count": 3,
+        "sources": [
+          "hr/leave-policy-2026.pdf"
+        ]
+      },
+      "error": null
+    },
+    {
+      "worker": "synthesis_worker",
+      "input": {
+        "task": "Nhân viên được làm remote tối đa mấy ngày mỗi tuần?",
+        "chunks_count": 3,
+        "has_policy": false,
+        "mcp_tools_count": 0
+      },
+      "output": {
+        "answer_length": 201,
+        "sources": [
+          "hr/leave-policy-2026.pdf"
+        ],
+        "confidence": 0.21
+      },
+      "error": null
+    }
+  ],
+  "question_id": "q05"
+}
