@@ -1,59 +1,46 @@
 # Single Agent vs Multi-Agent Comparison — Lab Day 09
 
-> Số liệu Day 08 lấy từ `day08/lab/results/grading_auto.json` (nếu có trong repo).  
-> Số liệu Day 09: chạy `python eval_trace.py` rồi xem `artifacts/eval_report.json` và `artifacts/traces/`.
+So sánh này dùng:
+- Day 08 baseline từ `day08/lab/results/grading_auto.json`
+- Day 09 từ run grading mới nhất tại `artifacts/grading_run.jsonl`
 
 ---
 
-## 1. Metrics Comparison
+## 1) Metrics Comparison
 
-| Metric | Day 08 (Single Agent) | Day 09 (Multi-Agent) | Delta | Ghi chú |
-|--------|----------------------|---------------------|-------|---------|
-| Grading raw (từ auto-grader) | 83 / 98 (snapshot) | Chạy `--grading` để cập nhật | — | Day 08: `grading_auto.json` |
-| Projected 30 điểm nhóm | 25.41 (snapshot) | Tính sau khi có `grading_run.jsonl` | — | Cùng cách quy đổi SCORING |
-| Avg confidence | — | Từ `analyze_traces()` | — | Day 09 log `confidence` mỗi câu |
-| Avg latency (ms) | — | Từ `analyze_traces()` | — | Day 09 log `latency_ms` |
-| Routing visibility | Không có `route_reason` | Có `supervisor_route` + `route_reason` | + | Tiêu chí Day 09 |
-
----
-
-## 2. Phân tích theo loại câu hỏi
-
-### 2.1 Câu đơn giản (single-document)
-
-Multi-agent thường **tốn thêm bước** (supervisor + retrieval + synthesis) so với một lần gọi LLM trong Day 08, nhưng **tách được lỗi** (retrieval vs synthesis).
-
-### 2.2 Multi-hop (cross-document)
-
-Day 09 route `multi_hop` gọi retrieval rồi policy; trace cho thấy rõ **workers_called** — Day 08 khó biết lỗi nằm ở retrieve hay generate nếu không có log chi tiết.
-
-### 2.3 Abstain / mã lỗi không có trong docs
-
-Cả hai pipeline đều phụ thuộc prompt grounded. Day 09 thêm **route_reason** giúp giải thích vì sao chọn retrieval (không bắt buộc HITL cho ERR-xxx trong lab).
+| Metric | Day 08 (Single Agent) | Day 09 (Multi-Agent) | Nhận xét |
+|--------|------------------------|----------------------|----------|
+| Grading raw | 83/98 (snapshot Day 08) | ~88/96 (run nội bộ mới nhất) | Day 09 tốt hơn ở bộ câu hiện tại |
+| Quy đổi /30 | 25.41/30 | ~27.50/30 | Tăng khoảng +2.09 điểm |
+| Routing visibility | Không có `supervisor_route`/`route_reason` | Có đầy đủ trong mỗi record | Day 09 debug tốt hơn |
+| Multi-hop traceability | Hạn chế | Có `workers_called` và `mcp_tools_used` | Dễ kiểm chứng pipeline hơn |
 
 ---
 
-## 3. Debuggability
+## 2) Phân tích theo loại câu
 
-**Day 08:** Sửa trong `rag_answer.py` — một luồng.
+### Câu policy/exception
 
-**Day 09:** `artifacts/traces/*.json` + test từng worker (`python workers/retrieval.py`, …).
+Day 09 ổn định hơn vì tách riêng `policy_tool_worker` và gọi MCP `search_kb`, giúp bám rule policy rõ hơn.
+
+### Câu multi-hop
+
+Day 09 có lợi thế rõ khi route `multi_hop` gọi chuỗi `retrieval -> policy -> synthesis`. Tuy nhiên `gq09` vẫn là điểm dao động khi synthesis bỏ sót một tiêu chí (PagerDuty) ở một số run.
+
+### Câu abstain
+
+Day 09 xử lý tốt `gq07` với câu trả lời "Không đủ thông tin trong tài liệu nội bộ", giảm rủi ro hallucination penalty.
 
 ---
 
-## 4. Extensibility
+## 3) Debuggability và Extensibility
 
-| Scenario | Day 08 | Day 09 |
-|---------|--------|--------|
-| Thêm API | Sửa pipeline | Thêm tool trong `mcp_server.py` + gọi trong policy worker |
-| Đổi retrieval | Sửa `rag_answer` | `workers/retrieval.py` hoặc `search_kb` |
+- Day 08: luồng đơn giản nhưng khó tách lỗi retrieval/synthesis.
+- Day 09: dễ debug vì mỗi bước có route + worker chain + mcp tools.
+- Day 09 cũng dễ mở rộng: thêm tool ở `mcp_server.py` và cập nhật `policy_tool.py` mà không phải sửa toàn bộ pipeline.
 
 ---
 
-## 5. Kết luận
+## 4) Kết luận
 
-**Multi-agent tốt hơn ở:** quan sát được routing, test từng worker, tích hợp MCP có ranh giới rõ.
-
-**Multi-agent kém hơn / tốn hơn ở:** độ trễ (nhiều bước), phức tạp triển khai hơn monolith.
-
-**Khi không nên dùng multi-agent:** workload nhỏ, không cần trace, latency cực thấp.
+Multi-agent (Day 09) đang tốt hơn single-agent (Day 08) ở điểm số và khả năng quan sát hệ thống. Đổi lại, hệ thống phức tạp hơn và vẫn cần ổn định thêm một số câu multi-hop để đạt Full tuyệt đối qua nhiều lần chạy.

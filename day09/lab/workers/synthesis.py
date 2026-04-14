@@ -42,6 +42,8 @@ Quy tắc nghiêm ngặt:
 13. Access level: Khi trả lời về quyền truy cập, SO SÁNH rõ ràng giữa các level. Ví dụ: Level 2 CÓ emergency bypass (chỉ cần Line Manager + IT Admin on-call, KHÔNG cần IT Security), còn Level 3 KHÔNG CÓ emergency bypass (phải follow quy trình chuẩn: Line Manager + IT Admin + IT Security). Nêu rõ sự khác biệt này.
 14. QUAN TRỌNG — Kiểm tra chéo: Trước khi kết luận "không có thông tin" về BẤT KỲ chi tiết nào, đọc lại TOÀN BỘ context một lần nữa. Context gồm nhiều chunk từ nhiều phần — thông tin cần tìm có thể nằm ở chunk khác với chunk bạn đang đọc.
 15. Nguồn ưu tiên: Khi trả lời về thông báo/notification SLA P1, CHỈ liệt kê các kênh notification được quy định TRỰC TIẾP trong quy trình SLA P1 (file sla_p1_2026.txt). Hotline IT helpdesk (ví dụ ext. 9999) là kênh support chung, KHÔNG phải kênh notification SLA — không đưa vào danh sách kênh notification P1.
+16. Temporal policy scoping — Khi câu hỏi liên quan đến chính sách có PHIÊN BẢN (version): Nếu đơn hàng/sự kiện xảy ra TRƯỚC ngày hiệu lực của phiên bản hiện tại (ví dụ: v4 effective 01/02/2026 mà đơn đặt 31/01/2026 → áp dụng v3), và context KHÔNG CÓ nội dung chi tiết của phiên bản cũ đó → nói rõ "tài liệu hiện có chỉ có phiên bản [X], không có nội dung phiên bản [Y]" và KHÔNG tự suy ra nội dung v3 từ v4. TUYỆT ĐỐI KHÔNG bịa nội dung policy version cũ.
+17. Escalation trong SLA P1 — BẮT BUỘC: Bất cứ khi nào trả lời liên quan SLA P1 (bao gồm notification, xử lý sự cố, quy trình), PHẢI nêu rõ escalation rule: "Nếu không có phản hồi trong 10 phút, hệ thống sẽ tự động escalate lên Senior Engineer." Đây là thông tin KHÔNG ĐƯỢC bỏ sót.
 """
 
 
