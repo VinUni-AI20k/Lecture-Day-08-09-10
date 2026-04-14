@@ -1,4 +1,4 @@
-# Báo Cáo Cá Nhân - Lab Day 08: RAG Pipeline
+﻿# Báo Cáo Cá Nhân - Lab Day 08: RAG Pipeline
 
 **Họ và tên:** Dương Quang Đông  
 **Vai trò trong nhóm:** Retrieval Owner  
@@ -9,19 +9,19 @@
 
 ## 1. Tôi đã làm gì trong lab này? (100-150 từ)
 
-Trong lab này, tôi tập trung chính vào Sprint 1 và Sprint 3, tương ứng với vai trò Retrieval Owner của nhóm. Ở Sprint 1, tôi tham gia xây dựng tầng indexing trong `index.py`: xử lý preprocess tài liệu, chia chunk theo section, giữ metadata như `source`, `section`, `effective_date`, và dùng Sentence Transformers để tạo embedding local trước khi lưu vào ChromaDB. Mục tiêu là làm cho tầng retrieval có đầu vào sạch, có cấu trúc và ít mất ngữ cảnh nhất có thể. Ở Sprint 3, tôi chọn variant rerank và tích hợp `rerank()` trong `rag_answer.py` bằng cross-encoder `cross-encoder/ms-marco-MiniLM-L-6-v2`. Cơ chế này nhận các chunk từ dense retrieval, chấm điểm lại theo từng cặp query-chunk rồi chọn top chunk tốt nhất trước khi gọi LLM. Phần tôi làm nối trực tiếp giữa index của Sprint 1, baseline retrieval của pipeline, và phần evaluation trong `eval.py`.
+Trong lab này, tôi tập trung chủ yếu vào Sprint 1 và Sprint 3 với vai trò Retrieval Owner. Ở Sprint 1, tôi tham gia chuẩn hóa dữ liệu đầu vào cho retrieval: hỗ trợ preprocess tài liệu, chia chunk theo section, giữ metadata như `source`, `section`, `effective_date`, rồi lưu vào ChromaDB để các bước sau có thể truy vết nguồn rõ ràng. Ở Sprint 3, tôi chọn hướng **Hybrid retrieval** thay vì reranking và implement trực tiếp trong `rag_answer.py` qua hai hàm `retrieve_sparse()` và `retrieve_hybrid()`. Cụ thể, tôi dùng BM25 để lấy tín hiệu keyword từ toàn bộ chunk, sau đó kết hợp kết quả dense retrieval và sparse retrieval bằng Reciprocal Rank Fusion với trọng số dense 0.6 và sparse 0.4. Tôi chọn hybrid vì nó phù hợp hơn với bộ dữ liệu của bài lab: vừa có câu mô tả tự nhiên, vừa có các keyword đặc thù như SLA, P1, Level 3, ERR-403 và Approval Matrix.
 
 ---
 
 ## 2. Điều tôi hiểu rõ hơn sau lab này (100-150 từ)
 
-Điều tôi hiểu rõ hơn sau lab là retrieval trong RAG không chỉ là “tìm đúng tài liệu”, mà là tìm đúng đoạn văn đủ tốt để model có thể trả lời ngắn gọn nhưng vẫn grounded. Khi tự tay làm Sprint 1, tôi thấy chunking và metadata ảnh hưởng rất mạnh đến chất lượng retrieval. Nếu chunk bị cắt giữa ý hoặc section không rõ, retriever có thể lấy đúng nguồn nhưng sai bằng chứng. Sau đó, khi làm Sprint 3, tôi hiểu rõ hơn vai trò của rerank. Dense retrieval rất tốt ở bước mở rộng ứng viên, nhưng top đầu vẫn có thể lẫn các chunk gần nghĩa mà chưa phải chunk trả lời trực tiếp câu hỏi. Cross-encoder rerank không thay dense retrieval, mà đóng vai trò lớp lọc cuối để tăng precision. Nói cách khác, dense retrieval giúp tăng recall, còn rerank giúp mô hình tập trung vào evidence sát câu hỏi hơn.
+Sau lab này, tôi hiểu rõ hơn rằng retrieval trong RAG không chỉ là “lấy đúng tài liệu”, mà là lấy đúng đoạn evidence để model có thể trả lời ngắn gọn nhưng vẫn grounded. Khi làm phần indexing, tôi thấy chunking và metadata ảnh hưởng trực tiếp đến chất lượng retrieve: nếu chunk cắt giữa ý hoặc section mơ hồ, hệ thống có thể lấy đúng file nhưng sai đoạn bằng chứng. Khi sang Sprint 3, tôi hiểu thêm sự khác nhau giữa dense, sparse, hybrid và reranking. Dense mạnh ở semantic search, sparse mạnh ở exact keyword, còn hybrid phù hợp khi corpus pha trộn cả hai kiểu tín hiệu. Tôi cũng hiểu rõ vì sao tôi không chọn reranking ở vòng này: rerank chủ yếu tăng precision bằng cách sắp xếp lại candidate đã có, trong khi bài lab này có nhiều truy vấn cần bắt đúng keyword hoặc alias ngay từ bước retrieve. Vì vậy, vấn đề đáng ưu tiên hơn là recall của retrieval, không phải một lớp chấm điểm lại ở cuối.
 
 ---
 
 ## 3. Điều tôi ngạc nhiên hoặc gặp khó khăn (100-150 từ)
 
-Khó khăn lớn nhất của tôi là làm cho phần rerank hoạt động ổn định trong pipeline thật, chứ không chỉ viết xong hàm là đủ. Trong quá trình tích hợp, `rag_answer.py` từng bị lẫn code đúng với các đoạn TODO cũ, làm file lỗi cú pháp và khiến `eval.py` không import được. Sau khi dọn lại file và giữ đúng interface cho `rag_answer()`, rerank mới chạy được end-to-end. Điều khiến tôi ngạc nhiên là dù rerank đã chạy đúng, score tổng thể gần như không tốt hơn baseline. Theo log `eval.py`, baseline và variant đều có Faithfulness 3.70, Relevance 3.80, Context Recall 5.00, còn Completeness của rerank còn giảm nhẹ từ 3.60 xuống 3.50. Giả thuyết ban đầu của tôi là rerank sẽ tạo cải thiện rõ hơn, nhưng thực tế cho thấy dense baseline trên bộ dữ liệu này đã khá mạnh, nên phần lợi ích thêm vào của rerank không nhiều.
+Khó khăn lớn nhất của tôi là làm cho biến thể hybrid chạy đúng end-to-end thay vì chỉ dừng ở mức ý tưởng. `retrieve_sparse()` phải đọc lại toàn bộ documents từ ChromaDB, tokenize ổn định, dựng BM25 index, rồi trả kết quả cùng format với dense retrieval để `rag_answer()` dùng chung được. Sau đó, ở `retrieve_hybrid()`, tôi còn phải gộp hai danh sách kết quả bằng RRF sao cho không bị trùng chunk và vẫn giữ metadata nhất quán. Điều làm tôi ngạc nhiên là dù hybrid rất hợp lý về mặt retrieval, scorecard cuối cùng của baseline dense và variant hybrid lại bằng nhau: Faithfulness 4.50, Relevance 4.20, Context Recall 5.00, Completeness 3.80. Kết quả này cho tôi thấy một bài học quan trọng: chọn đúng kỹ thuật chưa chắc tạo ra chênh lệch điểm nếu nút thắt thật sự nằm ở generation, prompt grounding, hoặc dữ liệu thiếu evidence cho một số câu hỏi.
 
 ---
 
@@ -31,12 +31,12 @@ Khó khăn lớn nhất của tôi là làm cho phần rerank hoạt động ổ
 
 **Phân tích:**
 
-Đây là câu hỏi tôi thấy đáng phân tích nhất vì nó cho thấy rõ ranh giới giữa retrieval và generation. Trong log scorecard, cả baseline và variant rerank đều cho kết quả `Khong du du lieu`, nên Faithfulness, Relevance và Completeness đều rất thấp. Tuy nhiên `context_recall = 5` ở cả hai cấu hình cho thấy hệ thống thực ra đã retrieve được đúng nguồn kỳ vọng. Điều đó nghĩa là vấn đề chính không nằm ở Sprint 1 hay ở tầng indexing: metadata và chunking đủ tốt để source cần thiết xuất hiện trong tập bằng chứng.
+Đây là câu hỏi tôi thấy đáng phân tích nhất vì nó giúp phân biệt khá rõ lỗi retrieval với lỗi generation. Trong cả `scorecard_baseline.md` và `scorecard_variant.md`, câu q07 đều đạt Faithfulness 5, Relevance 5, Context Recall 5 nhưng Completeness chỉ 2. Điều đó cho thấy hệ thống đã retrieve đúng nguồn cần thiết ở cả hai cấu hình, nên vấn đề không còn nằm ở indexing hay việc có tìm ra tài liệu hay không. Nói cách khác, dense baseline đã đủ tốt để kéo đúng evidence vào context, còn hybrid chỉ giúp củng cố thêm khả năng match alias và keyword chứ chưa tạo khác biệt ở điểm số cuối.
 
-Theo tôi, lỗi nằm nhiều hơn ở bước sinh câu trả lời và luật abstain. Query này dùng alias “Approval Matrix”, trong khi tài liệu thật là `access-control-sop.md`. Dense retrieval đã mang được đúng tài liệu về, nhưng model vẫn chưa đủ tự tin để kết luận rằng đây chính là tài liệu tương ứng với tên cũ, nên chọn trả lời abstain. Variant rerank không cải thiện trường hợp này vì rerank chỉ sắp xếp lại các chunk đã có, chứ không bổ sung suy luận nối alias với tên mới. Với loại câu hỏi như q07, query transformation hoặc prompt rõ hơn có lẽ sẽ hữu ích hơn rerank.
+Điểm thiếu nằm ở bước trả lời. Tài liệu đúng là `access-control-sop.md`, và trong chunk có thông tin cho biết tài liệu này trước đây từng được gọi là “Approval Matrix for System Access”. Tuy nhiên câu trả lời của model mới dừng ở mức mô tả đây là tài liệu quy định quy trình cấp quyền, chứ chưa nói rõ tên hiện tại là **Access Control SOP** và chưa khai thác đầy đủ chi tiết alias cũ. Trường hợp này cũng giải thích vì sao tôi chọn hybrid thay vì reranking ở Sprint 3: nếu candidate đúng đã được retrieve từ đầu, reranking chỉ đổi thứ tự chunk chứ không tự làm model trả lời đầy đủ hơn. Với q07, bước cải thiện hợp lý hơn ở vòng sau sẽ là query transformation hoặc siết grounded prompt để model nêu rõ cả tên mới lẫn tên cũ của tài liệu.
 
 ---
 
 ## 5. Nếu có thêm thời gian, tôi sẽ làm gì? (50-100 từ)
 
-Nếu có thêm thời gian, tôi sẽ thử tăng `top_k_search` để rerank có nhiều ứng viên hơn trước khi chọn top 3, vì hiện tại dense baseline đã khá mạnh nên rerank chưa có nhiều không gian tạo khác biệt. Ngoài ra, tôi sẽ thử thêm query transformation cho các câu hỏi alias như q07, vì log eval cho thấy rerank không giúp được những trường hợp mà vấn đề nằm ở cách diễn đạt truy vấn hơn là thứ tự chunk.
+Nếu có thêm thời gian, tôi sẽ thử hai hướng tiếp theo. Thứ nhất là query transformation cho các câu hỏi dạng alias như q07, ví dụ mở rộng “Approval Matrix” thành “Access Control SOP” hoặc “Approval Matrix for System Access” trước khi retrieve. Thứ hai là thử pipeline dense/hybrid → rerank → top-3 select để xem reranking có cải thiện precision sau khi recall đã đủ tốt hay không. Như vậy, hybrid vẫn là lựa chọn hợp lý ở vòng này, còn reranking sẽ là bước tối ưu tiếp theo nếu nhóm muốn đào sâu hơn.
