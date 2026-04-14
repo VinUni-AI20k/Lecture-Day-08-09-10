@@ -18,7 +18,7 @@ Gọi độc lập để test:
 import hashlib
 import os
 from pathlib import Path
-from typing import Callable, List
+from typing import Callable, List, Optional
 
 # ─────────────────────────────────────────────
 # Worker Contract (xem contracts/worker_contracts.yaml)
@@ -30,14 +30,13 @@ WORKER_NAME = "retrieval_worker"
 DEFAULT_TOP_K = 3
 COLLECTION_NAME = "day09_docs"
 CHROMA_DB_PATH = str(Path(__file__).resolve().parents[1] / "chroma_db")
+EMBEDDING_PROVIDER = os.getenv("EMBEDDING_PROVIDER", "openai").strip().lower()
+OPENAI_EMBEDDING_MODEL = os.getenv("OPENAI_EMBEDDING_MODEL", "text-embedding-3-small")
+
+_EMBED_FN_CACHE: Optional[Callable[[str], List[float]]] = None
 
 
-def _get_embedding_fn() -> Callable[[str], List[float]]:
-    """
-    Trả về embedding function.
-    TODO Sprint 1: Implement dùng OpenAI hoặc Sentence Transformers.
-    """
-    # Option A: Sentence Transformers (offline, không cần API key)
+def _build_local_embed_fn() -> Optional[Callable[[str], List[float]]]:
     try:
         from sentence_transformers import SentenceTransformer
 
@@ -48,28 +47,32 @@ def _get_embedding_fn() -> Callable[[str], List[float]]:
 
         return embed
     except Exception:
-        pass
+        return None
 
-    # Option B: OpenAI (chỉ dùng khi có API key)
+
+def _build_openai_embed_fn() -> Optional[Callable[[str], List[float]]]:
     api_key = os.getenv("OPENAI_API_KEY")
-    if api_key:
-        try:
-            from openai import OpenAI
+    if not api_key:
+        return None
 
-            client = OpenAI(api_key=api_key)
+    try:
+        from openai import OpenAI
 
-            def embed(text: str) -> List[float]:
-                resp = client.embeddings.create(
-                    input=text,
-                    model="text-embedding-3-small",
-                )
-                return list(resp.data[0].embedding)
+        client = OpenAI(api_key=api_key)
 
-            return embed
-        except Exception:
-            pass
+        def embed(text: str) -> List[float]:
+            resp = client.embeddings.create(
+                input=text,
+                model=OPENAI_EMBEDDING_MODEL,
+            )
+            return list(resp.data[0].embedding)
 
-    # Fallback: pseudo-random embedding cho test local (KHÔNG dùng production)
+        return embed
+    except Exception:
+        return None
+
+
+def _build_fallback_embed_fn() -> Callable[[str], List[float]]:
     import random
 
     def embed(text: str) -> List[float]:
@@ -78,8 +81,39 @@ def _get_embedding_fn() -> Callable[[str], List[float]]:
         rng = random.Random(seed)
         return [rng.random() for _ in range(384)]
 
-    print("⚠️  WARNING: Using pseudo-random embeddings (test only). Install sentence-transformers or set OPENAI_API_KEY.")
+    print(
+        "⚠️  WARNING: Using pseudo-random embeddings (test only). "
+        "Install sentence-transformers or set OPENAI_API_KEY."
+    )
     return embed
+
+
+def _get_embedding_fn() -> Callable[[str], List[float]]:
+    """
+    Trả về embedding function.
+    TODO Sprint 1: Implement dùng OpenAI hoặc Sentence Transformers.
+    """
+    global _EMBED_FN_CACHE
+    if _EMBED_FN_CACHE is not None:
+        return _EMBED_FN_CACHE
+
+    provider = EMBEDDING_PROVIDER
+    if provider not in {"openai", "local", "auto"}:
+        provider = "openai"
+
+    openai_fn = _build_openai_embed_fn
+    local_fn = _build_local_embed_fn
+
+    if provider == "openai":
+        embed_fn = openai_fn() or local_fn() or _build_fallback_embed_fn()
+    elif provider == "local":
+        embed_fn = local_fn() or openai_fn() or _build_fallback_embed_fn()
+    else:
+        # auto: ưu tiên local nếu có model, fallback OpenAI
+        embed_fn = local_fn() or openai_fn() or _build_fallback_embed_fn()
+
+    _EMBED_FN_CACHE = embed_fn
+    return embed_fn
 
 
 def _get_collection():
