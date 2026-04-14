@@ -68,17 +68,24 @@ def _get_collection():
     TODO Sprint 2: Đảm bảo collection đã được build từ Step 3 trong README.
     """
     import chromadb
-    client = chromadb.PersistentClient(path="./chroma_db")
+
+    DB_PATH = os.getenv(
+        "CHROMA_DB_PATH",
+        "/Users/nghia/Documents/Day_08/day08/lab/chroma_db"
+    )
+
+    client = chromadb.PersistentClient(path=DB_PATH)
+
     try:
-        collection = client.get_collection("day09_docs")
+        return client.get_collection("rag_lab")
+
     except Exception:
-        # Auto-create nếu chưa có
-        collection = client.get_or_create_collection(
+        print("⚠️ Collection chưa tồn tại hoặc chưa index data")
+        return client.get_or_create_collection(
             "day09_docs",
             metadata={"hnsw:space": "cosine"}
         )
-        print(f"⚠️  Collection 'day09_docs' chưa có data. Chạy index script trong README trước.")
-    return collection
+
 
 
 def retrieve_dense(query: str, top_k: int = DEFAULT_TOP_K) -> list:
