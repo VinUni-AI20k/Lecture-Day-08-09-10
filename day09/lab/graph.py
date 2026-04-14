@@ -11,11 +11,12 @@ Chạy thử:
 
 import json
 import os
+import re
 from datetime import datetime
 from typing import TypedDict, Literal, Optional
 
 # Uncomment nếu dùng LangGraph:
-# from langgraph.graph import StateGraph, END
+from langgraph.graph import StateGraph, END
 
 # ─────────────────────────────────────────────
 # 1. Shared State — dữ liệu đi xuyên toàn graph
@@ -98,27 +99,52 @@ def supervisor_node(state: AgentState) -> AgentState:
     # - còn lại → retrieval_worker
 
     route = "retrieval_worker"         # TODO: thay bằng logic thực
-    route_reason = "default route"    # TODO: thay bằng lý do thực
+    route_reason = "default route → retrieval_worker"    # TODO: thay bằng lý do thực
     needs_tool = False
     risk_high = False
+    matched_signals: list[str] = []
 
     # Ví dụ routing cơ bản — nhóm phát triển thêm:
-    policy_keywords = ["hoàn tiền", "refund", "flash sale", "license", "cấp quyền", "access", "level 3"]
+    policy_keywords = [
+        "hoàn tiền", "refund", "flash sale", "license", "bản quyền",
+        "cấp quyền", "access", "level 3", "phân quyền", "permission",
+    ]
+    retrieval_keywords = [
+        "p1", "sla", "ticket", "escalation", "sự cố", "incident", "helpdesk",
+    ]
     risk_keywords = ["emergency", "khẩn cấp", "2am", "không rõ", "err-"]
 
-    if any(kw in task for kw in policy_keywords):
-        route = "policy_tool_worker"
-        route_reason = f"task contains policy/access keyword"
-        needs_tool = True
+    matched_policy = [kw for kw in policy_keywords if kw in task]
+    matched_retrieval = [kw for kw in retrieval_keywords if kw in task]
+    matched_risk = [kw for kw in risk_keywords if kw in task]
 
-    if any(kw in task for kw in risk_keywords):
+    if matched_policy:
+        route = "policy_tool_worker"
+        route_reason = f"policy keywords matched: {matched_policy}"
+        needs_tool = True
+        matched_signals.extend(matched_policy)
+    elif matched_retrieval:
+        route = "retrieval_worker"
+        route_reason = f"retrieval keywords matched: {matched_retrieval}"
+        matched_signals.extend(matched_retrieval)
+
+    if matched_risk:
         risk_high = True
-        route_reason += " | risk_high flagged"
+        route_reason += f" | risk_high flagged ({matched_risk})"
+        matched_signals.extend(matched_risk)
 
     # Human review override
-    if risk_high and "err-" in task:
+    # Mã lỗi không rõ kiểu ERR-XXX hoặc rủi ro cao + không đủ context
+    unknown_error = bool(re.search(r"\berr[-_]?\d*\b", task))
+    if unknown_error and risk_high:
         route = "human_review"
-        route_reason = "unknown error code + risk_high → human review"
+        route_reason = (
+            f"unknown error code detected + risk_high → human review "
+            f"(signals={matched_signals})"
+        )
+    elif unknown_error and not matched_policy and not matched_retrieval:
+        route = "human_review"
+        route_reason = "unknown error code + insufficient context → human review"
 
     state["supervisor_route"] = route
     state["route_reason"] = route_reason
@@ -184,6 +210,13 @@ def human_review_node(state: AgentState) -> AgentState:
 def retrieval_worker_node(state: AgentState) -> AgentState:
     """Wrapper gọi retrieval worker."""
     # TODO Sprint 2: Thay bằng retrieval_run(state)
+
+    # Idempotent: nếu policy_tool_worker đã chạy và đã retrieve rồi thì bỏ qua,
+    # tránh double-retrieve khi node này được gọi lại trong graph.
+    if state.get("retrieved_chunks"):
+        state["history"].append("[retrieval_worker] skipped (chunks already present)")
+        return state
+
     state["workers_called"].append("retrieval_worker")
     state["history"].append("[retrieval_worker] called")
 
@@ -240,39 +273,63 @@ def build_graph():
     Option A (đơn giản — Python thuần): Dùng if/else, không cần LangGraph.
     Option B (nâng cao): Dùng LangGraph StateGraph với conditional edges.
 
-    Lab này implement Option A theo mặc định.
-    TODO Sprint 1: Có thể chuyển sang LangGraph nếu muốn.
+    Lab này implement Option B (LangGraph StateGraph) — đã import ở đầu file.
+    Conditional edge dùng `route_decision` để chọn worker tiếp theo.
     """
-    # Option A: Simple Python orchestrator
+    # Option B: LangGraph StateGraph
+    #
+    # Topology:
+    #   supervisor ─┬─→ retrieval_worker ────────────┐
+    #               ├─→ policy_tool_worker ──→ retrieval_worker (nếu chưa có chunks)
+    #               └─→ human_review ──────→ retrieval_worker (sau khi approve)
+    #                                                │
+    #                                                ▼
+    #                                         synthesis_worker → END
+
+    builder = StateGraph(AgentState)
+
+    builder.add_node("supervisor", supervisor_node)
+    builder.add_node("retrieval_worker", retrieval_worker_node)
+    builder.add_node("policy_tool_worker", policy_tool_worker_node)
+    builder.add_node("human_review", human_review_node)
+    builder.add_node("synthesis_worker", synthesis_worker_node)
+
+    builder.set_entry_point("supervisor")
+
+    # Conditional edge từ supervisor: chọn worker dựa vào route_decision
+    builder.add_conditional_edges(
+        "supervisor",
+        route_decision,
+        {
+            "retrieval_worker": "retrieval_worker",
+            "policy_tool_worker": "policy_tool_worker",
+            "human_review": "human_review",
+        },
+    )
+
+    # Policy worker cần retrieval context → luôn đi qua retrieval_worker sau đó.
+    # (retrieval_worker_node là idempotent: chỉ retrieve nếu chưa có chunks.)
+    builder.add_edge("policy_tool_worker", "retrieval_worker")
+
+    # Human review → sau khi approve, lấy evidence từ retrieval rồi synthesize
+    builder.add_edge("human_review", "retrieval_worker")
+
+    # Sau retrieval luôn synthesize
+    builder.add_edge("retrieval_worker", "synthesis_worker")
+
+    builder.add_edge("synthesis_worker", END)
+
+    compiled = builder.compile()
+
     def run(state: AgentState) -> AgentState:
         import time
         start = time.time()
 
-        # Step 1: Supervisor decides route
-        state = supervisor_node(state)
+        result = compiled.invoke(state)
 
-        # Step 2: Route to appropriate worker
-        route = route_decision(state)
-
-        if route == "human_review":
-            state = human_review_node(state)
-            # After human approval, continue with retrieval
-            state = retrieval_worker_node(state)
-        elif route == "policy_tool_worker":
-            state = policy_tool_worker_node(state)
-            # Policy worker may need retrieval context first
-            if not state["retrieved_chunks"]:
-                state = retrieval_worker_node(state)
-        else:
-            # Default: retrieval_worker
-            state = retrieval_worker_node(state)
-
-        # Step 3: Always synthesize
-        state = synthesis_worker_node(state)
-
-        state["latency_ms"] = int((time.time() - start) * 1000)
-        state["history"].append(f"[graph] completed in {state['latency_ms']}ms")
-        return state
+        result["latency_ms"] = int((time.time() - start) * 1000)
+        result["history"].append(f"[graph] completed in {result['latency_ms']}ms")
+        return result
 
     return run
 
