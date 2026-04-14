@@ -19,6 +19,7 @@ Gọi độc lập để test:
 import json
 import os
 import re
+import sys
 import urllib.error
 import urllib.request
 
@@ -34,26 +35,36 @@ Quy tắc nghiêm ngặt:
 1. CHỈ trả lời dựa vào context được cung cấp. KHÔNG dùng kiến thức ngoài.
 2. Nếu context không đủ để trả lời → nói rõ "Không đủ thông tin trong tài liệu nội bộ".
 3. Trích dẫn nguồn cuối mỗi câu quan trọng: [tên_file].
-4. Trả lời súc tích, có cấu trúc. Không dài dòng.
-5. Nếu có exceptions/ngoại lệ → nêu rõ ràng trước khi kết luận.
+4. Trả lời đầy đủ, rõ ràng, có cấu trúc; ưu tiên 3-6 câu hoặc 2-4 gạch đầu dòng khi context đủ.
+5. Bắt đầu bằng kết luận trực tiếp, sau đó giải thích ngắn gọn vì sao, rồi mới liệt kê ngoại lệ / phê duyệt / bằng chứng.
+6. Nếu có exceptions/ngoại lệ → nêu rõ ràng trước khi kết luận.
 """
 
 
 def _call_llm(messages: list) -> str:
     """
-    Gọi Groq chat completion API để tổng hợp câu trả lời.
+    Gọi LLM theo thứ tự ưu tiên:
+    1) Groq
+    2) OpenAI (gpt-5.4-nano)
+    3) Local fallback
     """
     api_key = os.getenv("GROQ_API_KEY")
     model = os.getenv("LLM_MODEL", "llama-3.1-8b-instant")
+    debug_mode = os.getenv("SYNTHESIS_DEBUG", "0").strip().lower() in {"1", "true", "yes", "on"}
 
     if not api_key:
-        return "[SYNTHESIS ERROR] Không tìm thấy GROQ_API_KEY trong .env."
+        if debug_mode:
+            print("[SYNTHESIS] GROQ_API_KEY missing -> using local fallback", file=sys.stderr)
+        return _call_openai_llm(messages, debug_mode=debug_mode)
+
+    if debug_mode:
+        print(f"[SYNTHESIS] GROQ_API_KEY detected -> calling Groq model={model}", file=sys.stderr)
 
     payload = {
         "model": model,
         "messages": messages,
         "temperature": 0.1,
-        "max_tokens": 500,
+        "max_tokens": 800,
         "stream": False,
     }
 
@@ -72,7 +83,82 @@ def _call_llm(messages: list) -> str:
             data = json.loads(response.read().decode("utf-8"))
             return data["choices"][0]["message"]["content"].strip()
     except (urllib.error.URLError, urllib.error.HTTPError, KeyError, ValueError) as exc:
-        return f"[SYNTHESIS ERROR] Không thể gọi Groq API: {exc}"
+        if debug_mode:
+            print(f"[SYNTHESIS] Groq failed -> {exc}; falling back to OpenAI", file=sys.stderr)
+        return _call_openai_llm(messages, debug_mode=debug_mode, groq_error=str(exc))
+
+
+def _call_openai_llm(messages: list, debug_mode: bool = False, groq_error: str | None = None) -> str:
+    """
+    Gọi OpenAI chat completions API làm fallback thứ hai.
+    Default model: gpt-5.4-nano.
+    """
+    api_key = os.getenv("OPENAI_API_KEY")
+    model = os.getenv("OPENAI_MODEL", "gpt-5.4-nano")
+
+    if not api_key:
+        if debug_mode:
+            print("[SYNTHESIS] OPENAI_API_KEY missing -> using local fallback", file=sys.stderr)
+        reason = "OPENAI_API_KEY missing"
+        if groq_error:
+            reason = f"Groq failed ({groq_error}); {reason}"
+        return f"[SYNTHESIS ERROR] {reason}"
+
+    if debug_mode:
+        print(f"[SYNTHESIS] calling OpenAI model={model}", file=sys.stderr)
+
+    try:
+        from openai import OpenAI
+
+        client = OpenAI(api_key=api_key)
+        prompt = _messages_to_prompt(messages)
+        response = client.responses.create(
+            model=model,
+            input=prompt,
+            max_output_tokens=800,
+        )
+        text = getattr(response, "output_text", None)
+        if isinstance(text, str) and text.strip():
+            return text.strip()
+
+        # Fallback extraction for SDK variations
+        try:
+            output_parts = []
+            for item in getattr(response, "output", []) or []:
+                for content in getattr(item, "content", []) or []:
+                    part_text = getattr(content, "text", None)
+                    if isinstance(part_text, str) and part_text.strip():
+                        output_parts.append(part_text.strip())
+            if output_parts:
+                return "\n".join(output_parts).strip()
+        except Exception:
+            pass
+
+        raise ValueError("OpenAI response missing output_text")
+    except Exception as exc:
+        if debug_mode:
+            print(f"[SYNTHESIS] OpenAI failed -> {exc}; falling back to local function", file=sys.stderr)
+        reason = f"OpenAI failed: {exc}"
+        if groq_error:
+            reason = f"Groq failed ({groq_error}); {reason}"
+        return f"[SYNTHESIS ERROR] {reason}"
+
+
+def _messages_to_prompt(messages: list) -> str:
+    """Convert chat-style messages into a single grounded prompt for the Responses API."""
+    parts: list[str] = []
+    for msg in messages:
+        role = msg.get("role", "user")
+        content = msg.get("content", "")
+        if not content:
+            continue
+        if role == "system":
+            parts.append(f"[SYSTEM]\n{content}")
+        elif role == "assistant":
+            parts.append(f"[ASSISTANT]\n{content}")
+        else:
+            parts.append(f"[USER]\n{content}")
+    return "\n\n".join(parts).strip()
 
 
 def _build_fallback_answer(task: str, chunks: list, policy_result: dict) -> str:
@@ -83,11 +169,14 @@ def _build_fallback_answer(task: str, chunks: list, policy_result: dict) -> str:
         lines.append("Theo chính sách nội bộ, yêu cầu này bị ảnh hưởng bởi các ngoại lệ sau:")
         for ex in policy_result["exceptions_found"]:
             lines.append(f"- {ex.get('rule', '')} [{ex.get('source', 'unknown')}]")
+        lines.append("Vì vậy, kết luận cần ưu tiên các ngoại lệ này thay vì áp dụng quy tắc chung.")
     elif policy_result and policy_result.get("policy_name") == "access_control_sop":
         lines.append(policy_result.get("summary", "Access Control SOP áp dụng."))
         approvers = policy_result.get("required_approvers", [])
         if approvers:
             lines.append(f"Yêu cầu phê duyệt: {', '.join(approvers)}.")
+        if policy_result.get("emergency_override"):
+            lines.append("Tình huống khẩn cấp cần kiểm tra rõ điều kiện override trước khi thực hiện.")
     elif chunks:
         lines.append("Dưới đây là bằng chứng trích từ tài liệu nội bộ:")
     else:
@@ -99,7 +188,78 @@ def _build_fallback_answer(task: str, chunks: list, policy_result: dict) -> str:
         if text:
             lines.append(f"[{i}] {source}: {text}")
 
+    if chunks:
+        lines.append("Tóm tắt: các dòng trên là bằng chứng trực tiếp nhất có trong tài liệu và là cơ sở để kết luận.")
+
     return "\n".join(lines)
+
+
+def _count_sentences(text: str) -> int:
+    pieces = [part.strip() for part in re.split(r"(?<=[.!?。！？])\s+", text or "") if part.strip()]
+    return len(pieces)
+
+
+def _shorten_text(text: str, limit: int = 170) -> str:
+    clean = " ".join((text or "").split())
+    if len(clean) <= limit:
+        return clean
+    return clean[: max(0, limit - 3)].rstrip() + "..."
+
+
+def _build_detail_addendum(chunks: list, policy_result: dict) -> str:
+    """Generate a grounded expansion so answers are not just one line."""
+    sections: list[str] = []
+
+    if policy_result:
+        policy_name = policy_result.get("policy_name")
+        summary = policy_result.get("summary")
+        if policy_name or summary:
+            sections.append("Chi tiết theo chính sách:")
+            if policy_name:
+                sections.append(f"- Policy áp dụng: {policy_name}")
+            if summary:
+                sections.append(f"- Tóm tắt: {summary}")
+
+        approvers = policy_result.get("required_approvers") or []
+        if approvers:
+            sections.append(f"- Yêu cầu phê duyệt: {', '.join(approvers)}")
+
+        if policy_result.get("exceptions_found"):
+            sections.append("- Ngoại lệ cần lưu ý:")
+            for ex in policy_result["exceptions_found"][:3]:
+                rule = ex.get("rule", "")
+                source = ex.get("source", "unknown")
+                sections.append(f"  • {rule} [{source}]")
+
+    if chunks:
+        sections.append("Chi tiết từ tài liệu:")
+        for i, chunk in enumerate(chunks[:3], 1):
+            source = chunk.get("source", "unknown")
+            text = _shorten_text(chunk.get("text", ""), 170)
+            if text:
+                sections.append(f"- [{source}] {text}")
+
+    return "\n".join(sections)
+
+
+def _expand_short_answer(answer: str, chunks: list, policy_result: dict) -> str:
+    """Add grounded detail when the model answer is too short for pitch/demo."""
+    if not chunks:
+        return answer
+
+    sentence_count = _count_sentences(answer)
+    is_short = len(answer.strip()) < 180 or sentence_count < 2
+    if not is_short:
+        return answer
+
+    addendum = _build_detail_addendum(chunks, policy_result)
+    if not addendum:
+        return answer
+
+    if _is_abstain_answer(answer):
+        return f"{answer}\n\nLý do / bằng chứng liên quan:\n{addendum}".strip()
+
+    return f"{answer}\n\nChi tiết bổ sung:\n{addendum}".strip()
 
 
 def _build_context(chunks: list, policy_result: dict) -> str:
@@ -215,13 +375,20 @@ def synthesize(task: str, chunks: list, policy_result: dict) -> dict:
 
 {context}
 
-Hãy trả lời câu hỏi dựa vào tài liệu trên."""
+Hãy trả lời theo format sau:
+1. Kết luận trực tiếp.
+2. Giải thích ngắn gọn dựa trên evidence.
+3. Nếu có policy/ngoại lệ/phê duyệt, liệt kê rõ.
+4. Không được chỉ trả lời một câu nếu context đủ để giải thích thêm.
+
+Ưu tiên câu trả lời đầy đủ và dễ pitch, nhưng vẫn phải grounded vào tài liệu trên."""
         }
     ]
 
     answer = _call_llm(messages)
     if answer.startswith("[SYNTHESIS ERROR]"):
         answer = _build_fallback_answer(task, chunks, policy_result)
+    answer = _expand_short_answer(answer, chunks, policy_result)
     answer = _ensure_citations(answer, sources)
     confidence = _estimate_confidence(chunks, answer, policy_result)
 
