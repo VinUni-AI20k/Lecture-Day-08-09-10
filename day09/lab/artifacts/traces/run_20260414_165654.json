@@ -1,0 +1,106 @@
+{
+  "task": "Ticket P1 được tạo lúc 22:47. Ai sẽ nhận thông báo đầu tiên và qua kênh nào? Escalation xảy ra lúc mấy giờ?",
+  "route_reason": "task contains retrieval keyword (P1/SLA/ticket/escalation)",
+  "risk_high": false,
+  "needs_tool": false,
+  "hitl_triggered": false,
+  "retrieved_chunks": [
+    {
+      "text": "Ticket P1:\n- Phản hồi ban đầu (first response): 15 phút kể từ khi ticket được tạo.\n- Xử lý và khắc phục (resolution): 4 giờ.\n- Escalation: Tự động escalate lên Senior Engineer nếu không có phản hồi trong 10 phút.\n- Thông báo stakeholder: Ngay khi nhận ticket, update mỗi 30 phút cho đến khi resolve.\n\nTicket P2:\n- Phản hồi ban đầu: 2 giờ.\n- Xử lý và khắc phục: 1 ngày làm việc.\n- Escalation: Tự động escalate sau 90 phút không có phản hồi.\n\nTicket P3:\n- Phản hồi ban đầu: 1 ngày làm việc.\n- Xử lý và khắc phục: 5 ngày làm việc.\n\nTicket P4:\n- Phản hồi ban đầu: 3 ngày làm việc.\n- Xử lý và khắc phục: Theo sprint cycle (thông thường 2-4 tuần).",
+      "source": "support/sla-p1-2026.pdf",
+      "score": 0.7725,
+      "metadata": {
+        "section": "Phần 2: SLA theo mức độ ưu tiên",
+        "department": "IT",
+        "source": "support/sla-p1-2026.pdf",
+        "access": "internal",
+        "effective_date": "2026-01-15"
+      }
+    },
+    {
+      "text": "Escalation chỉ áp dụng khi cần thay đổi quyền hệ thống ngoài quy trình thông thường.\nVí dụ: Khẩn cấp trong sự cố P1, cần cấp quyền tạm thời để fix incident.\n\nQuy trình escalation khẩn cấp:\n1. On-call IT Admin có thể cấp quyền tạm thời (max 24 giờ) sau khi được Tech Lead phê duyệt bằng lời.\n2. Sau 24 giờ, phải có ticket chính thức hoặc quyền bị thu hồi tự động.\n3. Mọi quyền tạm thời phải được ghi log vào hệ thống Security Audit.",
+      "source": "it/access-control-sop.md",
+      "score": 0.7509,
+      "metadata": {
+        "effective_date": "2026-01-01",
+        "department": "IT Security",
+        "access": "internal",
+        "source": "it/access-control-sop.md",
+        "section": "Section 4: Escalation khi cần thay đổi quyền hệ thống"
+      }
+    },
+    {
+      "text": "v2026.1 (2026-01-15): Cập nhật SLA P1 resolution từ 6 giờ xuống 4 giờ.\nv2025.3 (2025-09-01): Thêm quy trình escalation tự động.\nv2025.1 (2025-03-01): Phiên bản đầu tiên.",
+      "source": "support/sla-p1-2026.pdf",
+      "score": 0.708,
+      "metadata": {
+        "department": "IT",
+        "access": "internal",
+        "effective_date": "2026-01-15",
+        "source": "support/sla-p1-2026.pdf",
+        "section": "Phần 5: Lịch sử phiên bản"
+      }
+    }
+  ],
+  "retrieved_sources": [
+    "support/sla-p1-2026.pdf",
+    "it/access-control-sop.md"
+  ],
+  "policy_result": {},
+  "mcp_tools_used": [],
+  "final_answer": "Trả lời tóm tắt cho câu hỏi: Ticket P1 được tạo lúc 22:47. Ai sẽ nhận thông báo đầu tiên và qua kênh nào? Escalation xảy ra lúc mấy giờ?\n- [1] Ticket P1: - Phản hồi ban đầu (first response): 15 phút kể từ khi ticket được tạo. - Xử lý và khắc phục (resolution): 4 giờ. - Escalation: Tự động escalate lên Senior Engineer nếu không có phản hồi trong 10 phút. - Thông [support/sla-p1-2026.pdf]\n- [2] Escalation chỉ áp dụng khi cần thay đổi quyền hệ thống ngoài quy trình thông thường. Ví dụ: Khẩn cấp trong sự cố P1, cần cấp quyền tạm thời để fix incident.  Quy trình escalation khẩn cấp: 1. On-call IT Admin có thể cấp  [it/access-control-sop.md]",
+  "sources": [
+    "support/sla-p1-2026.pdf",
+    "it/access-control-sop.md"
+  ],
+  "confidence": 0.74,
+  "history": [
+    "[supervisor] received task: Ticket P1 được tạo lúc 22:47. Ai sẽ nhận thông báo đầu tiên và qua kênh nào? Esc",
+    "[supervisor] route=retrieval_worker reason=task contains retrieval keyword (P1/SLA/ticket/escalation)",
+    "[retrieval_worker] retrieved 3 chunks from ['support/sla-p1-2026.pdf', 'it/access-control-sop.md']",
+    "[synthesis_worker] answer generated, confidence=0.74, sources=['support/sla-p1-2026.pdf', 'it/access-control-sop.md']",
+    "[graph] completed in 2927ms"
+  ],
+  "workers_called": [
+    "retrieval_worker",
+    "synthesis_worker"
+  ],
+  "supervisor_route": "retrieval_worker",
+  "latency_ms": 2927,
+  "run_id": "run_20260414_165654",
+  "worker_io_logs": [
+    {
+      "worker": "retrieval_worker",
+      "input": {
+        "task": "Ticket P1 được tạo lúc 22:47. Ai sẽ nhận thông báo đầu tiên và qua kênh nào? Escalation xảy ra lúc mấy giờ?",
+        "top_k": 3
+      },
+      "output": {
+        "chunks_count": 3,
+        "sources": [
+          "support/sla-p1-2026.pdf",
+          "it/access-control-sop.md"
+        ]
+      },
+      "error": null
+    },
+    {
+      "worker": "synthesis_worker",
+      "input": {
+        "task": "Ticket P1 được tạo lúc 22:47. Ai sẽ nhận thông báo đầu tiên và qua kênh nào? Escalation xảy ra lúc mấy giờ?",
+        "chunks_count": 3,
+        "has_policy": false
+      },
+      "output": {
+        "answer_length": 643,
+        "sources": [
+          "support/sla-p1-2026.pdf",
+          "it/access-control-sop.md"
+        ],
+        "confidence": 0.74
+      },
+      "error": null
+    }
+  ],
+  "question_id": "q11"
+}

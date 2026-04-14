@@ -1,148 +1,102 @@
 # Single Agent vs Multi-Agent Comparison — Lab Day 09
 
-**Nhóm:** ___________  
-**Ngày:** ___________
+**Nhóm:** 04 
+**Ngày:** 2026-04-14
 
-> **Hướng dẫn:** So sánh Day 08 (single-agent RAG) với Day 09 (supervisor-worker).
-> Phải có **số liệu thực tế** từ trace — không ghi ước đoán.
-> Chạy cùng test questions cho cả hai nếu có thể.
+## 0) Quy tắc điền số liệu
 
----
+- Ưu tiên số liệu thật từ trace/report.
+- Nếu chưa có Day 08 baseline thật, ghi `N/A (chưa có artifact)` và nêu kế hoạch bổ sung.
+- Không điền số "đoán"; rubric chấm tính nhất quán giữa report và artifact.
 
-## 1. Metrics Comparison
+## 1) Nguồn dữ liệu dùng để so sánh
 
-> Điền vào bảng sau. Lấy số liệu từ:
-> - Day 08: chạy `python eval.py` từ Day 08 lab
-> - Day 09: chạy `python eval_trace.py` từ lab này
+- Day 09:
+  - `python eval_trace.py --analyze`
+  - `python eval_trace.py --compare`
+  - `artifacts/traces/*.json`
+- Day 08:
+  - `eval.py` hoặc file baseline do nhóm lưu
+  - Hiện tại: `N/A (chưa có artifact Day08 trong repo này)`
 
-| Metric | Day 08 (Single Agent) | Day 09 (Multi-Agent) | Delta | Ghi chú |
-|--------|----------------------|---------------------|-------|---------|
-| Avg confidence | ___ | ___ | ___ | |
-| Avg latency (ms) | ___ | ___ | ___ | |
-| Abstain rate (%) | ___ | ___ | ___ | % câu trả về "không đủ info" |
-| Multi-hop accuracy | ___ | ___ | ___ | % câu multi-hop trả lời đúng |
-| Routing visibility | ✗ Không có | ✓ Có route_reason | N/A | |
-| Debug time (estimate) | ___ phút | ___ phút | ___ | Thời gian tìm ra 1 bug |
-| ___________________ | ___ | ___ | ___ | |
+## 2) Metrics Comparison (bảng chính)
 
-> **Lưu ý:** Nếu không có Day 08 kết quả thực tế, ghi "N/A" và giải thích.
+| Metric | Day 08 (Single) | Day 09 (Multi) | Delta | Trạng thái dữ liệu | Ghi chú |
+|---|---:|---:|---:|---|---|
+| Avg confidence | N/A | 0.739 | N/A | Day08: Placeholder / Day09: Real | từ `artifacts/eval_report.json` |
+| Avg latency (ms) | N/A | 3494 | N/A | Day08: Placeholder / Day09: Real | |
+| Abstain rate (%) | N/A | Thấp | N/A | Day08: Placeholder / Day09: Estimated | phần lớn câu đã có evidence |
+| Multi-hop accuracy | N/A | Trung bình-khá (ước lượng) | N/A | Day08: Placeholder / Day09: Estimated | q15 có đủ 2 nguồn |
+| Routing visibility | Không có | Có `route_reason` | N/A | Real | |
+| MCP usage rate (%) | N/A | 33% (5/15) | N/A | Real | lấy từ `analyze_traces()` |
+| HITL rate (%) | N/A | 6% (1/15) | N/A | Real | |
+| Debug time cho 1 lỗi (phút) | N/A | 5-10 | N/A | Estimated | có route_reason + worker_io_logs |
 
----
+> Ghi chú quan trọng: trong `eval_trace.py`, baseline Day 08 mặc định còn TODO nếu không truyền file baseline thật.
 
-## 2. Phân tích theo loại câu hỏi
+## 3) Phân tích theo nhóm câu hỏi
 
-### 2.1 Câu hỏi đơn giản (single-document)
+### 3.1 Simple retrieval
 
-| Nhận xét | Day 08 | Day 09 |
-|---------|--------|--------|
-| Accuracy | ___ | ___ |
-| Latency | ___ | ___ |
-| Observation | ___________________ | ___________________ |
+| Tiêu chí | Day 08 | Day 09 | Nhận xét |
+|---|---|---|---|
+| Accuracy | N/A | Khá | Retrieval đã có chunks + sources rõ |
+| Latency | N/A | ~3.5s trung bình | Đã giảm sau khi đồng bộ embedding |
+| Độ ổn định | N/A | Tốt | 15/15 câu chạy thành công |
 
-**Kết luận:** Multi-agent có cải thiện không? Tại sao có/không?
+### 3.2 Multi-hop / cross-policy (đặc biệt gq09)
 
-_________________
+| Tiêu chí | Day 08 | Day 09 | Nhận xét |
+|---|---|---|---|
+| Trả đủ 2 ý chính | N/A | Trung bình-khá | q15 đã trả được cả access + SLA từ 2 source |
+| Có evidence trace route/worker | Không | Có | |
+| Khả năng debug khi thiếu 1 ý | N/A | Tốt | Có `route_reason`, `workers_called`, `worker_io_logs` |
 
-### 2.2 Câu hỏi multi-hop (cross-document)
+### 3.3 Câu cần abstain (đặc biệt gq07)
 
-| Nhận xét | Day 08 | Day 09 |
-|---------|--------|--------|
-| Accuracy | ___ | ___ |
-| Routing visible? | ✗ | ✓ |
-| Observation | ___________________ | ___________________ |
+| Tiêu chí | Day 08 | Day 09 | Nhận xét |
+|---|---|---|---|
+| Tỉ lệ abstain đúng | N/A | Vừa phải | abstain xuất hiện khi evidence yếu |
+| Hallucination cases | N/A | Thấp | câu trả lời có citation rõ hơn |
+| Mức phạt dự kiến theo rubric | N/A | Giảm rủi ro so với lần chạy trước | |
 
-**Kết luận:**
+## 4) Debuggability và khả năng vận hành
 
-_________________
+### Flow debug Day 08
 
-### 2.3 Câu hỏi cần abstain
-
-| Nhận xét | Day 08 | Day 09 |
-|---------|--------|--------|
-| Abstain rate | ___ | ___ |
-| Hallucination cases | ___ | ___ |
-| Observation | ___________________ | ___________________ |
-
-**Kết luận:**
-
-_________________
-
----
-
-## 3. Debuggability Analysis
-
-> Khi pipeline trả lời sai, mất bao lâu để tìm ra nguyên nhân?
-
-### Day 08 — Debug workflow
-```
-Khi answer sai → phải đọc toàn bộ RAG pipeline code → tìm lỗi ở indexing/retrieval/generation
-Không có trace → không biết bắt đầu từ đâu
-Thời gian ước tính: ___ phút
+```text
+Answer sai -> đọc pipeline chung -> khó định vị retrieval/prompt/policy sai
 ```
 
-### Day 09 — Debug workflow
+### Flow debug Day 09
+
+```text
+Answer sai -> xem supervisor_route + route_reason + workers_called
+-> route sai: sửa supervisor
+-> route đúng nhưng output sai: test worker tương ứng độc lập
 ```
-Khi answer sai → đọc trace → xem supervisor_route + route_reason
-  → Nếu route sai → sửa supervisor routing logic
-  → Nếu retrieval sai → test retrieval_worker độc lập
-  → Nếu synthesis sai → test synthesis_worker độc lập
-Thời gian ước tính: ___ phút
-```
 
-**Câu cụ thể nhóm đã debug:** _(Mô tả 1 lần debug thực tế trong lab)_
+**Case debug thực tế của nhóm:**  
+Trace `run_20260414_165615.json` cho thấy retrieval đã trả 3 chunks với source chuẩn, xác nhận fix đồng bộ embedding đã có hiệu lực.
 
-_________________
+## 5) Kết luận có thể chấm điểm
 
----
+### Multi-agent tốt hơn ở
 
-## 4. Extensibility Analysis
+1. Quan sát pipeline theo từng worker rõ ràng, debug nhanh hơn.
+2. Tích hợp MCP độc lập, không phải chỉnh prompt toàn hệ.
 
-> Dễ extend thêm capability không?
+### Multi-agent chưa tốt hơn ở
 
-| Scenario | Day 08 | Day 09 |
-|---------|--------|--------|
-| Thêm 1 tool/API mới | Phải sửa toàn prompt | Thêm MCP tool + route rule |
-| Thêm 1 domain mới | Phải retrain/re-prompt | Thêm 1 worker mới |
-| Thay đổi retrieval strategy | Sửa trực tiếp trong pipeline | Sửa retrieval_worker độc lập |
-| A/B test một phần | Khó — phải clone toàn pipeline | Dễ — swap worker |
+1. Chưa có baseline Day08 thật nên chưa kết luận được delta tuyệt đối.
 
-**Nhận xét:**
+### Rủi ro cần ghi trung thực trong report
 
-_________________
+- Day08 baseline chưa có artifact thật trong repo nên chưa tính được delta.
+- Một số metric comparison có thể còn placeholder nếu thiếu baseline Day 08.
+- Chưa có `grading_run.jsonl` nên chưa chốt score raw/96.
 
----
+### Kế hoạch cải thiện vòng sau
 
-## 5. Cost & Latency Trade-off
-
-> Multi-agent thường tốn nhiều LLM calls hơn. Nhóm đo được gì?
-
-| Scenario | Day 08 calls | Day 09 calls |
-|---------|-------------|-------------|
-| Simple query | 1 LLM call | ___ LLM calls |
-| Complex query | 1 LLM call | ___ LLM calls |
-| MCP tool call | N/A | ___ |
-
-**Nhận xét về cost-benefit:**
-
-_________________
-
----
-
-## 6. Kết luận
-
-> **Multi-agent tốt hơn single agent ở điểm nào?**
-
-1. ___________________
-2. ___________________
-
-> **Multi-agent kém hơn hoặc không khác biệt ở điểm nào?**
-
-1. ___________________
-
-> **Khi nào KHÔNG nên dùng multi-agent?**
-
-_________________
-
-> **Nếu tiếp tục phát triển hệ thống này, nhóm sẽ thêm gì?**
-
-_________________
+1. Chạy `eval_trace.py --grading` để có kết quả chấm thật.
+2. Bổ sung artifact Day08 để tính delta latency/accuracy đầy đủ.

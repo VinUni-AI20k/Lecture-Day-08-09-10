@@ -198,6 +198,20 @@ def run(state: dict) -> dict:
             state["mcp_tools_used"].append(mcp_result)
             state["history"].append(f"[{WORKER_NAME}] called MCP get_ticket_info")
 
+        # Step 4: Access-control questions -> check_access_permission
+        if needs_tool and any(kw in task.lower() for kw in ["access", "cấp quyền", "level 2", "level 3"]):
+            access_level = 3 if "level 3" in task.lower() else 2 if "level 2" in task.lower() else 1
+            mcp_result = _call_mcp_tool(
+                "check_access_permission",
+                {
+                    "access_level": access_level,
+                    "requester_role": "contractor" if "contractor" in task.lower() else "employee",
+                    "is_emergency": "emergency" in task.lower() or "khẩn cấp" in task.lower(),
+                },
+            )
+            state["mcp_tools_used"].append(mcp_result)
+            state["history"].append(f"[{WORKER_NAME}] called MCP check_access_permission")
+
         worker_io["output"] = {
             "policy_applies": policy_result["policy_applies"],
             "exceptions_count": len(policy_result.get("exceptions_found", [])),
@@ -222,6 +236,8 @@ def run(state: dict) -> dict:
 # ─────────────────────────────────────────────
 
 if __name__ == "__main__":
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     print("=" * 50)
     print("Policy Tool Worker — Standalone Test")
     print("=" * 50)
@@ -248,7 +264,7 @@ if __name__ == "__main__":
     ]
 
     for tc in test_cases:
-        print(f"\n▶ Task: {tc['task'][:70]}...")
+        print(f"\n> Task: {tc['task'][:70]}...")
         result = run(tc.copy())
         pr = result.get("policy_result", {})
         print(f"  policy_applies: {pr.get('policy_applies')}")
@@ -257,4 +273,4 @@ if __name__ == "__main__":
                 print(f"  exception: {ex['type']} — {ex['rule'][:60]}...")
         print(f"  MCP calls: {len(result.get('mcp_tools_used', []))}")
 
-    print("\n✅ policy_tool_worker test done.")
+    print("\n[OK] policy_tool_worker test done.")
