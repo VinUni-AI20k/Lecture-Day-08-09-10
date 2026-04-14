@@ -298,43 +298,76 @@ def synthesis_worker_node(state: AgentState) -> AgentState:
 def build_graph():
     """
     Xây dựng graph với supervisor-worker pattern.
-
-    Option A (đơn giản — Python thuần): Dùng if/else, không cần LangGraph.
-    Option B (nâng cao): Dùng LangGraph StateGraph với conditional edges.
-
-    Lab này implement Option A theo mặc định.
-    TODO Sprint 1: Có thể chuyển sang LangGraph nếu muốn.
+    Sử dụng LangGraph StateGraph.
     """
-    # Option A: Simple Python orchestrator
+    from langgraph.graph import StateGraph, START, END
+    
+    # Khởi tạo graph
+    builder = StateGraph(AgentState)
+
+    # Khai báo các nodes
+    builder.add_node("supervisor", supervisor_node)
+    builder.add_node("retrieval_worker", retrieval_worker_node)
+    builder.add_node("policy_tool_worker", policy_tool_worker_node)
+    builder.add_node("human_review", human_review_node)
+    builder.add_node("synthesis_worker", synthesis_worker_node)
+
+    # Bắt đầu tại supervisor
+    builder.add_edge(START, "supervisor")
+
+    # Supervisor quyết định route
+    def supervisor_router(state: AgentState) -> str:
+        route = state.get("supervisor_route", "retrieval_worker")
+        # QUAN TRỌNG: Nếu là policy, vẫn đi qua retrieval trước để lấy evidence
+        if route == "policy_tool_worker":
+            return "retrieval_worker"
+        return route
+
+    builder.add_conditional_edges(
+        "supervisor",
+        supervisor_router,
+        {
+            "human_review": "human_review",
+            "retrieval_worker": "retrieval_worker"
+        }
+    )
+
+    # Human review auto approve -> retrieval
+    builder.add_edge("human_review", "retrieval_worker")
+
+    # Logic sau retrieval: nếu supervisor ban đầu chọn policy -> đi sang policy
+    # Ngược lại -> synthesis
+    def after_retrieval_router(state: AgentState) -> str:
+        if state.get("supervisor_route") == "policy_tool_worker":
+            return "policy_tool_worker"
+        return "synthesis_worker"
+        
+    builder.add_conditional_edges(
+        "retrieval_worker",
+        after_retrieval_router,
+        {
+            "policy_tool_worker": "policy_tool_worker",
+            "synthesis_worker": "synthesis_worker"
+        }
+    )
+
+    # Policy xong -> synthesis
+    builder.add_edge("policy_tool_worker", "synthesis_worker")
+
+    # Synthesis -> END
+    builder.add_edge("synthesis_worker", END)
+
+    # Compile graph
+    graph = builder.compile()
+
+    # Wrapper để tương thích với API test
     def run(state: AgentState) -> AgentState:
         import time
         start = time.time()
-
-        # Step 1: Supervisor decides route
-        state = supervisor_node(state)
-
-        # Step 2: Route to appropriate worker
-        route = route_decision(state)
-
-        if route == "human_review":
-            state = human_review_node(state)
-            # After human approval, continue with retrieval
-            state = retrieval_worker_node(state)
-        elif route == "policy_tool_worker":
-            state = policy_tool_worker_node(state)
-            # Policy worker may need retrieval context first
-            if not state["retrieved_chunks"]:
-                state = retrieval_worker_node(state)
-        else:
-            # Default: retrieval_worker
-            state = retrieval_worker_node(state)
-
-        # Step 3: Always synthesize
-        state = synthesis_worker_node(state)
-
-        state["latency_ms"] = int((time.time() - start) * 1000)
-        state["history"].append(f"[graph] completed in {state['latency_ms']}ms")
-        return state
+        final_state = graph.invoke(state)
+        final_state["latency_ms"] = int((time.time() - start) * 1000)
+        final_state["history"].append(f"[graph] completed in {final_state['latency_ms']}ms")
+        return final_state
 
     return run
 
