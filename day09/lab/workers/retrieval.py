@@ -24,6 +24,11 @@ WORKER_NAME = "retrieval_worker"
 DEFAULT_TOP_K = int(os.getenv("RETRIEVAL_TOP_K", 3))
 
 
+class RetrievalUnavailableError(RuntimeError):
+    """Raised when retrieval infra/config is unavailable."""
+    pass
+
+
 def _get_embedding_fn():
     """
     Trả về embedding function.
@@ -74,13 +79,11 @@ def _get_collection():
     client = chromadb.PersistentClient(path=db_path)
     try:
         collection = client.get_collection(collection_name)
-    except Exception:
-        # Auto-create nếu chưa có
-        collection = client.get_or_create_collection(
-            collection_name,
-            metadata={"hnsw:space": "cosine"}
-        )
-        print(f"⚠️  Collection '{collection_name}' không tồn tại tại {db_path}. Vui lòng kiểm tra lại.")
+    except Exception as e:
+        raise RetrievalUnavailableError(
+            f"Collection '{collection_name}' không tồn tại tại '{db_path}'. "
+            f"Kiểm tra CHROMA_DB_PATH / CHROMA_COLLECTION. ({e})"
+        ) from e
     return collection
 
 
@@ -100,32 +103,30 @@ def retrieve_dense(query: str, top_k: int = DEFAULT_TOP_K) -> list:
     embed = _get_embedding_fn()
     query_embedding = embed(query)
 
+    collection = _get_collection()
+
     try:
-        collection = _get_collection()
         results = collection.query(
             query_embeddings=[query_embedding],
             n_results=top_k,
             include=["documents", "distances", "metadatas"]
         )
-
-        chunks = []
-        for i, (doc, dist, meta) in enumerate(zip(
-            results["documents"][0],
-            results["distances"][0],
-            results["metadatas"][0]
-        )):
-            chunks.append({
-                "text": doc,
-                "source": meta.get("source", "unknown"),
-                "score": round(1 - dist, 4),  # cosine similarity
-                "metadata": meta,
-            })
-        return chunks
-
     except Exception as e:
-        print(f"⚠️  ChromaDB query failed: {e}")
-        # Fallback: return empty (abstain)
-        return []
+        raise RetrievalUnavailableError(f"ChromaDB query failed: {e}") from e
+
+    chunks = []
+    for doc, dist, meta in zip(
+        results.get("documents", [[]])[0],
+        results.get("distances", [[]])[0],
+        results.get("metadatas", [[]])[0]
+    ):
+        chunks.append({
+            "text": doc,
+            "source": meta.get("source", "unknown"),
+            "score": round(1 - dist, 4),  # cosine similarity
+            "metadata": meta,
+        })
+    return chunks
 
 
 def run(state: dict) -> dict:
@@ -139,7 +140,11 @@ def run(state: dict) -> dict:
         Updated AgentState với retrieved_chunks và retrieved_sources
     """
     task = state.get("task", "")
-    top_k = state.get("retrieval_top_k", DEFAULT_TOP_K)
+    raw_top_k = state.get("top_k", state.get("retrieval_top_k", DEFAULT_TOP_K))
+    try:
+        top_k = int(raw_top_k)
+    except (TypeError, ValueError):
+        top_k = DEFAULT_TOP_K
 
     state.setdefault("workers_called", [])
     state.setdefault("history", [])
@@ -168,6 +173,14 @@ def run(state: dict) -> dict:
         }
         state["history"].append(
             f"[{WORKER_NAME}] retrieved {len(chunks)} chunks from {sources}"
+        )
+
+    except RetrievalUnavailableError as e:
+        worker_io["error"] = {"code": "RETRIEVAL_FAILED", "reason": str(e)}
+        state["retrieved_chunks"] = []
+        state["retrieved_sources"] = []
+        state["history"].append(
+            f"[{WORKER_NAME}] retrieval unavailable: {e}"
         )
 
     except Exception as e:

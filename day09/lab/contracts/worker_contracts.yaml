@@ -119,7 +119,7 @@ retrieval_worker:
     - "Stateless: không đọc hoặc ghi state ngoài những gì được khai báo ở trên"
   actual_implementation:
     status: "TODO Sprint 2"  # Update to "done" khi xong
-    notes: ""
+    notes: "Runtime không auto-create collection. Field input chuẩn là top_k; retrieval_top_k chỉ giữ tạm để tương thích."
 
 # ─────────────────────────────────────────────
 # Policy Tool Worker
