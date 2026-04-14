@@ -13,3 +13,4 @@ __pycache__/
 *.pyc
 day09/lab/data/grading_questions.json
 day10/lab/data/grading_questions.json
+.agent/
