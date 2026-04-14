@@ -17,6 +17,9 @@ Gọi độc lập để test:
 """
 
 import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 WORKER_NAME = "synthesis_worker"
 
@@ -41,25 +44,25 @@ def _call_llm(messages: list) -> str:
         from openai import OpenAI
         client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
         response = client.chat.completions.create(
-            model="gpt-4o-mini",
+            model=os.getenv("LLM_MODEL", "gpt-4o-mini"),
             messages=messages,
             temperature=0.1,  # Low temperature để grounded
             max_tokens=500,
         )
         return response.choices[0].message.content
-    except Exception:
-        pass
+    except Exception as e:
+        print(f"[synthesis] OpenAI call failed: {e}")
 
     # Option B: Gemini
-    try:
-        import google.generativeai as genai
-        genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
-        model = genai.GenerativeModel("gemini-1.5-flash")
-        combined = "\n".join([m["content"] for m in messages])
-        response = model.generate_content(combined)
-        return response.text
-    except Exception:
-        pass
+    # try:
+    #     import google.generativeai as genai
+    #     genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
+    #     model = genai.GenerativeModel("gemini-1.5-flash")
+    #     combined = "\n".join([m["content"] for m in messages])
+    #     response = model.generate_content(combined)
+    #     return response.text
+    # except Exception:
+    #     pass
 
     # Fallback: trả về message báo lỗi (không hallucinate)
     return "[SYNTHESIS ERROR] Không thể gọi LLM. Kiểm tra API key trong .env."
