@@ -1,10 +1,15 @@
 import os
 import chromadb
-from sentence_transformers import SentenceTransformer
+from dotenv import load_dotenv
+from openai import OpenAI
+
+load_dotenv()
 
 client = chromadb.PersistentClient(path="./chroma_db")
 col = client.get_or_create_collection("day09_docs")
-model = SentenceTransformer("all-MiniLM-L6-v2")
+
+# OpenAI Implementation
+openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 docs_dir = "./data/docs"
 
@@ -21,7 +26,9 @@ for fname in os.listdir(docs_dir):
         with open(fpath, "r", encoding="utf-8", errors="ignore") as f:
             content = f.read()
 
-    embedding = model.encode(content).tolist()
+    # Get OpenAI embedding
+    resp = openai_client.embeddings.create(input=content, model="text-embedding-3-small")
+    embedding = resp.data[0].embedding
 
     col.upsert(
         ids=[fname],
