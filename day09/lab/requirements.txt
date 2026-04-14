@@ -12,11 +12,11 @@ chromadb>=0.4.22
 sentence-transformers>=2.6.0
 
 # ─── LLM ────────────────────────────────
-# Option A: OpenAI
+# OpenAI SDK (supports OpenAI, Deepseek, and other compatible APIs)
 openai>=1.12.0
 
-# Option B: Google Gemini
-# google-generativeai>=0.5.0
+# Google Gemini (if using gemini provider)
+google-generativeai>=0.5.0
 
 # ─── Orchestration ──────────────────────
 # Option: LangGraph (uncomment nếu dùng LangGraph)
