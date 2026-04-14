@@ -508,15 +508,62 @@ body.notes-open .notes-panel { display:block; }
 .hitl-item span { display:block; font-size:13px; line-height:1.35; color:#cbd5e1; margin-top:4px; }
 .hitl-rule { margin-top:14px; border-radius:14px; background:rgba(255,255,255,0.06); padding:12px 14px; font-size:16px; line-height:1.4; color:#e5e7eb; }
 
+@media print {
+  @page {
+    size: 1280px 720px;
+    margin: 0;
+  }
+  html, body {
+    background: white !important;
+    overflow: visible !important;
+    display: block !important;
+    height: auto !important;
+    width: auto !important;
+  }
+  .presentation {
+    transform: none !important;
+    width: 1280px !important;
+    height: auto !important;
+    position: relative !important;
+    display: block !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+  .slide {
+    position: relative !important;
+    display: flex !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+    pointer-events: auto !important;
+    page-break-after: always !important;
+    break-after: page !important;
+    z-index: 1 !important;
+    width: 1280px !important;
+    height: 720px !important;
+    left: 0 !important;
+    top: 0 !important;
+  }
+  .slide-badge, .slide-counter, .nav-hint, .notes-hint, .notes-panel {
+    display: none !important;
+  }
+}
 </style>
 </head>
 <body>
 <div class="slide-badge">AI in Action · Ngày 9</div>
-<div class="slide-counter" id="counter">1 / 21</div>
+<div class="slide-counter" id="counter">1 / 37</div>
 <div class="nav-hint">&larr; &rarr; navigate</div>
 <div class="notes-hint">N = speaker notes</div>
 <div class="notes-panel" id="notes-panel"></div>
 <div class="presentation" id="pres">
+<!-- Shared SVG defs: marker referenced by multiple slide diagrams -->
+<svg width="0" height="0" style="position:absolute;overflow:hidden;pointer-events:none" aria-hidden="true" focusable="false">
+  <defs>
+    <marker id="mArrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto" markerUnits="strokeWidth">
+      <path d="M0 0 L10 5 L0 10 z" fill="#6b7280"/>
+    </marker>
+  </defs>
+</svg>
 
 <div class="slide section-slide hero-slide active" data-slide-id="D9-S01">
   <div class="hero-bg">
@@ -1070,7 +1117,137 @@ tốt nhất để tránh suy nghĩ “pattern nào cũng như nhau”.</p></div
 giải thích vì sao worker mơ hồ làm debugging cực khó: không biết lỗi do route sai,
 prompt sai hay input thiếu. Nên chốt bằng một rule đơn giản: supervisor giữ quyết
 định luồng, worker giữ domain skill, contract là ranh giới giữa hai bên.</p></div><div class="note-block"><div class="note-kicker">Interaction</div><p>Có thể cho học viên sửa nhanh 1 contract mơ hồ thành contract rõ ràng hơn.</p></div><div class="note-block"><div class="note-kicker">Visual cue</div><p>Code block JSON bên trái; bên phải là so sánh shared state vs message passing với 3 tag testable/traceable/replaceable.</p></div></aside>
-</div><div class="slide content-slide" data-slide-id="D9-S11">
+</div>
+
+<!-- Slide D9-S10-1: Dynamic vs Static -->
+<div class="slide content-slide" data-slide-id="D9-S10-1">
+    <div class="frame-header"><div class="frame-title">Điều phối Động vs. Tĩnh (Router vs. Chain)</div><div class="frame-sub">Khi nào cần sự linh hoạt của Router thay vì bước cố định của Chain</div><div class="thin-rule"></div></div>
+    <div class="slide-body" style="display:flex;gap:26px;align-items:center;padding-top:12px">
+      <div class="col" style="flex:1">
+        <div class="compare-rail">
+          <div class="compare-box blue">
+            <div class="compare-title">Static Chain (Tĩnh)</div>
+            <div class="compare-desc">Các bước A -> B -> C cố định. <br><b>Dùng khi:</b> Quy trình chuẩn (SOP) không đổi, đầu ra bước trước là đầu vào bước sau.</div>
+          </div>
+          <div class="compare-box red">
+            <div class="compare-title">Dynamic Router (Động)</div>
+            <div class="compare-desc">Dựa vào input để chọn bước tiếp theo. <br><b>Dùng khi:</b> Yêu cầu người dùng đa dạng, không thể đoán trước luồng đi (IT Helpdesk).</div>
+          </div>
+        </div>
+      </div>
+      <div class="col" style="flex:1">
+        <div class="diagram-shell">
+          <svg viewBox="0 0 400 200" xmlns="http://www.w3.org/2000/svg" class="fit-svg">
+            <rect x="10" y="80" width="60" height="40" rx="8" fill="#f5f5f7" stroke="#8c8c8c" />
+            <text x="40" y="105" text-anchor="middle" font-size="12" font-weight="700">User</text>
+            <path d="M70 100 H120" stroke="#2e548a" stroke-width="2" marker-end="url(#mArrow)" />
+            <rect x="120" y="70" width="80" height="60" rx="12" fill="#2e548a" />
+            <text x="160" y="105" text-anchor="middle" font-size="14" font-weight="800" fill="white">Router</text>
+            <path d="M200 80 L280 40" stroke="#2e548a" stroke-width="2" marker-end="url(#mArrow)" />
+            <path d="M200 100 H280" stroke="#2e548a" stroke-width="2" marker-end="url(#mArrow)" />
+            <path d="M200 120 L280 160" stroke="#2e548a" stroke-width="2" marker-end="url(#mArrow)" />
+            <rect x="280" y="20" width="90" height="34" rx="10" fill="#e6f4f5" stroke="#0d7377" />
+            <text x="325" y="42" text-anchor="middle" font-size="11" fill="#0d7377">Worker A</text>
+            <rect x="280" y="83" width="90" height="34" rx="10" fill="#efecff" stroke="#635bff" />
+            <text x="325" y="105" text-anchor="middle" font-size="11" fill="#4436c7">Worker B</text>
+            <rect x="280" y="146" width="90" height="34" rx="10" fill="#fff5e7" stroke="#b45309" />
+            <text x="325" y="168" text-anchor="middle" font-size="11" fill="#b45309">Worker C</text>
+          </svg>
+        </div>
+      </div>
+    </div>
+    <aside class="notes"><div class="note-block"><div class="note-kicker">Speaker notes</div><p>Nhấn mạnh: Chain phù hợp cho các luồng dữ liệu (Data Pipeline), Router phù hợp cho các buổi hội thoại (Agents). Đừng làm phức tạp hoá nếu quy trình chỉ có 2 bước cố định.</p></div></aside>
+</div>
+
+<!-- Slide D9-S10-2: Supervisor Brain -->
+<div class="slide content-slide" data-slide-id="D9-S10-2">
+    <div class="frame-header"><div class="frame-title">"Bộ não" của Supervisor: Prompting để điều phối</div><div class="frame-sub">Cách viết System Prompt để Supervisor không "làm hộ" Worker</div><div class="thin-rule"></div></div>
+    <div class="slide-body" style="display:flex;gap:24px;padding-top:10px">
+      <div class="code-panel" style="flex:1.2">
+        <div class="code-head">System Prompt Phân Vai</div>
+        <div class="code-body" style="font-size:16px">
+          # Vai trò: Điều phối viên Helpdesk<br>
+          1. CHỈ phân loại và gọi worker. KHÔNG tự trả lời kiến thức chuyên môn.<br>
+          2. Nếu thiếu thông tin, gọi 'Clarifier Worker'.<br>
+          3. Danh sách workers:<br>
+          - 'RefundBot': xử lý chính sách hoàn tiền.<br>
+          - 'TechBot': xử lý lỗi kết nối/account.<br>
+          - 'Escalation': chuyển cho người thật.
+        </div>
+      </div>
+      <div class="col" style="flex:0.8">
+        <div class="vin-box">
+          <div class="box-title">Lỗi thường gặp</div>
+          Supervisor quá thông minh nên "tự biên tự diễn", bỏ qua worker và dẫn đến ảo giác (hallucination) vì không dùng evidence từ worker.
+        </div>
+        <div class="warn-box">
+          <b>Kỹ thuật:</b> Cung cấp mô tả worker thật ngắn gọn và ranh giới rõ ràng trong prompt.
+        </div>
+      </div>
+    </div>
+    <aside class="notes"><div class="note-block"><div class="note-kicker">Speaker notes</div><p>Dạy học viên cách "kìm hãm" sự thông minh của Supervisor để ép nó phải tuân thủ quy trình. Supervisor chỉ nên là người dẫn đường (Traffic Controller).</p></div></aside>
+</div>
+
+<!-- Slide D9-S10-3: State Management -->
+<div class="slide content-slide" data-slide-id="D9-S10-3">
+    <div class="frame-header"><div class="frame-title">Quản lý State: Theo dõi tiến độ task</div><div class="frame-sub">Cách Supervisor "nhớ" những gì đã làm để không bị lặp vòng</div><div class="thin-rule"></div></div>
+    <div class="slide-body" style="display:flex;flex-direction:column;gap:18px;padding-top:12px">
+      <div class="stat-row">
+        <div class="stat-card blue"><div class="number">History</div><div class="label">Các bước đã đi qua</div></div>
+        <div class="stat-card violet"><div class="number">Pending</div><div class="label">Các task chưa xong</div></div>
+        <div class="stat-card teal"><div class="number">Decision</div><div class="label">Lý do chọn worker</div></div>
+      </div>
+      <div class="code-panel slim">
+        <div class="code-head">State Object Schema</div>
+        <div class="code-body" style="font-size:16px">
+          { "current_task": "...", "status": "in_progress", "history": ["route: tech", "tool: ping_server", "result: timeout"], "next_worker": "escalation" }
+        </div>
+      </div>
+      <div class="dark-banner">State là "bảng chấm công" của hệ thống, giúp Supervisor biết dừng lại khi task đã hoàn thành hoặc thất bại.</div>
+    </div>
+</div>
+
+<!-- Slide D9-S10-4: Diagnostic Example -->
+<div class="slide content-slide" data-slide-id="D9-S10-4">
+    <div class="frame-header"><div class="frame-title">Luồng Troubleshooting thực tế</div><div class="frame-sub">Ví dụ luồng đi của Supervisor khi xử lý lỗi đăng nhập</div><div class="thin-rule"></div></div>
+    <div class="slide-body" style="padding-top:10px">
+      <div class="diagram-shell" style="background:#f8fafc">
+        <svg viewBox="0 0 1000 300" xmlns="http://www.w3.org/2000/svg" class="fit-svg" preserveAspectRatio="xMidYMid meet">
+          <g transform="translate(50, 150)">
+            <circle r="40" fill="#2e548a" />
+            <text text-anchor="middle" y="5" fill="white" font-weight="800">Start</text>
+            <path d="M40 0 H150" stroke="#2e548a" stroke-width="3" marker-end="url(#mArrow)" />
+          </g>
+          <g transform="translate(240, 150)">
+            <rect x="-80" y="-40" width="160" height="80" rx="15" fill="#efecff" stroke="#635bff" stroke-width="2" />
+            <text text-anchor="middle" y="-5" fill="#4436c7" font-weight="800">Identify Problem</text>
+            <text text-anchor="middle" y="15" fill="#8c8c8c" font-size="12">"Can't login"</text>
+            <path d="M80 0 H150" stroke="#635bff" stroke-width="3" marker-end="url(#mArrow)" />
+          </g>
+          <g transform="translate(440, 150)">
+            <rect x="-80" y="-40" width="160" height="80" rx="15" fill="#e6f4f5" stroke="#0d7377" stroke-width="2" />
+            <text text-anchor="middle" y="-5" fill="#0d7377" font-weight="800">Check Database</text>
+            <text text-anchor="middle" y="15" fill="#8c8c8c" font-size="12">User status: Suspended</text>
+            <path d="M80 0 H150" stroke="#0d7377" stroke-width="3" marker-end="url(#mArrow)" />
+          </g>
+          <g transform="translate(640, 150)">
+            <rect x="-80" y="-40" width="160" height="80" rx="15" fill="#fff5e7" stroke="#b45309" stroke-width="2" />
+            <text text-anchor="middle" y="-5" fill="#b45309" font-weight="800">Action: Reset</text>
+            <text text-anchor="middle" y="15" fill="#8c8c8c" font-size="12">Unblock user</text>
+            <path d="M80 0 H150" stroke="#b45309" stroke-width="3" marker-end="url(#mArrow)" />
+          </g>
+          <g transform="translate(840, 150)">
+            <circle r="40" fill="#10b981" />
+            <text text-anchor="middle" y="5" fill="white" font-weight="800">Success</text>
+          </g>
+        </svg>
+      </div>
+      <div class="vin-box" style="margin-top:20px">
+        Trong mỗi bước, Supervisor là người quyết định: "Tiếp tục gọi DB worker" hay "Xong rồi, báo user".
+      </div>
+    </div>
+</div>
+<div class="slide content-slide" data-slide-id="D9-S11">
     <div class="frame-header"><div class="frame-title">MCP architecture: agent cắm vào năng lực bên ngoài theo chuẩn chung</div><div class="frame-sub">Agent/MCP client -> MCP server -> tools/resources/prompts</div><div class="thin-rule"></div></div>
     <div class="slide-body" style="display:flex;gap:24px;align-items:stretch;padding-top:12px">
       <div class="left-stack" style="flex:0.9;display:flex;flex-direction:column;gap:14px">
@@ -1085,43 +1262,38 @@ prompt sai hay input thiếu. Nên chốt bằng một rule đơn giản: superv
           <div class="card violet"><div class="card-title">Prompts</div><div class="card-body">template / policy surface</div></div>
         </div>
       </div>
-      <div class="diagram-shell" style="flex:1.1">
-<svg viewBox="0 0 700 320" xmlns="http://www.w3.org/2000/svg" class="fit-svg" aria-hidden="true">
-  <defs>
-    <marker id="mArrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
-      <path d="M0 0 L10 5 L0 10 z" fill="#9fb1cf"/>
-    </marker>
-  </defs>
-  <g stroke="#a7b6cf" stroke-width="4" fill="none" marker-end="url(#mArrow)">
-    <path d="M188 160 H328"/>
-    <path d="M446 160 H596"/>
-  </g>
-  <g font-family="Arial" text-anchor="middle">
-    <g transform="translate(110 160)">
-      <rect x="-78" y="-48" width="156" height="96" rx="24" fill="#635bff"/>
-      <text y="-6" font-size="24" font-weight="800" fill="white">Agent</text>
-      <text y="18" font-size="13" fill="rgba(255,255,255,0.82)">MCP client</text>
-    </g>
-    <g transform="translate(388 160)">
-      <rect x="-92" y="-60" width="184" height="120" rx="26" fill="#eef4ff" stroke="#2e548a" stroke-width="2"/>
-      <text y="-14" font-size="24" font-weight="800" fill="#2e548a">MCP Server</text>
-      <text y="14" font-size="13" fill="#4b5563">surface chuẩn chung</text>
-      <g transform="translate(0 40)">
-        <rect x="-62" y="-16" width="124" height="32" rx="16" fill="#dce6f5"/>
-        <text y="5" font-size="12" fill="#1d1d1f">auth · schema · discover</text>
-      </g>
-    </g>
-    <g transform="translate(620 160)">
-      <rect x="-78" y="-92" width="156" height="58" rx="18" fill="#e6f4f5" stroke="#0d7377"/>
-      <text y="-56" font-size="16" font-weight="700" fill="#0d7377">Tools</text>
-      <rect x="-78" y="-28" width="156" height="58" rx="18" fill="#efecff" stroke="#635bff"/>
-      <text y="8" font-size="16" font-weight="700" fill="#4436c7">Resources</text>
-      <rect x="-78" y="36" width="156" height="58" rx="18" fill="#fff5e7" stroke="#b45309"/>
-      <text y="72" font-size="16" font-weight="700" fill="#b45309">Prompts</text>
-    </g>
-  </g>
-</svg>
-</div>
+      <div class="diagram-shell" style="flex:1.12;min-width:0;align-self:stretch;display:flex">
+        <svg viewBox="0 0 730 300" xmlns="http://www.w3.org/2000/svg" class="fit-svg" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+          <g stroke="#a7b6cf" stroke-width="4" fill="none" marker-end="url(#mArrow)">
+            <path d="M188 160 H328"/>
+            <path d="M446 160 H596"/>
+          </g>
+          <g font-family="Arial" text-anchor="middle">
+            <g transform="translate(110 160)">
+              <rect x="-78" y="-48" width="156" height="96" rx="24" fill="#635bff"/>
+              <text y="-6" font-size="24" font-weight="800" fill="white">Agent</text>
+              <text y="18" font-size="13" fill="rgba(255,255,255,0.82)">MCP client</text>
+            </g>
+            <g transform="translate(388 160)">
+              <rect x="-92" y="-60" width="184" height="120" rx="26" fill="#eef4ff" stroke="#2e548a" stroke-width="2"/>
+              <text y="-14" font-size="24" font-weight="800" fill="#2e548a">MCP Server</text>
+              <text y="14" font-size="13" fill="#4b5563">surface chuẩn chung</text>
+              <g transform="translate(0 40)">
+                <rect x="-62" y="-16" width="124" height="32" rx="16" fill="#dce6f5"/>
+                <text y="5" font-size="12" fill="#1d1d1f">auth · schema · discover</text>
+              </g>
+            </g>
+            <g transform="translate(620 160)">
+              <rect x="-78" y="-92" width="156" height="58" rx="18" fill="#e6f4f5" stroke="#0d7377"/>
+              <text y="-56" font-size="16" font-weight="700" fill="#0d7377">Tools</text>
+              <rect x="-78" y="-28" width="156" height="58" rx="18" fill="#efecff" stroke="#635bff"/>
+              <text y="8" font-size="16" font-weight="700" fill="#4436c7">Resources</text>
+              <rect x="-78" y="36" width="156" height="58" rx="18" fill="#fff5e7" stroke="#b45309"/>
+              <text y="72" font-size="16" font-weight="700" fill="#b45309">Prompts</text>
+            </g>
+          </g>
+        </svg>
+      </div>
     </div>
     <div class="credit-footer"><div class="f-left">Instructor: [Tên giảng viên]</div><div class="f-center">AI in Action - Day 09</div><div class="f-right slide-page-num"></div></div>
     <aside class="notes"><div class="note-block"><div class="note-kicker">Speaker notes</div><p>Giảng viên nên dùng analogy “ổ cắm chuẩn” để dạy MCP. Mục tiêu của buổi này
@@ -1129,6 +1301,124 @@ không phải học thuộc spec, mà là hiểu vì sao MCP giúp mở rộng h
 phải custom tích hợp lại từ đầu cho từng tool. Nếu được, minh hoạ bằng một ví dụ:
 tool worker cần search API hoặc đọc schema và chỉ cần nói chuyện qua MCP surface.</p></div><div class="note-block"><div class="note-kicker">Interaction</div><p>Hỏi nhanh: “Trong system của bạn, capability nào hiện đang bị hard-code mà đáng ra có thể qua một interface chuẩn?”</p></div><div class="note-block"><div class="note-kicker">Visual cue</div><p>Diagram 3 lớp Agent/MCP client → MCP server → Tools/Resources/Prompts với card analogy “ổ cắm chuẩn”.</p></div></aside>
 </div>
+
+<!-- Slide D9-S11-1: MCP Lifecycle -->
+<div class="slide content-slide" data-slide-id="D9-S11-1">
+    <div class="frame-header"><div class="frame-title">Vòng đời kết nối MCP (Discovery & Lifecycle)</div><div class="frame-sub">Agent tìm thấy năng lực mới như thế nào?</div><div class="thin-rule"></div></div>
+    <div class="slide-body" style="display:flex;gap:24px;padding-top:12px">
+      <div class="col" style="flex:1">
+        <ul class="clean-list">
+          <li><b>1. Initialization:</b> Client (Agent) kết nối tới Server.</li>
+          <li><b>2. Discovery:</b> Server liệt kê các <b>tools</b>, <b>resources</b> và <b>prompts</b> có sẵn.</li>
+          <li><b>3. Execution:</b> Agent gọi tool cụ thể với tham số JSON.</li>
+          <li><b>4. Sampling:</b> Server có thể yêu cầu Agent thực hiện một hành động (Agent-as-a-service).</li>
+        </ul>
+      </div>
+      <div class="col" style="flex:1">
+        <div class="diagram-shell">
+          <svg viewBox="0 0 400 240" xmlns="http://www.w3.org/2000/svg" class="fit-svg" preserveAspectRatio="xMidYMid meet">
+            <rect x="20" y="40" width="100" height="160" rx="10" fill="#635bff" opacity="0.1" stroke="#635bff" stroke-width="2" />
+            <text x="70" y="30" text-anchor="middle" font-size="12" font-weight="700" fill="#4436c7">Client (Agent)</text>
+            <rect x="280" y="40" width="100" height="160" rx="10" fill="#2e548a" opacity="0.1" stroke="#2e548a" stroke-width="2" />
+            <text x="330" y="30" text-anchor="middle" font-size="12" font-weight="700" fill="#1a3355">Server (Tools)</text>
+            <!-- Giao tiếp: Thụt lùi điểm đầu/cuối 8px để không bị đè lên box -->
+            <path d="M128 70 H272" stroke="#8c8c8c" stroke-width="2" marker-end="url(#mArrow)" />
+            <text x="200" y="65" text-anchor="middle" font-size="10">Initialize / Tools::List</text>
+            <path d="M272 110 H128" stroke="#8c8c8c" stroke-width="2" marker-end="url(#mArrow)" />
+            <text x="200" y="105" text-anchor="middle" font-size="10">JSON Schema of Tools</text>
+            <path d="M128 150 H272" stroke="#8c8c8c" stroke-width="2" marker-end="url(#mArrow)" />
+            <text x="200" y="145" text-anchor="middle" font-size="10">Call: search_kb(query="...")</text>
+            <path d="M272 190 H128" stroke="#8c8c8c" stroke-width="2" marker-end="url(#mArrow)" />
+            <text x="200" y="185" text-anchor="middle" font-size="10">Result (JSON content)</text>
+          </svg>
+        </div>
+      </div>
+    </div>
+</div>
+
+<!-- Slide D9-S11-2: Real Tool Integration -->
+<div class="slide content-slide" data-slide-id="D9-S11-2">
+    <div class="frame-header"><div class="frame-title">Kết nối công cụ thật: Zendesk & Jira</div><div class="frame-sub">Dùng MCP để biến API thành năng lực của Agent</div><div class="thin-rule"></div></div>
+    <div class="slide-body" style="display:flex;flex-direction:column;gap:18px;padding-top:12px">
+      <div class="case-banner">
+        <div class="case-banner-label">Use case</div>
+        <div class="case-banner-title">Tự động hóa Ticket Escalation</div>
+      </div>
+      <div class="role-split">
+        <div class="role-box blue">
+          <div class="role-title">Zendesk Server</div>
+          <div class="chip-row compact">
+            <span class="chip blue">get_ticket_details</span>
+            <span class="chip blue">update_status</span>
+            <span class="chip blue">add_internal_note</span>
+          </div>
+        </div>
+        <div class="role-box violet">
+          <div class="role-title">Jira Server</div>
+          <div class="chip-row compact">
+            <span class="chip violet">create_issue</span>
+            <span class="chip violet">assign_developer</span>
+            <span class="chip violet">comment_on_bug</span>
+          </div>
+        </div>
+      </div>
+      <div class="vin-box">
+        Thay vì Agent phải "hiểu" API của Zendesk, MCP Server dịch API đó thành các <b>Tool Definition</b> mà LLM có thể gọi dễ dàng.
+      </div>
+    </div>
+</div>
+
+<!-- Slide D9-S11-3: Pillars of MCP -->
+<div class="slide content-slide" data-slide-id="D9-S11-3">
+    <div class="frame-header"><div class="frame-title">3 trụ cột của MCP: Tool, Resource, Prompt</div><div class="frame-sub">Phân biệt và cách dùng đúng trong hệ thống Agent</div><div class="thin-rule"></div></div>
+    <div class="slide-body" style="display:flex;gap:20px;padding-top:14px">
+      <div class="worksheet-card">
+        <div class="worksheet-head">Tools (Hành động)</div>
+        <div class="worksheet-canvas" style="display:flex;align-items:center;justify-content:center;font-size:16px;padding:20px">
+          "Làm" một việc gì đó có side-effect: tạo File, gửi Mail, chạy SQL.
+        </div>
+      </div>
+      <div class="worksheet-card">
+        <div class="worksheet-head">Resources (Dữ liệu)</div>
+        <div class="worksheet-canvas" style="display:flex;align-items:center;justify-content:center;font-size:16px;padding:20px">
+          "Đọc" dữ liệu tĩnh hoặc log: bảng Schema DB, nội dung File PDF, System Log.
+        </div>
+      </div>
+      <div class="worksheet-card">
+        <div class="worksheet-head">Prompts (Mẫu)</div>
+        <div class="worksheet-canvas" style="display:flex;align-items:center;justify-content:center;font-size:16px;padding:20px">
+          "Hướng dẫn" định sẵn cho Agent: mẫu trả lời Email, checklist bảo mật.
+        </div>
+      </div>
+    </div>
+</div>
+
+<!-- Slide D9-S11-4: Security boundary -->
+<div class="slide content-slide" data-slide-id="D9-S11-4">
+    <div class="frame-header"><div class="frame-title">Bảo mật & Ranh giới ủy quyền</div><div class="frame-sub">Agent không nên có quyền "full root" trên server</div><div class="thin-rule"></div></div>
+    <div class="slide-body" style="display:flex;gap:24px;padding-top:12px">
+      <div class="security-stack" style="flex:1">
+        <div class="security-card red">
+          <div class="security-title">Least Privilege (Quyền tối thiểu)</div>
+          <div class="security-body">Chỉ cấp quyền gọi tool đọc Ticket, không cho quyền xóa toàn bộ Database.</div>
+        </div>
+        <div class="security-card amber">
+          <div class="security-title">User Approval (Xác thực người dùng)</div>
+          <div class="security-body">Các hành động nguy hiểm (như Refund) PHẢI có sự đồng ý của con người trong luồng.</div>
+        </div>
+        <div class="security-card blue">
+          <div class="security-title">Sandboxing</div>
+          <div class="security-body">MCP Server nên chạy trong container/môi trường cô lập để Agent không phá hỏng hệ thống.</div>
+        </div>
+      </div>
+      <div class="col" style="flex:1">
+        <div class="warn-box">
+          <b>Kịch bản rủi ro:</b> Prompt injection khiến Agent cố tình gọi tool xóa dữ liệu. MCP Server phải là lớp phòng thủ cuối cùng kiểm tra quyền thực sự của Agent.
+        </div>
+      </div>
+    </div>
+</div>
+
 <div class="slide content-slide" data-slide-id="A2A-BOUNDARY">
   <div class="frame-header"><div class="frame-title">A2A = giao việc cho agent khác · MCP = lấy năng lực từ bên ngoài</div><div class="frame-sub">Kèm sync vs async và boundary cần nhớ trước khi chạm lab</div><div class="thin-rule"></div></div>
   <div class="slide-body" style="display:flex;gap:24px;align-items:stretch;padding-top:10px">
@@ -1186,6 +1476,145 @@ yêu cầu compliance worker kiểm tra policy”, “agent đọc config từ e
 Sau 8 phút, chốt quy tắc: MCP trả lời câu hỏi agent lấy năng lực ở đâu, A2A trả lời
 câu hỏi agent giao việc cho ai.</p></div><div class="note-block"><div class="note-kicker">Interaction</div><p>Nhóm 8 phút phân loại, 2 phút chốt rule.</p></div><div class="note-block"><div class="note-kicker">Visual cue</div><p>Board lớn 2 cột MCP vs A2A với 6 sticky cards để kéo-thả hoặc thảo luận.</p></div></aside>
 </div>
+
+<!-- Slide D9-S12-1: Collaboration Patterns -->
+<div class="slide content-slide" data-slide-id="D9-S12-1">
+    <div class="frame-header"><div class="frame-title">Các mô hình cộng tác Agent (A2A Patterns)</div><div class="frame-sub">Handoff, Cooperative Search & Concurrent Debate</div><div class="thin-rule"></div></div>
+    <div class="slide-body" style="display:flex;flex-direction:column;gap:18px;padding-top:12px">
+      <div class="pattern-grid">
+        <div class="pattern-card blue">
+          <div class="pattern-top"><div class="pattern-name">Handover</div><span class="tag blue">Sequential</span></div>
+          <div class="pattern-warning">Agent A bàn giao task cho Agent B khi xong phần việc của mình.</div>
+        </div>
+        <div class="pattern-card teal">
+          <div class="pattern-top"><div class="pattern-name">Cooperative Search</div><span class="tag teal">Parallel</span></div>
+          <div class="pattern-warning">Nhiều Agent cùng tìm kiếm ở các nguồn khác nhau để gom dữ liệu nhanh.</div>
+        </div>
+      </div>
+      <div class="pattern-grid">
+        <div class="pattern-card red">
+          <div class="pattern-top"><div class="pattern-name">Joint Decision</div><span class="tag red">Consensus</span></div>
+          <div class="pattern-warning">Cần sự đồng ý của cả 2 Agent (ví dụ: Tech + Compliance) trước khi trả lời.</div>
+        </div>
+        <div class="pattern-card violet">
+          <div class="pattern-top"><div class="pattern-name">Self-Correction</div><span class="tag violet">Feedback Loop</span></div>
+          <div class="pattern-warning">Agent A viết, Agent B check và yêu cầu A sửa lại nếu có lỗi.</div>
+        </div>
+      </div>
+    </div>
+</div>
+
+<!-- Slide D9-S12-2: Compliance Auditor Example -->
+<div class="slide content-slide" data-slide-id="D9-S12-2">
+    <div class="frame-header"><div class="frame-title">Case Study: Compliance Guardrail</div><div class="frame-sub">Dùng A2A để kiểm soát rủi ro pháp lý và chính sách</div><div class="thin-rule"></div></div>
+    <div class="slide-body" style="display:flex;gap:24px;padding-top:10px">
+      <div class="col" style="flex:1">
+        <div class="take-card">
+          <div class="take-num">1</div>
+          <div class="take-text"><b>Support Agent</b> soạn thảo câu trả lời dựa trên Knowledge Base.</div>
+        </div>
+        <div class="take-card" style="margin-top:10px">
+          <div class="take-num">2</div>
+          <div class="take-text"><b>Compliance Agent</b> nhận bản nháp, đối chiếu với danh sách "Blacklist" (từ cấm, cam kết sai...).</div>
+        </div>
+        <div class="take-card" style="margin-top:10px">
+          <div class="take-num">3</div>
+          <div class="take-text">Nếu có lỗi, Compliance Agent yêu cầu Support Agent sửa lại hoặc Escalation cho Manager.</div>
+        </div>
+      </div>
+      <div class="col" style="flex:1">
+        <div class="diagram-shell">
+          <svg viewBox="0 0 300 240" xmlns="http://www.w3.org/2000/svg">
+            <rect x="20" y="40" width="80" height="40" rx="8" fill="#dce6f5" stroke="#2e548a" />
+            <text x="60" y="65" text-anchor="middle" font-size="10">Support</text>
+            <path d="M100 60 H180" stroke="#2e548a" stroke-width="2" marker-end="url(#mArrow)" />
+            <rect x="180" y="40" width="80" height="40" rx="8" fill="#fdecec" stroke="#c83538" />
+            <text x="220" y="65" text-anchor="middle" font-size="10">Compliance</text>
+            <path d="M220 80 V120 H100 V160" stroke="#c83538" stroke-width="2" fill="none" stroke-dasharray="4 4" marker-end="url(#mArrow)" />
+            <text x="140" y="110" text-anchor="middle" font-size="9" fill="#c83538">Rejected: Rewrite needed</text>
+            <rect x="60" y="160" width="80" height="40" rx="8" fill="#dce6f5" stroke="#2e548a" />
+            <text x="100" y="185" text-anchor="middle" font-size="10">Rewrite</text>
+          </svg>
+        </div>
+      </div>
+    </div>
+</div>
+
+<!-- Slide D9-S12-3: Dealing with Contradictions -->
+<div class="slide content-slide" data-slide-id="D9-S12-3">
+    <div class="frame-header"><div class="frame-title">Xử lý mâu thuẫn giữa các Agent</div><div class="frame-sub">Khi "ông nói gà, bà nói vịt" — giải quyết như thế nào?</div><div class="thin-rule"></div></div>
+    <div class="slide-body" style="display:grid;grid-template-columns:1fr 1fr;gap:20px;padding-top:12px">
+      <div class="symptom-card red">
+        <div class="symptom-title">Conflict (Mâu thuẫn)</div>
+        <div class="symptom-desc">Agent A bảo có thể refund, Agent B bảo khách này vi phạm chính sách bảo mật nên không được.</div>
+      </div>
+      <div class="symptom-card blue">
+        <div class="symptom-title">Solution: Judge Agent</div>
+        <div class="symptom-desc">Dùng một Agent thứ 3 có Prompt "Phân xử" để cân nhắc bằng chứng của cả 2 bên.</div>
+      </div>
+      <div class="symptom-card violet">
+        <div class="symptom-title">Solution: Hierarchy</div>
+        <div class="symptom-desc">Quy định Agent nào có "trọng số" cao hơn (ví dụ: Compliance Agent luôn thắng Support Agent).</div>
+      </div>
+      <div class="symptom-card teal">
+        <div class="symptom-title">Last Resort: HITL</div>
+        <div class="symptom-desc">Nếu vẫn mâu thuẫn, chuyển cho người thật (Manual Intervention).</div>
+      </div>
+    </div>
+</div>
+
+<!-- Slide D9-S12-4: Hierarchical Teams -->
+<div class="slide content-slide" data-slide-id="D9-S12-4">
+    <div class="frame-header"><div class="frame-title">Cấu trúc phân tầng (Hierarchical Teams)</div><div class="frame-sub">Mở rộng hệ thống bằng cách biến Supervisor thành một Worker</div><div class="thin-rule"></div></div>
+    <div class="slide-body" style="display:flex;gap:24px;padding-top:10px">
+      <div class="col" style="flex:1">
+        <div class="vin-box">
+          <div class="box-title">Khái niệm</div>
+          Thay vì một Supervisor quản lý 100 workers, chúng ta tạo các <b>Team Leads</b>. Mỗi Team Lead là một Supervisor nhỏ quản lý 3-5 workers.
+        </div>
+        <div class="warn-box">
+          <b>Lợi ích:</b> Giảm tải context cho Supervisor tổng, dễ debug theo module (IT Team, Sales Team, HR Team).
+        </div>
+      </div>
+      <div class="col" style="flex:1">
+        <div class="diagram-shell">
+          <svg viewBox="0 0 320 228" xmlns="http://www.w3.org/2000/svg" class="fit-svg" preserveAspectRatio="xMidYMid meet">
+            <rect x="120" y="6" width="80" height="28" rx="8" fill="#1a3355" />
+            <text x="160" y="25" text-anchor="middle" font-size="11" font-weight="700" fill="white">Main Lead</text>
+            <path d="M160 34 L80 52" stroke="#8c8c8c" stroke-width="2" fill="none" marker-end="url(#mArrow)" />
+            <path d="M160 34 L240 52" stroke="#8c8c8c" stroke-width="2" fill="none" marker-end="url(#mArrow)" />
+            <rect x="36" y="52" width="88" height="28" rx="8" fill="#2e548a" />
+            <text x="80" y="70" text-anchor="middle" font-size="10" font-weight="700" fill="white">Tech Lead</text>
+            <rect x="196" y="52" width="88" height="28" rx="8" fill="#2e548a" />
+            <text x="240" y="70" text-anchor="middle" font-size="10" font-weight="700" fill="white">Policy Lead</text>
+            <!-- Workers under Tech Lead -->
+            <path d="M68 80 L52 98" stroke="#a3b4cc" stroke-width="1.5" fill="none" marker-end="url(#mArrow)" />
+            <path d="M80 80 L80 98" stroke="#a3b4cc" stroke-width="1.5" fill="none" marker-end="url(#mArrow)" />
+            <path d="M92 80 L108 98" stroke="#a3b4cc" stroke-width="1.5" fill="none" marker-end="url(#mArrow)" />
+            <rect x="34" y="98" width="34" height="22" rx="5" fill="#eef4ff" stroke="#2e548a" stroke-width="1.2" />
+            <text x="51" y="113" text-anchor="middle" font-size="8" font-weight="700" fill="#1a3355">W1</text>
+            <rect x="72" y="98" width="34" height="22" rx="5" fill="#eef4ff" stroke="#2e548a" stroke-width="1.2" />
+            <text x="89" y="113" text-anchor="middle" font-size="8" font-weight="700" fill="#1a3355">W2</text>
+            <rect x="110" y="98" width="34" height="22" rx="5" fill="#eef4ff" stroke="#2e548a" stroke-width="1.2" />
+            <text x="127" y="113" text-anchor="middle" font-size="8" font-weight="700" fill="#1a3355">W3</text>
+            <!-- Workers under Policy Lead -->
+            <path d="M228 80 L212 98" stroke="#a3b4cc" stroke-width="1.5" fill="none" marker-end="url(#mArrow)" />
+            <path d="M240 80 L240 98" stroke="#a3b4cc" stroke-width="1.5" fill="none" marker-end="url(#mArrow)" />
+            <path d="M252 80 L268 98" stroke="#a3b4cc" stroke-width="1.5" fill="none" marker-end="url(#mArrow)" />
+            <rect x="194" y="98" width="34" height="22" rx="5" fill="#eef4ff" stroke="#2e548a" stroke-width="1.2" />
+            <text x="211" y="113" text-anchor="middle" font-size="8" font-weight="700" fill="#1a3355">W1</text>
+            <rect x="232" y="98" width="34" height="22" rx="5" fill="#eef4ff" stroke="#2e548a" stroke-width="1.2" />
+            <text x="249" y="113" text-anchor="middle" font-size="8" font-weight="700" fill="#1a3355">W2</text>
+            <rect x="270" y="98" width="34" height="22" rx="5" fill="#eef4ff" stroke="#2e548a" stroke-width="1.2" />
+            <text x="287" y="113" text-anchor="middle" font-size="8" font-weight="700" fill="#1a3355">W3</text>
+            <text x="160" y="138" text-anchor="middle" font-size="9" fill="#6b7280">Mỗi lead quản 3–5 workers</text>
+            <text x="160" y="154" text-anchor="middle" font-size="9" fill="#6b7280">(W = worker / specialist)</text>
+          </svg>
+        </div>
+      </div>
+    </div>
+</div>
+
 <div class="slide content-slide" data-slide-id="D9-S13">
   <div class="frame-header">
     <div class="frame-title">LangGraph: node, edge, state, route, HITL</div>
@@ -1195,115 +1624,85 @@ câu hỏi agent giao việc cho ai.</p></div><div class="note-block"><div class
 
   <div class="slide-body" style="display:flex;gap:22px;align-items:stretch;padding-top:8px">
     <!-- LEFT: GRAPH -->
-    <div style="flex:1.08;background:linear-gradient(180deg,#f7faff 0%,#eef4fb 100%);border:1px solid rgba(46,84,138,0.12);border-radius:18px;padding:14px;overflow:hidden">
-      <svg viewBox="0 0 760 420" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg" aria-label="LangGraph orchestration diagram">
+    <div style="flex:1.08;min-width:0;background:linear-gradient(180deg,#f7faff 0%,#eef4fb 100%);border:1px solid rgba(46,84,138,0.12);border-radius:18px;padding:14px;overflow:hidden;display:flex;flex-direction:column">
+      <!-- Vertical flow: State tách xa workers; nét và marker mảnh để không chồng -->
+      <svg viewBox="0 0 460 498" xmlns="http://www.w3.org/2000/svg" class="fit-svg" preserveAspectRatio="xMidYMid meet" aria-label="LangGraph orchestration diagram (vertical)">
         <defs>
-          <marker id="arrowBlue" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto" markerUnits="strokeWidth">
-            <path d="M0,0 L10,5 L0,10 z" fill="#8ea7cf"></path>
+          <marker id="lgArrowBlue" markerUnits="userSpaceOnUse" markerWidth="7" markerHeight="7" refX="5.5" refY="3.5" orient="auto">
+            <path d="M0 0 L7 3.5 L0 7 z" fill="#94a8c4"/>
           </marker>
-          <marker id="arrowRed" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto" markerUnits="strokeWidth">
-            <path d="M0,0 L10,5 L0,10 z" fill="#c83538"></path>
+          <marker id="lgArrowRed" markerUnits="userSpaceOnUse" markerWidth="7" markerHeight="7" refX="5.5" refY="3.5" orient="auto">
+            <path d="M0 0 L7 3.5 L0 7 z" fill="#d64d52"/>
           </marker>
-
-          <filter id="softShadow" x="-20%" y="-20%" width="140%" height="140%">
-            <feDropShadow dx="0" dy="4" stdDeviation="8" flood-color="#1a3355" flood-opacity="0.12"/>
-          </filter>
         </defs>
 
-        <!-- stage labels -->
-        <g font-family="Be Vietnam Pro, SF Pro Display, Arial, sans-serif" font-size="13" font-weight="700">
-          <rect x="22" y="18" rx="10" ry="10" width="118" height="30" fill="#dce6f5"/>
-          <text x="81" y="37" text-anchor="middle" fill="#2e548a">1. decide</text>
-
-          <rect x="252" y="18" rx="10" ry="10" width="138" height="30" fill="#dce6f5"/>
-          <text x="321" y="37" text-anchor="middle" fill="#2e548a">2. execute</text>
-
-          <rect x="545" y="18" rx="10" ry="10" width="168" height="30" fill="#fdecee"/>
-          <text x="629" y="37" text-anchor="middle" fill="#c83538">3. review / finish</text>
+        <g font-family="Be Vietnam Pro, SF Pro Display, Arial, sans-serif" font-size="10" font-weight="700">
+          <rect x="18" y="8" rx="7" ry="7" width="92" height="22" fill="#dce6f5"/>
+          <text x="64" y="23" text-anchor="middle" fill="#2e548a">1. decide</text>
+          <rect x="122" y="8" rx="7" ry="7" width="96" height="22" fill="#dce6f5"/>
+          <text x="170" y="23" text-anchor="middle" fill="#2e548a">2. execute</text>
+          <rect x="230" y="8" rx="7" ry="7" width="132" height="22" fill="#fdecee"/>
+          <text x="296" y="23" text-anchor="middle" fill="#c83538">3. review / finish</text>
         </g>
 
-        <!-- arrows -->
+        <!-- State: cột trái, không chồng lên khối workers (Retrieval bắt đầu x≈115) -->
+        <g font-family="Be Vietnam Pro, SF Pro Display, Arial, sans-serif">
+          <rect x="12" y="188" width="76" height="96" rx="12" fill="#f4fbfd" stroke="#b8dce6" stroke-width="1.25"/>
+          <text x="50" y="218" text-anchor="middle" font-size="13" font-weight="800" fill="#0d7377">State</text>
+          <text x="50" y="238" text-anchor="middle" font-size="9" fill="#4c7f89">history</text>
+          <text x="50" y="254" text-anchor="middle" font-size="9" fill="#4c7f89">risk · conf.</text>
+        </g>
+        <path d="M88 228 L148 138" fill="none" stroke="#8bb4c7" stroke-width="1.35" stroke-dasharray="5 4" marker-end="url(#lgArrowBlue)"/>
+
         <g fill="none" stroke-linecap="round" stroke-linejoin="round">
-          <!-- input -> supervisor -->
-          <path d="M145 138 H220" stroke="#9fb1cf" stroke-width="4" marker-end="url(#arrowBlue)"/>
-          <!-- supervisor -> retrieval -->
-          <path d="M340 120 H398" stroke="#9fb1cf" stroke-width="4" marker-end="url(#arrowBlue)"/>
-          <!-- supervisor -> tool -->
-          <path d="M340 180 H398" stroke="#9fb1cf" stroke-width="4" marker-end="url(#arrowBlue)"/>
-          <!-- retrieval -> synthesis -->
-          <path d="M560 120 H618" stroke="#9fb1cf" stroke-width="4" marker-end="url(#arrowBlue)"/>
-          <!-- tool -> synthesis -->
-          <path d="M560 180 C590 180, 598 180, 618 180" stroke="#9fb1cf" stroke-width="4" marker-end="url(#arrowBlue)"/>
-
-          <!-- synthesis -> output -->
-          <path d="M505 300 H618" stroke="#9fb1cf" stroke-width="4" marker-end="url(#arrowBlue)"/>
-          <!-- synthesis -> review -->
-          <path d="M450 250 V275" stroke="#c83538" stroke-width="4" marker-end="url(#arrowRed)"/>
-
-          <!-- state -> supervisor -->
-          <path d="M245 330 V215" stroke="#8bb4c7" stroke-width="4" stroke-dasharray="8 8" marker-end="url(#arrowBlue)"/>
-          <!-- review -> output -->
-          <path d="M560 235 C620 235, 642 250, 642 275 V300" stroke="#c83538" stroke-width="4" marker-end="url(#arrowRed)"/>
+          <path d="M235 84 V92" stroke="#9fb1cf" stroke-width="1.5" marker-end="url(#lgArrowBlue)"/>
+          <path d="M235 166 L174 188" stroke="#9fb1cf" stroke-width="1.5" marker-end="url(#lgArrowBlue)"/>
+          <path d="M235 166 L316 188" stroke="#9fb1cf" stroke-width="1.5" marker-end="url(#lgArrowBlue)"/>
+          <path d="M174 238 L235 258" stroke="#9fb1cf" stroke-width="1.5" marker-end="url(#lgArrowBlue)"/>
+          <path d="M316 238 L235 258" stroke="#9fb1cf" stroke-width="1.5" marker-end="url(#lgArrowBlue)"/>
+          <path d="M235 310 V320" stroke="#9fb1cf" stroke-width="1.5" marker-end="url(#lgArrowBlue)"/>
+          <path d="M235 320 L144 332" stroke="#c83538" stroke-width="1.45" marker-end="url(#lgArrowRed)"/>
+          <path d="M235 320 L334 332" stroke="#9fb1cf" stroke-width="1.5" marker-end="url(#lgArrowBlue)"/>
+          <path d="M230 358 H258" stroke="#c83538" stroke-width="1.35" marker-end="url(#lgArrowRed)"/>
         </g>
 
-        <!-- arrow labels -->
-        <g font-family="Be Vietnam Pro, SF Pro Display, Arial, sans-serif" font-size="12" font-weight="700">
-          <rect x="262" y="88" rx="8" ry="8" width="76" height="22" fill="#ffffff" opacity="0.95"/>
-          <text x="300" y="103" text-anchor="middle" fill="#5f7396">route</text>
-
-          <rect x="262" y="148" rx="8" ry="8" width="92" height="22" fill="#ffffff" opacity="0.95"/>
-          <text x="308" y="163" text-anchor="middle" fill="#5f7396">needs tool</text>
-
-          <rect x="213" y="265" rx="8" ry="8" width="64" height="22" fill="#ffffff" opacity="0.95"/>
-          <text x="245" y="280" text-anchor="middle" fill="#2e548a">state</text>
-
-          <rect x="464" y="258" rx="8" ry="8" width="92" height="22" fill="#ffffff" opacity="0.98"/>
-          <text x="510" y="273" text-anchor="middle" fill="#c83538">risk high</text>
+        <!-- Nhãn nhỏ trên đường, không dùng rect nền (tránh che node) -->
+        <g font-family="Be Vietnam Pro, SF Pro Display, Arial, sans-serif" font-size="9" font-weight="700" fill="#5f7396">
+          <text x="330" y="128" text-anchor="middle">route</text>
+          <text x="235" y="222" text-anchor="middle">workers</text>
+          <text x="198" y="322" text-anchor="middle" fill="#b84a50">risk high</text>
         </g>
 
-        <!-- nodes -->
-        <g font-family="Be Vietnam Pro, SF Pro Display, Arial, sans-serif" filter="url(#softShadow)">
-          <!-- Input -->
-          <rect x="28" y="102" width="118" height="72" rx="18" fill="#ffffff" stroke="#cfdcf0" stroke-width="2"/>
-          <text x="87" y="128" text-anchor="middle" font-size="20" font-weight="800" fill="#1d1d1f">Input</text>
-          <text x="87" y="150" text-anchor="middle" font-size="14" fill="#6b7280">user task</text>
+        <g font-family="Be Vietnam Pro, SF Pro Display, Arial, sans-serif" stroke-width="1.25">
+          <rect x="175" y="40" width="120" height="44" rx="12" fill="#ffffff" stroke="#cfdcf0"/>
+          <text x="235" y="64" text-anchor="middle" font-size="16" font-weight="800" fill="#1d1d1f">Input</text>
+          <text x="235" y="78" text-anchor="middle" font-size="10" fill="#6b7280">user task</text>
 
-          <!-- Supervisor -->
-          <rect x="220" y="85" width="120" height="130" rx="22" fill="#2e548a" stroke="#24446f" stroke-width="2"/>
-          <text x="280" y="123" text-anchor="middle" font-size="22" font-weight="800" fill="#ffffff">Supervisor</text>
-          <text x="280" y="148" text-anchor="middle" font-size="14" fill="#dbe6f6">route(state)</text>
-          <rect x="246" y="165" width="68" height="26" rx="13" fill="#ffffff" opacity="0.14"/>
-          <text x="280" y="182" text-anchor="middle" font-size="12" font-weight="700" fill="#ffffff">decision</text>
+          <rect x="153" y="92" width="164" height="74" rx="16" fill="#2e548a" stroke="#24446f"/>
+          <text x="235" y="124" text-anchor="middle" font-size="17" font-weight="800" fill="#ffffff">Supervisor</text>
+          <text x="235" y="144" text-anchor="middle" font-size="11" fill="#dbe6f6">route(state)</text>
+          <rect x="203" y="150" width="64" height="20" rx="10" fill="#ffffff" opacity="0.14"/>
+          <text x="235" y="164" text-anchor="middle" font-size="9" font-weight="700" fill="#ffffff">decision</text>
 
-          <!-- Retrieval -->
-          <rect x="398" y="84" width="162" height="72" rx="18" fill="#ffffff" stroke="#cfdcf0" stroke-width="2"/>
-          <text x="479" y="110" text-anchor="middle" font-size="20" font-weight="800" fill="#1d1d1f">Retrieval worker</text>
-          <text x="479" y="132" text-anchor="middle" font-size="14" fill="#6b7280">find evidence</text>
+          <rect x="115" y="188" width="118" height="50" rx="12" fill="#ffffff" stroke="#cfdcf0"/>
+          <text x="174" y="212" text-anchor="middle" font-size="13" font-weight="800" fill="#1d1d1f">Retrieval</text>
+          <text x="174" y="228" text-anchor="middle" font-size="9" fill="#6b7280">evidence</text>
 
-          <!-- Tool -->
-          <rect x="398" y="144" width="162" height="72" rx="18" fill="#ffffff" stroke="#cfdcf0" stroke-width="2"/>
-          <text x="479" y="170" text-anchor="middle" font-size="20" font-weight="800" fill="#1d1d1f">Tool worker</text>
-          <text x="479" y="192" text-anchor="middle" font-size="14" fill="#6b7280">MCP / external capability</text>
+          <rect x="257" y="188" width="118" height="50" rx="12" fill="#ffffff" stroke="#cfdcf0"/>
+          <text x="316" y="212" text-anchor="middle" font-size="13" font-weight="800" fill="#1d1d1f">Tool worker</text>
+          <text x="316" y="228" text-anchor="middle" font-size="9" fill="#6b7280">MCP / API</text>
 
-          <!-- Synthesis -->
-          <rect x="342" y="278" width="164" height="74" rx="18" fill="#ffffff" stroke="#cfdcf0" stroke-width="2"/>
-          <text x="424" y="305" text-anchor="middle" font-size="20" font-weight="800" fill="#1d1d1f">Synthesis</text>
-          <text x="424" y="327" text-anchor="middle" font-size="14" fill="#6b7280">answer + cite</text>
+          <rect x="143" y="258" width="184" height="52" rx="14" fill="#ffffff" stroke="#cfdcf0"/>
+          <text x="235" y="284" text-anchor="middle" font-size="16" font-weight="800" fill="#1d1d1f">Synthesis</text>
+          <text x="235" y="300" text-anchor="middle" font-size="10" fill="#6b7280">answer + cite</text>
 
-          <!-- Human review -->
-          <rect x="562" y="200" width="160" height="72" rx="18" fill="#fff4f5" stroke="#efb7bc" stroke-width="2"/>
-          <text x="642" y="226" text-anchor="middle" font-size="20" font-weight="800" fill="#8f1f26">Human review</text>
-          <text x="642" y="248" text-anchor="middle" font-size="14" fill="#b04249">risk cao / confidence thấp</text>
+          <rect x="58" y="332" width="172" height="52" rx="12" fill="#fff4f5" stroke="#efb7bc"/>
+          <text x="144" y="356" text-anchor="middle" font-size="14" font-weight="800" fill="#8f1f26">Human review</text>
+          <text x="144" y="372" text-anchor="middle" font-size="9" fill="#b04249">risk cao · confidence thấp</text>
 
-          <!-- Output -->
-          <rect x="618" y="300" width="104" height="72" rx="18" fill="#ffffff" stroke="#cfdcf0" stroke-width="2"/>
-          <text x="670" y="326" text-anchor="middle" font-size="20" font-weight="800" fill="#1d1d1f">Output</text>
-          <text x="670" y="348" text-anchor="middle" font-size="14" fill="#6b7280">final answer</text>
-
-          <!-- State -->
-          <rect x="150" y="300" width="190" height="74" rx="18" fill="#f4fbfd" stroke="#b8dce6" stroke-width="2"/>
-          <text x="245" y="326" text-anchor="middle" font-size="20" font-weight="800" fill="#0d7377">Shared state</text>
-          <text x="245" y="348" text-anchor="middle" font-size="14" fill="#4c7f89">history · confidence · risk</text>
+          <rect x="258" y="332" width="152" height="52" rx="12" fill="#ffffff" stroke="#cfdcf0"/>
+          <text x="334" y="356" text-anchor="middle" font-size="15" font-weight="800" fill="#1d1d1f">Output</text>
+          <text x="334" y="372" text-anchor="middle" font-size="9" fill="#6b7280">final answer</text>
         </g>
       </svg>
     </div>
@@ -1365,6 +1764,136 @@ def route(state):<br>
     </div>
   </aside>
 </div>
+
+<!-- Slide D9-S13-1: Persistence & Checkpointing -->
+<div class="slide content-slide" data-slide-id="D9-S13-1">
+    <div class="frame-header"><div class="frame-title">Tính kiên định & Checkpointing trong LangGraph</div><div class="frame-sub">Làm sao hệ thống "nhớ" được buổi hội thoại ngày hôm qua?</div><div class="thin-rule"></div></div>
+    <div class="slide-body" style="display:flex;flex-direction:column;gap:18px;padding-top:12px">
+      <div class="stat-row">
+        <div class="stat-card blue"><div class="number">Thread ID</div><div class="label">Mã định danh buổi chat</div></div>
+        <div class="stat-card violet"><div class="number">Checkpointer</div><div class="label">Lưu state vào Database</div></div>
+        <div class="stat-card teal"><div class="number">Resume</div><div class="label">Tiếp tục flow từ điểm dừng</div></div>
+      </div>
+      <div class="code-panel">
+        <div class="code-head">LangGraph Memory Setup</div>
+        <div class="code-body" style="font-size:16px">
+          memory = SqliteSaver.from_conn_string(":memory:")<br>
+          graph = builder.compile(checkpointer=memory)<br>
+          # Chạy graph với thread_id cụ thể<br>
+          config = {"configurable": {"thread_id": "user_123"}}<br>
+          graph.invoke(input, config)
+        </div>
+      </div>
+      <div class="dark-banner">Checkpointing cho phép "Time Travel": Bạn có thể quay lại bất kỳ thời điểm nào trong quá khứ của Graph để sửa lỗi hoặc chạy thử kịch bản khác.</div>
+    </div>
+</div>
+
+<!-- Slide D9-S13-2: HITL Approval -->
+<div class="slide content-slide" data-slide-id="D9-S13-2">
+    <div class="frame-header"><div class="frame-title">Human-in-the-loop (HITL) & Phê duyệt</div><div class="frame-sub">Tạm dừng Graph để chờ sự can thiệp của con người</div><div class="thin-rule"></div></div>
+    <div class="slide-body" style="display:flex;gap:24px;padding-top:12px">
+      <div class="col" style="flex:1">
+        <div class="take-card">
+          <div class="take-num">!</div>
+          <div class="take-text"><b>Breakpoint:</b> Graph tự động dừng trước một Node nhạy cảm (ví dụ: `send_refund_email`).</div>
+        </div>
+        <div class="take-card" style="margin-top:10px">
+          <div class="take-num">?</div>
+          <div class="take-text"><b>Review:</b> Manager xem lại lý do Refund và bằng chứng Agent đã gom.</div>
+        </div>
+        <div class="take-card" style="margin-top:10px">
+          <div class="take-num">O</div>
+          <div class="take-text"><b>Action:</b> Manager bấm "Approve" -> Graph tiếp tục chạy Node tiếp theo.</div>
+        </div>
+      </div>
+      <div class="col" style="flex:1">
+        <div class="diagram-shell">
+          <svg viewBox="0 0 300 200" xmlns="http://www.w3.org/2000/svg" class="fit-svg" preserveAspectRatio="xMidYMid meet">
+            <rect x="20" y="85" width="80" height="30" rx="8" fill="#dce6f5" />
+            <text x="60" y="105" text-anchor="middle" font-size="10">Prepare</text>
+            <path d="M100 100 H140" stroke="#2e548a" stroke-width="2" marker-end="url(#mArrow)" />
+            <rect x="140" y="80" width="40" height="40" rx="20" fill="#c83538" />
+            <text x="160" y="105" text-anchor="middle" font-size="16" fill="white">||</text>
+            <text x="160" y="70" text-anchor="middle" font-size="9" font-weight="700" fill="#c83538">WAITING</text>
+            <path d="M180 100 H220" stroke="#8c8c8c" stroke-width="2" marker-end="url(#mArrow)" />
+            <rect x="220" y="85" width="80" height="30" rx="8" fill="#e6f4f5" />
+            <text x="260" y="105" text-anchor="middle" font-size="10">Execute</text>
+          </svg>
+        </div>
+        <div class="vin-box" style="margin-top:20px">Đảm bảo an toàn cho các tác vụ thay đổi dữ liệu hoặc tài chính.</div>
+      </div>
+    </div>
+</div>
+
+<!-- Slide D9-S13-3: Self-Correction Loops -->
+<div class="slide content-slide" data-slide-id="D9-S13-3">
+    <div class="frame-header"><div class="frame-title">Vòng lặp tự sửa lỗi (Self-Correction)</div><div class="frame-sub">Agent tự soi gương và sửa lỗi trước khi trả kết quả</div><div class="thin-rule"></div></div>
+    <div class="slide-body" style="display:flex;flex-direction:column;gap:18px;padding-top:12px">
+      <div class="diagram-shell" style="padding:20px">
+        <svg viewBox="0 0 820 200" xmlns="http://www.w3.org/2000/svg" class="fit-svg" preserveAspectRatio="xMidYMid meet" font-family="Be Vietnam Pro, Inter, Arial, sans-serif">
+          <g transform="translate(108, 100)">
+            <rect x="-74" y="-34" width="148" height="68" rx="10" fill="#dce6f5" stroke="#2e548a" stroke-width="1.75" />
+            <text text-anchor="middle" fill="#1a3355" font-size="12" font-weight="700">
+              <tspan x="0" y="-4">Generator</tspan>
+              <tspan x="0" dy="15">Agent</tspan>
+            </text>
+          </g>
+          <path d="M182 100 H334" stroke="#2e548a" stroke-width="1.75" marker-end="url(#mArrow)" />
+          <g transform="translate(408, 100)">
+            <rect x="-74" y="-34" width="148" height="68" rx="10" fill="#fdecec" stroke="#c83538" stroke-width="1.75" />
+            <text text-anchor="middle" fill="#8f1f26" font-size="12" font-weight="700">
+              <tspan x="0" y="-4">Critic</tspan>
+              <tspan x="0" dy="15">Agent</tspan>
+            </text>
+          </g>
+          <path d="M408 66 Q408 18, 258 18 Q108 18, 108 66" fill="none" stroke="#635bff" stroke-width="1.75" stroke-dasharray="5 4" marker-end="url(#mArrow)" />
+          <text x="258" y="14" text-anchor="middle" font-size="10.5" fill="#635bff" font-weight="700">Feedback · sửa bước 2</text>
+          <path d="M482 100 H684" stroke="#2e548a" stroke-width="1.75" marker-end="url(#mArrow)" />
+          <g transform="translate(712, 100)">
+            <circle r="28" fill="#10b981" />
+            <text text-anchor="middle" y="5" fill="white" font-weight="700" font-size="13">Final</text>
+          </g>
+        </svg>
+      </div>
+      <div class="role-box blue">
+        <b>Ý tưởng:</b> LLM A tạo ra kết quả, LLM B (với prompt khắt khe hơn) kiểm tra. Nếu B không hài lòng, nó gửi feedback cho A sửa lại. Giới hạn số lần lặp (ví dụ: tối đa 3 lần) để tránh tốn token.
+      </div>
+    </div>
+</div>
+
+<!-- Slide D9-S13-4: Sub-graphs for Modularity -->
+<div class="slide content-slide" data-slide-id="D9-S13-4">
+    <div class="frame-header"><div class="frame-title">Sub-graphs: Quản lý độ phức tạp</div><div class="frame-sub">Chia nhỏ Graph lớn thành các Graph con có thể tái sử dụng</div><div class="thin-rule"></div></div>
+    <div class="slide-body" style="display:flex;gap:24px;padding-top:12px">
+      <div class="col" style="flex:1">
+        <ul class="clean-list">
+          <li><b>Modularity:</b> Team IT xây dựng `IT_Graph`, Team Sales xây dựng `Sales_Graph`.</li>
+          <li><b>Encapsulation:</b> Graph lớn chỉ cần biết Input/Output của Graph con, không cần biết chi tiết bên trong.</li>
+          <li><b>Scalability:</b> Dễ dàng bảo trì và mở rộng từng phần độc lập.</li>
+        </ul>
+      </div>
+      <div class="col" style="flex:1">
+        <div class="diagram-shell" style="background:#f1f5f9;border-style:dashed">
+          <svg viewBox="0 0 340 188" xmlns="http://www.w3.org/2000/svg" class="fit-svg" preserveAspectRatio="xMidYMid meet" font-family="Be Vietnam Pro, Inter, Arial, sans-serif">
+            <rect x="8" y="8" width="324" height="172" rx="14" fill="none" stroke="#2e548a" stroke-width="1.5" stroke-dasharray="7 6" />
+            <text x="18" y="28" font-size="12" font-weight="800" fill="#2e548a">Main Graph</text>
+            <rect x="36" y="58" width="102" height="72" rx="10" fill="#ffffff" stroke="#635bff" stroke-width="1.5" />
+            <text x="87" y="88" text-anchor="middle" font-size="10.5" font-weight="700" fill="#635bff">
+              <tspan x="87" dy="0">IT</tspan>
+              <tspan x="87" dy="13">sub-graph</tspan>
+            </text>
+            <rect x="202" y="58" width="102" height="72" rx="10" fill="#ffffff" stroke="#0d7377" stroke-width="1.5" />
+            <text x="253" y="88" text-anchor="middle" font-size="10.5" font-weight="700" fill="#0d7377">
+              <tspan x="253" dy="0">Refund</tspan>
+              <tspan x="253" dy="13">sub-graph</tspan>
+            </text>
+            <path d="M138 94 H202" stroke="#8c8c8c" stroke-width="1.75" marker-end="url(#mArrow)" />
+          </svg>
+        </div>
+      </div>
+    </div>
+</div>
+
 <div class="slide content-slide" data-slide-id="D9-S14">
     <div class="frame-header"><div class="frame-title">Hands-on 9 — Supervisor + Workers + MCP + Trace</div><div class="frame-sub">4 giờ thực hành: refactor Day 08 thành hệ multi-agent quan sát được</div><div class="thin-rule"></div></div>
     <div class="slide-body" style="display:flex;gap:24px;align-items:stretch;padding-top:12px">
@@ -1573,7 +2102,7 @@ artifacts/
         <div class="takeaway-stack">
           <div class="take-card"><div class="take-num">1</div><div class="take-text"><b>Trace nên ghi</b><br><span class="muted">task · route reason · worker IO · answer cuối</span></div></div>
           <div class="take-card"><div class="take-num">2</div><div class="take-text"><b>Multi-agent không phải để tăng số agent</b><br><span class="muted">mục tiêu là hệ rõ vai hơn</span></div></div>
-          <div class="take-card"><div class="take-num">3</div><div class="take-text"><b>Cầu nối sang Day 10</b><br><span class="muted">data quality + observability giữ hệ chạy bền</span></div></div>
+          <div class="take-card"><div class="take-num">3</div><div class="take-text"><b>Cầu nối sang Day 10</b><br><span class="muted">data quality + observability giữ hệ thống chạy thống bền</span></div></div>
         </div>
         <div class="flow-preview">
           <div class="flow-box blue">Day 09<br><span class="flow-sub">trace & routing</span></div>
