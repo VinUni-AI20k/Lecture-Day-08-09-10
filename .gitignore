@@ -18,4 +18,17 @@ day08/lab/logs/*.json
 !day08/lab/logs/grading_run.json
 
 # Reference UI (nested git repo — không nhúng; clone riêng nếu cần)
-vinagent-web/
+day09/lab/.env
+day09/lab/__pycache__/
+day09/lab/**/__pycache__/
+day09/lab/chroma_db/
+day09/lab/logs/*.jsonl
+day09/lab/logs/*.log
+day09/lab/logs/*.json
+!day09/lab/logs/.gitkeep
+!day09/lab/logs/grading_run.json
+
+
+day09/lab/workers/__pycache__/
+day09/lab/workers/**/__pycache__/
+day09/lab/artifacts/traces/

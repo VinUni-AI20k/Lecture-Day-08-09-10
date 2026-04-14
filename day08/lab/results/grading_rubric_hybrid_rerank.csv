@@ -1,0 +1,18 @@
+id,category,rag_skill_tested,points_max,grade,points_earned,hallucination_detected,judge_reason,answer_preview
+gq01,SLA,Freshness & version reasoning,10,Partial,5.0,False,Câu trả lời bịa thông tin về quy trình escalation tự động trong phiên bản v2025.3.,"SLA xử lý ticket P1 đã thay đổi từ phiên bản trước như sau:
+
+- Thời gian xử lý và khắc phục (resolution) đã được cập nhật từ 6 giờ xuống 4 giờ trong phiên bản v2026.1 (2026-01-15) [2]. 
+- Quy trình es"
+gq02,Cross-Document,Multi-document synthesis,10,Partial,5.0,False,Câu trả lời chỉ trích dẫn một nguồn và không tổng hợp thông tin từ cả hai nguồn.,"Khi làm việc remote, bạn phải sử dụng VPN và được kết nối trên tối đa 2 thiết bị cùng lúc [2]."
+gq03,Refund,Exception chain retrieval & completeness,10,Full,10.0,False,Câu trả lời đáp ứng tất cả các tiêu chí đã đề ra.,"Đơn hàng mua trong chương trình Flash Sale và đã kích hoạt sản phẩm sẽ không được hoàn tiền. Điều này được nêu rõ trong ngoại lệ không được hoàn tiền, bao gồm đơn hàng đã áp dụng mã giảm giá đặc biệt "
+gq04,Refund,Specific numeric fact retrieval,8,Full,8.0,False,Câu trả lời đáp ứng tất cả các tiêu chí đã đề ra.,"Nếu chọn nhận store credit thay vì hoàn tiền, bạn sẽ nhận được giá trị 110% so với số tiền gốc [1]."
+gq05,Access Control,Scope identification + multi-detail retrieval,10,Full,10.0,False,Câu trả lời rõ ràng không có thông tin trong tài liệu.,Không đủ dữ liệu trong tài liệu để trả lời.
+gq06,Cross-Document,Emergency path + cross-document multi-hop,12,Full,12.0,False,Câu trả lời đáp ứng tất cả các tiêu chí yêu cầu mà không bịa thông tin.,"Quy trình cụ thể để cấp quyền tạm thời cho một engineer xử lý incident P1 như sau:
+
+1. On-call IT Admin có thể cấp quyền tạm thời (tối đa 24 giờ) sau khi được Tech Lead phê duyệt bằng lời.
+2. Sau 24 g"
+gq07,Insufficient Context,Abstain behavior — hallucination resistance,10,Full,10.0,False,Câu trả lời chính xác khi xác nhận không có thông tin về mức phạt trong tài liệu.,Không đủ dữ liệu trong tài liệu để trả lời.
+gq08,HR Policy,"Disambiguation — same number, different contexts",10,Full,10.0,False,Câu trả lời đáp ứng đầy đủ tất cả các tiêu chí đã đề ra.,"Nhân viên phải báo trước ít nhất 3 ngày làm việc để xin nghỉ phép năm [2]. Con số này không giống với số ngày cần giấy tờ khi nghỉ ốm, vì nghỉ ốm yêu cầu thông báo cho Line Manager trước 9:00 sáng ngà"
+gq09,IT Helpdesk,Multi-detail extraction from FAQ format,8,Full,8.0,False,Đáp ứng tất cả các tiêu chí ngoại trừ kênh đổi mật khẩu.,"Có, mật khẩu phải được thay đổi mỗi 90 ngày. Hệ thống sẽ nhắc nhở 7 ngày trước khi hết hạn [1]."
+gq10,Refund,Temporal scoping & metadata-aware retrieval,10,Full,10.0,False,Câu trả lời đáp ứng tất cả các tiêu chí đã đề ra.,Chính sách hoàn tiền hiện tại không áp dụng cho đơn hàng đặt trước ngày 01/02/2026. Các đơn hàng đặt trước ngày này sẽ áp dụng theo chính sách hoàn tiền phiên bản 3 [1].
+TOTAL,,,98,,88.0,,group_score=26.9/30,
