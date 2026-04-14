@@ -16,7 +16,15 @@ Gọi độc lập để test:
     python workers/synthesis.py
 """
 
+import json
 import os
+import re
+import urllib.error
+import urllib.request
+
+from dotenv import load_dotenv
+
+load_dotenv()
 
 WORKER_NAME = "synthesis_worker"
 
@@ -33,36 +41,65 @@ Quy tắc nghiêm ngặt:
 
 def _call_llm(messages: list) -> str:
     """
-    Gọi LLM để tổng hợp câu trả lời.
-    TODO Sprint 2: Implement với OpenAI hoặc Gemini.
+    Gọi Groq chat completion API để tổng hợp câu trả lời.
     """
-    # Option A: OpenAI
-    try:
-        from openai import OpenAI
-        client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-        response = client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=messages,
-            temperature=0.1,  # Low temperature để grounded
-            max_tokens=500,
-        )
-        return response.choices[0].message.content
-    except Exception:
-        pass
+    api_key = os.getenv("GROQ_API_KEY")
+    model = os.getenv("LLM_MODEL", "llama-3.1-8b-instant")
 
-    # Option B: Gemini
-    try:
-        import google.generativeai as genai
-        genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
-        model = genai.GenerativeModel("gemini-1.5-flash")
-        combined = "\n".join([m["content"] for m in messages])
-        response = model.generate_content(combined)
-        return response.text
-    except Exception:
-        pass
+    if not api_key:
+        return "[SYNTHESIS ERROR] Không tìm thấy GROQ_API_KEY trong .env."
 
-    # Fallback: trả về message báo lỗi (không hallucinate)
-    return "[SYNTHESIS ERROR] Không thể gọi LLM. Kiểm tra API key trong .env."
+    payload = {
+        "model": model,
+        "messages": messages,
+        "temperature": 0.1,
+        "max_tokens": 500,
+        "stream": False,
+    }
+
+    request = urllib.request.Request(
+        "https://api.groq.com/openai/v1/chat/completions",
+        data=json.dumps(payload).encode("utf-8"),
+        headers={
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json",
+        },
+        method="POST",
+    )
+
+    try:
+        with urllib.request.urlopen(request, timeout=30) as response:
+            data = json.loads(response.read().decode("utf-8"))
+            return data["choices"][0]["message"]["content"].strip()
+    except (urllib.error.URLError, urllib.error.HTTPError, KeyError, ValueError) as exc:
+        return f"[SYNTHESIS ERROR] Không thể gọi Groq API: {exc}"
+
+
+def _build_fallback_answer(task: str, chunks: list, policy_result: dict) -> str:
+    """Local grounded fallback nếu Groq không khả dụng."""
+    lines = []
+
+    if policy_result and policy_result.get("exceptions_found"):
+        lines.append("Theo chính sách nội bộ, yêu cầu này bị ảnh hưởng bởi các ngoại lệ sau:")
+        for ex in policy_result["exceptions_found"]:
+            lines.append(f"- {ex.get('rule', '')} [{ex.get('source', 'unknown')}]")
+    elif policy_result and policy_result.get("policy_name") == "access_control_sop":
+        lines.append(policy_result.get("summary", "Access Control SOP áp dụng."))
+        approvers = policy_result.get("required_approvers", [])
+        if approvers:
+            lines.append(f"Yêu cầu phê duyệt: {', '.join(approvers)}.")
+    elif chunks:
+        lines.append("Dưới đây là bằng chứng trích từ tài liệu nội bộ:")
+    else:
+        lines.append("Không đủ thông tin trong tài liệu nội bộ để trả lời câu hỏi này.")
+
+    for i, chunk in enumerate(chunks, 1):
+        source = chunk.get("source", "unknown")
+        text = chunk.get("text", "").strip()
+        if text:
+            lines.append(f"[{i}] {source}: {text}")
+
+    return "\n".join(lines)
 
 
 def _build_context(chunks: list, policy_result: dict) -> str:
@@ -88,6 +125,31 @@ def _build_context(chunks: list, policy_result: dict) -> str:
     return "\n\n".join(parts)
 
 
+def _contains_citation(text: str) -> bool:
+    return bool(re.search(r"\[[^\]]+\]", text))
+
+
+def _is_abstain_answer(text: str) -> bool:
+    lower = (text or "").lower()
+    return (
+        "không đủ thông tin" in lower
+        or "không có trong tài liệu" in lower
+        or "không thể tìm thấy" in lower
+        or "tôi không biết" in lower
+        or "insufficient" in lower
+    )
+
+
+def _ensure_citations(answer: str, sources: list[str]) -> str:
+    """Ensure answer includes citation markers when evidence exists."""
+    if not sources:
+        return answer
+    if _contains_citation(answer):
+        return answer
+    citation_tail = " ".join([f"[{i + 1}] {src}" for i, src in enumerate(sources)])
+    return f"{answer}\n\nNguồn tham chiếu: {citation_tail}".strip()
+
+
 def _estimate_confidence(chunks: list, answer: str, policy_result: dict) -> float:
     """
     Ước tính confidence dựa vào:
@@ -100,20 +162,29 @@ def _estimate_confidence(chunks: list, answer: str, policy_result: dict) -> floa
     if not chunks:
         return 0.1  # Không có evidence → low confidence
 
-    if "Không đủ thông tin" in answer or "không có trong tài liệu" in answer.lower():
-        return 0.3  # Abstain → moderate-low
+    scores = sorted([float(c.get("score", 0.0)) for c in chunks], reverse=True)
+    top1 = scores[0] if scores else 0.0
+    top2 = scores[1] if len(scores) > 1 else 0.0
 
-    # Weighted average của chunk scores
-    if chunks:
-        avg_score = sum(c.get("score", 0) for c in chunks) / len(chunks)
-    else:
-        avg_score = 0
+    # Ưu tiên evidence mạnh nhất để tránh dilution bởi chunk yếu.
+    evidence_core = (0.75 * top1) + (0.25 * top2)
 
-    # Penalty nếu có exceptions (phức tạp hơn)
-    exception_penalty = 0.05 * len(policy_result.get("exceptions_found", []))
+    evidence_bonus = min(0.12, 0.02 * max(0, len(chunks) - 1))
+    citation_bonus = 0.05 if _contains_citation(answer) else 0.0
+    policy_bonus = 0.0
+    if policy_result.get("required_approvers"):
+        policy_bonus += 0.04
+    if policy_result.get("exceptions_found"):
+        policy_bonus += 0.02
 
-    confidence = min(0.95, avg_score - exception_penalty)
-    return round(max(0.1, confidence), 2)
+    exception_penalty = 0.03 * len(policy_result.get("exceptions_found", []))
+
+    if _is_abstain_answer(answer):
+        abstain_conf = 0.3 + (0.35 * evidence_core) + (0.5 * citation_bonus)
+        return round(max(0.2, min(0.75, abstain_conf)), 2)
+
+    confidence = evidence_core + evidence_bonus + citation_bonus + policy_bonus - exception_penalty
+    return round(max(0.1, min(0.95, confidence)), 2)
 
 
 def synthesize(task: str, chunks: list, policy_result: dict) -> dict:
@@ -123,6 +194,16 @@ def synthesize(task: str, chunks: list, policy_result: dict) -> dict:
     Returns:
         {"answer": str, "sources": list, "confidence": float}
     """
+    sources = list(dict.fromkeys([c.get("source", "unknown") for c in chunks if c]))
+
+    # Contract rule: if no evidence chunks, abstain and avoid hallucination.
+    if not chunks:
+        return {
+            "answer": "Không đủ thông tin trong tài liệu nội bộ để trả lời câu hỏi này.",
+            "sources": [],
+            "confidence": 0.1,
+        }
+
     context = _build_context(chunks, policy_result)
 
     # Build messages
@@ -139,7 +220,9 @@ Hãy trả lời câu hỏi dựa vào tài liệu trên."""
     ]
 
     answer = _call_llm(messages)
-    sources = list({c.get("source", "unknown") for c in chunks})
+    if answer.startswith("[SYNTHESIS ERROR]"):
+        answer = _build_fallback_answer(task, chunks, policy_result)
+    answer = _ensure_citations(answer, sources)
     confidence = _estimate_confidence(chunks, answer, policy_result)
 
     return {
@@ -159,6 +242,7 @@ def run(state: dict) -> dict:
 
     state.setdefault("workers_called", [])
     state.setdefault("history", [])
+    state.setdefault("worker_io_logs", [])
     state["workers_called"].append(WORKER_NAME)
 
     worker_io = {
@@ -177,6 +261,9 @@ def run(state: dict) -> dict:
         state["final_answer"] = result["answer"]
         state["sources"] = result["sources"]
         state["confidence"] = result["confidence"]
+        if state["confidence"] < 0.4:
+            state["hitl_triggered"] = True
+            state["history"].append(f"[{WORKER_NAME}] low confidence -> hitl_triggered=True")
 
         worker_io["output"] = {
             "answer_length": len(result["answer"]),
@@ -194,7 +281,7 @@ def run(state: dict) -> dict:
         state["confidence"] = 0.0
         state["history"].append(f"[{WORKER_NAME}] ERROR: {e}")
 
-    state.setdefault("worker_io_logs", []).append(worker_io)
+    state["worker_io_logs"].append(worker_io)
     return state
 
 
