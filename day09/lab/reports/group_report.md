@@ -1,6 +1,6 @@
 # Báo Cáo Nhóm — Lab Day 09: Multi-Agent Orchestration
 
-**Tên nhóm:** ___________  
+**Tên nhóm:** A4-C401
 **Thành viên:**
 | Tên | Vai trò | Email |
 |-----|---------|-------|

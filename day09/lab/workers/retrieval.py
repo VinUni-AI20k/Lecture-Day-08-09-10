@@ -77,6 +77,7 @@ def _get_collection():
     """
     import chromadb
 
+    # Keep the worker self-contained: it opens the local persistent DB directly.
     client = chromadb.PersistentClient(path="./chroma_db")
     try:
         collection = client.get_collection("day09_docs")
@@ -110,6 +111,7 @@ def retrieve_dense(query: str, top_k: int = DEFAULT_TOP_K) -> list:
         except Exception:
             has_indexed_data = False
 
+        # Preferred path: dense retrieval from the indexed Chroma collection.
         if has_indexed_data:
             embed = _get_embedding_fn()
             query_embedding = embed(query)
@@ -172,6 +174,7 @@ def retrieve_dense(query: str, top_k: int = DEFAULT_TOP_K) -> list:
             if overlap == 0:
                 continue
 
+            # Small boosts help simple keyword routing questions surface the right section faster.
             score = overlap / max(len(query_tokens), 1)
             normalized_query = normalize(query)
             normalized_section = normalize(section_text)
@@ -212,6 +215,7 @@ def retrieve_dense(query: str, top_k: int = DEFAULT_TOP_K) -> list:
 
 
 def _extract_relevant_sentences(query: str, chunks: list, max_sentences: int = 3) -> list:
+    # Compress long retrieved sections into the most answer-worthy evidence sentences.
     def normalize(text: str) -> str:
         normalized = unicodedata.normalize("NFKD", text)
         normalized = "".join(char for char in normalized if not unicodedata.combining(char))
@@ -283,7 +287,7 @@ def run(state: dict) -> dict:
 
     state["workers_called"].append(WORKER_NAME)
 
-    # Log worker IO (theo contract)
+    # Worker IO logs are stored in trace so we can debug retrieval separately from synthesis.
     worker_io = {
         "worker": WORKER_NAME,
         "input": {"task": task, "top_k": top_k},
@@ -316,7 +320,7 @@ def run(state: dict) -> dict:
         state["retrieved_sources"] = []
         state["history"].append(f"[{WORKER_NAME}] ERROR: {e}")
 
-    # Ghi worker IO vào state để trace
+    # Persist per-worker IO to the shared state for later trace analysis.
     state.setdefault("worker_io_logs", []).append(worker_io)
 
     return state
