@@ -17,6 +17,9 @@ Gọi độc lập để test:
 
 import os
 import sys
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # ─────────────────────────────────────────────
 # Worker Contract (xem contracts/worker_contracts.yaml)
@@ -31,9 +34,21 @@ DEFAULT_TOP_K = 3
 def _get_embedding_fn():
     """
     Trả về embedding function.
-    TODO Sprint 1: Implement dùng OpenAI hoặc Sentence Transformers.
+    Ưu tiên OpenAI để khớp với index từ Day 08.
     """
-    # Option A: Sentence Transformers (offline, không cần API key)
+    # Option A: OpenAI (cần API key) - Ưu tiên để khớp với index.py
+    try:
+        from openai import OpenAI
+        import os
+        client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+        def embed(text: str) -> list:
+            resp = client.embeddings.create(input=text, model="text-embedding-3-small")
+            return resp.data[0].embedding
+        return embed
+    except Exception:
+        pass
+
+    # Option B: Sentence Transformers (offline)
     try:
         from sentence_transformers import SentenceTransformer
         model = SentenceTransformer("all-MiniLM-L6-v2")
@@ -43,22 +58,11 @@ def _get_embedding_fn():
     except ImportError:
         pass
 
-    # Option B: OpenAI (cần API key)
-    try:
-        from openai import OpenAI
-        client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-        def embed(text: str) -> list:
-            resp = client.embeddings.create(input=text, model="text-embedding-3-small")
-            return resp.data[0].embedding
-        return embed
-    except ImportError:
-        pass
-
-    # Fallback: random embeddings cho test (KHÔNG dùng production)
+    # Fallback: random embeddings cho test
     import random
     def embed(text: str) -> list:
         return [random.random() for _ in range(384)]
-    print("⚠️  WARNING: Using random embeddings (test only). Install sentence-transformers.")
+    print("⚠️  WARNING: Using random embeddings (test only).")
     return embed
 
 
@@ -70,14 +74,14 @@ def _get_collection():
     import chromadb
     client = chromadb.PersistentClient(path="./chroma_db")
     try:
-        collection = client.get_collection("day09_docs")
+        collection = client.get_collection("rag_lab")
     except Exception:
         # Auto-create nếu chưa có
         collection = client.get_or_create_collection(
-            "day09_docs",
+            "rag_lab",
             metadata={"hnsw:space": "cosine"}
         )
-        print(f"⚠️  Collection 'day09_docs' chưa có data. Chạy index script trong README trước.")
+        print(f"⚠️  Collection 'rag_lab' chưa có data. Chạy index script trong README trước.")
     return collection
 
 
