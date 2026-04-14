@@ -16,6 +16,8 @@ Gọi độc lập để test:
     python workers/policy_tool.py
 """
 import os
+import re
+from datetime import datetime
 
 WORKER_NAME = "policy_tool_worker"
 
@@ -128,7 +130,12 @@ def analyze_policy(task: str, chunks: list) -> dict:
         })
 
     # Exception 2: Digital product
-    if any(kw in task_lower for kw in ["license key", "license", "subscription", "kỹ thuật số"]):
+    digital_positive = any(kw in task_lower for kw in ["license key", "license", "subscription", "kỹ thuật số"])
+    digital_negated = any(
+        kw in task_lower
+        for kw in ["không phải kỹ thuật số", "khong phai ky thuat so", "not digital", "not a digital product"]
+    )
+    if digital_positive and not digital_negated:
         exceptions_found.append({
             "type": "digital_product_exception",
             "rule": "Sản phẩm kỹ thuật số (license key, subscription) không được hoàn tiền (Điều 3).",
@@ -136,7 +143,12 @@ def analyze_policy(task: str, chunks: list) -> dict:
         })
 
     # Exception 3: Activated product
-    if any(kw in task_lower for kw in ["đã kích hoạt", "đã đăng ký", "đã sử dụng"]):
+    activated_positive = any(kw in task_lower for kw in ["đã kích hoạt", "đã đăng ký", "đã sử dụng"])
+    activated_negated = any(
+        kw in task_lower
+        for kw in ["chưa kích hoạt", "chưa đăng ký", "chưa sử dụng", "not activated", "unused"]
+    )
+    if activated_positive and not activated_negated:
         exceptions_found.append({
             "type": "activated_exception",
             "rule": "Sản phẩm đã kích hoạt hoặc đăng ký tài khoản không được hoàn tiền (Điều 3).",
@@ -150,8 +162,27 @@ def analyze_policy(task: str, chunks: list) -> dict:
     # TODO: Check nếu đơn hàng trước 01/02/2026 → v3 applies (không có docs, nên flag cho synthesis)
     policy_name = "refund_policy_v4"
     policy_version_note = ""
-    if "31/01" in task_lower or "30/01" in task_lower or "trước 01/02" in task_lower:
-        policy_version_note = "Đơn hàng đặt trước 01/02/2026 áp dụng chính sách v3 (không có trong tài liệu hiện tại)."
+    order_date = None
+    for m in re.findall(r"\b(\d{1,2}/\d{1,2}/\d{4})\b", task):
+        try:
+            dt = datetime.strptime(m, "%d/%m/%Y")
+            if order_date is None or dt < order_date:
+                order_date = dt
+        except ValueError:
+            continue
+
+    if order_date and order_date < datetime(2026, 2, 1):
+        policy_name = "refund_policy_v3_unknown"
+        policy_version_note = (
+            "Đơn hàng đặt trước 01/02/2026 áp dụng chính sách v3, "
+            "nhưng tài liệu hiện có chỉ gồm policy_refund_v4.txt nên không thể kết luận chắc chắn theo v3."
+        )
+    elif "trước 01/02/2026" in task_lower:
+        policy_name = "refund_policy_v3_unknown"
+        policy_version_note = (
+            "Đơn hàng đặt trước 01/02/2026 áp dụng chính sách v3, "
+            "nhưng tài liệu hiện có chỉ gồm policy_refund_v4.txt nên không thể kết luận chắc chắn theo v3."
+        )
 
     # TODO Sprint 2: Gọi LLM để phân tích phức tạp hơn
     # Ví dụ:
