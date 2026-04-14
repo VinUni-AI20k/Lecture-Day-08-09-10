@@ -17,6 +17,9 @@ Gọi độc lập để test:
 """
 
 import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 WORKER_NAME = "synthesis_worker"
 
@@ -31,38 +34,43 @@ Quy tắc nghiêm ngặt:
 """
 
 
-def _call_llm(messages: list) -> str:
+JUDGE_PROMPT = """Bạn là một chuyên gia kiểm định chất lượng AI (QA Judge).
+Nhiệm vụ của bạn là đánh giá mức độ tin cậy (Confidence Score) của câu trả lời dựa trên Context và Câu hỏi.
+
+Tiêu chí đánh giá:
+1. Groundedness: Câu trả lời có hoàn toàn dựa trên Context không? (Không có thông tin ngoài)
+2. Accuracy: Thông tin trong câu trả lời có chính xác so với Context không?
+3. Completeness: Câu trả lời có giải quyết được vấn đề trong Câu hỏi không?
+4. Citation: Các thông tin quan trọng có được trích dẫn nguồn [file_name] đầy đủ không?
+
+Quy tắc chấm điểm:
+- 1.0: Hoàn hảo, đầy đủ bằng chứng, có trích dẫn, không lỗi.
+- 0.7-0.9: Đúng và đủ nhưng có thể cải thiện cách diễn đạt hoặc trích dẫn.
+- 0.4-0.6: Trả lời được một phần hoặc thông tin hơi mơ hồ nhưng vẫn có căn cứ.
+- 0.1-0.3: Không đủ thông tin để trả lời (Abstain) hoặc trả lời sai lệch nhiều.
+
+CHỈ trả về một con số duy nhất từ 0.0 đến 1.0. KHÔNG giải thích gì thêm.
+"""
+
+
+def _call_llm(messages: list, model: str = "gpt-4o-mini", temperature: float = 0.1) -> str:
     """
-    Gọi LLM để tổng hợp câu trả lời.
-    TODO Sprint 2: Implement với OpenAI hoặc Gemini.
+    Gọi LLM để thực hiện các tác vụ (Synthesis hoặc Judge).
     """
-    # Option A: OpenAI
     try:
         from openai import OpenAI
         client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
         response = client.chat.completions.create(
-            model="gpt-4o-mini",
+            model=model,
             messages=messages,
-            temperature=0.1,  # Low temperature để grounded
-            max_tokens=500,
+            temperature=temperature,
+            max_tokens=500 if temperature > 0 else 10, # Judge chỉ cần token ngắn
         )
-        return response.choices[0].message.content
+        return response.choices[0].message.content.strip()
     except Exception:
         pass
 
-    # Option B: Gemini
-    try:
-        import google.generativeai as genai
-        genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
-        model = genai.GenerativeModel("gemini-1.5-flash")
-        combined = "\n".join([m["content"] for m in messages])
-        response = model.generate_content(combined)
-        return response.text
-    except Exception:
-        pass
-
-    # Fallback: trả về message báo lỗi (không hallucinate)
-    return "[SYNTHESIS ERROR] Không thể gọi LLM. Kiểm tra API key trong .env."
+    return ""
 
 
 def _build_context(chunks: list, policy_result: dict) -> str:
@@ -88,32 +96,45 @@ def _build_context(chunks: list, policy_result: dict) -> str:
     return "\n\n".join(parts)
 
 
-def _estimate_confidence(chunks: list, answer: str, policy_result: dict) -> float:
+def _estimate_confidence(task: str, context: str, answer: str) -> float:
     """
-    Ước tính confidence dựa vào:
-    - Số lượng và quality của chunks
-    - Có exceptions không
-    - Answer có abstain không
-
-    TODO Sprint 2: Có thể dùng LLM-as-Judge để tính confidence chính xác hơn.
+    Ước tính confidence sử dụng LLM-as-Judge.
     """
-    if not chunks:
-        return 0.1  # Không có evidence → low confidence
-
+    # Nếu answer báo không có thông tin ngay từ đầu
     if "Không đủ thông tin" in answer or "không có trong tài liệu" in answer.lower():
-        return 0.3  # Abstain → moderate-low
+        return 0.2
 
-    # Weighted average của chunk scores
-    if chunks:
-        avg_score = sum(c.get("score", 0) for c in chunks) / len(chunks)
-    else:
-        avg_score = 0
+    judge_messages = [
+        {"role": "system", "content": JUDGE_PROMPT},
+        {
+            "role": "user",
+            "content": f"""---
+CÂU HỎI: {task}
+---
+CONTEXT:
+{context}
+---
+CÂU TRẢ LỜI CỦA AI:
+{answer}
+---
+HÃY CHẤM ĐIỂM CONFIDENCE (0.0 - 1.0):"""
+        }
+    ]
 
-    # Penalty nếu có exceptions (phức tạp hơn)
-    exception_penalty = 0.05 * len(policy_result.get("exceptions_found", []))
+    score_str = _call_llm(judge_messages, temperature=0)
+    
+    try:
+        # Trích xuất số từ chuỗi trả về (đề phòng LLM trả về "0.8" hoặc "Score: 0.8")
+        import re
+        match = re.search(r"([0-9]*\.[0-9]+|[0-9]+)", score_str)
+        if match:
+            confidence = float(match.group(1))
+            return round(min(1.0, max(0.0, confidence)), 2)
+    except (ValueError, TypeError):
+        pass
 
-    confidence = min(0.95, avg_score - exception_penalty)
-    return round(max(0.1, confidence), 2)
+    # Fallback nếu Judge lỗi
+    return 0.5
 
 
 def synthesize(task: str, chunks: list, policy_result: dict) -> dict:
@@ -121,7 +142,7 @@ def synthesize(task: str, chunks: list, policy_result: dict) -> dict:
     Tổng hợp câu trả lời từ chunks và policy context.
 
     Returns:
-        {"answer": str, "sources": list, "confidence": float}
+        {"answer": str, "sources": list, "confidence": float, "hitl_flag": bool}
     """
     context = _build_context(chunks, policy_result)
 
@@ -139,13 +160,20 @@ Hãy trả lời câu hỏi dựa vào tài liệu trên."""
     ]
 
     answer = _call_llm(messages)
+    if not answer:
+        answer = "[SYNTHESIS ERROR] Không thể gọi LLM. Kiểm tra API key trong .env."
+        
     sources = list({c.get("source", "unknown") for c in chunks})
-    confidence = _estimate_confidence(chunks, answer, policy_result)
+    confidence = _estimate_confidence(task, context, answer)
+    
+    # HITL trigger: Nếu confidence < 0.6, yêu cầu con người kiểm tra
+    hitl_flag = confidence < 0.6
 
     return {
         "answer": answer,
         "sources": sources,
         "confidence": confidence,
+        "hitl_flag": hitl_flag,
     }
 
 
@@ -177,14 +205,18 @@ def run(state: dict) -> dict:
         state["final_answer"] = result["answer"]
         state["sources"] = result["sources"]
         state["confidence"] = result["confidence"]
+        state["hitl_flag"] = result["hitl_flag"]
 
         worker_io["output"] = {
             "answer_length": len(result["answer"]),
             "sources": result["sources"],
             "confidence": result["confidence"],
+            "hitl_flag": result["hitl_flag"],
         }
+        
+        hitl_status = " [HITL TRIGGERED]" if result["hitl_flag"] else ""
         state["history"].append(
-            f"[{WORKER_NAME}] answer generated, confidence={result['confidence']}, "
+            f"[{WORKER_NAME}] answer generated, confidence={result['confidence']}{hitl_status}, "
             f"sources={result['sources']}"
         )
 
@@ -192,6 +224,7 @@ def run(state: dict) -> dict:
         worker_io["error"] = {"code": "SYNTHESIS_FAILED", "reason": str(e)}
         state["final_answer"] = f"SYNTHESIS_ERROR: {e}"
         state["confidence"] = 0.0
+        state["hitl_flag"] = True # Lỗi thì nên qua HITL
         state["history"].append(f"[{WORKER_NAME}] ERROR: {e}")
 
     state.setdefault("worker_io_logs", []).append(worker_io)
@@ -223,24 +256,17 @@ if __name__ == "__main__":
     print(f"\nAnswer:\n{result['final_answer']}")
     print(f"\nSources: {result['sources']}")
     print(f"Confidence: {result['confidence']}")
+    print(f"HITL Flag: {result['hitl_flag']}")
 
-    print("\n--- Test 2: Exception case ---")
+    print("\n--- Test 2: Low confidence / Abstain case ---")
     test_state2 = {
-        "task": "Khách hàng Flash Sale yêu cầu hoàn tiền vì lỗi nhà sản xuất.",
-        "retrieved_chunks": [
-            {
-                "text": "Ngoại lệ: Đơn hàng Flash Sale không được hoàn tiền theo Điều 3 chính sách v4.",
-                "source": "policy_refund_v4.txt",
-                "score": 0.88,
-            }
-        ],
-        "policy_result": {
-            "policy_applies": False,
-            "exceptions_found": [{"type": "flash_sale_exception", "rule": "Flash Sale không được hoàn tiền."}],
-        },
+        "task": "Làm sao để hack NASA?",
+        "retrieved_chunks": [],
+        "policy_result": {},
     }
     result2 = run(test_state2.copy())
     print(f"\nAnswer:\n{result2['final_answer']}")
     print(f"Confidence: {result2['confidence']}")
+    print(f"HITL Flag: {result2['hitl_flag']}")
 
     print("\n✅ synthesis_worker test done.")

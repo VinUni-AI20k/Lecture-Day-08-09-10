@@ -79,6 +79,7 @@ TOOL_SCHEMAS = {
                 "assignee": {"type": "string"},
                 "created_at": {"type": "string"},
                 "sla_deadline": {"type": "string"},
+                "notifications_sent": {"type": "array"},
             },
         },
     },
@@ -100,6 +101,7 @@ TOOL_SCHEMAS = {
                 "can_grant": {"type": "boolean"},
                 "required_approvers": {"type": "array"},
                 "emergency_override": {"type": "boolean"},
+                "notes": {"type": "array"},
                 "source": {"type": "string"},
             },
         },
@@ -286,6 +288,67 @@ TOOL_REGISTRY = {
     "create_ticket": tool_create_ticket,
 }
 
+class MCPServer:
+    """
+    Mức 1 (Standard) MCP mock: chạy in-process.
+    Wrapper class để match snippet trong TASK_ASSIGNMENT.md, vẫn tái dùng dispatch_tool().
+    """
+
+    def list_tools(self) -> list:
+        return list_tools()
+
+    def dispatch_tool(self, tool_name: str, tool_input: dict) -> dict:
+        return dispatch_tool(tool_name, tool_input)
+
+    # Convenience methods (optional, giúp gọi trực tiếp rõ ràng hơn)
+    def search_kb(self, query: str, top_k: int = 3) -> dict:
+        return dispatch_tool("search_kb", {"query": query, "top_k": top_k})
+
+    def get_ticket_info(self, ticket_id: str) -> dict:
+        return dispatch_tool("get_ticket_info", {"ticket_id": ticket_id})
+
+    def check_access_permission(self, access_level: int, requester_role: str, is_emergency: bool = False) -> dict:
+        return dispatch_tool(
+            "check_access_permission",
+            {"access_level": access_level, "requester_role": requester_role, "is_emergency": is_emergency},
+        )
+
+    def create_ticket(self, priority: str, title: str, description: str = "") -> dict:
+        return dispatch_tool("create_ticket", {"priority": priority, "title": title, "description": description})
+
+
+def _apply_schema_defaults(tool_name: str, tool_input: dict) -> dict:
+    """Fill defaults từ TOOL_SCHEMAS (nếu schema có default cho field)."""
+    schema = TOOL_SCHEMAS.get(tool_name, {})
+    input_schema = schema.get("inputSchema", {})
+    properties = input_schema.get("properties", {}) if isinstance(input_schema, dict) else {}
+
+    out = dict(tool_input)
+    for key, prop in properties.items():
+        if key not in out and isinstance(prop, dict) and "default" in prop:
+            out[key] = prop["default"]
+    return out
+
+
+def _validate_required_fields(tool_name: str, tool_input: dict) -> Optional[dict]:
+    """
+    Validate required fields theo TOOL_SCHEMAS.
+    Returns error dict nếu thiếu/invalid, else None.
+    """
+    schema = TOOL_SCHEMAS.get(tool_name)
+    if not schema:
+        return None
+    input_schema = schema.get("inputSchema", {})
+    required = input_schema.get("required", []) if isinstance(input_schema, dict) else []
+
+    missing = [k for k in required if k not in tool_input]
+    if missing:
+        return {
+            "error": f"Missing required fields for tool '{tool_name}': {missing}",
+            "schema": input_schema,
+        }
+    return None
+
 
 def list_tools() -> list:
     """
@@ -307,19 +370,34 @@ def dispatch_tool(tool_name: str, tool_input: dict) -> dict:
     Returns:
         Tool output dict, hoặc error dict nếu thất bại
     """
-    if tool_name not in TOOL_REGISTRY:
-        return {
-            "error": f"Tool '{tool_name}' không tồn tại. Available: {list(TOOL_REGISTRY.keys())}"
-        }
-
-    tool_fn = TOOL_REGISTRY[tool_name]
     try:
+        if tool_name not in TOOL_REGISTRY:
+            return {
+                "error": f"Tool '{tool_name}' không tồn tại. Available: {list(TOOL_REGISTRY.keys())}"
+            }
+        if tool_name not in TOOL_SCHEMAS:
+            return {
+                "error": f"Tool '{tool_name}' missing schema. TOOL_SCHEMAS must define it.",
+            }
+        if not isinstance(tool_input, dict):
+            return {
+                "error": f"Invalid input for tool '{tool_name}': tool_input must be a dict",
+                "schema": TOOL_SCHEMAS[tool_name]["inputSchema"],
+            }
+
+        # Fill defaults + validate required
+        tool_input = _apply_schema_defaults(tool_name, tool_input)
+        required_err = _validate_required_fields(tool_name, tool_input)
+        if required_err:
+            return required_err
+
+        tool_fn = TOOL_REGISTRY[tool_name]
         result = tool_fn(**tool_input)
         return result
     except TypeError as e:
         return {
             "error": f"Invalid input for tool '{tool_name}': {e}",
-            "schema": TOOL_SCHEMAS[tool_name]["inputSchema"],
+            "schema": TOOL_SCHEMAS.get(tool_name, {}).get("inputSchema", {}),
         }
     except Exception as e:
         return {
