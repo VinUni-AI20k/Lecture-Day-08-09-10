@@ -22,11 +22,7 @@ from dotenv import load_dotenv
 
 # Đọc .env từ thư mục cha (day09/lab/) dù chạy từ đâu
 load_dotenv(dotenv_path=Path(__file__).resolve().parent.parent / ".env")
-from pathlib import Path
-from dotenv import load_dotenv
 
-# Đọc .env từ thư mục cha (day09/lab/) dù chạy từ đâu
-load_dotenv(dotenv_path=Path(__file__).resolve().parent.parent / ".env")
 
 # ─────────────────────────────────────────────
 # Worker Contract (xem contracts/worker_contracts.yaml)
