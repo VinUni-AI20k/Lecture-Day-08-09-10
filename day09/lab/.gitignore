@@ -1,10 +1,30 @@
+# Hệ điều hành
 .DS_Store
+Thumbs.db
+
+# Editor / IDE
 *.swp
-*~
+*.swo
+.vscode/
+.idea/
+
+# Môi trường ảo (Virtual Environment)
+venv/
+env/
+ENV/
+.venv/
+
+# Python rác
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Dữ liệu nhạy cảm
 .env
-*venv/
-.__pycache__/
-.__init__.py/
+*.podspec
+
+# Database (nếu bạn dùng SQLite để test local)
+*.sqlite3
 
 # Grading questions — không public trước 17:00
 day08/lab/data/grading_questions.json
