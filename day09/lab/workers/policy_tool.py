@@ -16,7 +16,12 @@ Gọi độc lập để test:
     python workers/policy_tool.py
 """
 
+import re
+from datetime import date
+
 POLICY_SOURCE_FILE = "policy_refund_v4.txt"
+POLICY_V4_EFFECTIVE_DATE = date(2026, 2, 1)
+DATE_DMY_REGEX = re.compile(r"\b(\d{1,2})/(\d{1,2})/(\d{4})\b")
 
 FLASH_SALE_KEYWORDS = (
     "flash sale",
@@ -43,7 +48,14 @@ ACTIVATED_PRODUCT_HINT_KEYWORDS = (
     "đăng ký tài khoản",
     "dang ky tai khoan",
 )
-TEMPORAL_V3_HINT_KEYWORDS = ("31/01", "30/01", "trước 01/02")
+TEMPORAL_V3_HINT_KEYWORDS = (
+    "trước 01/02",
+    "truoc 01/02",
+    "trước ngày 01/02/2026",
+    "truoc ngay 01/02/2026",
+    "áp dụng chính sách v3",
+    "ap dung chinh sach v3",
+)
 TICKET_LOOKUP_KEYWORDS = ("ticket", "p1", "jira")
 
 WORKER_NAME = "policy_tool_worker"
@@ -118,6 +130,34 @@ def _is_activated_product_case(task_text: str, context_text: str) -> bool:
     task_has_activated_hint = _contains_any(task_text, ACTIVATED_PRODUCT_HINT_KEYWORDS)
     context_confirms_activated = _contains_any(context_text, ACTIVATED_PRODUCT_KEYWORDS)
     return task_has_activated_hint and context_confirms_activated
+
+
+def _extract_dates(text: str) -> list[date]:
+    """Extract dd/mm/yyyy dates from text and convert to date objects."""
+    parsed_dates = []
+    for day_str, month_str, year_str in DATE_DMY_REGEX.findall(text):
+        try:
+            parsed_dates.append(date(int(year_str), int(month_str), int(day_str)))
+        except ValueError:
+            continue
+    return parsed_dates
+
+
+def _resolve_policy_version(task_text: str, context_text: str) -> tuple[str, str]:
+    """Resolve refund policy version based on effective date and temporal hints."""
+    all_dates = _extract_dates(task_text) + _extract_dates(context_text)
+    pre_v4_dates = sorted(d for d in all_dates if d < POLICY_V4_EFFECTIVE_DATE)
+    has_v3_hint = _contains_any(task_text, TEMPORAL_V3_HINT_KEYWORDS) or _contains_any(context_text, TEMPORAL_V3_HINT_KEYWORDS)
+
+    if pre_v4_dates or has_v3_hint:
+        evidence_date = pre_v4_dates[0].strftime("%d/%m/%Y") if pre_v4_dates else "(không rõ ngày cụ thể)"
+        note = (
+            f"Phát hiện mốc thời gian trước 01/02/2026 ({evidence_date}) nên áp dụng chính sách v3; "
+            "tài liệu hiện tại chỉ có policy v4, cần xác nhận thêm với CS Team."
+        )
+        return "refund_policy_v3", note
+
+    return "refund_policy_v4", ""
 
 
 # ─────────────────────────────────────────────
@@ -207,15 +247,14 @@ def analyze_policy(task: str, chunks: list) -> dict:
             )
         )
 
+    # Determine which policy version applies (temporal scoping)
+    policy_name, policy_version_note = _resolve_policy_version(task_lower, context_text)
+
     # Determine policy_applies
     policy_applies = len(exceptions_found) == 0
-
-    # Determine which policy version applies (temporal scoping)
-    # TODO: Check nếu đơn hàng trước 01/02/2026 → v3 applies (không có docs, nên flag cho synthesis)
-    policy_name = "refund_policy_v4"
-    policy_version_note = ""
-    if _contains_any(task_lower, TEMPORAL_V3_HINT_KEYWORDS):
-        policy_version_note = "Đơn hàng đặt trước 01/02/2026 áp dụng chính sách v3 (không có trong tài liệu hiện tại)."
+    if policy_name == "refund_policy_v3" and policy_version_note:
+        # v3 policy content is unavailable in current docs, so require human confirmation.
+        policy_applies = False
 
     # TODO Sprint 2: Gọi LLM để phân tích phức tạp hơn
     # Ví dụ:
@@ -364,6 +403,12 @@ if __name__ == "__main__":
                 {"text": "Yêu cầu trong 7 ngày làm việc, sản phẩm lỗi nhà sản xuất, chưa dùng.", "source": "policy_refund_v4.txt", "score": 0.85}
             ],
         },
+        {
+            "task": "Khách hàng đặt đơn ngày 31/01/2026 và yêu cầu hoàn tiền ngày 07/02/2026. Được hoàn tiền không?",
+            "retrieved_chunks": [
+                {"text": "Chính sách có hiệu lực từ 01/02/2026. Đơn trước ngày hiệu lực áp dụng policy v3.", "source": "policy_refund_v4.txt", "score": 0.84}
+            ],
+        },
     ]
 
     for tc in test_cases:
@@ -371,9 +416,12 @@ if __name__ == "__main__":
         result = run(tc.copy())
         pr = result.get("policy_result", {})
         print(f"  policy_applies: {pr.get('policy_applies')}")
+        print(f"  policy_name: {pr.get('policy_name')}")
         if pr.get("exceptions_found"):
             for ex in pr["exceptions_found"]:
                 print(f"  exception: {ex['type']} — {ex['rule'][:60]}...")
+        if pr.get("policy_version_note"):
+            print(f"  temporal_note: {pr['policy_version_note'][:90]}...")
         print(f"  MCP calls: {len(result.get('mcp_tools_used', []))}")
 
     print("\n✅ policy_tool_worker test done.")
