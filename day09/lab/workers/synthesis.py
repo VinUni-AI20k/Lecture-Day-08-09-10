@@ -17,6 +17,11 @@ Gọi độc lập để test:
 """
 
 import os
+import re
+from typing import Optional
+from dotenv import load_dotenv
+
+load_dotenv()
 
 WORKER_NAME = "synthesis_worker"
 
@@ -46,20 +51,20 @@ def _call_llm(messages: list) -> str:
             temperature=0.1,  # Low temperature để grounded
             max_tokens=500,
         )
-        return response.choices[0].message.content
+        return response.choices[0].message.content or ""
     except Exception:
         pass
 
     # Option B: Gemini
-    try:
-        import google.generativeai as genai
-        genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
-        model = genai.GenerativeModel("gemini-1.5-flash")
-        combined = "\n".join([m["content"] for m in messages])
-        response = model.generate_content(combined)
-        return response.text
-    except Exception:
-        pass
+    # try:
+    #     import google.generativeai as genai
+    #     genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
+    #     model = genai.GenerativeModel("gemini-1.5-flash")
+    #     combined = "\n".join([m["content"] for m in messages])
+    #     response = model.generate_content(combined)
+    #     return response.text
+    # except Exception:
+    #     pass
 
     # Fallback: trả về message báo lỗi (không hallucinate)
     return "[SYNTHESIS ERROR] Không thể gọi LLM. Kiểm tra API key trong .env."
@@ -108,12 +113,84 @@ def _estimate_confidence(chunks: list, answer: str, policy_result: dict) -> floa
         avg_score = sum(c.get("score", 0) for c in chunks) / len(chunks)
     else:
         avg_score = 0
-
+    #LLM as judge
+    
     # Penalty nếu có exceptions (phức tạp hơn)
     exception_penalty = 0.05 * len(policy_result.get("exceptions_found", []))
 
     confidence = min(0.95, avg_score - exception_penalty)
+
+    judge_score = _llm_judge_confidence(answer, chunks, policy_result)
+    if judge_score is not None:
+        combined = 0.6 * confidence + 0.4 * judge_score
+        confidence = min(0.95, combined)
+
     return round(max(0.1, confidence), 2)
+
+
+def _llm_judge_confidence(answer: str, chunks: list, policy_result: dict) -> Optional[float]:
+    """
+    Use LLM-as-judge to score how well the answer is grounded on the provided context.
+    """
+    # Build evidence summary
+    snippets = []
+    for chunk in chunks[:5]:
+        text = chunk.get("text", "").strip().replace("\n", " ")
+        snippet = text[:200]
+        score = chunk.get("score", 0)
+        source = chunk.get("source", "unknown")
+        snippets.append(f"{source} (score {score:.2f}): {snippet}")
+
+    evidence = "\n".join(f"{idx+1}. {snippet}" for idx, snippet in enumerate(snippets)) or "Không có chunk."
+    exceptions = policy_result.get("exceptions_found", [])
+    exceptions_section = (
+        "\n".join(f"- {ex.get('rule', 'unknown')} (type: {ex.get('type', 'unknown')})" for ex in exceptions)
+        if exceptions else
+        "Không có exception."
+    )
+
+    messages = [
+        {
+            "role": "system",
+            "content": (
+                "You are a judge that assesses whether a proposed answer is grounded in the provided references "
+                "and policy exceptions. Return a confidence score between 0.0 and 1.0 (inclusive) where 1.0 "
+                "means fully grounded, and 0.0 means you cannot trust the answer. Your final line must contain "
+                "a JSON object like {\"confidence\": 0.82}. Do not hallucinate."
+            ),
+        },
+        {
+            "role": "user",
+            "content": (
+                f"Answer: {answer}\n\n"
+                f"Evidence:\n{evidence}\n\n"
+                f"Policy exceptions:\n{exceptions_section}\n"
+                "How confident are you in the answer relative to the evidence? Give a single JSON line as described."
+            ),
+        },
+    ]
+
+    try:
+        response = _call_llm(messages)
+    except Exception as exc:
+        print(f"⚠️  LLM confidence judge failed: {exc}")
+        return None
+
+    if not response:
+        return None
+
+    matcher = re.search(r'"confidence"\s*:\s*(0(?:\.\d+)?|1(?:\.0)?)', response, re.IGNORECASE)
+    if not matcher:
+        matcher = re.search(r'(\b0(?:\.\d+)?\b|\b1(?:\.0)?\b)', response)
+
+    if matcher:
+        try:
+            score = float(matcher.group(1))
+            return max(0.0, min(1.0, score))
+        except ValueError:
+            return None
+
+    return None
 
 
 def synthesize(task: str, chunks: list, policy_result: dict) -> dict:
