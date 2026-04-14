@@ -13,7 +13,10 @@ import json
 import os
 from datetime import datetime
 from typing import TypedDict, Literal, Optional
+from dotenv import load_dotenv
+from openai import OpenAI
 
+load_dotenv()
 # Uncomment nếu dùng LangGraph:
 # from langgraph.graph import StateGraph, END
 
@@ -77,54 +80,117 @@ def make_initial_state(task: str) -> AgentState:
 # 2. Supervisor Node — quyết định route
 # ─────────────────────────────────────────────
 
+# IF/ElSE cứng (Option A) — đơn giản, dễ hiểu, không cần thư viện ngoài
+# def supervisor_node(state: AgentState) -> AgentState:
+#     """
+#     Supervisor phân tích task và quyết định:
+#     1. Route sang worker nào
+#     2. Có cần MCP tool không
+#     3. Có risk cao cần HITL không
+
+#     TODO Sprint 1: Implement routing logic dựa vào task keywords.
+#     """
+#     task = state["task"].lower()
+#     state["history"].append(f"[supervisor] received task: {state['task'][:80]}")
+
+#     # Mặc định là tra cứu vectorDB thông thường
+#     route = "retrieval_worker"
+#     route_reason = "Default route: General lookup needed."
+#     needs_tool = False
+#     risk_high = False
+
+#     # Ví dụ routing cơ bản — nhóm phát triển thêm:
+#     policy_keywords = ["hoàn tiền", "refund", "flash sale", "license", "cấp quyền", "access", "level 3"]
+#     risk_keywords = ["emergency", "khẩn cấp", "2am", "không rõ", "err-"]
+
+#     if any(kw in task for kw in policy_keywords):
+#         route = "policy_tool_worker"
+#         route_reason = f"task contains policy/access keyword"
+#         needs_tool = True
+
+#     # Nếu có rủi ro cao
+#     if any(kw in task for kw in risk_keywords):
+#         risk_high = True
+#         route_reason += " | risk_high flagged"
+
+#     # Human review override
+#     if risk_high and "err-" in task:
+#         route = "human_review"
+#         route_reason = "unknown error code + risk_high → human review"
+
+#     state["supervisor_route"] = route
+#     state["route_reason"] = route_reason
+#     state["needs_tool"] = needs_tool
+#     state["risk_high"] = risk_high
+#     state["history"].append(f"[supervisor] route={route} reason={route_reason}")
+
+#     return state
+
+
+# Option B: LLM-based Supervisor (Semantic Routing) — linh hoạt, thông minh hơn, nhưng phụ thuộc vào LLM và có thể phát sinh lỗi cần xử lý.
 def supervisor_node(state: AgentState) -> AgentState:
     """
-    Supervisor phân tích task và quyết định:
-    1. Route sang worker nào
-    2. Có cần MCP tool không
-    3. Có risk cao cần HITL không
-
-    TODO Sprint 1: Implement routing logic dựa vào task keywords.
+    Supervisor sử dụng LLM để phân tích task và định tuyến (Semantic Routing).
     """
-    task = state["task"].lower()
-    state["history"].append(f"[supervisor] received task: {state['task'][:80]}")
+    task = state["task"]
+    state["history"].append(f"[supervisor_llm] received task: {task[:80]}")
 
-    # --- TODO: Implement routing logic ---
-    # Gợi ý:
-    # - "hoàn tiền", "refund", "flash sale", "license" → policy_tool_worker
-    # - "cấp quyền", "access level", "level 3", "emergency" → policy_tool_worker
-    # - "P1", "escalation", "sla", "ticket" → retrieval_worker
-    # - mã lỗi không rõ (ERR-XXX), không đủ context → human_review
-    # - còn lại → retrieval_worker
+    # 1. Khởi tạo LLM Client
+    client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
 
-    route = "retrieval_worker"         # TODO: thay bằng logic thực
-    route_reason = "default route"    # TODO: thay bằng lý do thực
-    needs_tool = False
-    risk_high = False
+    # 2. Xây dựng System Prompt ép LLM trả về JSON chuẩn
+    system_prompt = """
+    Bạn là một AI Supervisor của hệ thống IT/CS Helpdesk. Nhiệm vụ của bạn là đọc yêu cầu của người dùng và quyết định định tuyến (route) đến 1 trong 3 worker sau:
 
-    # Ví dụ routing cơ bản — nhóm phát triển thêm:
-    policy_keywords = ["hoàn tiền", "refund", "flash sale", "license", "cấp quyền", "access", "level 3"]
-    risk_keywords = ["emergency", "khẩn cấp", "2am", "không rõ", "err-"]
+    1. "policy_tool_worker": Chọn nếu yêu cầu liên quan đến thủ tục, chính sách (hoàn tiền, nghỉ phép, hợp đồng), quy định cấp quyền, hoặc tính toán phức tạp.
+    2. "human_review": Chọn nếu yêu cầu có RỦI RO CAO (khẩn cấp, ngoài giờ hành chính, sự cố P1 nghiêm trọng) HOẶC chứa các mã lỗi hệ thống không rõ ràng (ví dụ: ERR-xxx).
+    3. "retrieval_worker": Chọn cho tất cả các câu hỏi tra cứu thông tin chung, quy định cơ bản (SLA, VPN, mật khẩu) mà không rủi ro cao.
 
-    if any(kw in task for kw in policy_keywords):
-        route = "policy_tool_worker"
-        route_reason = f"task contains policy/access keyword"
-        needs_tool = True
+    BẮT BUỘC TRẢ VỀ ĐÚNG ĐỊNH DẠNG JSON (Không kèm markdown code block, không thêm text giải thích):
+    {
+        "route": "retrieval_worker" | "policy_tool_worker" | "human_review",
+        "route_reason": "Giải thích ngắn gọn lý do chọn worker này",
+        "needs_tool": true | false,
+        "risk_high": true | false
+    }
+    """
 
-    if any(kw in task for kw in risk_keywords):
-        risk_high = True
-        route_reason += " | risk_high flagged"
+    try:
+        # 3. Gọi LLM yêu cầu JSON response
+        response = client.chat.completions.create(
+            model="gpt-4o-mini", # Dùng model mini cho rẻ và nhanh, rất phù hợp làm Router
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": task}
+            ],
+            response_format={"type": "json_object"}, # Ép trả về JSON
+            temperature=0.1 # Để nhiệt độ thấp cho quyết định ổn định, logic
+        )
 
-    # Human review override
-    if risk_high and "err-" in task:
-        route = "human_review"
-        route_reason = "unknown error code + risk_high → human review"
+        # 4. Parse JSON kết quả
+        result_content = response.choices[0].message.content
+        decision = json.loads(result_content)
 
+        # Cập nhật State
+        route = decision.get("route", "retrieval_worker")
+        route_reason = decision.get("route_reason", "LLM Routing")
+        needs_tool = decision.get("needs_tool", False)
+        risk_high = decision.get("risk_high", False)
+
+    except Exception as e:
+        # Fallback an toàn: Nếu LLM lỗi (timeout, hết tiền, parse lỗi...), luôn đẩy về Retrieval
+        print(f"⚠️ LLM Routing Error: {e}")
+        route = "retrieval_worker"
+        route_reason = "Fallback route due to LLM error"
+        needs_tool = False
+        risk_high = False
+
+    # 5. Lưu vào state
     state["supervisor_route"] = route
     state["route_reason"] = route_reason
     state["needs_tool"] = needs_tool
     state["risk_high"] = risk_high
-    state["history"].append(f"[supervisor] route={route} reason={route_reason}")
+    state["history"].append(f"[supervisor_llm] route={route} reason={route_reason}")
 
     return state
 
