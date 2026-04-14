@@ -16,11 +16,56 @@ Gọi độc lập để test:
     python workers/policy_tool.py
 """
 
-import os
-import sys
-from typing import Optional
+POLICY_SOURCE_FILE = "policy_refund_v4.txt"
+
+FLASH_SALE_KEYWORDS = ("flash sale",)
+DIGITAL_PRODUCT_KEYWORDS = ("license key", "license", "subscription", "kỹ thuật số")
+ACTIVATED_PRODUCT_KEYWORDS = ("đã kích hoạt", "đã đăng ký", "đã sử dụng")
+TEMPORAL_V3_HINT_KEYWORDS = ("31/01", "30/01", "trước 01/02")
+TICKET_LOOKUP_KEYWORDS = ("ticket", "p1", "jira")
 
 WORKER_NAME = "policy_tool_worker"
+
+
+def _normalize(text: str) -> str:
+    """Normalize input text for simple keyword checks."""
+    if not isinstance(text, str):
+        return ""
+    return text.lower()
+
+
+def _contains_any(text: str, keywords: tuple[str, ...]) -> bool:
+    """Return True when text contains at least one keyword."""
+    return any(kw in text for kw in keywords)
+
+
+def _join_chunk_text(chunks: list) -> str:
+    """Flatten retrieved chunk texts to one normalized string."""
+    raw = " ".join(c.get("text", "") for c in chunks if isinstance(c, dict))
+    return _normalize(raw)
+
+
+def _collect_sources(chunks: list) -> list:
+    """Collect unique sources from chunks while keeping output stable."""
+    unique_sources = []
+    seen = set()
+    for chunk in chunks:
+        if not isinstance(chunk, dict):
+            continue
+        source = chunk.get("source", "unknown")
+        if source not in seen:
+            seen.add(source)
+            unique_sources.append(source)
+    return unique_sources
+
+
+def _make_exception(exception_type: str, rule: str) -> dict:
+    """Standardize exception object format."""
+    return {
+        "type": exception_type,
+        "rule": rule,
+        "source": POLICY_SOURCE_FILE,
+    }
 
 
 # ─────────────────────────────────────────────
@@ -77,35 +122,38 @@ def analyze_policy(task: str, chunks: list) -> dict:
     Returns:
         dict with: policy_applies, policy_name, exceptions_found, source, rule, explanation
     """
-    task_lower = task.lower()
-    context_text = " ".join([c.get("text", "") for c in chunks]).lower()
+    task_lower = _normalize(task)
+    context_text = _join_chunk_text(chunks)
 
     # --- Rule-based exception detection ---
     exceptions_found = []
 
     # Exception 1: Flash Sale
-    if "flash sale" in task_lower or "flash sale" in context_text:
-        exceptions_found.append({
-            "type": "flash_sale_exception",
-            "rule": "Đơn hàng Flash Sale không được hoàn tiền (Điều 3, chính sách v4).",
-            "source": "policy_refund_v4.txt",
-        })
+    if _contains_any(task_lower, FLASH_SALE_KEYWORDS) or _contains_any(context_text, FLASH_SALE_KEYWORDS):
+        exceptions_found.append(
+            _make_exception(
+                "flash_sale_exception",
+                "Đơn hàng Flash Sale không được hoàn tiền (Điều 3, chính sách v4).",
+            )
+        )
 
     # Exception 2: Digital product
-    if any(kw in task_lower for kw in ["license key", "license", "subscription", "kỹ thuật số"]):
-        exceptions_found.append({
-            "type": "digital_product_exception",
-            "rule": "Sản phẩm kỹ thuật số (license key, subscription) không được hoàn tiền (Điều 3).",
-            "source": "policy_refund_v4.txt",
-        })
+    if _contains_any(task_lower, DIGITAL_PRODUCT_KEYWORDS):
+        exceptions_found.append(
+            _make_exception(
+                "digital_product_exception",
+                "Sản phẩm kỹ thuật số (license key, subscription) không được hoàn tiền (Điều 3).",
+            )
+        )
 
     # Exception 3: Activated product
-    if any(kw in task_lower for kw in ["đã kích hoạt", "đã đăng ký", "đã sử dụng"]):
-        exceptions_found.append({
-            "type": "activated_exception",
-            "rule": "Sản phẩm đã kích hoạt hoặc đăng ký tài khoản không được hoàn tiền (Điều 3).",
-            "source": "policy_refund_v4.txt",
-        })
+    if _contains_any(task_lower, ACTIVATED_PRODUCT_KEYWORDS):
+        exceptions_found.append(
+            _make_exception(
+                "activated_exception",
+                "Sản phẩm đã kích hoạt hoặc đăng ký tài khoản không được hoàn tiền (Điều 3).",
+            )
+        )
 
     # Determine policy_applies
     policy_applies = len(exceptions_found) == 0
@@ -114,7 +162,7 @@ def analyze_policy(task: str, chunks: list) -> dict:
     # TODO: Check nếu đơn hàng trước 01/02/2026 → v3 applies (không có docs, nên flag cho synthesis)
     policy_name = "refund_policy_v4"
     policy_version_note = ""
-    if "31/01" in task_lower or "30/01" in task_lower or "trước 01/02" in task_lower:
+    if _contains_any(task_lower, TEMPORAL_V3_HINT_KEYWORDS):
         policy_version_note = "Đơn hàng đặt trước 01/02/2026 áp dụng chính sách v3 (không có trong tài liệu hiện tại)."
 
     # TODO Sprint 2: Gọi LLM để phân tích phức tạp hơn
@@ -130,7 +178,7 @@ def analyze_policy(task: str, chunks: list) -> dict:
     # )
     # analysis = response.choices[0].message.content
 
-    sources = list({c.get("source", "unknown") for c in chunks if c})
+    sources = _collect_sources(chunks)
 
     return {
         "policy_applies": policy_applies,
@@ -157,6 +205,7 @@ def run(state: dict) -> dict:
         Updated AgentState với policy_result và mcp_tools_used
     """
     task = state.get("task", "")
+    task_lower = _normalize(task)
     chunks = state.get("retrieved_chunks", [])
     needs_tool = state.get("needs_tool", False)
 
@@ -193,7 +242,7 @@ def run(state: dict) -> dict:
         state["policy_result"] = policy_result
 
         # Step 3: Nếu cần thêm info từ MCP (e.g., ticket status), gọi get_ticket_info
-        if needs_tool and any(kw in task.lower() for kw in ["ticket", "p1", "jira"]):
+        if needs_tool and _contains_any(task_lower, TICKET_LOOKUP_KEYWORDS):
             mcp_result = _call_mcp_tool("get_ticket_info", {"ticket_id": "P1-LATEST"})
             state["mcp_tools_used"].append(mcp_result)
             state["history"].append(f"[{WORKER_NAME}] called MCP get_ticket_info")
