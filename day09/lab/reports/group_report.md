@@ -6,7 +6,7 @@
 |-----|---------|-------|
 | Nguyễn Khánh Nam | Supervisor Owner | ___ |
 | Đỗ Minh Phúc | Worker Owner | ___ |
-| Lê Tú Nam | Worker Owner | ___ |
+| Lê Tú Nam | Worker Owner | 2A202600109 |
 | Lê Hữu Hưng | Worker Owner | 2A202600098 |
 | Chu Minh Quân | MCP Owner | ___ |
 | Nguyễn Minh Hiếu | Trace & Docs Owner | ___ |
