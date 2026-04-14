@@ -1,0 +1,369 @@
+{
+  "generated_at": "2026-04-14T12:41:49.941738",
+  "inputs": {
+    "day08_csv": "E:\\AI Thuc Chien\\assignments\\Lecture-Day-08-09-10\\day08\\lab\\results\\ab_comparison.csv",
+    "day08_test_questions": "E:\\AI Thuc Chien\\assignments\\Lecture-Day-08-09-10\\day08\\lab\\data\\test_questions.json",
+    "day08_config_label": "baseline_dense",
+    "day09_jsonl": "e:\\AI Thuc Chien\\assignments\\Lecture-Day-08-09-10\\day09\\lab\\artifacts\\runs\\sprint4_test_latencyopt_20260414.jsonl",
+    "day09_test_questions": "E:\\AI Thuc Chien\\assignments\\Lecture-Day-08-09-10\\day09\\lab\\data\\test_questions.json"
+  },
+  "conversion_notes": [
+    "Day08 confidence is converted from 1-5 metrics using weighted normalization.",
+    "When Day08 context_recall is missing (no expected source), recall bridge rewards safe abstain.",
+    "Additional cross-day tests are heuristic and intended for comparative trend analysis."
+  ],
+  "day08": {
+    "summary": {
+      "question_count": 10,
+      "avg_confidence": 0.754,
+      "avg_latency_ms": 3977.624,
+      "answered_rate_percent": 100.0,
+      "abstain_rate_percent": 30.0,
+      "citation_rate_percent": 20.0,
+      "source_recall_rate_percent": 100.0,
+      "numeric_consistency_rate_percent": 64.58,
+      "mcp_usage_rate_percent": 0.0,
+      "hitl_rate_percent": 0.0,
+      "route_accuracy_percent": null
+    },
+    "tests": {
+      "abstain_behavior": {
+        "applicable": true,
+        "passed": 0,
+        "total": 1,
+        "pass_rate_percent": 0.0
+      },
+      "citation_presence": {
+        "applicable": true,
+        "passed": 2,
+        "total": 9,
+        "pass_rate_percent": 22.22
+      },
+      "source_coverage_full": {
+        "applicable": true,
+        "passed": 9,
+        "total": 9,
+        "pass_rate_percent": 100.0
+      },
+      "numeric_fidelity": {
+        "applicable": true,
+        "passed": 4,
+        "total": 8,
+        "pass_rate_percent": 50.0
+      },
+      "multi_hop_support": {
+        "applicable": false,
+        "passed": 0,
+        "total": 0,
+        "pass_rate_percent": null
+      },
+      "route_correctness": {
+        "applicable": false,
+        "passed": 0,
+        "total": 0,
+        "pass_rate_percent": null
+      }
+    },
+    "row_count": 10,
+    "preview": [
+      {
+        "id": "q01",
+        "question": "SLA xử lý ticket P1 là bao lâu?",
+        "category": "SLA",
+        "answer": "SLA xử lý ticket P1 là 4 giờ.",
+        "expected_answer": "Ticket P1 có SLA phản hồi ban đầu 15 phút và thời gian xử lý (resolution) là 4 giờ.",
+        "expected_sources": [
+          "support/sla-p1-2026.pdf"
+        ],
+        "retrieved_sources": [],
+        "faithfulness": 3.0,
+        "relevance": 4.0,
+        "context_recall": 5.0,
+        "completeness": 2.0,
+        "latency_ms": 11856.885499997588,
+        "answered": true,
+        "abstain": false,
+        "expected_abstain": false,
+        "citation": false,
+        "source_recall": 1.0,
+        "numeric_consistency": 0.6666666666666666,
+        "mcp_used": false,
+        "route_ok": null,
+        "hitl_triggered": null,
+        "multi_hop": false,
+        "confidence_est": 0.66,
+        "hitl_estimated": false
+      },
+      {
+        "id": "q02",
+        "question": "Khách hàng có thể yêu cầu hoàn tiền trong bao nhiêu ngày?",
+        "category": "Refund",
+        "answer": "Tôi không thể tìm thấy thông tin về thời gian khách hàng có thể yêu cầu hoàn tiền trong văn bản cung cấp.",
+        "expected_answer": "Khách hàng có thể yêu cầu hoàn tiền trong vòng 7 ngày làm việc kể từ thời điểm xác nhận đơn hàng.",
+        "expected_sources": [
+          "policy/refund-v4.pdf"
+        ],
+        "retrieved_sources": [],
+        "faithfulness": 2.0,
+        "relevance": 5.0,
+        "context_recall": 5.0,
+        "completeness": 1.0,
+        "latency_ms": 2901.9788000005065,
+        "answered": true,
+        "abstain": true,
+        "expected_abstain": false,
+        "citation": false,
+        "source_recall": 1.0,
+        "numeric_consistency": 0.0,
+        "mcp_used": false,
+        "route_ok": null,
+        "hitl_triggered": null,
+        "multi_hop": false,
+        "confidence_est": 0.59,
+        "hitl_estimated": false
+      },
+      {
+        "id": "q03",
+        "question": "Ai phải phê duyệt để cấp quyền Level 3?",
+        "category": "Access Control",
+        "answer": "Để cấp quyền Level 3, cần phải phê duyệt của Line Manager, IT Admin và IT Security.",
+        "expected_answer": "Level 3 (Elevated Access) cần phê duyệt từ Line Manager, IT Admin, và IT Security.",
+        "expected_sources": [
+          "it/access-control-sop.md"
+        ],
+        "retrieved_sources": [],
+        "faithfulness": 5.0,
+        "relevance": 5.0,
+        "context_recall": 5.0,
+        "completeness": 5.0,
+        "latency_ms": 3193.525300001056,
+        "answered": true,
+        "abstain": false,
+        "expected_abstain": false,
+        "citation": false,
+        "source_recall": 1.0,
+        "numeric_consistency": 1.0,
+        "mcp_used": false,
+        "route_ok": null,
+        "hitl_triggered": null,
+        "multi_hop": false,
+        "confidence_est": 0.95,
+        "hitl_estimated": false
+      }
+    ]
+  },
+  "day09": {
+    "summary": {
+      "question_count": 15,
+      "avg_confidence": 0.851,
+      "avg_latency_ms": 1078.467,
+      "answered_rate_percent": 100.0,
+      "abstain_rate_percent": 6.67,
+      "citation_rate_percent": 93.33,
+      "source_recall_rate_percent": 100.0,
+      "numeric_consistency_rate_percent": 63.78,
+      "mcp_usage_rate_percent": 40.0,
+      "hitl_rate_percent": 6.67,
+      "route_accuracy_percent": 100.0
+    },
+    "tests": {
+      "abstain_behavior": {
+        "applicable": true,
+        "passed": 1,
+        "total": 1,
+        "pass_rate_percent": 100.0
+      },
+      "citation_presence": {
+        "applicable": true,
+        "passed": 14,
+        "total": 14,
+        "pass_rate_percent": 100.0
+      },
+      "source_coverage_full": {
+        "applicable": true,
+        "passed": 14,
+        "total": 14,
+        "pass_rate_percent": 100.0
+      },
+      "numeric_fidelity": {
+        "applicable": true,
+        "passed": 6,
+        "total": 15,
+        "pass_rate_percent": 40.0
+      },
+      "multi_hop_support": {
+        "applicable": true,
+        "passed": 3,
+        "total": 3,
+        "pass_rate_percent": 100.0
+      },
+      "route_correctness": {
+        "applicable": true,
+        "passed": 15,
+        "total": 15,
+        "pass_rate_percent": 100.0
+      }
+    },
+    "row_count": 15,
+    "preview": [
+      {
+        "id": "q01",
+        "question": "SLA xử lý ticket P1 là bao lâu?",
+        "category": "SLA",
+        "answer": "Dưới đây là bằng chứng trích từ tài liệu nội bộ:\n[1] sla_p1_2026.txt: === Phần 3: Quy trình xử lý sự cố P1 ===\n[2] access_control_sop.txt: Thời gian xử lý: 1 ngày làm việc.\n[3] policy_refund_v4.txt: Bước 3: Nếu đủ điều kiện, chuyển yêu cầu sang Finance Team để xử lý hoàn tiền.",
+        "expected_answer": "Ticket P1 có SLA phản hồi ban đầu 15 phút và thời gian xử lý (resolution) là 4 giờ.",
+        "expected_sources": [
+          "sla_p1_2026.txt"
+        ],
+        "retrieved_sources": [
+          "access_control_sop.txt",
+          "policy_refund_v4.txt",
+          "sla_p1_2026.txt"
+        ],
+        "faithfulness": null,
+        "relevance": null,
+        "context_recall": null,
+        "completeness": null,
+        "latency_ms": 14133.0,
+        "answered": true,
+        "abstain": false,
+        "expected_abstain": false,
+        "citation": true,
+        "source_recall": 1.0,
+        "numeric_consistency": 0.6666666666666666,
+        "mcp_used": false,
+        "route_ok": true,
+        "hitl_triggered": false,
+        "multi_hop": false,
+        "confidence": 0.72,
+        "supervisor_route": "retrieval_worker"
+      },
+      {
+        "id": "q02",
+        "question": "Khách hàng có thể yêu cầu hoàn tiền trong bao nhiêu ngày?",
+        "category": "Refund",
+        "answer": "Dưới đây là bằng chứng trích từ tài liệu nội bộ:\n[1] policy_refund_v4.txt: Khách hàng được quyền yêu cầu hoàn tiền khi đáp ứng đủ các điều kiện sau:\n[2] access_control_sop.txt: Bước 2: Line Manager phê duyệt yêu cầu trong 1 ngày làm việc.\n[3] hr_leave_policy.txt: Yêu cầu: Thông báo cho Line Manager trước 9:00 sáng ngày nghỉ.",
+        "expected_answer": "Khách hàng có thể yêu cầu hoàn tiền trong vòng 7 ngày làm việc kể từ thời điểm xác nhận đơn hàng.",
+        "expected_sources": [
+          "policy_refund_v4.txt"
+        ],
+        "retrieved_sources": [
+          "hr_leave_policy.txt",
+          "access_control_sop.txt",
+          "policy_refund_v4.txt"
+        ],
+        "faithfulness": null,
+        "relevance": null,
+        "context_recall": null,
+        "completeness": null,
+        "latency_ms": 196.0,
+        "answered": true,
+        "abstain": false,
+        "expected_abstain": false,
+        "citation": true,
+        "source_recall": 1.0,
+        "numeric_consistency": 0.0,
+        "mcp_used": false,
+        "route_ok": true,
+        "hitl_triggered": false,
+        "multi_hop": false,
+        "confidence": 0.95,
+        "supervisor_route": "retrieval_worker"
+      },
+      {
+        "id": "q03",
+        "question": "Ai phải phê duyệt để cấp quyền Level 3?",
+        "category": "Access Control",
+        "answer": "Access policy evaluated using Access Control SOP and MCP tool check.\nYêu cầu phê duyệt: Line Manager, IT Admin, IT Security.\n[1] access_control_sop.txt: 1. On-call IT Admin có thể cấp quyền tạm thời (max 24 giờ) sau khi được Tech Lead phê duyệt bằng lời.\n[2] hr_leave_policy.txt: Bước 3: Nhân viên nhận thông báo qua email sau khi được phê duyệt.\n[3] it_helpdesk_faq.txt: A: Gửi yêu cầu qua Jira project IT-SOFTWARE. Line Manager phải phê duyệt trước khi IT cài đặt.",
+        "expected_answer": "Level 3 (Elevated Access) cần phê duyệt từ Line Manager, IT Admin, và IT Security — ba người phê duyệt.",
+        "expected_sources": [
+          "access_control_sop.txt"
+        ],
+        "retrieved_sources": [
+          "access_control_sop.txt",
+          "hr_leave_policy.txt",
+          "it_helpdesk_faq.txt"
+        ],
+        "faithfulness": null,
+        "relevance": null,
+        "context_recall": null,
+        "completeness": null,
+        "latency_ms": 120.0,
+        "answered": true,
+        "abstain": false,
+        "expected_abstain": false,
+        "citation": true,
+        "source_recall": 1.0,
+        "numeric_consistency": 1.0,
+        "mcp_used": true,
+        "route_ok": true,
+        "hitl_triggered": false,
+        "multi_hop": false,
+        "confidence": 0.76,
+        "supervisor_route": "policy_tool_worker"
+      }
+    ]
+  },
+  "aligned_comparison": [
+    {
+      "metric": "avg_confidence",
+      "day08_single_agent": 0.754,
+      "day09_multi_agent": 0.851,
+      "delta_day09_minus_day08": 0.097
+    },
+    {
+      "metric": "avg_latency_ms",
+      "day08_single_agent": 3977.624,
+      "day09_multi_agent": 1078.467,
+      "delta_day09_minus_day08": -2899.157
+    },
+    {
+      "metric": "answered_rate_percent",
+      "day08_single_agent": 100.0,
+      "day09_multi_agent": 100.0,
+      "delta_day09_minus_day08": 0.0
+    },
+    {
+      "metric": "abstain_rate_percent",
+      "day08_single_agent": 30.0,
+      "day09_multi_agent": 6.67,
+      "delta_day09_minus_day08": -23.33
+    },
+    {
+      "metric": "citation_rate_percent",
+      "day08_single_agent": 20.0,
+      "day09_multi_agent": 93.33,
+      "delta_day09_minus_day08": 73.33
+    },
+    {
+      "metric": "source_recall_rate_percent",
+      "day08_single_agent": 100.0,
+      "day09_multi_agent": 100.0,
+      "delta_day09_minus_day08": 0.0
+    },
+    {
+      "metric": "numeric_consistency_rate_percent",
+      "day08_single_agent": 64.58,
+      "day09_multi_agent": 63.78,
+      "delta_day09_minus_day08": -0.8
+    },
+    {
+      "metric": "mcp_usage_rate_percent",
+      "day08_single_agent": 0.0,
+      "day09_multi_agent": 40.0,
+      "delta_day09_minus_day08": 40.0
+    },
+    {
+      "metric": "hitl_rate_percent",
+      "day08_single_agent": 0.0,
+      "day09_multi_agent": 6.67,
+      "delta_day09_minus_day08": 6.67
+    },
+    {
+      "metric": "route_accuracy_percent",
+      "day08_single_agent": null,
+      "day09_multi_agent": 100.0,
+      "delta_day09_minus_day08": null
+    }
+  ]
+}

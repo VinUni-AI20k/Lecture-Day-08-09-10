@@ -1,0 +1,104 @@
+{
+  "task": "Nhân viên được làm remote tối đa mấy ngày mỗi tuần?",
+  "route_reason": "no policy/access or error-code signals; default retrieval; needs_tool=False; mcp_expected=False | mcp_used=False",
+  "risk_high": false,
+  "needs_tool": false,
+  "hitl_triggered": false,
+  "supervisor_route": "retrieval_worker",
+  "retrieved_chunks": [
+    {
+      "text": "Nhân viên sau probation period có thể làm remote tối đa 2 ngày/tuần.",
+      "source": "hr_leave_policy.txt",
+      "score": 0.7273,
+      "metadata": {
+        "retrieval_mode": "local_fallback",
+        "rank": 1
+      }
+    },
+    {
+      "text": "A: Mỗi tài khoản được kết nối VPN trên tối đa 2 thiết bị cùng lúc.",
+      "source": "it_helpdesk_faq.txt",
+      "score": 0.3636,
+      "metadata": {
+        "retrieval_mode": "local_fallback",
+        "rank": 2
+      }
+    },
+    {
+      "text": "Áp dụng cho: Tất cả nhân viên mới trong 30 ngày đầu.",
+      "source": "access_control_sop.txt",
+      "score": 0.2727,
+      "metadata": {
+        "retrieval_mode": "local_fallback",
+        "rank": 3
+      }
+    }
+  ],
+  "retrieved_sources": [
+    "it_helpdesk_faq.txt",
+    "access_control_sop.txt",
+    "hr_leave_policy.txt"
+  ],
+  "policy_result": {},
+  "mcp_tools_used": [],
+  "worker_io_logs": [
+    {
+      "worker": "retrieval_worker",
+      "input": {
+        "task": "Nhân viên được làm remote tối đa mấy ngày mỗi tuần?",
+        "top_k": 3
+      },
+      "output": {
+        "chunks_count": 3,
+        "sources": [
+          "it_helpdesk_faq.txt",
+          "access_control_sop.txt",
+          "hr_leave_policy.txt"
+        ]
+      },
+      "error": null
+    },
+    {
+      "worker": "synthesis_worker",
+      "input": {
+        "task": "Nhân viên được làm remote tối đa mấy ngày mỗi tuần?",
+        "chunks_count": 3,
+        "has_policy": false
+      },
+      "output": {
+        "answer_length": 315,
+        "sources": [
+          "hr_leave_policy.txt",
+          "it_helpdesk_faq.txt",
+          "access_control_sop.txt"
+        ],
+        "confidence": 0.45
+      },
+      "error": null
+    }
+  ],
+  "final_answer": "Dưới đây là bằng chứng trích từ tài liệu nội bộ:\n[1] hr_leave_policy.txt: Nhân viên sau probation period có thể làm remote tối đa 2 ngày/tuần.\n[2] it_helpdesk_faq.txt: A: Mỗi tài khoản được kết nối VPN trên tối đa 2 thiết bị cùng lúc.\n[3] access_control_sop.txt: Áp dụng cho: Tất cả nhân viên mới trong 30 ngày đầu.",
+  "sources": [
+    "hr_leave_policy.txt",
+    "it_helpdesk_faq.txt",
+    "access_control_sop.txt"
+  ],
+  "confidence": 0.45,
+  "history": [
+    "[supervisor] received task: Nhân viên được làm remote tối đa mấy ngày mỗi tuần?",
+    "[supervisor] route=retrieval_worker reason=no policy/access or error-code signals; default retrieval; needs_tool=False; mcp_expected=False",
+    "[retrieval_worker] retrieved 3 chunks from ['it_helpdesk_faq.txt', 'access_control_sop.txt', 'hr_leave_policy.txt']",
+    "[synthesis_worker] answer generated, confidence=0.45, sources=['hr_leave_policy.txt', 'it_helpdesk_faq.txt', 'access_control_sop.txt']",
+    "[supervisor] mcp_used=False calls=0",
+    "[graph] completed in 194ms"
+  ],
+  "workers_called": [
+    "retrieval_worker",
+    "synthesis_worker"
+  ],
+  "latency_ms": 194,
+  "run_id": "run_20260414_115527_345441",
+  "timestamp": "2026-04-14T11:55:27",
+  "run_started_at": 1776142527.3454702,
+  "question_id": "q05"
+}

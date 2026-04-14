@@ -1,0 +1,105 @@
+{
+  "task": "SLA xử lý ticket P1 là bao lâu?",
+  "route_reason": "incident/SLA keywords matched (p1, sla, ticket); needs_tool=False; mcp_expected=False | mcp_used=False",
+  "risk_high": false,
+  "needs_tool": false,
+  "hitl_triggered": true,
+  "supervisor_route": "retrieval_worker",
+  "retrieved_chunks": [
+    {
+      "text": "SLA TICKET - QUY ĐỊNH XỬ LÝ SỰ CỐ",
+      "source": "sla_p1_2026.txt",
+      "score": 0.5,
+      "metadata": {
+        "retrieval_mode": "local_fallback",
+        "rank": 1
+      }
+    },
+    {
+      "text": "Thời gian xử lý: 1 ngày làm việc.",
+      "source": "access_control_sop.txt",
+      "score": 0.25,
+      "metadata": {
+        "retrieval_mode": "local_fallback",
+        "rank": 2
+      }
+    },
+    {
+      "text": "Q: Laptop mới được cấp sau bao lâu khi vào công ty?",
+      "source": "it_helpdesk_faq.txt",
+      "score": 0.25,
+      "metadata": {
+        "retrieval_mode": "local_fallback",
+        "rank": 3
+      }
+    }
+  ],
+  "retrieved_sources": [
+    "it_helpdesk_faq.txt",
+    "access_control_sop.txt",
+    "sla_p1_2026.txt"
+  ],
+  "policy_result": {},
+  "mcp_tools_used": [],
+  "worker_io_logs": [
+    {
+      "worker": "retrieval_worker",
+      "input": {
+        "task": "SLA xử lý ticket P1 là bao lâu?",
+        "top_k": 3
+      },
+      "output": {
+        "chunks_count": 3,
+        "sources": [
+          "it_helpdesk_faq.txt",
+          "access_control_sop.txt",
+          "sla_p1_2026.txt"
+        ]
+      },
+      "error": null
+    },
+    {
+      "worker": "synthesis_worker",
+      "input": {
+        "task": "SLA xử lý ticket P1 là bao lâu?",
+        "chunks_count": 3,
+        "has_policy": false
+      },
+      "output": {
+        "answer_length": 242,
+        "sources": [
+          "sla_p1_2026.txt",
+          "access_control_sop.txt",
+          "it_helpdesk_faq.txt"
+        ],
+        "confidence": 0.33
+      },
+      "error": null
+    }
+  ],
+  "final_answer": "Dưới đây là bằng chứng trích từ tài liệu nội bộ:\n[1] sla_p1_2026.txt: SLA TICKET - QUY ĐỊNH XỬ LÝ SỰ CỐ\n[2] access_control_sop.txt: Thời gian xử lý: 1 ngày làm việc.\n[3] it_helpdesk_faq.txt: Q: Laptop mới được cấp sau bao lâu khi vào công ty?",
+  "sources": [
+    "sla_p1_2026.txt",
+    "access_control_sop.txt",
+    "it_helpdesk_faq.txt"
+  ],
+  "confidence": 0.33,
+  "history": [
+    "[supervisor] received task: SLA xử lý ticket P1 là bao lâu?",
+    "[supervisor] route=retrieval_worker reason=incident/SLA keywords matched (p1, sla, ticket); needs_tool=False; mcp_expected=False",
+    "[retrieval_worker] retrieved 3 chunks from ['it_helpdesk_faq.txt', 'access_control_sop.txt', 'sla_p1_2026.txt']",
+    "[synthesis_worker] low confidence -> hitl_triggered=True",
+    "[synthesis_worker] answer generated, confidence=0.33, sources=['sla_p1_2026.txt', 'access_control_sop.txt', 'it_helpdesk_faq.txt']",
+    "[supervisor] mcp_used=False calls=0",
+    "[graph] completed in 13902ms"
+  ],
+  "workers_called": [
+    "retrieval_worker",
+    "synthesis_worker"
+  ],
+  "latency_ms": 13902,
+  "run_id": "run_20260414_115500_536061",
+  "timestamp": "2026-04-14T11:55:00",
+  "run_started_at": 1776142500.5360875,
+  "question_id": "q01"
+}

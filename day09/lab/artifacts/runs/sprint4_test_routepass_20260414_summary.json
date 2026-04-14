@@ -1,0 +1,52 @@
+{
+  "total_questions": 15,
+  "successful_runs": 15,
+  "failed_runs": 0,
+  "routing_distribution": {
+    "retrieval_worker": 9,
+    "policy_tool_worker": 6
+  },
+  "avg_confidence": 0.874,
+  "avg_latency_ms": 4158.4,
+  "mcp_usage": {
+    "count": 6,
+    "rate_percent": 40.0
+  },
+  "hitl_usage": {
+    "count": 0,
+    "rate_percent": 0.0
+  },
+  "route_accuracy": {
+    "evaluated": 15,
+    "correct": 15,
+    "rate_percent": 100.0
+  },
+  "top_sources": [
+    [
+      "access_control_sop.txt",
+      13
+    ],
+    [
+      "hr_leave_policy.txt",
+      9
+    ],
+    [
+      "policy_refund_v4.txt",
+      9
+    ],
+    [
+      "sla_p1_2026.txt",
+      7
+    ],
+    [
+      "it_helpdesk_faq.txt",
+      5
+    ]
+  ],
+  "failed_ids": [],
+  "run_name": "sprint4_test_routepass_20260414",
+  "questions_file": "E:\\AI Thuc Chien\\assignments\\Lecture-Day-08-09-10\\day09\\lab\\data\\test_questions.json",
+  "trace_dir": "E:\\AI Thuc Chien\\assignments\\Lecture-Day-08-09-10\\day09\\lab\\artifacts\\traces\\sprint4_test_routepass_20260414",
+  "jsonl_file": "E:\\AI Thuc Chien\\assignments\\Lecture-Day-08-09-10\\day09\\lab\\artifacts\\runs\\sprint4_test_routepass_20260414.jsonl",
+  "generated_at": "2026-04-14T12:29:03.444841"
+}

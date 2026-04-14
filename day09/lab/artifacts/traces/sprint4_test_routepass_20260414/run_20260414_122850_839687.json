@@ -1,0 +1,104 @@
+{
+  "task": "Nhân viên vừa vào thử việc (trong probation period) muốn làm remote vì lý do cá nhân. Điều kiện là gì?",
+  "route_reason": "no policy/access or error-code signals; default retrieval; needs_tool=False; mcp_expected=False | mcp_used=False",
+  "risk_high": false,
+  "needs_tool": false,
+  "hitl_triggered": false,
+  "supervisor_route": "retrieval_worker",
+  "retrieved_chunks": [
+    {
+      "text": "Nhân viên sau probation period có thể làm remote tối đa 2 ngày/tuần.",
+      "source": "hr_leave_policy.txt",
+      "score": 1.0,
+      "metadata": {
+        "retrieval_mode": "local_fallback",
+        "rank": 1
+      }
+    },
+    {
+      "text": "Áp dụng cho: Nhân viên chính thức đã qua thử việc.",
+      "source": "access_control_sop.txt",
+      "score": 0.6667,
+      "metadata": {
+        "retrieval_mode": "local_fallback",
+        "rank": 2
+      }
+    },
+    {
+      "text": "Bước 2: CS Agent xem xét trong vòng 1 ngày làm việc và xác nhận điều kiện đủ điều kiện.",
+      "source": "policy_refund_v4.txt",
+      "score": 0.6667,
+      "metadata": {
+        "retrieval_mode": "local_fallback",
+        "rank": 3
+      }
+    }
+  ],
+  "retrieved_sources": [
+    "access_control_sop.txt",
+    "policy_refund_v4.txt",
+    "hr_leave_policy.txt"
+  ],
+  "policy_result": {},
+  "mcp_tools_used": [],
+  "worker_io_logs": [
+    {
+      "worker": "retrieval_worker",
+      "input": {
+        "task": "Nhân viên vừa vào thử việc (trong probation period) muốn làm remote vì lý do cá nhân. Điều kiện là gì?",
+        "top_k": 3
+      },
+      "output": {
+        "chunks_count": 3,
+        "sources": [
+          "access_control_sop.txt",
+          "policy_refund_v4.txt",
+          "hr_leave_policy.txt"
+        ]
+      },
+      "error": null
+    },
+    {
+      "worker": "synthesis_worker",
+      "input": {
+        "task": "Nhân viên vừa vào thử việc (trong probation period) muốn làm remote vì lý do cá nhân. Điều kiện là gì?",
+        "chunks_count": 3,
+        "has_policy": false
+      },
+      "output": {
+        "answer_length": 335,
+        "sources": [
+          "hr_leave_policy.txt",
+          "access_control_sop.txt",
+          "policy_refund_v4.txt"
+        ],
+        "confidence": 0.95
+      },
+      "error": null
+    }
+  ],
+  "final_answer": "Dưới đây là bằng chứng trích từ tài liệu nội bộ:\n[1] hr_leave_policy.txt: Nhân viên sau probation period có thể làm remote tối đa 2 ngày/tuần.\n[2] access_control_sop.txt: Áp dụng cho: Nhân viên chính thức đã qua thử việc.\n[3] policy_refund_v4.txt: Bước 2: CS Agent xem xét trong vòng 1 ngày làm việc và xác nhận điều kiện đủ điều kiện.",
+  "sources": [
+    "hr_leave_policy.txt",
+    "access_control_sop.txt",
+    "policy_refund_v4.txt"
+  ],
+  "confidence": 0.95,
+  "history": [
+    "[supervisor] received task: Nhân viên vừa vào thử việc (trong probation period) muốn làm remote vì lý do cá nhân. Điều kiện là gì?",
+    "[supervisor] route=retrieval_worker reason=no policy/access or error-code signals; default retrieval; needs_tool=False; mcp_expected=False",
+    "[retrieval_worker] retrieved 3 chunks from ['access_control_sop.txt', 'policy_refund_v4.txt', 'hr_leave_policy.txt']",
+    "[synthesis_worker] answer generated, confidence=0.95, sources=['hr_leave_policy.txt', 'access_control_sop.txt', 'policy_refund_v4.txt']",
+    "[supervisor] mcp_used=False calls=0",
+    "[graph] completed in 205ms"
+  ],
+  "workers_called": [
+    "retrieval_worker",
+    "synthesis_worker"
+  ],
+  "latency_ms": 205,
+  "run_id": "run_20260414_122850_839687",
+  "timestamp": "2026-04-14T12:28:50",
+  "run_started_at": 1776144530.8397393,
+  "question_id": "q14"
+}
