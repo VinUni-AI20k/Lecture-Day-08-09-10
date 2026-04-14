@@ -4,9 +4,20 @@
 .env
 # Grading questions — không public trước 17:00
 day08/lab/data/grading_questions.json
+day09/lab/data/grading_questions.json
+day10/lab/data/grading_questions.json
+
 day08/lab/chroma_db/
 day08/lab/chroma_db_alt/
 day08/lab/__pycache__/
 day08/lab/.env
 day08/lab/venv
 day08/lab/.venv
+
+day09/lab/.env
+day09/lab/venv
+day09/lab/.venv
+
+day10/lab/.env
+day10/lab/venv
+day10/lab/.venv
