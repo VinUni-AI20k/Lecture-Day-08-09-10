@@ -27,39 +27,30 @@ import sys
 WORKER_NAME = "retrieval_worker"
 DEFAULT_TOP_K = 3
 
+_model = None
 
 def _get_embedding_fn():
-    """
-    Trả về embedding function.
-    TODO Sprint 1: Implement dùng OpenAI hoặc Sentence Transformers.
-    """
-    # Option A: Sentence Transformers (offline, không cần API key)
+    global _model
+
+    if _model is None:
+        from sentence_transformers import SentenceTransformer
+        _model = SentenceTransformer("all-MiniLM-L6-v2")
+
+    def embed(text: str) -> list:
+        return _model.encode(text).tolist()
+
+    return embed
+
+    # Option B: OpenAI (cần API key)
     # try:
-    #     from sentence_transformers import SentenceTransformer
-    #     model = SentenceTransformer("all-MiniLM-L6-v2")
+    #     from openai import OpenAI
+    #     client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
     #     def embed(text: str) -> list:
-    #         return model.encode([text])[0].tolist()
+    #         resp = client.embeddings.create(input=text, model="text-embedding-3-small")
+    #         return resp.data[0].embedding
     #     return embed
     # except ImportError:
     #     pass
-
-    # Option B: OpenAI (cần API key)
-    try:
-        from openai import OpenAI
-        client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-        def embed(text: str) -> list:
-            resp = client.embeddings.create(input=text, model="text-embedding-3-small")
-            return resp.data[0].embedding
-        return embed
-    except ImportError:
-        pass
-
-    # Fallback: random embeddings cho test (KHÔNG dùng production)
-    import random
-    def embed(text: str) -> list:
-        return [random.random() for _ in range(384)]
-    print("⚠️  WARNING: Using random embeddings (test only). Install sentence-transformers.")
-    return embed
 
 
 def _get_collection():
@@ -74,7 +65,7 @@ def _get_collection():
     except Exception:
         # Auto-create nếu chưa có
         collection = client.get_or_create_collection(
-            "day09_docs",
+            name="day09_docs",
             metadata={"hnsw:space": "cosine"}
         )
         print(f"⚠️  Collection 'day09_docs' chưa có data. Chạy index script trong README trước.")
