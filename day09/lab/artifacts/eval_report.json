@@ -1,0 +1,52 @@
+{
+  "generated_at": "2026-04-14T18:00:29.294017",
+  "day08_single_agent": {
+    "total_questions": 15,
+    "avg_confidence": 0.0,
+    "avg_latency_ms": 0,
+    "abstain_rate": "?",
+    "multi_hop_accuracy": "?",
+    "source": "placeholder"
+  },
+  "day09_multi_agent": {
+    "total_traces": 10,
+    "routing_distribution": {
+      "retrieval_worker": "5/10 (50%)",
+      "policy_tool_worker": "5/10 (50%)"
+    },
+    "avg_confidence": 0.816,
+    "avg_latency_ms": 4689,
+    "mcp_usage_rate": "5/10 (50%)",
+    "hitl_rate": "0/10 (0%)",
+    "top_sources": [
+      [
+        "unknown",
+        5
+      ],
+      [
+        "policy_refund_v4.txt",
+        4
+      ],
+      [
+        "it_helpdesk_faq.txt",
+        3
+      ],
+      [
+        "sla_p1_2026.txt",
+        3
+      ],
+      [
+        "access_control_sop.txt",
+        3
+      ]
+    ]
+  },
+  "analysis": {
+    "routing_visibility": "Day 09 có route_reason cho từng câu → dễ debug hơn Day 08",
+    "latency_delta": "Day 08 baseline unavailable. Provide a JSON baseline via --day08-results.",
+    "confidence_delta": "Day 08 baseline unavailable. Provide a JSON baseline via --day08-results.",
+    "accuracy_delta": "Use Day 08 grading results to compare answer quality; currently placeholder.",
+    "debuggability": "Multi-agent: có thể test từng worker độc lập. Single-agent: khó tách lỗi từng phần.",
+    "mcp_benefit": "Day 09 có thể mở rộng công cụ qua MCP mà không sửa core routing logic."
+  }
+}
