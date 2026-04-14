@@ -28,7 +28,7 @@ SYSTEM_PROMPT = """Bạn là trợ lý IT Helpdesk nội bộ. Trả lời CHỈ
 
 Quy tắc nghiêm ngặt:
 1. CHỈ trả lời dựa vào context bên dưới. TUYỆT ĐỐI KHÔNG dùng kiến thức bên ngoài.
-2. Nếu context KHÔNG chứa thông tin để trả lời → nói rõ "Không đủ thông tin trong tài liệu nội bộ." và dừng. KHÔNG suy đoán, KHÔNG bịa.
+2. Nếu context KHÔNG chứa đủ thông tin để trả lời câu hỏi → nói rõ "Không đủ thông tin trong tài liệu nội bộ." và dừng. KHÔNG suy đoán, KHÔNG bịa. Nhưng nếu context CÓ đủ thông tin để trả lời → TUYỆT ĐỐI KHÔNG thêm "Không đủ thông tin" vì sẽ gây nhầm lẫn.
 3. KHÔNG bịa thêm con số, mức phạt, chính sách, điều khoản mà context không đề cập.
 4. Trích dẫn nguồn bằng [tên_file] (ví dụ [sla_p1_2026.txt]) sau mỗi thông tin quan trọng.
 5. Nếu thông tin đến từ NHIỀU tài liệu khác nhau, cite TẤT CẢ các nguồn liên quan — ví dụ: [hr_leave_policy.txt] và [it_helpdesk_faq.txt].
@@ -36,6 +36,12 @@ Quy tắc nghiêm ngặt:
 7. Nếu có exceptions/ngoại lệ → LIỆT KÊ ĐẦY ĐỦ TẤT CẢ ngoại lệ liên quan, không chỉ một.
 8. Trả lời có cấu trúc, đầy đủ chi tiết từ context. Không bỏ sót thông tin quan trọng nếu context có.
 9. Nếu câu hỏi hỏi về quy trình (SOP), nêu đủ: ai phê duyệt, bao lâu, yêu cầu đặc biệt, kênh liên hệ.
+10. SLA P1 notification: Khi câu hỏi liên quan tới thông báo sự cố P1, hãy ĐỌC KỸ TỪNG CHUNK trong context. Quy trình SLA P1 thường đề cập 3 kênh: (a) Slack channel — tìm trong bước "Thông báo", (b) Email — cũng trong bước "Thông báo", (c) PagerDuty — thường trong phần "Công cụ". Đọc TOÀN BỘ context, gộp lại và liệt kê ĐẦY ĐỦ tất cả kênh kèm địa chỉ chính xác. KHÔNG bỏ sót bất kỳ kênh nào xuất hiện trong context.
+11. Khi context CÓ chứa địa chỉ cụ thể (email, Slack channel, v.v.), BẮT BUỘC phải ghi ra ĐỊA CHỈ CHÍNH XÁC đó. KHÔNG viết "không có địa chỉ cụ thể" nếu context đã đề cập. KHÔNG paraphrase thành "gửi đến stakeholder liên quan" mà phải ghi đúng địa chỉ.
+12. Escalation rule: Nếu context đề cập escalation (vd: 10 phút không phản hồi → Senior Engineer), LUÔN nêu rõ trong câu trả lời kèm timeline cụ thể. Đây là thông tin BẮT BUỘC phải có khi trả lời về P1.
+13. Access level: Khi trả lời về quyền truy cập, SO SÁNH rõ ràng giữa các level. Ví dụ: Level 2 CÓ emergency bypass (chỉ cần Line Manager + IT Admin on-call, KHÔNG cần IT Security), còn Level 3 KHÔNG CÓ emergency bypass (phải follow quy trình chuẩn: Line Manager + IT Admin + IT Security). Nêu rõ sự khác biệt này.
+14. QUAN TRỌNG — Kiểm tra chéo: Trước khi kết luận "không có thông tin" về BẤT KỲ chi tiết nào, đọc lại TOÀN BỘ context một lần nữa. Context gồm nhiều chunk từ nhiều phần — thông tin cần tìm có thể nằm ở chunk khác với chunk bạn đang đọc.
+15. Nguồn ưu tiên: Khi trả lời về thông báo/notification SLA P1, CHỈ liệt kê các kênh notification được quy định TRỰC TIẾP trong quy trình SLA P1 (file sla_p1_2026.txt). Hotline IT helpdesk (ví dụ ext. 9999) là kênh support chung, KHÔNG phải kênh notification SLA — không đưa vào danh sách kênh notification P1.
 """
 
 
@@ -51,8 +57,8 @@ def _call_llm(messages: list) -> str:
         response = client.chat.completions.create(
             model=os.getenv("LLM_MODEL", "gpt-4o-mini"),
             messages=messages,
-            temperature=0.1,  # Low temperature để grounded
-            max_tokens=1024,
+            temperature=0.0,  # Zero temperature for deterministic grounded answers
+            max_tokens=2048,
         )
         return response.choices[0].message.content
     except Exception as e:
@@ -94,6 +100,23 @@ def _build_context(chunks: list, policy_result: dict) -> str:
                 meta_hints.append(f"section={meta['section']}")
             meta_str = f" | {', '.join(meta_hints)}" if meta_hints else ""
             parts.append(f"[{i}] Nguồn: {source} (relevance: {score:.2f}{meta_str})\n{text}")
+
+    # Auto-detect notification channels across all chunks and add summary hint
+    if chunks:
+        all_text = " ".join(c.get("text", "") for c in chunks).lower()
+        channels_found = []
+        if "#incident-p1" in all_text or "slack" in all_text:
+            channels_found.append("Slack #incident-p1")
+        if "incident@company.internal" in all_text:
+            channels_found.append("Email incident@company.internal")
+        if "pagerduty" in all_text:
+            channels_found.append("PagerDuty")
+        if len(channels_found) >= 2:
+            parts.append(
+                f"\n=== GỢI Ý: CÁC KÊNH NOTIFICATION TÌM THẤY TRONG CONTEXT ===\n"
+                f"Các kênh sau ĐỀU được đề cập trong tài liệu: {', '.join(channels_found)}.\n"
+                f"Khi trả lời về notification/thông báo, hãy liệt kê ĐẦY ĐỦ tất cả các kênh trên."
+            )
 
     if policy_result and policy_result.get("exceptions_found"):
         parts.append("\n=== POLICY EXCEPTIONS ===")
@@ -201,8 +224,12 @@ Hãy trả lời câu hỏi dựa vào tài liệu trên. Yêu cầu:
 - Trả lời đầy đủ tất cả các phần của câu hỏi.
 - Cite nguồn bằng [tên_file.txt] sau mỗi thông tin quan trọng.
 - Nếu thông tin đến từ nhiều tài liệu, hãy tổng hợp và cite tất cả.
-- Nếu context không đủ, nói rõ "Không đủ thông tin trong tài liệu nội bộ."
-- KHÔNG bịa thêm thông tin ngoài context."""
+- Nếu context THẬT SỰ không đủ, nói rõ "Không đủ thông tin trong tài liệu nội bộ." Nhưng nếu context ĐÃ CÓ đủ thông tin → KHÔNG thêm câu này.
+- KHÔNG bịa thêm thông tin ngoài context.
+- Nếu câu hỏi liên quan đến thông báo/notification: đọc kỹ TOÀN BỘ context từ mọi phần/section, tổng hợp TẤT CẢ kênh thông báo vào câu trả lời. Cụ thể: tìm (a) Slack channel trong bước thông báo, (b) email trong bước thông báo, (c) PagerDuty trong phần công cụ/tools. Nếu context đề cập cả 3 kênh, câu trả lời PHẢI liệt kê đủ cả 3. KHÔNG bỏ sót kênh nào xuất hiện trong context.
+- Khi nêu kênh liên lạc, dùng ĐỊA CHỈ CỤ THỂ từ context (ví dụ: email incident@company.internal, Slack #incident-p1), KHÔNG viết chung chung. KHÔNG nói "không có địa chỉ cụ thể" nếu context ĐÃ chứa địa chỉ.
+- Nếu câu hỏi liên quan đến SLA P1, PHẢI nêu escalation rule (10 phút không phản hồi → Senior Engineer).
+- Nếu câu hỏi liên quan đến access level, SO SÁNH rõ sự khác biệt giữa các level (ví dụ: Level 2 CÓ emergency bypass nhưng Level 3 KHÔNG CÓ)."""
         }
     ]
 

@@ -31,7 +31,7 @@ CHROMA_PATH = str(LAB_ROOT / "chroma_db")
 # ─────────────────────────────────────────────
 
 WORKER_NAME = "retrieval_worker"
-DEFAULT_TOP_K = 3
+DEFAULT_TOP_K = 5
 COLLECTION_NAME = "day09_docs"
 CHROMA_DB_PATH = str(Path(__file__).resolve().parents[1] / "chroma_db")
 EMBEDDING_PROVIDER = os.getenv("EMBEDDING_PROVIDER", "local").strip().lower()
@@ -235,6 +235,20 @@ def _extract_sub_queries(task: str) -> list:
     if has_annual and has_sick:
         sub_queries.append("quy trình xin nghỉ phép năm báo trước bao nhiêu ngày HR Portal")
         sub_queries.append("nghỉ ốm giấy tờ y tế bao nhiêu ngày liên tiếp")
+
+    # SLA P1: ensure ALL SLA sections are retrieved
+    # Phần 2 has escalation rules, Phần 3 has process steps (email), Phần 4 has tools/channels (PagerDuty)
+    has_p1_sla = any(k in t for k in ("p1", "sla", "sự cố", "incident"))
+    if has_p1_sla:
+        sub_queries.append(
+            "SLA P1 escalation Senior Engineer tự động escalate 10 phút không phản hồi"
+        )
+        sub_queries.append(
+            "Ticket system Jira Slack PagerDuty Hotline on-call P1"
+        )
+        sub_queries.append(
+            "Bước tiếp nhận thông báo triage phân công xử lý resolution incident report P1"
+        )
 
     return sub_queries
 
