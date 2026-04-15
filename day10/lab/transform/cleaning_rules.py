@@ -1,8 +1,11 @@
 """
 Cleaning rules — raw export → cleaned rows + quarantine.
 
-Baseline gồm các failure mode mở rộng (allowlist doc_id, parse ngày, HR stale version).
-Sinh viên thêm ≥3 rule mới: mỗi rule phải ghi `metric_impact` (xem README — chống trivial).
+Baseline (README): allowlist doc_id, normalize effective_date, quarantine HR stale,
+reject empty text/date, dedupe, fix refund 14→7.
+
+Sinh viên (Người 2) thêm ≥3 rule mới — mỗi rule có tên + docstring + metric_impact
+(xem biến NEW_RULE_IDS và các hàm rule_* bên dưới).
 """
 
 from __future__ import annotations
@@ -11,9 +14,9 @@ import csv
 import hashlib
 import re
 import unicodedata
-from datetime import datetime
+from datetime import date, datetime
 from pathlib import Path
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Optional, Set, Tuple
 
 # Khớp export hợp lệ trong lab (mở rộng khi nhóm thêm doc mới — phải đồng bộ contract).
 ALLOWED_DOC_IDS = frozenset(
@@ -25,9 +28,16 @@ ALLOWED_DOC_IDS = frozenset(
     }
 )
 
+# --- Rule mới (đủ ≥3, có tên cố định để rubric / báo cáo metric_impact) ---
+NEW_RULE_IDS: Tuple[str, ...] = (
+    "unicode_whitespace_hygiene",
+    "exported_at_iso_or_quarantine",
+    "malformed_row_guards",
+    "dedupe_doc_scoped_content",
+)
+
 _ISO_DATE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 _DMY_SLASH = re.compile(r"^(\d{2})/(\d{2})/(\d{4})$")
-# Zero-width / BOM — thường gặp khi copy-paste từ PDF/Slack; làm lệch dedupe và retrieval.
 _INVISIBLE_CHARS = dict.fromkeys(map(ord, "\u200b\u200c\u200d\ufeff"), None)
 
 
@@ -41,10 +51,7 @@ def _stable_chunk_id(doc_id: str, chunk_text: str, seq: int) -> str:
 
 
 def _normalize_effective_date(raw: str) -> Tuple[str, str]:
-    """
-    Trả về (iso_date, error_reason).
-    iso_date rỗng nếu không parse được.
-    """
+    """Trả về (iso_date, error_reason). iso_date rỗng nếu không parse được."""
     s = (raw or "").strip()
     if not s:
         return "", "empty_effective_date"
@@ -57,21 +64,20 @@ def _normalize_effective_date(raw: str) -> Tuple[str, str]:
     return "", "invalid_effective_date_format"
 
 
-def _sanitize_chunk_text_unicode(text: str) -> Tuple[str, bool]:
+def rule_unicode_whitespace_hygiene(text: str) -> Tuple[str, bool]:
     """
-    Rule: **unicode_whitespace_hygiene**
+    Rule **unicode_whitespace_hygiene** (NEW_RULE_IDS[0])
 
-    Chuẩn hoá NFC, bỏ ký tự zero-width/BOM, gom khoảng trắng Unicode về space rồi collapse.
-    Chuỗi chỉ còn khoảng trắng → rỗng (giúp bắt whitespace-only mà strip đơn giản không bắt được).
+    Chuẩn hoá NFC, bỏ zero-width/BOM, đưa NBSP và khoảng trắng Unicode phổ biến về space rồi collapse.
+    Chuỗi chỉ còn khoảng trắng → rỗng.
 
-    metric_impact: thay đổi `chunk_text` (và `chunk_id` phụ thuộc hash) khi có ký tự ẩn / NBSP;
-    có thể làm tăng/giảm duplicate hoặc quarantine nếu text trở thành rỗng.
+    metric_impact: đổi `chunk_text` / `chunk_id` khi có ký tự ẩn; có thể đổi `cleaned_records`/`quarantine_records`
+    (duplicate trùng sau chuẩn hoá, hoặc text rỗng → quarantine).
     """
     if not text:
         return "", False
     t = unicodedata.normalize("NFC", text)
     t = t.translate(_INVISIBLE_CHARS)
-    # NBSP và một số khoảng trắng phổ biến → ASCII space trước khi collapse
     t = t.replace("\u00a0", " ").replace("\u1680", " ").replace("\u2000", " ").replace("\u2001", " ")
     t = t.replace("\u2002", " ").replace("\u2003", " ").replace("\u2004", " ").replace("\u2005", " ")
     t = t.replace("\u2006", " ").replace("\u2007", " ").replace("\u2008", " ").replace("\u2009", " ")
@@ -80,19 +86,17 @@ def _sanitize_chunk_text_unicode(text: str) -> Tuple[str, bool]:
     return t, t != text
 
 
-def _canonical_exported_at(raw: str) -> Tuple[str, str]:
+def rule_exported_at_iso_or_quarantine(raw_exported: str) -> Tuple[str, str]:
     """
-    Rule: **exported_at_iso_or_quarantine**
+    Rule **exported_at_iso_or_quarantine** (NEW_RULE_IDS[1])
 
-    Parse `exported_at` về dạng ISO `YYYY-MM-DDTHH:MM:SS` (UTC-naive, không timezone offset trong string).
-    Thiếu hoặc không parse được → lỗi để quarantine.
+    Parse `exported_at` → `YYYY-MM-DDTHH:MM:SS`. Thiếu / không parse được → mã lỗi để quarantine.
 
-    metric_impact: tăng `quarantine_records` khi timestamp export sai; chuẩn hoá giá trị hợp lệ cho downstream.
+    metric_impact: tăng `quarantine_records` khi timestamp export sai; chuẩn hoá giá trị hợp lệ trên cleaned.
     """
-    s = (raw or "").strip()
+    s = (raw_exported or "").strip()
     if not s:
         return "", "missing_exported_at"
-    # Cho phép 'Z' cuối (UTC) rồi bỏ khi canonical
     if s.endswith("Z"):
         s = s[:-1]
     s = s.replace(" ", "T", 1) if " " in s and "T" not in s else s
@@ -103,13 +107,35 @@ def _canonical_exported_at(raw: str) -> Tuple[str, str]:
     return dt.strftime("%Y-%m-%dT%H:%M:%S"), ""
 
 
-def load_raw_csv(path: Path) -> List[Dict[str, str]]:
-    rows: List[Dict[str, str]] = []
-    with path.open(encoding="utf-8", newline="") as f:
-        reader = csv.DictReader(f)
-        for r in reader:
-            rows.append({k: (v or "").strip() for k, v in r.items()})
-    return rows
+def rule_malformed_row_guards(raw: Dict[str, str], text_before_sanitize: str) -> Optional[str]:
+    """
+    Rule **malformed_row_guards** (NEW_RULE_IDS[2]) — phát hiện record malformed trước khi clean sâu.
+
+    - `chunk_id` rỗng (không gắn được dòng source / join catalog).
+    - `chunk_text` chứa byte NUL (binary corrupt / lỗi export).
+
+    metric_impact: tăng `quarantine_records` khi export lỗi cấu trúc; 0 dòng khi dữ liệu sạch.
+
+    Trả về: reason string nếu quarantine, hoặc None nếu OK.
+    """
+    if not (raw.get("chunk_id") or "").strip():
+        return "malformed_missing_chunk_id"
+    if "\x00" in text_before_sanitize:
+        return "malformed_chunk_contains_nul_byte"
+    return None
+
+
+def rule_exported_covers_effective_date(eff_norm: str, exported_at_iso: str) -> bool:
+    """
+    Phần kiểm tra timeline dùng chung với rule exported_at (không phải rule ID riêng).
+
+    Export không được “trước” ngày hiệu lực (dữ liệu vô lý / export lạ).
+
+    metric_impact: `quarantine_records` khi timeline sai; cleaned nhận `exported_at` đã canonical.
+    """
+    eff_d = date.fromisoformat(eff_norm)
+    exp_dt = datetime.fromisoformat(exported_at_iso)
+    return exp_dt.date() >= eff_d
 
 
 def clean_rows(
@@ -120,24 +146,23 @@ def clean_rows(
     """
     Trả về (cleaned, quarantine).
 
-    Baseline (mở rộng theo narrative Day 10):
-    1) Quarantine: doc_id không thuộc allowlist (export lạ / catalog sai).
-    2) Chuẩn hoá effective_date sang YYYY-MM-DD; quarantine nếu không parse được.
-    3) Quarantine: chunk hr_leave_policy có effective_date < 2026-01-01 (bản HR cũ / conflict version).
-    4) Quarantine: chunk_text rỗng hoặc effective_date rỗng sau chuẩn hoá.
-    5) **unicode_whitespace_hygiene**: NFC + bỏ zero-width/BOM + collapse whitespace (metric_impact khi có ký tự ẩn).
-    6) **exported_at_iso_or_quarantine**: exported_at bắt buộc parse được → canonical ISO datetime string.
-    7) **dedupe_doc_scoped_content**: loại trùng theo (doc_id, normalized chunk_text), không gộp nhầm giữa các doc (giữ bản đầu).
-    8) Fix stale refund: policy_refund_v4 chứa '14 ngày làm việc' → 7 ngày.
+    Baseline:
+    1) unknown_doc_id
+    2) effective_date parse / missing
+    3) stale_hr_policy_effective_date
+    4) Rule mới (xem NEW_RULE_IDS): malformed → unicode → exported_at → timeline → dedupe doc-scoped
+    5) missing_chunk_text (sau unicode)
+    6) duplicate_chunk_text (dedupe theo doc_id + normalized text)
+    7) Refund 14→7 (+ marker)
     """
     quarantine: List[Dict[str, Any]] = []
-    seen_doc_text: set[Tuple[str, str]] = set()
+    seen_doc_text: Set[Tuple[str, str]] = set()
     cleaned: List[Dict[str, Any]] = []
     seq = 0
 
     for raw in rows:
         doc_id = raw.get("doc_id", "")
-        text = raw.get("chunk_text", "")
+        text_raw = raw.get("chunk_text", "")
         eff_raw = raw.get("effective_date", "")
         exported_raw = raw.get("exported_at", "")
 
@@ -163,12 +188,20 @@ def clean_rows(
             )
             continue
 
-        text, unicode_changed = _sanitize_chunk_text_unicode(text)
+        # --- NEW: malformed_row_guards ---
+        bad = rule_malformed_row_guards(raw, text_raw)
+        if bad:
+            quarantine.append({**raw, "reason": bad})
+            continue
+
+        # --- NEW: unicode_whitespace_hygiene ---
+        text, unicode_changed = rule_unicode_whitespace_hygiene(text_raw)
         if not text:
             quarantine.append({**raw, "reason": "missing_chunk_text"})
             continue
 
-        exported_at, exp_err = _canonical_exported_at(exported_raw)
+        # --- NEW: exported_at_iso_or_quarantine ---
+        exported_at, exp_err = rule_exported_at_iso_or_quarantine(exported_raw)
         if exp_err:
             quarantine.append(
                 {
@@ -179,7 +212,19 @@ def clean_rows(
             )
             continue
 
-        # Rule: **dedupe_doc_scoped_content** — cùng nội dung ở hai doc_id khác nhau không bị coi là trùng.
+        # Timeline: export không được trước effective_date (cùng rule family exported_at)
+        if not rule_exported_covers_effective_date(eff_norm, exported_at):
+            quarantine.append(
+                {
+                    **raw,
+                    "reason": "malformed_timeline_export_before_effective",
+                    "effective_date_normalized": eff_norm,
+                    "exported_at_normalized": exported_at,
+                }
+            )
+            continue
+
+        # --- NEW: dedupe_doc_scoped_content ---
         dedupe_key = (doc_id, _norm_text(text))
         if dedupe_key in seen_doc_text:
             quarantine.append({**raw, "reason": "duplicate_chunk_text"})
@@ -209,6 +254,15 @@ def clean_rows(
         )
 
     return cleaned, quarantine
+
+
+def load_raw_csv(path: Path) -> List[Dict[str, str]]:
+    rows: List[Dict[str, str]] = []
+    with path.open(encoding="utf-8", newline="") as f:
+        reader = csv.DictReader(f)
+        for r in reader:
+            rows.append({k: (v or "").strip() for k, v in r.items()})
+    return rows
 
 
 def write_cleaned_csv(path: Path, rows: List[Dict[str, Any]]) -> None:
