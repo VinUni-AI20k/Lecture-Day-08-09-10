@@ -1,8 +1,13 @@
+.env
 .DS_Store
 *.swp
 *~
+
+__pycache__/
 
 # Grading questions — không public trước 17:00
 day08/lab/data/grading_questions.json
 day09/lab/data/grading_questions.json
 day10/lab/data/grading_questions.json
+
+day10/lab/artifacts/chroma_db/

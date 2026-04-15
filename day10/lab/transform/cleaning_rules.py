@@ -20,11 +20,17 @@ ALLOWED_DOC_IDS = frozenset(
         "sla_p1_2026",
         "it_helpdesk_faq",
         "hr_leave_policy",
+        "access_control_sop",  # Added to match data_contract.yaml
     }
 )
 
 _ISO_DATE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 _DMY_SLASH = re.compile(r"^(\d{2})/(\d{2})/(\d{4})$")
+
+# NEW RULES CONSTANTS (Person 1)
+_METADATA_PATTERN = re.compile(r'\(ghi chú:.*?\)|\(bản\s+\w+\s+\d{4}\)', re.IGNORECASE)
+_EM_DASH = '—'
+_EN_DASH = '–'
 
 
 def _norm_text(s: str) -> str:
@@ -77,6 +83,11 @@ def clean_rows(
     4) Quarantine: chunk_text rỗng hoặc effective_date rỗng sau chuẩn hoá.
     5) Loại trùng nội dung chunk_text (giữ bản đầu).
     6) Fix stale refund: policy_refund_v4 chứa '14 ngày làm việc' → 7 ngày.
+    
+    NEW RULES (Person 1 - Cleaning Owner):
+    7) Quarantine: chunk_text chứa metadata/comments như "(ghi chú: ...)" - không nên có trong production text.
+    8) Normalize: em dash (—) và en dash (–) → hyphen (-) để chuẩn hóa punctuation.
+    9) Quarantine: chunk_text chứa cả "14 ngày" VÀ "7 ngày" (conflict trong cùng chunk).
     """
     quarantine: List[Dict[str, Any]] = []
     seen_text: set[str] = set()
@@ -113,6 +124,32 @@ def clean_rows(
 
         if not text:
             quarantine.append({**raw, "reason": "missing_chunk_text"})
+            continue
+
+        # NEW RULE 7 (Person 1): Quarantine chunk_text có metadata/comments
+        # Impact: Row 3 có "(ghi chú: bản sync cũ policy-v3 — lỗi migration)"
+        if _METADATA_PATTERN.search(text):
+            quarantine.append({
+                **raw,
+                "reason": "contains_metadata_comments",
+                "detected": "metadata should not be in production text"
+            })
+            continue
+
+        # NEW RULE 8 (Person 1): Normalize em dash và en dash → hyphen
+        # Impact: Improve text quality (row 3 có "—")
+        if _EM_DASH in text or _EN_DASH in text:
+            text = text.replace(_EM_DASH, '-').replace(_EN_DASH, '-')
+            # Continue processing với text đã normalize
+
+        # NEW RULE 9 (Person 1): Quarantine chunk có conflict "14 ngày" VÀ "7 ngày"
+        # Impact: Detect chunks có thông tin mâu thuẫn
+        if '14 ngày' in text and '7 ngày' in text:
+            quarantine.append({
+                **raw,
+                "reason": "conflicting_day_values",
+                "detected": "chunk contains both '14 ngày' and '7 ngày'"
+            })
             continue
 
         key = _norm_text(text)
