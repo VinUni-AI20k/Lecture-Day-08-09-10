@@ -24,6 +24,10 @@ ALLOWED_DOC_IDS = frozenset(
     }
 )
 
+# Contract-aligned minimum stripped chunk length for quarantine.
+# Chunks shorter than this after sanitisation are treated as invalid stubs.
+MIN_CHUNK_TEXT_STRIPPED_LEN = 8
+
 _ISO_DATE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 _DMY_SLASH = re.compile(r"^(\d{2})/(\d{2})/(\d{4})$")
 _YMD_SLASH = re.compile(r"^(\d{4})/(\d{2})/(\d{2})$")
@@ -132,12 +136,19 @@ def clean_rows(
             c for c in clean_text if unicodedata.category(c) != "Cc" or c in "\n\t"
         )
 
-        # Rule 8: quarantine chunk_text that is too short after stripping (< 20 chars).
+        # Rule 8: quarantine chunk_text that is too short after stripping (< 8 chars).
         # Catches stub rows like "N/A", "---", or content that collapsed to nothing after
-        # BOM/control-char removal.
+        # BOM/control-char removal, while allowing valid short chunks that meet the contract.
         # metric_impact: inject a row with chunk_text="N/A" → quarantine_records increases by 1.
-        if len(clean_text.strip()) < 20:
-            quarantine.append({**raw, "reason": "chunk_text_too_short_after_strip", "length": len(clean_text.strip())})
+        stripped_length = len(clean_text.strip())
+        if stripped_length < MIN_CHUNK_TEXT_STRIPPED_LEN:
+            quarantine.append(
+                {
+                    **raw,
+                    "reason": "chunk_text_too_short_after_strip",
+                    "length": stripped_length,
+                }
+            )
             continue
 
         key = _norm_text(clean_text)
