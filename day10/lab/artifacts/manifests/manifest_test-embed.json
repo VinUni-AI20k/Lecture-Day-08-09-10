@@ -1,6 +1,6 @@
 {
-  "run_id": "sprint1",
-  "run_timestamp": "2026-04-15T05:21:51.585379+00:00",
+  "run_id": "test-embed",
+  "run_timestamp": "2026-04-15T05:57:09.876887+00:00",
   "raw_path": "data/raw/policy_export_dirty.csv",
   "raw_records": 10,
   "cleaned_records": 6,
@@ -8,7 +8,7 @@
   "latest_exported_at": "2026-04-10T08:00:00",
   "no_refund_fix": false,
   "skipped_validate": false,
-  "cleaned_csv": "artifacts/cleaned/cleaned_sprint1.csv",
+  "cleaned_csv": "artifacts/cleaned/cleaned_test-embed.csv",
   "chroma_path": "./chroma_db",
   "chroma_collection": "day10_kb"
 }

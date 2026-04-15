@@ -18,11 +18,11 @@
 
 | Cột | Kiểu | Bắt buộc | Ghi chú |
 |-----|------|----------|---------|
-| chunk_id | string | Có | … |
-| doc_id | string | Có | … |
-| chunk_text | string | Có | … |
-| effective_date | date | Có | … |
-| exported_at | datetime | Có | … |
+| chunk_id | string | Có | Hash ổn định từ `doc_id + chunk_text + seq` (SHA-256 prefix 16 ký tự), dùng làm upsert key cho Chroma |
+| doc_id | string | Có | Phải thuộc allowlist trong `data_contract.yaml`; record ngoài allowlist → quarantine |
+| chunk_text | string | Có | Tối thiểu 8 ký tự; chunk refund phải chứa "7 ngày làm việc" (không phải 14) |
+| effective_date | date | Có | ISO `YYYY-MM-DD` sau chuẩn hóa; HR leave phải >= 2026-01-01 |
+| exported_at | datetime | Có | Timestamp lần export gần nhất từ hệ nguồn; dùng để tính freshness SLA |
 
 ---
 
