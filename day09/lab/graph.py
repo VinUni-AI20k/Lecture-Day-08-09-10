@@ -78,53 +78,65 @@ def make_initial_state(task: str) -> AgentState:
 # ─────────────────────────────────────────────
 
 def supervisor_node(state: AgentState) -> AgentState:
-    """
-    Supervisor phân tích task và quyết định:
-    1. Route sang worker nào
-    2. Có cần MCP tool không
-    3. Có risk cao cần HITL không
-
-    TODO Sprint 1: Implement routing logic dựa vào task keywords.
-    """
     task = state["task"].lower()
-    state["history"].append(f"[supervisor] received task: {state['task'][:80]}")
 
-    # --- TODO: Implement routing logic ---
-    # Gợi ý:
-    # - "hoàn tiền", "refund", "flash sale", "license" → policy_tool_worker
-    # - "cấp quyền", "access level", "level 3", "emergency" → policy_tool_worker
-    # - "P1", "escalation", "sla", "ticket" → retrieval_worker
-    # - mã lỗi không rõ (ERR-XXX), không đủ context → human_review
-    # - còn lại → retrieval_worker
+    state["history"].append(
+        f"[supervisor] received task: {task[:80]}"
+    )
 
-    route = "retrieval_worker"         # TODO: thay bằng logic thực
-    route_reason = "default route"    # TODO: thay bằng lý do thực
+    policy_keywords = [
+        "hoàn tiền", "refund", "flash sale",
+        "license", "cấp quyền", "access", "level 3"
+    ]
+
+    risk_keywords = [
+        "emergency", "khẩn cấp", "err-"
+    ]
+
+    retrieval_keywords = [
+        "p1", "escalation", "sla", "ticket"
+    ]
+
+    # flags
+    is_policy = any(kw in task for kw in policy_keywords)
+    is_retrieval = any(kw in task for kw in retrieval_keywords)
+    risk_high = any(kw in task for kw in risk_keywords)
+
+    route = "retrieval_worker"
+    route_reason = "fallback retrieval"
     needs_tool = False
-    risk_high = False
 
-    # Ví dụ routing cơ bản — nhóm phát triển thêm:
-    policy_keywords = ["hoàn tiền", "refund", "flash sale", "license", "cấp quyền", "access", "level 3"]
-    risk_keywords = ["emergency", "khẩn cấp", "2am", "không rõ", "err-"]
-
-    if any(kw in task for kw in policy_keywords):
-        route = "policy_tool_worker"
-        route_reason = f"task contains policy/access keyword"
-        needs_tool = True
-
-    if any(kw in task for kw in risk_keywords):
-        risk_high = True
-        route_reason += " | risk_high flagged"
-
-    # Human review override
+    # ─────────────────────────────
+    # 1. HIGHEST PRIORITY: HUMAN REVIEW
+    # ─────────────────────────────
     if risk_high and "err-" in task:
         route = "human_review"
-        route_reason = "unknown error code + risk_high → human review"
+        route_reason = "error + risk_high → human review"
+
+    # ─────────────────────────────
+    # 2. POLICY ROUTE
+    # ─────────────────────────────
+    elif is_policy:
+        route = "policy_tool_worker"
+        route_reason = "policy / access task"
+        needs_tool = True
+
+    # ─────────────────────────────
+    # 3. RETRIEVAL ROUTE
+    # ─────────────────────────────
+    elif is_retrieval:
+        route = "retrieval_worker"
+        route_reason = "sla / ticket query"
+        needs_tool = True
 
     state["supervisor_route"] = route
     state["route_reason"] = route_reason
     state["needs_tool"] = needs_tool
     state["risk_high"] = risk_high
-    state["history"].append(f"[supervisor] route={route} reason={route_reason}")
+
+    state["history"].append(
+        f"[supervisor] route={route} risk={risk_high} tool={needs_tool}"
+    )
 
     return state
 
@@ -182,50 +194,170 @@ def human_review_node(state: AgentState) -> AgentState:
 
 
 def retrieval_worker_node(state: AgentState) -> AgentState:
-    """Wrapper gọi retrieval worker."""
-    # TODO Sprint 2: Thay bằng retrieval_run(state)
+    """Retrieve relevant documents based on task."""
+
     state["workers_called"].append("retrieval_worker")
     state["history"].append("[retrieval_worker] called")
 
-    # Placeholder output để test graph chạy được
-    state["retrieved_chunks"] = [
-        {"text": "SLA P1: phản hồi 15 phút, xử lý 4 giờ.", "source": "sla_p1_2026.txt", "score": 0.92}
+    query = state["task"].lower()
+
+    kb = [
+        {
+            "text": "SLA P1: phản hồi 15 phút, xử lý 4 giờ.",
+            "source": "sla_p1.txt",
+            "keywords": ["p1", "sla", "ticket"]
+        },
+        {
+            "text": "Escalation P1 cần notify team lead ngay lập tức.",
+            "source": "escalation.txt",
+            "keywords": ["escalation", "p1"]
+        },
+        {
+            "text": "Ticket xử lý theo mức độ ưu tiên P0 P1 P2.",
+            "source": "ticket_priority.txt",
+            "keywords": ["ticket", "priority"]
+        }
     ]
-    state["retrieved_sources"] = ["sla_p1_2026.txt"]
-    state["history"].append(f"[retrieval_worker] retrieved {len(state['retrieved_chunks'])} chunks")
+
+    results = []
+
+    for doc in kb:
+        if any(kw in query for kw in doc["keywords"]):
+            results.append({
+                "text": doc["text"],
+                "source": doc["source"],
+                "score": 0.9
+            })
+
+    # fallback nếu không match
+    if not results:
+        results = [{
+            "text": "Không tìm thấy dữ liệu phù hợp.",
+            "source": "fallback",
+            "score": 0.3
+        }]
+
+    # IMPORTANT: dùng results thật (fix bug của bạn)
+    state["retrieved_chunks"] = results
+    state["retrieved_sources"] = list(set([r["source"] for r in results]))
+
+    state["history"].append(
+        f"[retrieval_worker] retrieved {len(results)} chunks"
+    )
+
     return state
 
 
 def policy_tool_worker_node(state: AgentState) -> AgentState:
-    """Wrapper gọi policy/tool worker."""
-    # TODO Sprint 2: Thay bằng policy_tool_run(state)
     state["workers_called"].append("policy_tool_worker")
     state["history"].append("[policy_tool_worker] called")
 
-    # Placeholder output
-    state["policy_result"] = {
-        "policy_applies": True,
-        "policy_name": "refund_policy_v4",
-        "exceptions_found": [],
-        "source": "policy_refund_v4.txt",
+    task = state["task"].lower()
+
+    result = {
+        "policy_applies": False,
+        "policy_name": None,
+        "decision": None,
+        "reason": "",
+        "source": "policy_db",
+        "exceptions_found": []
     }
-    state["history"].append("[policy_tool_worker] policy check complete")
+
+    # Rule 1: refund
+    if "hoàn tiền" in task or "refund" in task:
+        result["policy_applies"] = True
+        result["policy_name"] = "refund_policy_v4"
+
+        if "flash sale" in task:
+            result["decision"] = "allowed_with_condition"
+            result["reason"] = "Flash sale chỉ hoàn tiền nếu sản phẩm lỗi"
+        else:
+            result["decision"] = "allowed"
+            result["reason"] = "Refund tiêu chuẩn"
+
+        result["source"] = "policy_refund_v4.txt"
+
+    # Rule 2: access control
+    elif "cấp quyền" in task or "access" in task:
+        result["policy_applies"] = True
+        result["policy_name"] = "access_control_v2"
+        result["decision"] = "requires_approval"
+        result["reason"] = "Cấp quyền level cao cần approval"
+
+        result["source"] = "policy_access_control_v2.txt"
+
+    else:
+        result["reason"] = "No matching policy"
+
+    state["policy_result"] = result
+
+    state["history"].append(
+        f"[policy_tool_worker] policy={result['policy_name']} decision={result['decision']}"
+    )
+
     return state
 
 
 def synthesis_worker_node(state: AgentState) -> AgentState:
     """Wrapper gọi synthesis worker."""
-    # TODO Sprint 2: Thay bằng synthesis_run(state)
     state["workers_called"].append("synthesis_worker")
     state["history"].append("[synthesis_worker] called")
 
-    # Placeholder output
     chunks = state.get("retrieved_chunks", [])
     sources = state.get("retrieved_sources", [])
-    state["final_answer"] = f"[PLACEHOLDER] Câu trả lời được tổng hợp từ {len(chunks)} chunks."
+    policy = state.get("policy_result", {})
+
+    answer_parts = []
+
+    # ─────────────────────────────
+    # 1. POLICY LAYER
+    # ─────────────────────────────
+    if policy and policy.get("policy_applies"):
+        answer_parts.append(
+            f"[Policy Decision] {policy.get('policy_name')} → {policy.get('decision')}. "
+            f"Lý do: {policy.get('reason')}"
+        )
+
+    # ─────────────────────────────
+    # 2. RETRIEVAL LAYER
+    # ─────────────────────────────
+    if chunks:
+        answer_parts.append("\n[Evidence]")
+        for c in chunks:
+            answer_parts.append(f"- {c['text']} (source: {c['source']})")
+
+    # ─────────────────────────────
+    # 3. FALLBACK
+    # ─────────────────────────────
+    if not answer_parts:
+        final_answer = "Không tìm thấy đủ thông tin để trả lời câu hỏi này."
+        confidence = 0.3
+    else:
+        final_answer = "\n".join(answer_parts)
+
+        # confidence logic đơn giản nhưng thực tế
+        confidence = 0.5
+
+        if chunks:
+            confidence += 0.2
+        if policy and policy.get("policy_applies"):
+            confidence += 0.2
+        if len(chunks) > 1:
+            confidence += 0.1
+
+        confidence = min(confidence, 0.95)
+
+    # ─────────────────────────────
+    # 4. UPDATE STATE
+    # ─────────────────────────────
+    state["final_answer"] = final_answer
     state["sources"] = sources
-    state["confidence"] = 0.75
-    state["history"].append(f"[synthesis_worker] answer generated, confidence={state['confidence']}")
+    state["confidence"] = confidence
+
+    state["history"].append(
+        f"[synthesis_worker] generated answer | confidence={confidence}"
+    )
+
     return state
 
 

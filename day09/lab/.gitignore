@@ -1,0 +1,28 @@
+# Hệ điều hành
+.DS_Store
+Thumbs.db
+
+# Editor / IDE
+*.swp
+*.swo
+.vscode/
+.idea/
+
+# Môi trường ảo (Virtual Environment)
+venv/
+env/
+ENV/
+.venv/
+
+# Python rác
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Dữ liệu nhạy cảm
+.env
+
+# Grading questions — không public trước 17:00
+day08/lab/data/grading_questions.json
+day09/lab/data/grading_questions.json
+day10/lab/data/grading_questions.json
