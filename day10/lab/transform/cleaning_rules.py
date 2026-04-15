@@ -10,6 +10,7 @@ from __future__ import annotations
 import csv
 import hashlib
 import re
+import unicodedata
 from pathlib import Path
 from typing import Any, Dict, List, Tuple
 
@@ -23,8 +24,13 @@ ALLOWED_DOC_IDS = frozenset(
     }
 )
 
+# Contract-aligned minimum stripped chunk length for quarantine.
+# Chunks shorter than this after sanitisation are treated as invalid stubs.
+MIN_CHUNK_TEXT_STRIPPED_LEN = 8
+
 _ISO_DATE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 _DMY_SLASH = re.compile(r"^(\d{2})/(\d{2})/(\d{4})$")
+_YMD_SLASH = re.compile(r"^(\d{4})/(\d{2})/(\d{2})$")
 
 
 def _norm_text(s: str) -> str:
@@ -50,6 +56,12 @@ def _normalize_effective_date(raw: str) -> Tuple[str, str]:
     if m:
         dd, mm, yyyy = m.group(1), m.group(2), m.group(3)
         return f"{yyyy}-{mm}-{dd}", ""
+    # Rule 9: accept YYYY/MM/DD (year-first slash) emitted by some export tools.
+    # metric_impact: inject a row with effective_date=2026/04/10 — without this rule it
+    # quarantines as invalid_effective_date_format; with the rule it passes through.
+    m2 = _YMD_SLASH.match(s)
+    if m2:
+        return f"{m2.group(1)}-{m2.group(2)}-{m2.group(3)}", ""
     return "", "invalid_effective_date_format"
 
 
@@ -115,13 +127,37 @@ def clean_rows(
             quarantine.append({**raw, "reason": "missing_chunk_text"})
             continue
 
-        key = _norm_text(text)
+        # Rule 7: strip BOM and non-printable control characters from chunk_text.
+        # Catches encoding noise from PDF/OCR exports (e.g. \ufeff BOM prefix, null bytes).
+        # metric_impact: inject a BOM-prefixed row → quarantine_records stays the same but
+        # chunk_text is sanitised before embed, preventing vector noise.
+        clean_text = text.lstrip("\ufeff")
+        clean_text = "".join(
+            c for c in clean_text if unicodedata.category(c) != "Cc" or c in "\n\t"
+        )
+
+        # Rule 8: quarantine chunk_text that is too short after stripping (< 8 chars).
+        # Catches stub rows like "N/A", "---", or content that collapsed to nothing after
+        # BOM/control-char removal, while allowing valid short chunks that meet the contract.
+        # metric_impact: inject a row with chunk_text="N/A" → quarantine_records increases by 1.
+        stripped_length = len(clean_text.strip())
+        if stripped_length < MIN_CHUNK_TEXT_STRIPPED_LEN:
+            quarantine.append(
+                {
+                    **raw,
+                    "reason": "chunk_text_too_short_after_strip",
+                    "length": stripped_length,
+                }
+            )
+            continue
+
+        key = _norm_text(clean_text)
         if key in seen_text:
             quarantine.append({**raw, "reason": "duplicate_chunk_text"})
             continue
         seen_text.add(key)
 
-        fixed_text = text
+        fixed_text = clean_text
         if apply_refund_window_fix and doc_id == "policy_refund_v4":
             if "14 ngày làm việc" in fixed_text:
                 fixed_text = fixed_text.replace(
