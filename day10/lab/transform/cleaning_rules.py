@@ -10,6 +10,7 @@ from __future__ import annotations
 import csv
 import hashlib
 import re
+from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Tuple
 
@@ -115,13 +116,28 @@ def clean_rows(
             quarantine.append({**raw, "reason": "missing_chunk_text"})
             continue
 
-        key = _norm_text(text)
+        # 7) Normalize whitespace in chunk_text (New Rule: preserve case)
+        fixed_text = " ".join((text or "").strip().split())
+
+        # 8) Quarantine: 'DRAFT' or 'INTERNAL ONLY' (New Rule)
+        if any(marker in fixed_text.upper() for marker in ["DRAFT", "INTERNAL ONLY"]):
+            quarantine.append({**raw, "reason": "prohibited_content_marker"})
+            continue
+
+        # 9) Validate exported_at format (New Rule)
+        if exported_at:
+            try:
+                datetime.fromisoformat(exported_at.replace("Z", "+00:00"))
+            except ValueError:
+                quarantine.append({**raw, "reason": "invalid_exported_at_format"})
+                continue
+
+        key = fixed_text.lower()
         if key in seen_text:
             quarantine.append({**raw, "reason": "duplicate_chunk_text"})
             continue
         seen_text.add(key)
 
-        fixed_text = text
         if apply_refund_window_fix and doc_id == "policy_refund_v4":
             if "14 ngày làm việc" in fixed_text:
                 fixed_text = fixed_text.replace(
