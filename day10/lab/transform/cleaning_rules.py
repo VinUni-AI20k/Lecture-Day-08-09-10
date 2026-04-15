@@ -20,11 +20,50 @@ ALLOWED_DOC_IDS = frozenset(
         "sla_p1_2026",
         "it_helpdesk_faq",
         "hr_leave_policy",
+        "access_control_sop",  # Rule 10 (Mở rộng cho Data Hợp Đồng)
     }
 )
 
 _ISO_DATE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 _DMY_SLASH = re.compile(r"^(\d{2})/(\d{2})/(\d{4})$")
+_ISO_DATETIME = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}")
+_HTML_TAGS = re.compile(r"<[^>]+>")
+
+
+def _check_too_long(text: str, max_len: int = 8000) -> bool:
+    """Rule 11: Check chuỗi quá dài (vượt max token context của DB)."""
+    return len(text) > max_len
+
+
+def _remove_html_tags(text: str) -> str:
+    """Rule 12: Khử nhiễu thẻ HTML rác dính trong text."""
+    return _HTML_TAGS.sub("", text)
+
+
+def _check_invalid_exported_at(exported_at: str) -> bool:
+    """Rule 7: Validate ISO-8601 format cho exported_at."""
+    if not exported_at:
+        return True
+    return not bool(_ISO_DATETIME.match(exported_at.strip()))
+
+
+def _check_short_or_trivial(text: str) -> bool:
+    """Rule 8: Check chuỗi quá ngắn (< 20 ký tự) hoặc quá rác (không có chữ cái)."""
+    text_stripped = text.strip()
+    if len(text_stripped) < 20:
+        return True
+    # Check nếu chuỗi không chứa ký tự chữ cái nào (toàn số, khoảng trắng, ký hiệu)
+    alpha_count = sum(1 for c in text_stripped if c.isalpha())
+    if alpha_count == 0:
+        return True
+    return False
+
+
+def _check_corrupted_encoding(text: str) -> bool:
+    """Rule 9: Check BOM và các ký tự bị lỗi."""
+    if '\ufeff' in text or '\x00' in text:
+        return True
+    return False
 
 
 def _norm_text(s: str) -> str:
@@ -129,6 +168,31 @@ def clean_rows(
                     "7 ngày làm việc",
                 )
                 fixed_text += " [cleaned: stale_refund_window]"
+
+        # --- KHANH: RULE MỚI (SPRINT 1-2) ---
+        
+        # Rule 12: Khử nhiễu thẻ HTML rác dính trong text (Transformation)
+        fixed_text = _remove_html_tags(fixed_text)
+        
+        # Rule 11: Kiểm soát trần kích thước context - Không nhét chunk quá 8000 kí tự
+        if _check_too_long(fixed_text):
+            quarantine.append({**raw, "reason": "chunk_text_too_long"})
+            continue
+        
+        # Rule 7: Kiểm soát tính toàn vẹn & validate format ISO-8601 của exported_at
+        if _check_invalid_exported_at(exported_at):
+            quarantine.append({**raw, "reason": "missing_or_invalid_exported_at"})
+            continue
+            
+        # Rule 8: Kiểm duyệt độ dài tối thiểu của context và ý nghĩa của chunk_text (Low-Information Filter)
+        if _check_short_or_trivial(fixed_text):
+            quarantine.append({**raw, "reason": "chunk_text_too_short_or_trivial"})
+            continue
+            
+        # Rule 9: Phát hiện lỗi Encoding, ký tự BOM và ký tự không hợp lệ (Corrupted Characters)
+        if _check_corrupted_encoding(fixed_text):
+            quarantine.append({**raw, "reason": "corrupted_text_encoding"})
+            continue
 
         seq += 1
         cleaned.append(
