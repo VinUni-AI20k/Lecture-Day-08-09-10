@@ -1,0 +1,104 @@
+{
+  "run_id": "inject-bad",
+  "run_token": "inject-bad",
+  "run_timestamp": "2026-04-15T05:52:11.632557+00:00",
+  "command": "python etl_pipeline.py run",
+  "raw_path": "data/raw/policy_export_dirty.csv",
+  "raw_records": 10,
+  "cleaned_records": 6,
+  "quarantine_records": 4,
+  "latest_exported_at": "2026-04-10T08:00:00",
+  "no_refund_fix": true,
+  "skip_validate": true,
+  "skipped_validate": true,
+  "artifacts": {
+    "log_path": "artifacts/logs/run_inject-bad.log",
+    "cleaned_csv": "artifacts/cleaned/cleaned_inject-bad.csv",
+    "quarantine_csv": "artifacts/quarantine/quarantine_inject-bad.csv",
+    "manifest_path": "artifacts/manifests/manifest_inject-bad.json"
+  },
+  "validation": {
+    "halt": true,
+    "halt_failures": 1,
+    "warn_failures": 0,
+    "results": [
+      {
+        "name": "min_one_row",
+        "passed": true,
+        "severity": "halt",
+        "detail": "cleaned_rows=6"
+      },
+      {
+        "name": "no_empty_doc_id",
+        "passed": true,
+        "severity": "halt",
+        "detail": "empty_doc_id_count=0"
+      },
+      {
+        "name": "refund_no_stale_14d_window",
+        "passed": false,
+        "severity": "halt",
+        "detail": "violations=1"
+      },
+      {
+        "name": "chunk_min_length_8",
+        "passed": true,
+        "severity": "warn",
+        "detail": "short_chunks=0"
+      },
+      {
+        "name": "effective_date_iso_yyyy_mm_dd",
+        "passed": true,
+        "severity": "halt",
+        "detail": "non_iso_rows=0"
+      },
+      {
+        "name": "hr_leave_no_stale_10d_annual",
+        "passed": true,
+        "severity": "halt",
+        "detail": "violations=0"
+      },
+      {
+        "name": "each_critical_doc_has_min_chunks",
+        "passed": true,
+        "severity": "halt",
+        "detail": "missing_docs=[]; counts={'policy_refund_v4': 2, 'sla_p1_2026': 1, 'it_helpdesk_faq': 2, 'hr_leave_policy': 1}"
+      },
+      {
+        "name": "no_duplicate_chunk_ids",
+        "passed": true,
+        "severity": "halt",
+        "detail": "duplicate_chunk_ids=0 examples=[]"
+      },
+      {
+        "name": "chunk_text_reasonable_length",
+        "passed": true,
+        "severity": "warn",
+        "detail": "chunks_over_2000_chars=0"
+      }
+    ]
+  },
+  "embed": {
+    "attempted": true,
+    "status": "completed",
+    "collection": "day10_kb",
+    "db_path": "C:\\Users\\admin\\Desktop\\New folder (12)\\lap9\\C401-B3\\day10\\lab\\chroma_db"
+  },
+  "freshness": {
+    "status": "FAIL",
+    "detail": {
+      "latest_exported_at": "2026-04-10T08:00:00",
+      "age_hours": 117.876,
+      "sla_hours": 24.0,
+      "reason": "freshness_sla_exceeded"
+    },
+    "sla_hours": 24.0
+  },
+  "pipeline_status": "ok",
+  "exit_code": 0,
+  "cleaned_csv": "artifacts/cleaned/cleaned_inject-bad.csv",
+  "quarantine_csv": "artifacts/quarantine/quarantine_inject-bad.csv",
+  "log_path": "artifacts/logs/run_inject-bad.log",
+  "chroma_path": "C:\\Users\\admin\\Desktop\\New folder (12)\\lap9\\C401-B3\\day10\\lab\\chroma_db",
+  "chroma_collection": "day10_kb"
+}

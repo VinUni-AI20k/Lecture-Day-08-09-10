@@ -11,9 +11,9 @@
 | Chỉ số | Dữ liệu bẩn (trước fix) | Sau pipeline chuẩn | Ghi chú |
 |---|---|---|---|
 | `raw_records` | 10 | 10 | Không thay đổi nguồn |
-| `cleaned_records` | *(chưa fix — xem inject)* | **6** | Sau clean + dedupe |
-| `quarantine_records` | *(chưa fix — xem inject)* | **4** | Tổng bị loại |
-| Expectation halt? | *(có/không)* | **Không** (9/9 PASS) | Chuẩn = exit 0 |
+| `cleaned_records` | **6** | **6** | Sau clean + dedupe |
+| `quarantine_records` | **4** | **4** | Tổng bị loại |
+| Expectation halt? | **Có** (E3 FAIL — chunk "14 ngày" còn trong index, bypass bởi `--skip-validate`) | **Không** (9/9 PASS) | Chuẩn = exit 0 |
 
 *Lý do quarantine điển hình trong bộ mẫu:*
 
