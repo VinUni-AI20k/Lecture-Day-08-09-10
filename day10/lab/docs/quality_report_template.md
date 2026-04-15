@@ -1,7 +1,7 @@
 # Quality Report — Lab Day 10 (nhóm)
 
-**run_id:** *(điền sau khi chạy pipeline, ví dụ `sprint2-clean` hoặc UUID sinh bởi `etl_pipeline.py`)*
-**Ngày chạy:** *(điền ngày thực tế)*
+**run_id:** `sprint2-clean`
+**Ngày chạy:** 2026-04-15
 **Người phụ trách quality:** Ngô Quang Phúc (Người 3)
 
 ---
@@ -11,9 +11,9 @@
 | Chỉ số | Dữ liệu bẩn (trước fix) | Sau pipeline chuẩn | Ghi chú |
 |---|---|---|---|
 | `raw_records` | 10 | 10 | Không thay đổi nguồn |
-| `cleaned_records` | *(điền)* | *(điền)* | Sau clean + dedupe |
-| `quarantine_records` | *(điền)* | *(điền)* | Tổng bị loại |
-| Expectation halt? | *(có/không)* | Không | Chuẩn = exit 0 |
+| `cleaned_records` | *(chưa fix — xem inject)* | **6** | Sau clean + dedupe |
+| `quarantine_records` | *(chưa fix — xem inject)* | **4** | Tổng bị loại |
+| Expectation halt? | *(có/không)* | **Không** (9/9 PASS) | Chuẩn = exit 0 |
 
 *Lý do quarantine điển hình trong bộ mẫu:*
 
@@ -55,7 +55,7 @@
 
 | Scenario | `hr_leave_policy` chunks | E7 |
 |---|---|---|
-| Pipeline chuẩn | ≥ 1 | PASS |
+| Pipeline chuẩn (`sprint2-clean`) | **1** (`counts={'policy_refund_v4': 2, 'sla_p1_2026': 1, 'it_helpdesk_faq': 2, 'hr_leave_policy': 1}`) | PASS |
 | Inject sai ngày toàn bộ HR | 0 | **HALT** |
 
 ### E8 — `no_duplicate_chunk_ids`
