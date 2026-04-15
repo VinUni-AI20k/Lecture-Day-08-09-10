@@ -1,0 +1,33 @@
+[
+  {
+    "id": "gq_d10_01",
+    "question": "Theo policy hoàn tiền nội bộ, khách có tối đa bao nhiêu ngày làm việc để gửi yêu cầu hoàn tiền sau khi đơn được xác nhận?",
+    "must_contain_any": ["7"],
+    "must_not_contain": ["14 ngày làm việc"],
+    "grading_criteria": [
+      "Trả lời đúng số ngày (7 ngày làm việc hoặc tương đương)",
+      "Không khẳng định 14 ngày là chính sách hiện hành"
+    ]
+  },
+  {
+    "id": "gq_d10_02",
+    "question": "Ticket P1: thời gian resolution SLA là bao nhiêu giờ?",
+    "must_contain_any": ["4 giờ", "4h"],
+    "must_not_contain": [],
+    "grading_criteria": [
+      "Nêu đúng resolution 4 giờ (hoặc tương đương trong tài liệu)"
+    ]
+  },
+  {
+    "id": "gq_d10_03",
+    "question": "Theo chính sách nghỉ phép hiện hành (2026), nhân viên dưới 3 năm kinh nghiệm được bao nhiêu ngày phép năm?",
+    "must_contain_any": ["12 ngày", "12 ngày phép năm"],
+    "must_not_contain": ["10 ngày phép năm"],
+    "expect_top1_doc_id": "hr_leave_policy",
+    "grading_criteria": [
+      "Nêu đúng 12 ngày (hoặc tương đương trong chunk HR 2026)",
+      "Không khẳng định 10 ngày phép năm là chính sách hiện hành",
+      "Ưu tiên chunk đúng doc_id ở top-1 (ranking / versioning)"
+    ]
+  }
+]
