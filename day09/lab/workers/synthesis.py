@@ -17,6 +17,9 @@ Gọi độc lập để test:
 """
 
 import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 WORKER_NAME = "synthesis_worker"
 
@@ -34,34 +37,36 @@ Quy tắc nghiêm ngặt:
 def _call_llm(messages: list) -> str:
     """
     Gọi LLM để tổng hợp câu trả lời.
-    TODO Sprint 2: Implement với OpenAI hoặc Gemini.
+    Ưu tiên OpenAI, fallback sang Gemini nếu có GOOGLE_API_KEY.
     """
-    # Option A: OpenAI
-    try:
-        from openai import OpenAI
-        client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-        response = client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=messages,
-            temperature=0.1,  # Low temperature để grounded
-            max_tokens=500,
-        )
-        return response.choices[0].message.content
-    except Exception:
-        pass
+    openai_key = os.getenv("OPENAI_API_KEY")
+    if openai_key:
+        try:
+            from openai import OpenAI
+            client = OpenAI(api_key=openai_key)
+            response = client.chat.completions.create(
+                model=os.getenv("LLM_MODEL", "gpt-4o-mini"),
+                messages=messages,
+                temperature=0.1,
+                max_tokens=600,
+            )
+            return (response.choices[0].message.content or "").strip()
+        except Exception as e:
+            print(f"[synthesis] OpenAI error: {e}")
 
-    # Option B: Gemini
-    try:
-        import google.generativeai as genai
-        genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
-        model = genai.GenerativeModel("gemini-1.5-flash")
-        combined = "\n".join([m["content"] for m in messages])
-        response = model.generate_content(combined)
-        return response.text
-    except Exception:
-        pass
+    google_key = os.getenv("GOOGLE_API_KEY")
+    if google_key:
+        try:
+            import google.generativeai as genai
+            genai.configure(api_key=google_key)
+            model_name = os.getenv("GEMINI_MODEL", "gemini-1.5-flash")
+            model = genai.GenerativeModel(model_name)
+            combined = "\n".join([m["content"] for m in messages])
+            response = model.generate_content(combined)
+            return (response.text or "").strip()
+        except Exception as e:
+            print(f"[synthesis] Gemini error: {e}")
 
-    # Fallback: trả về message báo lỗi (không hallucinate)
     return "[SYNTHESIS ERROR] Không thể gọi LLM. Kiểm tra API key trong .env."
 
 
@@ -90,30 +95,71 @@ def _build_context(chunks: list, policy_result: dict) -> str:
 
 def _estimate_confidence(chunks: list, answer: str, policy_result: dict) -> float:
     """
-    Ước tính confidence dựa vào:
-    - Số lượng và quality của chunks
-    - Có exceptions không
-    - Answer có abstain không
+    Sprint 2: Dùng LLM-as-Judge để đánh giá độ tin cậy của câu trả lời.
 
-    TODO Sprint 2: Có thể dùng LLM-as-Judge để tính confidence chính xác hơn.
+    Tiêu chí đánh giá:
+    - Faithfulness: answer có bám sát context không?
+    - Completeness: trả lời đủ các phần của câu hỏi không?
+    - Anti-hallucination: không có claim nào ngoài context không?
     """
+    # Short-circuit: rõ ràng là abstain hoặc error
     if not chunks:
-        return 0.1  # Không có evidence → low confidence
+        return 0.1
+    if "[SYNTHESIS ERROR]" in answer:
+        return 0.0
+    if any(kw in answer for kw in [
+        "Không đủ thông tin", "không có trong tài liệu", "not enough information"
+    ]):
+        return 0.3  # Abstain → moderate-low (bảo thủ nhưng đúng)
 
-    if "Không đủ thông tin" in answer or "không có trong tài liệu" in answer.lower():
-        return 0.3  # Abstain → moderate-low
+    # ── LLM-as-Judge ────────────────────────────────────────────────────────
+    context_str = "\n".join([
+        f"[{i+1}] {c.get('source', '?')}: {c.get('text', '')[:300]}"
+        for i, c in enumerate(chunks[:5])
+    ])
+    exceptions_note = ""
+    if policy_result.get("exceptions_found"):
+        exceptions_note = "\nPolicy exceptions da phat hien: " + "; ".join(
+            ex.get("rule", "") for ex in policy_result["exceptions_found"]
+        )
 
-    # Weighted average của chunk scores
-    if chunks:
-        avg_score = sum(c.get("score", 0) for c in chunks) / len(chunks)
-    else:
-        avg_score = 0
+    judge_prompt = f"""Ban la Quality Evaluator. Danh gia cau tra loi cua AI duoi day dua vao:
+1. Faithfulness (0-1): Cau tra loi co chi dung thong tin tu context?
+2. Completeness (0-1): Co tra loi du cau hoi khong?
+3. Anti-hallucination (0-1): Khong co claim bia ngoai context?
 
-    # Penalty nếu có exceptions (phức tạp hơn)
+Context:
+{context_str}{exceptions_note}
+
+Cau tra loi can danh gia:
+{answer}
+
+Tra loi dung 1 dong JSON:
+{{"faithfulness": 0.0-1.0, "completeness": 0.0-1.0, "anti_hallucination": 0.0-1.0, "note": "..."}}"""
+
+    try:
+        raw = _call_llm([{"role": "user", "content": judge_prompt}])
+        import re, json
+        # Tìm JSON trong response
+        json_match = re.search(r"\{[^\{\}]+\}", raw)
+        if json_match:
+            scores = json.loads(json_match.group(0))
+            faithfulness = float(scores.get("faithfulness", 0.5))
+            completeness = float(scores.get("completeness", 0.5))
+            anti_halluc  = float(scores.get("anti_hallucination", 0.5))
+            # Tính weighted average: anti-hallucination quan trọng nhất
+            llm_score = 0.4 * faithfulness + 0.3 * completeness + 0.3 * anti_halluc
+            # Penalty nếu có exceptions làm phức tạp
+            exception_penalty = 0.03 * len(policy_result.get("exceptions_found", []))
+            final = max(0.1, min(0.95, llm_score - exception_penalty))
+            return round(final, 2)
+    except Exception as e:
+        print(f"[synthesis] LLM-as-Judge failed, falling back to heuristic: {e}")
+
+    # Fallback: heuristic nếu LLM-as-Judge không khả dụng
+    avg_score = sum(c.get("score", 0.5) for c in chunks) / len(chunks)
     exception_penalty = 0.05 * len(policy_result.get("exceptions_found", []))
-
-    confidence = min(0.95, avg_score - exception_penalty)
-    return round(max(0.1, confidence), 2)
+    return round(max(0.1, min(0.95, avg_score - exception_penalty)), 2)
 
 
 def synthesize(task: str, chunks: list, policy_result: dict) -> dict:
@@ -125,7 +171,7 @@ def synthesize(task: str, chunks: list, policy_result: dict) -> dict:
     """
     context = _build_context(chunks, policy_result)
 
-    # Build messages
+    # Build messages with multi-detail extraction emphasis
     messages = [
         {"role": "system", "content": SYSTEM_PROMPT},
         {
@@ -133,6 +179,11 @@ def synthesize(task: str, chunks: list, policy_result: dict) -> dict:
             "content": f"""Câu hỏi: {task}
 
 {context}
+
+QUAN TRỌNG: 
+- Nếu câu hỏi yêu cầu NHIỀU thông tin (ví dụ: "ai nhận thông báo và qua kênh nào", "các bước", "điều kiện"), hãy liệt kê TẤT CẢ các thông tin tìm thấy trong context.
+- KHÔNG bỏ sót bất kỳ chi tiết nào được nêu trong tài liệu.
+- Nếu có nhiều kênh/người/bước → liệt kê đầy đủ.
 
 Hãy trả lời câu hỏi dựa vào tài liệu trên."""
         }
@@ -178,20 +229,32 @@ def run(state: dict) -> dict:
         state["sources"] = result["sources"]
         state["confidence"] = result["confidence"]
 
+        # Sprint 2: Kiểm tra nếu confidence quá thấp → trigger HITL
+        confidence_threshold = float(os.getenv("HITL_CONFIDENCE_THRESHOLD", "0.4"))
+        hitl_triggered = result["confidence"] < confidence_threshold
+        state["hitl_triggered"] = hitl_triggered
+        if hitl_triggered:
+            state["history"].append(
+                f"[{WORKER_NAME}] HITL triggered: confidence={result['confidence']} "
+                f"< threshold={confidence_threshold}"
+            )
+
         worker_io["output"] = {
             "answer_length": len(result["answer"]),
             "sources": result["sources"],
             "confidence": result["confidence"],
+            "hitl_triggered": hitl_triggered,
         }
         state["history"].append(
             f"[{WORKER_NAME}] answer generated, confidence={result['confidence']}, "
-            f"sources={result['sources']}"
+            f"sources={result['sources']}, hitl={hitl_triggered}"
         )
 
     except Exception as e:
         worker_io["error"] = {"code": "SYNTHESIS_FAILED", "reason": str(e)}
         state["final_answer"] = f"SYNTHESIS_ERROR: {e}"
         state["confidence"] = 0.0
+        state["hitl_triggered"] = True  # Error → luôn trigger HITL
         state["history"].append(f"[{WORKER_NAME}] ERROR: {e}")
 
     state.setdefault("worker_io_logs", []).append(worker_io)
@@ -204,7 +267,7 @@ def run(state: dict) -> dict:
 
 if __name__ == "__main__":
     print("=" * 50)
-    print("Synthesis Worker — Standalone Test")
+    print("Synthesis Worker - Standalone Test")
     print("=" * 50)
 
     test_state = {
@@ -223,6 +286,7 @@ if __name__ == "__main__":
     print(f"\nAnswer:\n{result['final_answer']}")
     print(f"\nSources: {result['sources']}")
     print(f"Confidence: {result['confidence']}")
+    print(f"HITL triggered: {result.get('hitl_triggered', False)}")
 
     print("\n--- Test 2: Exception case ---")
     test_state2 = {
@@ -236,11 +300,12 @@ if __name__ == "__main__":
         ],
         "policy_result": {
             "policy_applies": False,
-            "exceptions_found": [{"type": "flash_sale_exception", "rule": "Flash Sale không được hoàn tiền."}],
+            "exceptions_found": [{"type": "flash_sale_exception", "rule": "Flash Sale khong duoc hoan tien."}],
         },
     }
     result2 = run(test_state2.copy())
     print(f"\nAnswer:\n{result2['final_answer']}")
     print(f"Confidence: {result2['confidence']}")
+    print(f"HITL triggered: {result2.get('hitl_triggered', False)}")
 
-    print("\n✅ synthesis_worker test done.")
+    print("\n[OK] synthesis_worker test done.")

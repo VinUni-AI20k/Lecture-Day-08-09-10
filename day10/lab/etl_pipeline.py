@@ -66,7 +66,7 @@ def cmd_run(args: argparse.Namespace) -> int:
     log(f"run_id={run_id}")
     log(f"raw_records={raw_count}")
 
-    cleaned, quarantine = clean_rows(
+    cleaned, quarantine, clean_stats = clean_rows(
         rows,
         apply_refund_window_fix=not args.no_refund_fix,
     )
@@ -77,6 +77,7 @@ def cmd_run(args: argparse.Namespace) -> int:
 
     log(f"cleaned_records={len(cleaned)}")
     log(f"quarantine_records={len(quarantine)}")
+    log(f"cleaning_bom_stripped={clean_stats.get('bom_stripped', 0)}")
     log(f"cleaned_csv={cleaned_path.relative_to(ROOT)}")
     log(f"quarantine_csv={quar_path.relative_to(ROOT)}")
 
@@ -152,7 +153,17 @@ def cmd_embed_internal(cleaned_csv: Path, *, run_id: str, log) -> bool:
     col = client.get_or_create_collection(name=collection_name, embedding_function=emb)
 
     ids = [r["chunk_id"] for r in rows]
-    # Tránh “mồi cũ” trong top-k: xóa id không còn trong cleaned run này (index = snapshot publish).
+
+    # Idempotency check: log số vector trước upsert để chứng minh rerun không làm tăng count.
+    # Sau upsert + prune, count phải = len(ids) bất kể chạy bao nhiêu lần.
+    try:
+        count_before = col.count()
+        log(f"embed_collection_before={count_before}")
+    except Exception as e:
+        log(f"WARN: cannot get collection count before: {e}")
+        count_before = -1
+
+    # Tránh "mồi cũ" trong top-k: xóa id không còn trong cleaned run này (index = snapshot publish).
     try:
         prev = col.get(include=[])
         prev_ids = set(prev.get("ids") or [])
@@ -162,6 +173,7 @@ def cmd_embed_internal(cleaned_csv: Path, *, run_id: str, log) -> bool:
             log(f"embed_prune_removed={len(drop)}")
     except Exception as e:
         log(f"WARN: embed prune skip: {e}")
+
     documents = [r["chunk_text"] for r in rows]
     metadatas = [
         {
@@ -173,6 +185,16 @@ def cmd_embed_internal(cleaned_csv: Path, *, run_id: str, log) -> bool:
     ]
     # Idempotent: upsert theo chunk_id
     col.upsert(ids=ids, documents=documents, metadatas=metadatas)
+
+    # Log count sau upsert — phải bằng len(ids) dù chạy lần 1 hay lần N
+    try:
+        count_after = col.count()
+        log(f"embed_collection_after={count_after} (expected={len(ids)})")
+        if count_before >= 0 and count_after == count_before and count_before == len(ids):
+            log("embed_idempotent=true (rerun không làm tăng collection size)")
+    except Exception as e:
+        log(f"WARN: cannot get collection count after: {e}")
+
     log(f"embed_upsert count={len(ids)} collection={collection_name}")
     return True
 

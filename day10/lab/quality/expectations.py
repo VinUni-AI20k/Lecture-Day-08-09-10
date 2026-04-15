@@ -24,6 +24,10 @@ def run_expectations(cleaned_rows: List[Dict[str, Any]]) -> Tuple[List[Expectati
     Trả về (results, should_halt).
 
     should_halt = True nếu có bất kỳ expectation severity halt nào fail.
+
+    Khiêm thêm (Sprint 2):
+    - E7: exported_at_all_populated — tất cả dòng phải có exported_at.
+    - E8: chunk_text_min_length_20 — tất cả chunk_text >= 20 ký tự (validate Rule 7 cleaning).
     """
     results: List[ExpectationResult] = []
 
@@ -109,6 +113,42 @@ def run_expectations(cleaned_rows: List[Dict[str, Any]]) -> Tuple[List[Expectati
             ok6,
             "halt",
             f"violations={len(bad_hr_annual)}",
+        )
+    )
+
+    # E7 (Khiêm): exported_at phải được populate toàn bộ (không rỗng).
+    # Tác động: exported_at dùng cho freshness check → cần bắt buộc.
+    # Metric: Track số dòng missing exported_at.
+    bad_exported = [
+        r
+        for r in cleaned_rows
+        if not (r.get("exported_at") or "").strip()
+    ]
+    ok7 = len(bad_exported) == 0
+    results.append(
+        ExpectationResult(
+            "exported_at_all_populated",
+            ok7,
+            "warn",
+            f"missing_exported_at_count={len(bad_exported)}",
+        )
+    )
+
+    # E8 (Khiêm): chunk_text phải đủ dài (>= 20 ký tự).
+    # Tác động: Chunk quá ngắn không đủ context → embedding xấu.
+    # Metric: Track số dòng < 20 ký tự (validate cleaning Rule 7).
+    short_chunks = [
+        r
+        for r in cleaned_rows
+        if len((r.get("chunk_text") or "").strip()) < 20
+    ]
+    ok8 = len(short_chunks) == 0
+    results.append(
+        ExpectationResult(
+            "chunk_text_min_length_20",
+            ok8,
+            "warn",
+            f"short_chunks_(<20_chars)={len(short_chunks)}",
         )
     )
 

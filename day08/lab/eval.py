@@ -1,6 +1,9 @@
 """
 eval.py — Sprint 4: Evaluation & Scorecard
 ==========================================
+Implemented by: Trần Đình Minh Vương
+Sprint: 4 - Evaluation with LLM-as-Judge
+
 Mục tiêu Sprint 4 (60 phút):
   - Chạy 10 test questions qua pipeline
   - Chấm điểm theo 4 metrics: Faithfulness, Relevance, Context Recall, Completeness
@@ -40,14 +43,26 @@ BASELINE_CONFIG = {
     "label": "baseline_dense",
 }
 
-# Cấu hình variant (Sprint 3 — điều chỉnh theo lựa chọn của nhóm)
-# TODO Sprint 4: Cập nhật VARIANT_CONFIG theo variant nhóm đã implement
+# Cấu hình variant cũ (hybrid — không cải thiện được, xem grading_report.md)
 VARIANT_CONFIG = {
-    "retrieval_mode": "hybrid",   # Hoặc "dense" nếu chỉ đổi rerank
+    "retrieval_mode": "hybrid",
     "top_k_search": 10,
     "top_k_select": 3,
-    "use_rerank": True,           # Hoặc False nếu variant là hybrid không rerank
-    "label": "variant_hybrid_rerank",
+    "use_rerank": False,
+    "label": "variant_hybrid",
+}
+
+# Variant C: Dense + prompt v2 + top_k_select=5
+# Mục tiêu: tăng Completeness (2.70→) và sửa Abstain (gq07)
+# Lý do chọn: Context Recall đã = 5.0 → bottleneck là generation, không phải retrieval
+# A/B rule: chỉ đổi 2 biến cùng nhóm (prompt + select_k) so với baseline
+VARIANT_C_CONFIG = {
+    "retrieval_mode": "dense",
+    "top_k_search": 10,
+    "top_k_select": 5,
+    "use_rerank": False,
+    "prompt_version": "v2",
+    "label": "variant_dense_v2",
 }
 
 
@@ -62,38 +77,79 @@ def score_faithfulness(
 ) -> Dict[str, Any]:
     """
     Faithfulness: Câu trả lời có bám đúng chứng cứ đã retrieve không?
-    Câu hỏi: Model có tự bịa thêm thông tin ngoài retrieved context không?
-
-    Thang điểm 1-5:
-      5: Mọi thông tin trong answer đều có trong retrieved chunks
-      4: Gần như hoàn toàn grounded, 1 chi tiết nhỏ chưa chắc chắn
-      3: Phần lớn grounded, một số thông tin có thể từ model knowledge
-      2: Nhiều thông tin không có trong retrieved chunks
-      1: Câu trả lời không grounded, phần lớn là model bịa
-
-    TODO Sprint 4 — Có 2 cách chấm:
-
-    Cách 1 — Chấm thủ công (Manual, đơn giản):
-        Đọc answer và chunks_used, chấm điểm theo thang trên.
-        Ghi lý do ngắn gọn vào "notes".
-
-    Cách 2 — LLM-as-Judge (Tự động, nâng cao):
-        Gửi prompt cho LLM:
-            "Given these retrieved chunks: {chunks}
-             And this answer: {answer}
-             Rate the faithfulness on a scale of 1-5.
-             5 = completely grounded in the provided context.
-             1 = answer contains information not in the context.
-             Output JSON: {'score': <int>, 'reason': '<string>'}"
-
-    Trả về dict với: score (1-5) và notes (lý do)
+    
+    Sử dụng LLM-as-Judge để chấm tự động.
     """
-    # TODO Sprint 4: Implement scoring
-    # Tạm thời trả về None (yêu cầu chấm thủ công)
-    return {
-        "score": None,
-        "notes": "TODO: Chấm thủ công hoặc implement LLM-as-Judge",
-    }
+    abstain_phrases = [
+        "tôi không biết",
+        "không có trong tài liệu",
+        "không đủ dữ liệu",
+        "không có thông tin",
+        "thông tin này không có",
+    ]
+    is_abstain = not chunks_used or any(p in answer.lower() for p in abstain_phrases)
+    if is_abstain:
+        # Abstain case - faithfulness = 5 (không bịa)
+        return {
+            "score": 5,
+            "notes": "Abstain correctly - no hallucination",
+        }
+    
+    # Build context từ chunks
+    context = "\n\n".join([
+        f"[Chunk {i+1}] {chunk['text'][:300]}"
+        for i, chunk in enumerate(chunks_used[:3])
+    ])
+    
+    prompt = f"""Rate the faithfulness of the answer based on the retrieved context.
+
+Context:
+{context}
+
+Answer:
+{answer}
+
+Faithfulness scale (1-5):
+5 = All information in answer is grounded in the context
+4 = Almost completely grounded, one minor detail uncertain
+3 = Mostly grounded, some information may be from model knowledge
+2 = Many claims not in context
+1 = Answer is not grounded, mostly hallucinated
+
+Output only a JSON object with 'score' (integer 1-5) and 'reason' (brief explanation).
+Example: {{"score": 5, "reason": "All claims are directly from the context"}}"""
+    
+    try:
+        from openai import OpenAI
+        import os
+        import json as json_lib
+        
+        client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0,
+            max_tokens=150,
+        )
+        
+        result_text = response.choices[0].message.content.strip()
+        # Parse JSON
+        if result_text.startswith("```json"):
+            result_text = result_text.split("```json")[1].split("```")[0].strip()
+        elif result_text.startswith("```"):
+            result_text = result_text.split("```")[1].split("```")[0].strip()
+            
+        result = json_lib.loads(result_text)
+        return {
+            "score": result.get("score", 3),
+            "notes": result.get("reason", ""),
+        }
+    except Exception as e:
+        # Fallback: manual scoring needed
+        return {
+            "score": None,
+            "notes": f"LLM-as-Judge failed: {e}. Manual scoring needed.",
+        }
 
 
 def score_answer_relevance(
@@ -102,21 +158,54 @@ def score_answer_relevance(
 ) -> Dict[str, Any]:
     """
     Answer Relevance: Answer có trả lời đúng câu hỏi người dùng hỏi không?
-    Câu hỏi: Model có bị lạc đề hay trả lời đúng vấn đề cốt lõi không?
-
-    Thang điểm 1-5:
-      5: Answer trả lời trực tiếp và đầy đủ câu hỏi
-      4: Trả lời đúng nhưng thiếu vài chi tiết phụ
-      3: Trả lời có liên quan nhưng chưa đúng trọng tâm
-      2: Trả lời lạc đề một phần
-      1: Không trả lời câu hỏi
-
-    TODO Sprint 4: Implement tương tự score_faithfulness
+    
+    Sử dụng LLM-as-Judge để chấm tự động.
     """
-    return {
-        "score": None,
-        "notes": "TODO: Implement score_answer_relevance",
-    }
+    prompt = f"""Rate how well the answer addresses the question.
+
+Question: {query}
+
+Answer: {answer}
+
+Relevance scale (1-5):
+5 = Answer directly and completely addresses the question
+4 = Answer is correct but missing minor details
+3 = Answer is related but not focused on the core question
+2 = Answer is partially off-topic
+1 = Answer does not address the question
+
+Output only a JSON object with 'score' (integer 1-5) and 'reason' (brief explanation).
+Example: {{"score": 5, "reason": "Directly answers the question with all details"}}"""
+    
+    try:
+        from openai import OpenAI
+        import os
+        import json as json_lib
+        
+        client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0,
+            max_tokens=150,
+        )
+        
+        result_text = response.choices[0].message.content.strip()
+        if result_text.startswith("```json"):
+            result_text = result_text.split("```json")[1].split("```")[0].strip()
+        elif result_text.startswith("```"):
+            result_text = result_text.split("```")[1].split("```")[0].strip()
+            
+        result = json_lib.loads(result_text)
+        return {
+            "score": result.get("score", 3),
+            "notes": result.get("reason", ""),
+        }
+    except Exception as e:
+        return {
+            "score": None,
+            "notes": f"LLM-as-Judge failed: {e}",
+        }
 
 
 def score_context_recall(
@@ -182,26 +271,62 @@ def score_completeness(
 ) -> Dict[str, Any]:
     """
     Completeness: Answer có thiếu điều kiện ngoại lệ hoặc bước quan trọng không?
-    Câu hỏi: Answer có bao phủ đủ thông tin so với expected_answer không?
-
-    Thang điểm 1-5:
-      5: Answer bao gồm đủ tất cả điểm quan trọng trong expected_answer
-      4: Thiếu 1 chi tiết nhỏ
-      3: Thiếu một số thông tin quan trọng
-      2: Thiếu nhiều thông tin quan trọng
-      1: Thiếu phần lớn nội dung cốt lõi
-
-    TODO Sprint 4:
-    Option 1 — Chấm thủ công: So sánh answer vs expected_answer và chấm.
-    Option 2 — LLM-as-Judge:
-        "Compare the model answer with the expected answer.
-         Rate completeness 1-5. Are all key points covered?
-         Output: {'score': int, 'missing_points': [str]}"
+    
+    Sử dụng LLM-as-Judge để so sánh với expected answer.
     """
-    return {
-        "score": None,
-        "notes": "TODO: Implement score_completeness (so sánh với expected_answer)",
-    }
+    if not expected_answer:
+        return {"score": None, "notes": "No expected answer provided"}
+    
+    prompt = f"""Compare the model answer with the expected answer and rate completeness.
+
+Question: {query}
+
+Expected Answer: {expected_answer}
+
+Model Answer: {answer}
+
+Completeness scale (1-5):
+5 = Answer includes all key points from expected answer
+4 = Missing one minor detail
+3 = Missing some important information
+2 = Missing many important points
+1 = Missing most core content
+
+Output only a JSON object with 'score' (integer 1-5) and 'missing_points' (list of missing key information).
+Example: {{"score": 4, "missing_points": ["response time detail"]}}"""
+    
+    try:
+        from openai import OpenAI
+        import os
+        import json as json_lib
+        
+        client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0,
+            max_tokens=200,
+        )
+        
+        result_text = response.choices[0].message.content.strip()
+        if result_text.startswith("```json"):
+            result_text = result_text.split("```json")[1].split("```")[0].strip()
+        elif result_text.startswith("```"):
+            result_text = result_text.split("```")[1].split("```")[0].strip()
+            
+        result = json_lib.loads(result_text)
+        missing = result.get("missing_points", [])
+        notes = f"Missing: {', '.join(missing)}" if missing else "Complete"
+        
+        return {
+            "score": result.get("score", 3),
+            "notes": notes,
+        }
+    except Exception as e:
+        return {
+            "score": None,
+            "notes": f"LLM-as-Judge failed: {e}",
+        }
 
 
 # =============================================================================
@@ -263,6 +388,7 @@ def run_scorecard(
                 top_k_search=config.get("top_k_search", 10),
                 top_k_select=config.get("top_k_select", 3),
                 use_rerank=config.get("use_rerank", False),
+                prompt_version=config.get("prompt_version", "v1"),
                 verbose=False,
             )
             answer = result["answer"]
@@ -404,9 +530,7 @@ def compare_ab(
 
 def generate_scorecard_summary(results: List[Dict], label: str) -> str:
     """
-    Tạo báo cáo tóm tắt scorecard dạng markdown.
-
-    TODO Sprint 4: Cập nhật template này theo kết quả thực tế của nhóm.
+    Tạo báo cáo tóm tắt scorecard dạng markdown với phân tích chi tiết.
     """
     metrics = ["faithfulness", "relevance", "context_recall", "completeness"]
     averages = {}
@@ -415,27 +539,65 @@ def generate_scorecard_summary(results: List[Dict], label: str) -> str:
         averages[metric] = sum(scores) / len(scores) if scores else None
 
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M")
+    
+    # Tính thêm statistics
+    total_questions = len(results)
+    categories = {}
+    for r in results:
+        cat = r.get("category", "unknown")
+        categories[cat] = categories.get(cat, 0) + 1
 
     md = f"""# Scorecard: {label}
 Generated: {timestamp}
+Total Questions: {total_questions}
 
-## Summary
+## Summary Statistics
 
-| Metric | Average Score |
-|--------|--------------|
+| Metric | Average Score | Min | Max |
+|--------|--------------|-----|-----|
 """
-    for metric, avg in averages.items():
-        avg_str = f"{avg:.2f}/5" if avg else "N/A"
-        md += f"| {metric.replace('_', ' ').title()} | {avg_str} |\n"
+    for metric in metrics:
+        scores = [r[metric] for r in results if r[metric] is not None]
+        if scores:
+            avg = sum(scores) / len(scores)
+            min_score = min(scores)
+            max_score = max(scores)
+            md += f"| {metric.replace('_', ' ').title()} | {avg:.2f}/5 | {min_score} | {max_score} |\n"
+        else:
+            md += f"| {metric.replace('_', ' ').title()} | N/A | N/A | N/A |\n"
+
+    md += "\n## Category Distribution\n\n"
+    md += "| Category | Count |\n"
+    md += "|----------|-------|\n"
+    for cat, count in sorted(categories.items()):
+        md += f"| {cat} | {count} |\n"
 
     md += "\n## Per-Question Results\n\n"
     md += "| ID | Category | Faithful | Relevant | Recall | Complete | Notes |\n"
     md += "|----|----------|----------|----------|--------|----------|-------|\n"
 
     for r in results:
+        notes = r.get('faithfulness_notes', '')[:50]
+        if len(r.get('faithfulness_notes', '')) > 50:
+            notes += "..."
         md += (f"| {r['id']} | {r['category']} | {r.get('faithfulness', 'N/A')} | "
                f"{r.get('relevance', 'N/A')} | {r.get('context_recall', 'N/A')} | "
-               f"{r.get('completeness', 'N/A')} | {r.get('faithfulness_notes', '')[:50]} |\n")
+               f"{r.get('completeness', 'N/A')} | {notes} |\n")
+    
+    # Thêm phân tích weak points
+    md += "\n## Weak Points Analysis\n\n"
+    weak_questions = []
+    for r in results:
+        avg_score = sum([r.get(m, 0) or 0 for m in metrics]) / len(metrics)
+        if avg_score < 3.5:
+            weak_questions.append((r['id'], r['query'][:60], avg_score))
+    
+    if weak_questions:
+        md += "Questions scoring below 3.5 average:\n\n"
+        for qid, query, score in sorted(weak_questions, key=lambda x: x[2]):
+            md += f"- **{qid}** (avg: {score:.2f}): {query}...\n"
+    else:
+        md += "No questions scored below 3.5 average. Excellent performance!\n"
 
     return md
 
@@ -486,25 +648,23 @@ if __name__ == "__main__":
         print("Pipeline chưa implement. Hoàn thành Sprint 2 trước.")
         baseline_results = []
 
-    # --- Chạy Variant (sau khi Sprint 3 hoàn thành) ---
-    # TODO Sprint 4: Uncomment sau khi implement variant trong rag_answer.py
-    # print("\n--- Chạy Variant ---")
-    # variant_results = run_scorecard(
-    #     config=VARIANT_CONFIG,
-    #     test_questions=test_questions,
-    #     verbose=True,
-    # )
-    # variant_md = generate_scorecard_summary(variant_results, VARIANT_CONFIG["label"])
-    # (RESULTS_DIR / "scorecard_variant.md").write_text(variant_md, encoding="utf-8")
+    # --- Chạy Variant C (dense + prompt_v2 + top_k=5) ---
+    print("\n--- Chạy Variant C: dense + prompt_v2 + top_k_select=5 ---")
+    variant_results = run_scorecard(
+        config=VARIANT_C_CONFIG,
+        test_questions=test_questions,
+        verbose=True,
+    )
+    variant_md = generate_scorecard_summary(variant_results, VARIANT_C_CONFIG["label"])
+    (RESULTS_DIR / "scorecard_variant.md").write_text(variant_md, encoding="utf-8")
 
     # --- A/B Comparison ---
-    # TODO Sprint 4: Uncomment sau khi có cả baseline và variant
-    # if baseline_results and variant_results:
-    #     compare_ab(
-    #         baseline_results,
-    #         variant_results,
-    #         output_csv="ab_comparison.csv"
-    #     )
+    if baseline_results and variant_results:
+        compare_ab(
+            baseline_results,
+            variant_results,
+            output_csv="ab_comparison.csv"
+        )
 
     print("\n\nViệc cần làm Sprint 4:")
     print("  1. Hoàn thành Sprint 2 + 3 trước")
