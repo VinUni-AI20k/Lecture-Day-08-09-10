@@ -1,0 +1,31 @@
+[
+  {
+    "id": "q_refund_window",
+    "question": "Khách hàng có bao nhiêu ngày để yêu cầu hoàn tiền kể từ khi xác nhận đơn?",
+    "must_contain_any": ["7 ngày", "7 ngày làm việc"],
+    "must_not_contain": ["14 ngày làm việc"],
+    "note": "Nếu embed còn chunk stale 14 ngày → hits_forbidden=yes"
+  },
+  {
+    "id": "q_p1_sla",
+    "question": "SLA phản hồi đầu tiên cho ticket P1 là bao lâu?",
+    "must_contain_any": ["15 phút"],
+    "must_not_contain": [],
+    "note": "Chunk từ sla_p1_2026"
+  },
+  {
+    "id": "q_lockout",
+    "question": "Bao nhiêu lần đăng nhập sai thì tài khoản bị khóa?",
+    "must_contain_any": ["5 lần"],
+    "must_not_contain": [],
+    "note": "Chunk từ it_helpdesk_faq"
+  },
+  {
+    "id": "q_leave_version",
+    "question": "Theo chính sách nghỉ phép hiện hành (2026), nhân viên dưới 3 năm kinh nghiệm được bao nhiêu ngày phép năm?",
+    "must_contain_any": ["12 ngày", "12 ngày phép năm"],
+    "must_not_contain": ["10 ngày phép năm"],
+    "expect_top1_doc_id": "hr_leave_policy",
+    "note": "Phải loại bản HR cũ (10 ngày); top-1 nên từ hr_leave_policy"
+  }
+]
