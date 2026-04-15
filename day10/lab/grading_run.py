@@ -19,13 +19,31 @@ from dotenv import load_dotenv
 
 load_dotenv()
 ROOT = Path(__file__).resolve().parent
+DEFAULT_GRADING_QUESTIONS = ROOT / "data" / "grading_questions.json"
+FALLBACK_TEST_QUESTIONS = ROOT / "data" / "test_questions.json"
+
+
+def _resolve_questions_path(raw_path: str) -> Path:
+    qpath = Path(raw_path)
+    if qpath.is_file():
+        return qpath
+
+    # Keep CLI behavior stable: when default grading file is missing, use test questions.
+    if qpath == DEFAULT_GRADING_QUESTIONS and FALLBACK_TEST_QUESTIONS.is_file():
+        print(
+            f"WARN: missing {DEFAULT_GRADING_QUESTIONS.name}; fallback to {FALLBACK_TEST_QUESTIONS.name}",
+            file=sys.stderr,
+        )
+        return FALLBACK_TEST_QUESTIONS
+
+    return qpath
 
 
 def main() -> int:
     p = argparse.ArgumentParser()
     p.add_argument(
         "--questions",
-        default=str(ROOT / "data" / "grading_questions.json"),
+        default=str(DEFAULT_GRADING_QUESTIONS),
     )
     p.add_argument(
         "--out",
@@ -41,7 +59,11 @@ def main() -> int:
         print("pip install chromadb sentence-transformers", file=sys.stderr)
         return 1
 
-    qpath = Path(args.questions)
+    qpath = _resolve_questions_path(args.questions)
+    if not qpath.is_file():
+        print(f"questions not found: {qpath}", file=sys.stderr)
+        return 1
+
     qs = json.loads(qpath.read_text(encoding="utf-8"))
     db_path = os.environ.get("CHROMA_DB_PATH", str(ROOT / "chroma_db"))
     collection_name = os.environ.get("CHROMA_COLLECTION", "day10_kb")
