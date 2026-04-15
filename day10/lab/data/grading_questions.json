@@ -1,0 +1,24 @@
+[
+  {
+    "id": "gq_d10_01",
+    "question": "Khách hàng có bao nhiêu ngày để yêu cầu hoàn tiền kể từ khi xác nhận đơn?",
+    "must_contain_any": ["7 ngày", "7 ngày làm việc"],
+    "must_not_contain": ["14 ngày làm việc"],
+    "note": "refund window — nếu inject còn chunk stale 14 ngày → hits_forbidden=yes"
+  },
+  {
+    "id": "gq_d10_02",
+    "question": "SLA phản hồi đầu tiên cho ticket P1 là bao lâu?",
+    "must_contain_any": ["15 phút"],
+    "must_not_contain": [],
+    "note": "P1 resolution SLA — chunk từ sla_p1_2026"
+  },
+  {
+    "id": "gq_d10_03",
+    "question": "Theo chính sách nghỉ phép hiện hành (2026), nhân viên dưới 3 năm kinh nghiệm được bao nhiêu ngày phép năm?",
+    "must_contain_any": ["12 ngày", "12 ngày phép năm"],
+    "must_not_contain": ["10 ngày phép năm"],
+    "expect_top1_doc_id": "hr_leave_policy",
+    "note": "HR 12 ngày + top1 doc_id + không 10 ngày stale trong top-k"
+  }
+]

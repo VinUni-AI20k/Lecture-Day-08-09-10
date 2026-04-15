@@ -4,11 +4,11 @@
 **Thành viên:**
 | # | Tên | Vai trò (Day 10) | Email |
 |---|-----|------------------|-------|
-| 1 | Phan Thanh Sang | Ingestion Owner | |
-| 2 | Đỗ Minh Khiêm | Cleaning / Quality Owner | |
-| 3 | Trần Tiến Dũng | Embed Owner | |
-| 4 | Ngô Hải Văn | Inject & Evidence Owner | |
-| 5 | Trần Đình Minh Vương | Monitoring / Docs Owner | |
+| 1 | Phan Thanh Sang | Ingestion Owner | sang.phan2409@gmail.com |
+| 2 | Đỗ Minh Khiêm | Cleaning / Quality Owner | dokhiem562@gmail.com |
+| 3 | Trần Tiến Dũng | Embed Owner | tiendungtran2005@gmail.com |
+| 4 | Ngô Hải Văn | Inject & Evidence Owner | ngohaivan7@gmail.com |
+| 5 | Trần Đình Minh Vương | Monitoring / Docs Owner | vuongsky55.cv@gmail.com |
 
 **Ngày nộp:** 2026-04-15  
 **Repo:** https://github.com/hvan128/team62-lecture-Day-08-09-10  

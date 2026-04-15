@@ -39,24 +39,25 @@ Cách viết này giúp chuyển tài liệu từ mức mô tả chung sang mứ
 Lệnh đã chạy:
 
 ```bash
-python etl_pipeline.py run --run-id sprint1
+python etl_pipeline.py run --run-id sprint1-final
 ```
 
-File log sinh ra: `artifacts/logs/run_sprint1.log`.
+File log sinh ra: `artifacts/logs/run_sprint1-final.log`.
 
 Các dòng bằng chứng DoD trong log:
 
 ```text
-run_id=sprint1
-raw_records=10
-cleaned_records=6
-quarantine_records=4
+run_id=sprint1-final
+raw_records=13
+cleaned_records=7
+quarantine_records=6
+cleaning_bom_stripped=1
 ```
 
 Ngoài các trường DoD bắt buộc, log còn cho thấy pipeline hoàn thành end-to-end:
-- expectation halt đều pass,
-- embed thành công (`embed_upsert count=6`),
-- manifest được ghi (`manifest_sprint1.json`).
+- expectation halt đều pass (8/8),
+- embed thành công (`embed_upsert count=7`),
+- manifest được ghi (`manifest_sprint1-final.json`).
 
 ---
 
