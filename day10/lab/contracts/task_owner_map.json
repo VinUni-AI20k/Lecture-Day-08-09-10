@@ -1,0 +1,32 @@
+{
+  "D10-T00": {
+    "owner": "Hoang Kim Tri Thanh",
+    "owner_id": "2A202600372",
+    "scope": "Pipeline integration, release gate"
+  },
+  "D10-T01": {
+    "owner": "Dang Dinh Tu Anh",
+    "owner_id": "2A202600019",
+    "scope": "Ingestion and schema mapping"
+  },
+  "D10-T02": {
+    "owner": "Quach Gia Duoc",
+    "owner_id": "2A202600423",
+    "scope": "Cleaning and transformation rules"
+  },
+  "D10-T03": {
+    "owner": "Pham Quoc Dung",
+    "owner_id": "2A202600490",
+    "scope": "Quality expectations and grading evidence"
+  },
+  "D10-T04": {
+    "owner": "Nguyen Thanh Nam",
+    "owner_id": "2A202600205",
+    "scope": "Runbook, architecture docs, incident documentation"
+  },
+  "D10-T05": {
+    "owner": "Hoang Kim Tri Thanh",
+    "owner_id": "2A202600372",
+    "scope": "Embedding + freshness monitoring + final runtime triage"
+  }
+}
