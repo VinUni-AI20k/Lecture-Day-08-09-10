@@ -1,37 +1,55 @@
-# Phân tích Kịch bản Stress Test - Lab Day 10
-**Người thực hiện:** Quang (Transformation Engineer)
-**Mục tiêu:** Kiểm tra độ bền của Pipeline và khả năng tự chữa lành dữ liệu trước khi nạp vào Vector DB.
+# Kế hoạch Stress Test Nâng cao - Lab Day 10 (Adversarial Level)
+
+**Người phụ trách:** Quang (Transformation Engineer)
+**Chiến lược:** Kiểm tra khả năng xử lý xung đột logic, bảo mật thông tin nhạy cảm và tính nhất quán của Vector DB.
 
 ---
 
-## 1. Chi tiết kịch bản & Kỳ vọng xử lý
+## 1. Danh sách các kịch bản đối kháng (Adversarial Scenarios)
 
-| ID | Vấn đề (Issue) | Kỳ vọng xử lý (Expected Handling) | Metric Impact |
+| ID | Kịch bản | Thách thức kỹ thuật | Kỳ vọng xử lý |
 |:---|:---|:---|:---|
-| **st_01** | **Logic sai:** Ghi 14 ngày (v4 chuẩn là 7 ngày). | Rule `fix_stale_refund` phải đổi 14 -> 7 ngày. | `cleaned_refund_window_fixed` |
-| **st_02** | **Duplicate chéo:** Nội dung Refund nhưng gán nhầm Doc_ID là Helpdesk. | Rule `dedupe_chunk_text` phải phát hiện nội dung này đã tồn tại và loại bỏ dòng này. | `dropped_duplicate_chunk_text` |
-| **st_03** | **Encoding bẩn:** Chứa mã Hex `\x00\xff...` | Rule `clean_trash_chars` phải xóa bỏ các ký tự không in được, giữ lại text sạch. | `cleaned_records` |
-| **st_04** | **Dữ liệu cũ (Stale):** Chính sách năm 2024. | Rule `stale_hr_policy` phải đẩy dòng này vào Quarantine vì contract yêu cầu >= 2026. | `quarantine_stale_hr_policy` |
-| **st_05** | **Dữ liệu rỗng:** `chunk_text` để trống. | Phải đẩy vào Quarantine ngay lập tức. | `quarantine_empty_chunk_text` |
-| **st_06** | **Doc_ID lạ:** `unknown_system_log`. | Phải đẩy vào Quarantine vì không nằm trong `allowed_doc_ids`. | `quarantine_unknown_doc_id` |
-| **st_07** | **Sai định dạng ngày:** `15/04/2026`. | Rule `normalize_effective_date` phải convert về đúng ISO `2026-04-15`. | `cleaned_records` |
-| **st_08** | **Duplicate tuyệt đối:** Trùng y hệt dòng `st_01`. | Rule `dropped_duplicate_chunk_id` phải loại bỏ để đảm bảo Idempotency. | `dropped_duplicate_chunk_id` |
+| **st_adv_01** | **Xung đột Version (Lỗi logic)** | Ghi 14 ngày (v4 chuẩn 7 ngày). | Rule `fix_stale_refund` phải ép về 7 ngày. |
+| **st_adv_02** | **Xung đột Version (Thời gian)** | Dòng đúng nhưng `exported_at` cũ hơn. | Hệ thống phải giữ dòng đúng dựa trên logic "Correctness over Recency". |
+| **st_adv_03** | **Rò rỉ PII (Bảo mật)** | Chứa SĐT và Email thật. | Rule `mask_pii` phải thay thế bằng `[REDACTED]`. |
+| **st_adv_04** | **Phá vỡ Tokenizer** | Tab, Newline, Zero-width space. | Rule `clean_whitespace` đưa về khoảng trắng đơn. |
+| **st_adv_05** | **Sai Case-sensitivity** | `policy_refund_V4` (viết hoa V). | Chuẩn hóa `lower()` hoặc đẩy vào Quarantine. |
+| **st_adv_06** | **Nhiễu Emoji** | Quá nhiều emoji gây nhiễu vector. | Rule `remove_emoji` dọn dẹp sạch văn bản. |
+| **st_adv_07** | **Dữ liệu chuẩn (Base)** | Dòng dữ liệu đúng để test duplicate. | Nạp vào bình thường. |
+| **st_adv_08** | **Duplicate Tuyệt đối** | Trùng 100% với dòng `st_adv_07`. | Cơ chế Idempotency loại bỏ dòng này. |
+| **st_adv_09** | **Giá trị Logic âm** | SLA ghi nhận `-1` giờ. | Đẩy vào Quarantine (lỗi `invalid_range`). |
+| **st_adv_10** | **Doc_ID lạ** | `unknown_doc` không có trong contract. | Đẩy vào Quarantine (lỗi `unknown_doc_id`). |
 
 ---
 
-## 2. Ảnh hưởng dự kiến lên Agent (Before vs. After)
+## 2. Quy trình thực thi & Kiểm chứng (Execution & Assertions)
 
-### Kịch bản: Câu hỏi về Hoàn tiền (Refund Window)
-*   **Trước khi fix (Before):** Huy (Eval) sẽ thấy Agent trả lời "14 ngày" hoặc tệ hơn là trả lời lẫn lộn giữa 7 và 14 ngày (Hallucination). Cột `hits_forbidden` sẽ báo **YES**.
-*   **Sau khi fix (After):** Pipeline của Quang & Tuấn sẽ sửa 14 thành 7. Agent chỉ nhận được context 7 ngày duy nhất. Cột `hits_forbidden` phải báo **NO**.
+### Giai đoạn 1: Kiểm soát biên (Boundary Guard)
+**Lệnh chạy:**
+```bash
+python etl_pipeline.py run --raw data/raw/policy_stress_test.csv --run-id adv-stress
+```
+**Tiêu chí đạt (Assertions):**
+*   **PII Check:** Mở `cleaned_adv-stress.csv`, tìm chuỗi `090-123`. Kỳ vọng: **Không tìm thấy** (đã bị redacted).
+*   **Whitespace Check:** Mở `cleaned_adv-stress.csv`, kiểm tra dòng `st_adv_04`. Kỳ vọng: Không còn Tab/Newline thừa.
+*   **Range Check:** Mở `quarantine_adv-stress.csv`. Kỳ vọng: Dòng `st_adv_09` nằm ở đây với lý do `invalid_logical_range`.
 
-### Kịch bản: Câu hỏi về Nghỉ phép (HR Leave)
-*   **Trước khi fix (Before):** Agent có thể lấy nhầm thông tin 10 ngày (của năm 2024) thay vì 12 ngày (của năm 2026).
-*   **Sau khi fix (After):** Dòng 2024 bị Quang "nhốt" vào Quarantine. Agent chỉ thấy dữ liệu 2026. Cột `top1_doc_matches` phải báo **YES**.
+### Giai đoạn 2: Kiểm tra tính bất biến (Idempotency Assertions)
+**Lệnh chạy lại:** Chạy lại đúng lệnh trên 2 lần.
+**Tiêu chí đạt:**
+*   `embed_prune_removed` trong Log phải khớp với số lượng dòng bị loại bỏ.
+*   `chroma_db` collection count không được tăng thêm dù chỉ 1 bản ghi.
+
+### Giai đoạn 3: Đánh giá chất lượng Retrieval (Eval Assertions)
+**Lệnh chạy:**
+```bash
+python eval_retrieval.py --out artifacts/eval/eval_adv_stress.csv
+```
+**Tiêu chí đạt:**
+*   Câu hỏi `q_refund_window`: `hits_forbidden` phải là **NO**.
+*   Câu hỏi `q_lockout`: Kết quả tìm kiếm không bị nhiễu bởi Emojis (kiểm tra `top1_preview`).
 
 ---
 
-## 3. Kết luận cho Observability
-Kết quả chạy file Stress Test này sẽ được dùng để điền vào bảng `metric_impact` trong báo cáo nhóm. 
-*   Nếu mọi kỳ vọng trên đều khớp với Log thực tế -> Hệ thống đạt chuẩn **Distinction**.
-*   Nếu có bất kỳ dòng bẩn nào lọt vào Vector DB -> Cần cập nhật lại `cleaning_rules.py`.
+## 3. Giá trị đối với Báo cáo Nhóm
+Việc vượt qua bản test này chứng minh nhóm không chỉ làm sạch dữ liệu mà còn xây dựng được một **"Data Firewall"** (Tường lửa dữ liệu) thực thụ cho AI Agent. Kết quả này sẽ chiếm trọng số lớn trong mục **"Distinction Evidence"** của báo cáo.

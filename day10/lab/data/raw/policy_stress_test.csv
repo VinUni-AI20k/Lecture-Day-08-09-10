@@ -1,9 +1,12 @@
 chunk_id,doc_id,chunk_text,effective_date,exported_at
-st_01,policy_refund_v4,"Chính sách hoàn tiền mới: Khách hàng được hoàn tiền trong vòng 14 ngày làm việc.",2026-02-01,2026-04-15T10:00:00
-st_02,it_helpdesk_faq,"Yêu cầu được gửi trong vòng 7 ngày làm việc kể từ thời điểm xác nhận đơn hàng.",2026-02-01,2026-04-15T10:00:00
-st_03,sla_p1_2026,"Nội dung chứa mã lỗi nặng: \x00\xff\xfe\xbd và các ký tự không thể định dạng .",2026-02-01,2026-04-15T10:00:00
-st_04,hr_leave_policy,"Nhân viên được nghỉ phép 10 ngày (Dữ liệu cũ từ năm 2024).",2024-05-20,2026-04-15T10:00:00
-st_05,policy_refund_v4,"",2026-02-01,2026-04-15T10:00:00
-st_06,unknown_system_log,"Dữ liệu rác từ hệ thống lạ không có trong contract.",2026-01-01,2026-04-15T10:00:00
-st_07,it_helpdesk_faq,"Tài khoản bị khóa sau 5 lần đăng nhập sai.",15/04/2026,2026-04-15T10:00:00
-st_08,policy_refund_v4,"Chính sách hoàn tiền mới: Khách hàng được hoàn tiền trong vòng 14 ngày làm việc.",2026-02-01,2026-04-15T10:00:00
+st_adv_01,policy_refund_v4,"Chính sách v4: Hoàn tiền trong 14 ngày. (Lỗi logic: v4 thực tế chỉ 7 ngày)",2026-02-01,2026-04-15T10:00:00
+st_adv_02,policy_refund_v4,"Chính sách v4: Hoàn tiền trong 7 ngày.",2026-02-01,2026-04-15T09:00:00
+st_adv_03,hr_leave_policy,"Liên hệ nhân sự qua số 090-123-4567 hoặc admin@company.com để nghỉ phép.",2026-01-01,2026-04-15T10:00:00
+st_adv_04,sla_p1_2026,"Ticket P1 xử lý trong 4 giờ.	 	
+(Chứa Tab, Newline và Zero-width space để phá Tokenizer)",2026-01-15,2026-04-15T10:00:00
+st_adv_05,policy_refund_V4,"Sai Case-sensitivity: policy_refund_V4 (viết hoa chữ V).",2026-02-01,2026-04-15T10:00:00
+st_adv_06,it_helpdesk_faq,"Mật khẩu reset tại portal. 🔑 🛡️ 🔴 (Chứa quá nhiều Emojis gây nhiễu embedding)",2026-01-20,2026-04-15T10:00:00
+st_adv_07,hr_leave_policy,"Nhân viên có 12 ngày phép.",2026-01-01,2026-01-01T00:00:00
+st_adv_08,hr_leave_policy,"Nhân viên có 12 ngày phép.",2026-01-01,2026-01-01T00:00:00
+st_adv_09,sla_p1_2026,"SLA P1 là -1 giờ. (Giá trị âm vô lý)",2026-01-15,2026-04-15T10:00:00
+st_adv_10,unknown_doc,"Dữ liệu nằm ngoài danh mục cho phép.",2026-04-15,2026-04-15T10:00:00
