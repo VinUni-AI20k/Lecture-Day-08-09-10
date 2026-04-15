@@ -141,5 +141,20 @@ def run_expectations(cleaned_rows: List[Dict[str, Any]]) -> Tuple[List[Expectati
         )
     )
 
+    # E9: warn if any cleaned row has an empty exported_at field.
+    # An empty exported_at means freshness_check cannot compute age accurately for that row —
+    # the pipeline still publishes it, but the freshness SLI is blind to its source timestamp.
+    # severity=warn: publish proceeds; flag for backlog review so the source export is fixed.
+    # metric_impact: inject a row with exported_at="" that passes all other rules → E9 FAIL (warn) in log.
+    missing_exported = [r for r in cleaned_rows if not (r.get("exported_at") or "").strip()]
+    results.append(
+        ExpectationResult(
+            "exported_at_not_empty",
+            len(missing_exported) == 0,
+            "warn",
+            f"missing_exported_at={len(missing_exported)}",
+        )
+    )
+
     halt = any(not r.passed and r.severity == "halt" for r in results)
     return results, halt
