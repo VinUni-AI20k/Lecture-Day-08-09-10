@@ -6,8 +6,8 @@
 |-----|---------|-------|
 | Dương Văn Hiệp | Tech Lead | 26ai.hiepnd@vinuni.edu |
 | Trịnh Đức Anh | Tech Lead / Retrieval Owner | 26ai.anhtd@vinuni.edu |
-| Nguyễn Minh Quân | Eval Owner | 26ai.hiepnd@vinuni.edu |
-| Hoàng Thái Dương | Eval Owner | 26ai.quannm@vinuni.edu |
+| Nguyễn Minh Quân | Eval Owner | 26ai.quannm@vinuni.edu |
+| Hoàng Thái Dương | Eval Owner | 26ai.duonght@vinuni.edu |
 | Bùi Văn Đạt | Retrieval Owner / Documentation Owner | 26ai.datbv@vinuni.edu |
 | Hoàng Quốc Chung | Documentation Owner | 26ai.chunghq@vinuni.edu |
 
