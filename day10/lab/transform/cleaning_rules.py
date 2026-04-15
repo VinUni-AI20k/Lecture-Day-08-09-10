@@ -10,6 +10,7 @@ from __future__ import annotations
 import csv
 import hashlib
 import re
+from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Tuple
 
@@ -25,6 +26,19 @@ ALLOWED_DOC_IDS = frozenset(
 
 _ISO_DATE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 _DMY_SLASH = re.compile(r"^(\d{2})/(\d{2})/(\d{4})$")
+_ISO_DATETIME = re.compile(
+    r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})?$"
+)
+_BRACKETED_CLEANED_TAG = re.compile(r"\s*\[cleaned:[^\]]+\]\s*$", flags=re.IGNORECASE)
+
+_MIGRATION_NOTE_MARKERS = (
+    "lỗi migration",
+    "policy-v3",
+    "bản sync cũ",
+    "legacy",
+    "stale",
+    "migration",
+)
 
 
 def _norm_text(s: str) -> str:
@@ -34,6 +48,53 @@ def _norm_text(s: str) -> str:
 def _stable_chunk_id(doc_id: str, chunk_text: str, seq: int) -> str:
     h = hashlib.sha256(f"{doc_id}|{chunk_text}|{seq}".encode("utf-8")).hexdigest()[:16]
     return f"{doc_id}_{seq}_{h}"
+
+
+def _normalize_exported_at(raw: str) -> Tuple[str, str]:
+    s = (raw or "").strip()
+    if not s:
+        return "", "empty_exported_at"
+    if not _ISO_DATETIME.match(s):
+        return "", "invalid_exported_at_format"
+    try:
+        s2 = s.replace("Z", "+00:00")
+        dt = datetime.fromisoformat(s2)
+        if dt.tzinfo is None:
+            return dt.replace(microsecond=0).isoformat(timespec="seconds"), ""
+        return dt.replace(microsecond=0).isoformat(timespec="seconds"), ""
+    except Exception:
+        return "", "invalid_exported_at_format"
+
+
+def _strip_migration_notes(text: str) -> Tuple[str, bool]:
+    s = (text or "").strip()
+    if not s:
+        return "", False
+    lower = s.lower()
+    if not any(m in lower for m in _MIGRATION_NOTE_MARKERS):
+        return s, False
+
+    changed = False
+
+    def repl(m: re.Match) -> str:
+        nonlocal changed
+        inner = (m.group(1) or "").lower()
+        if "ghi chú" in inner or any(k in inner for k in _MIGRATION_NOTE_MARKERS):
+            changed = True
+            return ""
+        return m.group(0)
+
+    out = re.sub(r"\(([^)]*)\)", repl, s)
+    out2 = " ".join(out.split()).strip()
+    if out2 != s:
+        changed = True
+    return out2, changed
+
+
+def _canonical_key(text: str) -> str:
+    s = (text or "").strip()
+    s = _BRACKETED_CLEANED_TAG.sub("", s).strip()
+    return _norm_text(s)
 
 
 def _normalize_effective_date(raw: str) -> Tuple[str, str]:
@@ -79,7 +140,7 @@ def clean_rows(
     6) Fix stale refund: policy_refund_v4 chứa '14 ngày làm việc' → 7 ngày.
     """
     quarantine: List[Dict[str, Any]] = []
-    seen_text: set[str] = set()
+    seen_canon: set[str] = set()
     cleaned: List[Dict[str, Any]] = []
     seq = 0
 
@@ -101,6 +162,14 @@ def clean_rows(
             quarantine.append({**raw, "reason": eff_err, "effective_date_raw": eff_raw})
             continue
 
+        exp_norm, exp_err = _normalize_exported_at(exported_at)
+        if exp_err == "empty_exported_at":
+            quarantine.append({**raw, "reason": "missing_exported_at"})
+            continue
+        if exp_err == "invalid_exported_at_format":
+            quarantine.append({**raw, "reason": exp_err, "exported_at_raw": exported_at})
+            continue
+
         if doc_id == "hr_leave_policy" and eff_norm < "2026-01-01":
             quarantine.append(
                 {
@@ -115,20 +184,22 @@ def clean_rows(
             quarantine.append({**raw, "reason": "missing_chunk_text"})
             continue
 
-        key = _norm_text(text)
-        if key in seen_text:
-            quarantine.append({**raw, "reason": "duplicate_chunk_text"})
+        fixed_text, _ = _strip_migration_notes(text)
+        if not fixed_text:
+            quarantine.append({**raw, "reason": "missing_chunk_text"})
             continue
-        seen_text.add(key)
-
-        fixed_text = text
         if apply_refund_window_fix and doc_id == "policy_refund_v4":
             if "14 ngày làm việc" in fixed_text:
                 fixed_text = fixed_text.replace(
                     "14 ngày làm việc",
                     "7 ngày làm việc",
                 )
-                fixed_text += " [cleaned: stale_refund_window]"
+
+        canon = _canonical_key(fixed_text)
+        if canon in seen_canon:
+            quarantine.append({**raw, "reason": "duplicate_after_canonicalization"})
+            continue
+        seen_canon.add(canon)
 
         seq += 1
         cleaned.append(
@@ -137,7 +208,7 @@ def clean_rows(
                 "doc_id": doc_id,
                 "chunk_text": fixed_text,
                 "effective_date": eff_norm,
-                "exported_at": exported_at or "",
+                "exported_at": exp_norm,
             }
         )
 
