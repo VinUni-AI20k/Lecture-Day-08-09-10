@@ -1,0 +1,6 @@
+artifacts
+chroma_db/
+__pycache__/
+.env
+
+.agent/

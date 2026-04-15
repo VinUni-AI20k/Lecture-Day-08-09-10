@@ -1,0 +1,70 @@
+{
+  "generated_at": "2026-04-14T16:55:07.531078",
+  "day08_single_agent": {
+    "architecture": "Single-agent RAG (retrieve → generate)",
+    "total_questions": 15,
+    "avg_confidence": 0.72,
+    "avg_latency_ms": 2800,
+    "routing": "Không có — mọi câu đi qua 1 pipeline duy nhất",
+    "exception_handling": "Không có — phải hard-code trong prompt",
+    "abstain_capability": "Yếu — không có confidence threshold rõ ràng",
+    "multi_hop_support": "Không — chỉ 1 lần retrieve, không cross-doc",
+    "debuggability": "Thấp — không trace được lỗi ở retrieval hay generation"
+  },
+  "day09_multi_agent": {
+    "total_traces": 15,
+    "routing_distribution": {
+      "retrieval_worker": "9/15 (60%)",
+      "policy_tool_worker": "6/15 (40%)"
+    },
+    "routing_accuracy": {
+      "accuracy_pct": 100.0,
+      "correct": 15,
+      "total": 15,
+      "mismatches": []
+    },
+    "avg_confidence": 0.92,
+    "confidence_range": "0.20 – 1.00",
+    "latency": {
+      "mean_ms": 8120,
+      "median_ms": 6411,
+      "p95_ms": 15993,
+      "p99_ms": 17931,
+      "min_ms": 2429,
+      "max_ms": 18416
+    },
+    "mcp_usage_rate": "2/15 (13%)",
+    "hitl_rate": "1/15 (6%)",
+    "top_sources": [
+      [
+        "it_helpdesk_faq.txt",
+        15
+      ],
+      [
+        "access_control_sop.txt",
+        12
+      ],
+      [
+        "policy_refund_v4.txt",
+        11
+      ],
+      [
+        "hr_leave_policy.txt",
+        11
+      ],
+      [
+        "sla_p1_2026.txt",
+        10
+      ]
+    ]
+  },
+  "analysis": {
+    "latency_delta_ms": 5320,
+    "confidence_delta": 0.2,
+    "routing_visibility": "Day 09: mỗi câu có route_reason + supervisor_route → dễ debug. Day 08: black box, không biết lỗi ở retrieval hay generation.",
+    "debuggability": "Multi-agent: test từng worker độc lập, trace mỗi bước. Single-agent: phải debug toàn pipeline.",
+    "exception_handling": "Day 09: policy_tool_worker kiểm tra Flash Sale, digital product, temporal scoping. Day 08: phải nhồi mọi rule vào 1 prompt.",
+    "extensibility": "Day 09: thêm capability qua MCP tool mới, không sửa core. Day 08: phải sửa code pipeline.",
+    "multi_hop": "Day 09: routing cho phép gọi nhiều worker cho câu cross-doc (q13, q15). Day 08: chỉ 1 lần retrieve → miss context."
+  }
+}
