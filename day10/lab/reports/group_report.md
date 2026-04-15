@@ -4,14 +4,14 @@
 **Thành viên:**
 | Tên | Vai trò (Day 10) | Email |
 |-----|------------------|-------|
-| Đỗ Minh Khiêm | Cleaning & Quality Owner | khiem@example.com |
-| Ngô Hải Vân | Ingestion / Raw Owner | van@example.com |
-| Phan Thanh Sang | Embed & Idempotency Owner | sang@example.com |
-| Trần Đình Minh Vương | Monitoring / Docs Owner | vuong@example.com |
+| Đỗ Minh Khiêm | Cleaning & Quality Owner | 22028092@vnu.edu.vn |
+| Ngô Hải Vân | Ingestion / Raw Owner | 22028149@vnu.edu.vn |
+| Phan Thanh Sang | Embed & Idempotency Owner | 22028135@vnu.edu.vn |
+| Trần Đình Minh Vương | Monitoring / Docs Owner | 22028154@vnu.edu.vn |
 
 **Ngày nộp:** 2026-04-15  
-**Repo:** team62-lecture-Day-08-09-10  
-**Độ dài khuyến nghị:** 600–1000 từ
+**Repo:** https://github.com/hvan128/team62-lecture-Day-08-09-10  
+**Độ dài:** ~950 từ
 
 ---
 
@@ -23,25 +23,31 @@
 
 ## 1. Pipeline tổng quan (150–200 từ)
 
-**Nguồn raw:** CSV mẫu `data/raw/policy_export_dirty.csv` mô phỏng export từ policy management system. File chứa 10 records với các failure mode: duplicate, missing effective_date, stale HR version (10 ngày phép năm), stale refund window (14 ngày), và missing exported_at.
+**Nguồn raw:** CSV mẫu `data/raw/policy_export_dirty.csv` mô phỏng export từ policy management system. File chứa 13 records (sau khi Vân inject thêm) với các failure mode: duplicate, missing effective_date, stale HR version (10 ngày phép năm), stale refund window (14 ngày), missing exported_at, và BOM characters.
 
 **Tóm tắt luồng:**
-1. **Ingest:** Load raw CSV → 10 records
-2. **Transform:** Apply cleaning rules → 6 cleaned + 4 quarantine
+1. **Ingest:** Load raw CSV → 13 records (10 baseline + 3 inject test)
+2. **Transform:** Apply cleaning rules → 7 cleaned + 6 quarantine
    - Allowlist doc_id (policy_refund_v4, sla_p1_2026, it_helpdesk_faq, hr_leave_policy)
    - Normalize effective_date (DD/MM/YYYY → YYYY-MM-DD)
    - Quarantine HR < 2026-01-01, short chunk (<20 chars), missing exported_at
-   - Fix refund 14→7 days, dedupe, strip BOM
-3. **Quality:** Run 8 expectations (6 baseline + 2 mới) → 3 halt, 5 warn
-4. **Embed:** Upsert 6 chunks vào ChromaDB collection `day10_kb` (idempotent)
-5. **Monitor:** Generate manifest + freshness check (FAIL: age 120h > SLA 24h)
+   - Fix refund 14→7 days, dedupe, strip BOM (1 record có BOM)
+3. **Quality:** Run 8 expectations (6 baseline + 2 mới) → 3 halt, 5 warn → ALL PASS
+4. **Embed:** Upsert 7 chunks vào ChromaDB collection `day10_kb` (idempotent)
+5. **Monitor:** Generate manifest + freshness check (FAIL: age 121h > SLA 24h)
 
-**run_id:** Lấy từ `--run-id` flag hoặc auto-generate UTC timestamp (vd: `sprint1`, `2026-04-15T08-03Z`). Ghi trong log dòng đầu: `run_id=sprint1`.
+**run_id:** Lấy từ `--run-id` flag hoặc auto-generate UTC timestamp (vd: `sprint1`, `vuong-sprint4-test`, `van-inject-bad`). Ghi trong log dòng đầu: `run_id=sprint1`.
 
 **Lệnh chạy một dòng:**
 ```bash
 python etl_pipeline.py run --run-id sprint1
 ```
+
+**Artifacts chính:**
+- Manifest: `artifacts/manifests/manifest_sprint1.json`, `manifest_vuong-sprint4-test.json`
+- Log: `artifacts/logs/run_sprint1.log`, `run_vuong-sprint4-test.log`
+- Cleaned: `artifacts/cleaned/cleaned_sprint1.csv` (6 rows), `cleaned_vuong-sprint4-test.csv` (7 rows)
+- Quarantine: `artifacts/quarantine/quarantine_sprint1.csv` (4 rows), `quarantine_vuong-sprint4-test.csv` (6 rows)
 
 ---
 
@@ -66,11 +72,16 @@ python etl_pipeline.py run --run-id sprint1
 
 | Rule / Expectation mới (tên ngắn) | Trước (số liệu) | Sau / khi inject (số liệu) | Chứng cứ (log / CSV / commit) |
 |-----------------------------------|------------------|-----------------------------|-------------------------------|
-| Rule 7: short_chunk | quarantine_records=4 (baseline) | quarantine_records=5 (nếu inject chunk <20 chars) | artifacts/quarantine/quarantine_sprint1.csv |
-| Rule 8: missing_exported_at | quarantine_records=4 | quarantine_records=5 (nếu inject row thiếu exported_at) | artifacts/logs/run_sprint1.log |
-| Rule 9: bom_stripped | cleaning_bom_stripped=0 (CSV mẫu không có BOM) | cleaning_bom_stripped=1 (nếu inject BOM) | artifacts/logs/run_sprint1.log |
-| E7: exported_at_all_populated | OK (warn) | FAIL (warn) nếu inject missing exported_at | artifacts/logs/run_sprint1.log |
-| E8: chunk_text_min_length_20 | OK (warn) | FAIL (warn) nếu inject short chunk | artifacts/logs/run_sprint1.log |
+| Rule 7: short_chunk | quarantine_records=4 (sprint1) | quarantine_records=6 (vuong-sprint4-test) | artifacts/quarantine/quarantine_vuong-sprint4-test.csv |
+| Rule 8: missing_exported_at | quarantine_records=4 (sprint1) | quarantine_records=6 (nếu inject thiếu exported_at) | artifacts/logs/run_sprint1.log |
+| Rule 9: bom_stripped | cleaning_bom_stripped=0 (sprint1) | cleaning_bom_stripped=1 (vuong-sprint4-test) | artifacts/logs/run_vuong-sprint4-test.log line 5 |
+| E7: exported_at_all_populated | OK (warn) sprint1 | OK (warn) vuong-sprint4-test | artifacts/logs/run_vuong-sprint4-test.log line 13 |
+| E8: chunk_text_min_length_20 | OK (warn) sprint1 | OK (warn) vuong-sprint4-test | artifacts/logs/run_vuong-sprint4-test.log line 14 |
+
+**Metric impact thực tế từ log:**
+- `cleaning_bom_stripped=1` → Rule 9 hoạt động (1 record có BOM được strip)
+- `quarantine_records` tăng từ 4 (sprint1) lên 6 (vuong-sprint4-test) → Rules 7, 8 hoạt động
+- Tất cả expectations PASS → data quality đảm bảo
 
 **Rule chính (baseline + mở rộng):**
 - Allowlist doc_id → quarantine unknown_doc_id
@@ -118,8 +129,14 @@ python etl_pipeline.py run --run-id sprint1
 
 **Evidence files:**
 - Before (clean): `artifacts/eval/before_after_eval.csv` (run_id=sprint1)
-- After (inject): `artifacts/eval/eval_after_inject.csv` (run_id=inject-bad)
-- Restored: `artifacts/eval/eval_after_fix.csv` (run_id=fix-refund-20260415)
+- After (inject): `artifacts/eval/eval_after_inject.csv` (run_id=van-inject-bad)
+- Restored: `artifacts/eval/eval_after_fix.csv` (run_id=van-restored)
+- Grading: `artifacts/eval/grading_run.jsonl` (3 câu: gq_d10_01, gq_d10_02, gq_d10_03 - ALL PASS)
+
+**Grading results:**
+- `gq_d10_01` (refund): `contains_expected=true`, `hits_forbidden=false` ✓
+- `gq_d10_02` (SLA P1): `contains_expected=true` ✓
+- `gq_d10_03` (HR leave): `contains_expected=true`, `hits_forbidden=false`, `top1_doc_matches=true` ✓
 
 **Chứng cứ q_leave_version (Merit):**
 - Câu hỏi: "Theo chính sách nghỉ phép hiện hành (2026), nhân viên dưới 3 năm kinh nghiệm được bao nhiêu ngày phép năm?"
