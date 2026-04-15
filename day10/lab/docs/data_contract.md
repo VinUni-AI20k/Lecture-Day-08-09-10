@@ -17,7 +17,7 @@
 
 | Cột | Kiểu | Bắt buộc | Ghi chú |
 |---|---|---|---|
-| `chunk_id` | string | Có | Hash ổn định: `sha256(doc_id\|chunk_text\|seq)[:16]` — tái chạy không đổi |
+| `chunk_id` | string | Có | Hash xác định theo công thức hiện tại: `sha256(doc_id\|chunk_text\|seq)[:16]`. Giá trị chỉ ổn định khi thứ tự ingest / kết quả quarantine không đổi; nếu `seq` dịch chuyển giữa các lần chạy thì `chunk_id` cũng sẽ đổi. |
 | `doc_id` | string | Có | Phải thuộc `ALLOWED_DOC_IDS` trong `cleaning_rules.py` và `contracts/data_contract.yaml` |
 | `chunk_text` | string | Có | Tối thiểu 8 ký tự (warn), tối đa 2000 ký tự (warn E7) |
 | `effective_date` | date (YYYY-MM-DD) | Có | Chuẩn hoá từ DD/MM/YYYY hoặc YYYY/MM/DD; rỗng hoặc không parse được → quarantine |
