@@ -1,0 +1,73 @@
+{
+  "P1-LATEST": {
+    "ticket_id": "IT-9847",
+    "priority": "P1",
+    "title": "API Gateway down — toàn bộ người dùng không đăng nhập được",
+    "status": "in_progress",
+    "assignee": "nguyen.van.a@company.internal",
+    "created_at": "2026-04-13T22:47:00",
+    "sla_deadline": "2026-04-14T02:47:00",
+    "sla_first_response": "15 phút",
+    "sla_resolution": "4 giờ",
+    "escalated": true,
+    "escalated_to": "senior_engineer_team",
+    "notifications_sent": [
+      "slack:#incident-p1",
+      "email:incident@company.internal",
+      "pagerduty:oncall"
+    ],
+    "source": "sla_p1_2026.txt"
+  },
+  "IT-1234": {
+    "ticket_id": "IT-1234",
+    "priority": "P2",
+    "title": "Feature login chậm cho một số user",
+    "status": "open",
+    "assignee": null,
+    "created_at": "2026-04-13T09:15:00",
+    "sla_deadline": "2026-04-14T09:15:00",
+    "sla_first_response": "2 giờ",
+    "sla_resolution": "1 ngày làm việc",
+    "escalated": false,
+    "source": "sla_p1_2026.txt"
+  },
+  "IT-9848": {
+    "ticket_id": "IT-9848",
+    "priority": "P1",
+    "title": "Test HTTP MCP",
+    "description": "test via REST",
+    "status": "open",
+    "assignee": null,
+    "created_at": "2026-04-14T17:29:36.291386",
+    "sla_first_response": "15 phút",
+    "sla_resolution": "4 giờ",
+    "url": "https://jira.company.internal/browse/IT-9848",
+    "source": "sla_p1_2026.txt"
+  },
+  "IT-9849": {
+    "ticket_id": "IT-9849",
+    "priority": "P1",
+    "title": "Test HTTP MCP",
+    "description": "test via REST",
+    "status": "open",
+    "assignee": null,
+    "created_at": "2026-04-14T17:29:47.622877",
+    "sla_first_response": "15 phút",
+    "sla_resolution": "4 giờ",
+    "url": "https://jira.company.internal/browse/IT-9849",
+    "source": "sla_p1_2026.txt"
+  },
+  "IT-9850": {
+    "ticket_id": "IT-9850",
+    "priority": "P2",
+    "title": "Test HTTP MCP",
+    "description": "test via REST",
+    "status": "open",
+    "assignee": null,
+    "created_at": "2026-04-14T17:30:06.758370",
+    "sla_first_response": "2 giờ",
+    "sla_resolution": "1 ngày làm việc",
+    "url": "https://jira.company.internal/browse/IT-9850",
+    "source": "sla_p1_2026.txt"
+  }
+}
