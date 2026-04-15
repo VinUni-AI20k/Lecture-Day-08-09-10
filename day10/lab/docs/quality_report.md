@@ -13,7 +13,7 @@
 | raw_records | 10 | 10 | Cùng nguồn CSV |
 | cleaned_records | 6 | 6 | Số lượng không đổi — inject chỉ thay đổi nội dung chunk, không số lượng |
 | quarantine_records | 4 | 4 | Cùng quarantine — Rules 1–4 không bị ảnh hưởng bởi --no-refund-fix |
-| Expectation halt? | YES — E3 FAIL (`refund_no_stale_14d_window`, violations=1) | NO — tất cả 8 expectations OK | --skip-validate cho phép pipeline tiếp tục khi inject |
+| Expectation suite (halt condition) | Halt condition triggered, but skipped — E3 FAIL (`refund_no_stale_14d_window`, violations=1); pipeline tiếp tục do `--skip-validate` | NO — tất cả 8 expectations OK | --skip-validate cho phép pipeline tiếp tục dù có lỗi expectation |
 | embed_prune_removed | 1 (clean→stale) | 1 (stale→clean) | Idempotency hoạt động đúng: mỗi run thay thế chunk cũ bằng chunk mới |
 
 ---
