@@ -1,6 +1,6 @@
 # Báo Cáo Cá Nhân — Lab Day 10: Data Pipeline & Observability
 
-**Họ và tên:** ___________  
+**Họ và tên:** Trần Gia Khánh
 **Vai trò:** Ingestion / Cleaning — Ingestion + Data Contract (Sprint 1)  
 **Ngày nộp:** 2026-04-15  
 **Độ dài yêu cầu:** **400–650 từ** (ngắn hơn Day 09 vì rubric slide cá nhân ~10% — vẫn phải đủ bằng chứng)
