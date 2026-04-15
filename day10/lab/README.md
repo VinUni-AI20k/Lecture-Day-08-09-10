@@ -21,7 +21,7 @@ Vector store và agent Day 09 chỉ ổn nếu **pipeline ingest → clean → v
 ## Mục tiêu học tập
 
 | Mục tiêu | Sprint |
-|----------|--------|
+| -------- | ------ |
 | Ingest + map schema + log raw | Sprint 1 |
 | Cleaning rules + cleaned CSV + quarantine | Sprint 1–2 |
 | Expectation suite + embed Chroma (idempotent) | Sprint 2 |
@@ -32,7 +32,7 @@ Vector store và agent Day 09 chỉ ổn nếu **pipeline ingest → clean → v
 
 ## Cấu trúc thư mục
 
-```
+```text
 lab/
 ├── etl_pipeline.py           # Sprint 1–2: run ingest→clean→validate→embed
 ├── eval_retrieval.py         # Sprint 3–4: before/after retrieval (CSV)
@@ -86,7 +86,16 @@ cd lab
 python -m venv .venv
 source .venv/bin/activate   # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
+```
+
+Tạo file môi trường:
+
+```bash
+# macOS / Linux
 cp .env.example .env
+
+# Windows PowerShell
+Copy-Item .env.example .env
 ```
 
 **Lần đầu** SentenceTransformers có thể tải model `all-MiniLM-L6-v2` (~90MB) — cần mạng.
@@ -99,8 +108,38 @@ cp .env.example .env
 # Luồng chuẩn: fix stale refund 14→7, expectation pass, embed
 python etl_pipeline.py run
 
-# Kiểm tra freshness theo manifest vừa tạo
-python etl_pipeline.py freshness --manifest artifacts/manifests/manifest_<run-id>.json
+# Có thể gắn run_id để đối chiếu log / manifest / quality report
+python etl_pipeline.py run --run-id sprint4-good
+```
+
+Sau khi chạy xong, pipeline sẽ:
+
+- đọc raw CSV từ `data/raw/policy_export_dirty.csv`
+- ghi log với `run_id`, `raw_records`, `cleaned_records`, `quarantine_records`
+- ghi `cleaned_csv`, `quarantine_csv`, `manifest` vào `artifacts/`
+- chạy expectation; nếu có lỗi `halt` thì dừng trước bước embed với exit code `2`
+- chỉ embed khi validation pass, hoặc khi chạy đúng chế độ demo inject
+- luôn ghi manifest của run và gọi freshness check
+
+Artifact chính của một run:
+
+```bash
+artifacts/logs/run_<run-id>.log
+artifacts/cleaned/cleaned_<run-id>.csv
+artifacts/quarantine/quarantine_<run-id>.csv
+artifacts/manifests/manifest_<run-id>.json
+```
+
+Kiểm tra freshness theo manifest vừa tạo:
+
+```bash
+python etl_pipeline.py freshness --manifest artifacts/manifests/manifest_sprint4-good.json
+```
+
+Nếu không truyền `--run-id`, script sẽ tự sinh `run_id` theo giờ UTC, ví dụ `2026-04-15T03-50Z`:
+
+```bash
+python etl_pipeline.py freshness --manifest artifacts/manifests/manifest_2026-04-15T03-50Z.json
 ```
 
 **Eval retrieval (sau khi đã embed):**
@@ -120,6 +159,8 @@ python etl_pipeline.py run --run-id inject-bad --no-refund-fix --skip-validate
 python eval_retrieval.py --out artifacts/eval/after_inject_bad.csv
 # So sánh với file eval sau khi chạy lại pipeline chuẩn (không flag inject)
 ```
+
+`--skip-validate` chỉ dành cho flow demo inject. Script sẽ từ chối nếu dùng cờ này mà không có `--no-refund-fix`.
 
 **Grading (sau 17:00):**
 
@@ -181,7 +222,7 @@ python instructor_quick_check.py --manifest artifacts/manifests/manifest_<run-id
 ## Deliverables (nộp bài)
 
 | Item | Ghi chú |
-|------|---------|
+| ---- | ------- |
 | `etl_pipeline.py` + `transform/` + `quality/` + `monitoring/` | Có thể mở rộng file, không xóa entrypoint bắt buộc |
 | `contracts/data_contract.yaml` | Điền owner, SLA, nguồn |
 | `artifacts/logs/`, `manifests/`, `quarantine/`, `eval/` | Ít nhất 1 run “tốt” + evidence inject |
@@ -195,7 +236,7 @@ python instructor_quick_check.py --manifest artifacts/manifests/manifest_<run-id
 ## Phân vai (gợi ý — đồng bộ slide Hands-on 10)
 
 | Vai | Trách nhiệm | Sprint chính |
-|-----|-------------|----------------|
+| --- | ----------- | ------------ |
 | **Ingestion Owner** | raw paths, logging, manifest | 1 |
 | **Cleaning / Quality Owner** | `cleaning_rules.py`, `expectations.py`, quarantine | 1–3 |
 | **Embed Owner** | Chroma collection, idempotency, eval | 2–3 |
@@ -205,7 +246,7 @@ python instructor_quick_check.py --manifest artifacts/manifests/manifest_<run-id
 
 ## Debug order (nhắc từ slide Day 10)
 
-```
+```text
 Freshness / version → Volume & errors → Schema & contract → Lineage / run_id → mới đến model/prompt
 ```
 
@@ -215,5 +256,5 @@ Freshness / version → Volume & errors → Schema & contract → Lineage / run_
 
 - Slide: [`../lecture-10.html`](../lecture-10.html)
 - Lab Day 09 (orchestration): [`../../day09/lab/README.md`](../../day09/lab/README.md)
-- Great Expectations (tuỳ chọn nâng cao): https://docs.greatexpectations.io/
-- ChromaDB: https://docs.trychroma.com/
+- Great Expectations (tuỳ chọn nâng cao): <https://docs.greatexpectations.io/>
+- ChromaDB: <https://docs.trychroma.com/>
