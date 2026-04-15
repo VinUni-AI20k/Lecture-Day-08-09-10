@@ -105,6 +105,8 @@
   }
   .visual-card { padding: 12px; }
   .problem-kicker { display:inline-flex; padding:8px 14px; background:var(--amber-light); border-radius:999px; font-size:14px; font-weight:800; color:var(--apple-dark); margin-bottom:18px; }
+  .sample-answer-kicker { display:inline-flex; padding:6px 14px; border-radius:999px; background:var(--green); color:white; font-size:13px; font-weight:900; margin-bottom:8px; letter-spacing:0.02em; }
+  .detail-part-kicker { display:inline-flex; padding:6px 12px; border-radius:999px; background:rgba(46,84,138,0.12); color:var(--vin-blue); font-size:12px; font-weight:900; margin-bottom:8px; text-transform:uppercase; letter-spacing:0.04em; }
   .big-question { font-size:38px; font-weight:800; line-height:1.25; color:var(--apple-dark); margin-bottom:18px; }
   .prompt-list { display:flex; flex-direction:column; gap:10px; }
   .prompt-item { background:rgba(46,84,138,0.05); border-left:4px solid var(--vin-blue); border-radius:12px; padding:11px 14px; font-size:18px; font-weight:700; }
@@ -457,11 +459,51 @@
   .note-block { margin-bottom: 14px; }
   .note-title { font-size: 12px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.5px; color: var(--vin-blue); margin-bottom: 6px; }
   .note-block p { font-size: 14px; line-height: 1.5; color: var(--apple-dark); }
+
+  @media print {
+    @page {
+      size: 1280px 720px;
+      margin: 0;
+    }
+    html, body {
+      background: white !important;
+      overflow: visible !important;
+      display: block !important;
+      height: auto !important;
+      width: auto !important;
+    }
+    .presentation {
+      transform: none !important;
+      width: 1280px !important;
+      height: auto !important;
+      position: relative !important;
+      display: block !important;
+      margin: 0 !important;
+      padding: 0 !important;
+    }
+    .slide {
+      position: relative !important;
+      display: flex !important;
+      opacity: 1 !important;
+      visibility: visible !important;
+      pointer-events: auto !important;
+      page-break-after: always !important;
+      break-after: page !important;
+      z-index: 1 !important;
+      width: 1280px !important;
+      height: 720px !important;
+      left: 0 !important;
+      top: 0 !important;
+    }
+    .slide-badge, .slide-counter, .nav-hint, .notes-hint, .notes-panel {
+      display: none !important;
+    }
+  }
 </style>
 </head>
 <body>
 <div class="slide-badge">AI in Action · Ngày 10</div>
-<div class="slide-counter" id="counter">1 / 22</div>
+<div class="slide-counter" id="counter">1 / 46</div>
 <div class="nav-hint">← → navigate · N toggle notes</div>
 <div class="notes-panel" id="notesPanel"></div>
 
@@ -585,53 +627,55 @@
         </div>
       </div>
       <div class="visual-card">
-        <svg viewBox="0 0 560 390" style="width:100%;height:auto;display:block" aria-label="Broken pipeline">
+        <svg viewBox="0 0 560 412" style="width:100%;height:auto;display:block" aria-label="Broken pipeline">
           <defs>
+            <linearGradient id="soft" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#eef3ff"></stop><stop offset="100%" stop-color="#eef9f8"></stop></linearGradient>
             <marker id="brokenBlue" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 Z" fill="#2e548a"></path></marker>
             <marker id="brokenRed" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 Z" fill="#c83538"></path></marker>
           </defs>
-          <rect x="0" y="0" width="560" height="390" rx="28" fill="url(#soft)"></rect>
-          <defs><linearGradient id="soft" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#eef3ff"></stop><stop offset="100%" stop-color="#eef9f8"></stop></linearGradient></defs>
-          <rect x="18" y="72" width="120" height="180" rx="22" fill="white" stroke="rgba(46,84,138,0.18)" stroke-width="2"></rect>
-          <ellipse cx="78" cy="116" rx="28" ry="10" fill="#dce6f5" stroke="#2e548a" stroke-width="3"></ellipse>
-          <rect x="50" y="116" width="56" height="52" fill="#dce6f5" stroke="#2e548a" stroke-width="3"></rect>
-          <ellipse cx="78" cy="168" rx="28" ry="10" fill="#dce6f5" stroke="#2e548a" stroke-width="3"></ellipse>
-          <text x="78" y="204" text-anchor="middle" font-size="19" font-weight="800" fill="#1d1d1f">Source DB</text>
-          <text x="78" y="228" text-anchor="middle" font-size="14" font-weight="600" fill="#86868b">refund-v4</text>
+          <rect x="0" y="0" width="560" height="412" rx="28" fill="url(#soft)"></rect>
+          <!-- Row 1: three cards (aligned); alert badge inside pipeline card to avoid overlap with card edges -->
+          <rect x="18" y="64" width="120" height="172" rx="22" fill="white" stroke="rgba(46,84,138,0.18)" stroke-width="2"></rect>
+          <ellipse cx="78" cy="108" rx="28" ry="10" fill="#dce6f5" stroke="#2e548a" stroke-width="3"></ellipse>
+          <rect x="50" y="108" width="56" height="50" fill="#dce6f5" stroke="#2e548a" stroke-width="3"></rect>
+          <ellipse cx="78" cy="158" rx="28" ry="10" fill="#dce6f5" stroke="#2e548a" stroke-width="3"></ellipse>
+          <text x="78" y="196" text-anchor="middle" font-size="19" font-weight="800" fill="#1d1d1f">Source DB</text>
+          <text x="78" y="218" text-anchor="middle" font-size="14" font-weight="600" fill="#86868b">refund-v4</text>
 
-          <rect x="166" y="72" width="150" height="180" rx="22" fill="white" stroke="rgba(13,115,119,0.18)" stroke-width="2"></rect>
-          <text x="241" y="114" text-anchor="middle" font-size="24" font-weight="800" fill="#1d1d1f">Pipeline</text>
-          <text x="241" y="152" text-anchor="middle" font-size="16" font-weight="700" fill="#1d1d1f">sync 02:00 failed</text>
-          <text x="241" y="176" text-anchor="middle" font-size="15" font-weight="600" fill="#86868b">retry exhausted</text>
-          <rect x="180" y="196" width="122" height="28" rx="14" fill="#c83538"></rect>
-          <text x="241" y="214" text-anchor="middle" font-size="13" font-weight="800" fill="white">freshness = 17h</text>
-          <circle cx="308" cy="60" r="16" fill="#c83538"></circle>
-          <text x="308" y="67" text-anchor="middle" font-size="18" font-weight="900" fill="white">!</text>
+          <rect x="166" y="64" width="150" height="172" rx="22" fill="white" stroke="rgba(13,115,119,0.18)" stroke-width="2"></rect>
+          <text x="241" y="106" text-anchor="middle" font-size="24" font-weight="800" fill="#1d1d1f">Pipeline</text>
+          <text x="241" y="142" text-anchor="middle" font-size="16" font-weight="700" fill="#1d1d1f">sync 02:00 failed</text>
+          <text x="241" y="166" text-anchor="middle" font-size="15" font-weight="600" fill="#86868b">retry exhausted</text>
+          <rect x="180" y="186" width="122" height="28" rx="14" fill="#c83538"></rect>
+          <text x="241" y="204" text-anchor="middle" font-size="13" font-weight="800" fill="white">freshness = 17h</text>
+          <circle cx="298" cy="84" r="13" fill="#c83538"></circle>
+          <text x="298" y="90" text-anchor="middle" font-size="16" font-weight="900" fill="white">!</text>
 
-          <rect x="344" y="72" width="146" height="180" rx="22" fill="white" stroke="rgba(46,84,138,0.18)" stroke-width="2"></rect>
-          <rect x="388" y="110" width="58" height="58" rx="14" fill="#eef3ff" stroke="#2e548a" stroke-width="3"></rect>
-          <circle cx="404" cy="126" r="4" fill="#2e548a"></circle><circle cx="418" cy="140" r="4" fill="#2e548a"></circle><circle cx="432" cy="126" r="4" fill="#2e548a"></circle>
-          <circle cx="404" cy="154" r="4" fill="#2e548a"></circle><circle cx="418" cy="140" r="4" fill="#2e548a"></circle><circle cx="432" cy="154" r="4" fill="#2e548a"></circle>
-          <line x1="404" y1="126" x2="418" y2="140" stroke="#2e548a" stroke-width="2"></line>
-          <line x1="418" y1="140" x2="432" y2="126" stroke="#2e548a" stroke-width="2"></line>
-          <line x1="404" y1="154" x2="418" y2="140" stroke="#2e548a" stroke-width="2"></line>
-          <line x1="418" y1="140" x2="432" y2="154" stroke="#2e548a" stroke-width="2"></line>
-          <text x="417" y="204" text-anchor="middle" font-size="20" font-weight="800" fill="#1d1d1f">Vector store</text>
-          <text x="417" y="228" text-anchor="middle" font-size="14" font-weight="600" fill="#86868b">last update: yesterday</text>
-          <rect x="420" y="18" width="84" height="24" rx="12" fill="#f59e0b"></rect>
-          <text x="462" y="35" text-anchor="middle" font-size="13" font-weight="800" fill="#1d1d1f">stale data</text>
+          <rect x="344" y="64" width="146" height="172" rx="22" fill="white" stroke="rgba(46,84,138,0.18)" stroke-width="2"></rect>
+          <rect x="388" y="102" width="58" height="58" rx="14" fill="#eef3ff" stroke="#2e548a" stroke-width="3"></rect>
+          <circle cx="404" cy="118" r="4" fill="#2e548a"></circle><circle cx="418" cy="132" r="4" fill="#2e548a"></circle><circle cx="432" cy="118" r="4" fill="#2e548a"></circle>
+          <circle cx="404" cy="146" r="4" fill="#2e548a"></circle><circle cx="418" cy="132" r="4" fill="#2e548a"></circle><circle cx="432" cy="146" r="4" fill="#2e548a"></circle>
+          <line x1="404" y1="118" x2="418" y2="132" stroke="#2e548a" stroke-width="2"></line>
+          <line x1="418" y1="132" x2="432" y2="118" stroke="#2e548a" stroke-width="2"></line>
+          <line x1="404" y1="146" x2="418" y2="132" stroke="#2e548a" stroke-width="2"></line>
+          <line x1="418" y1="132" x2="432" y2="146" stroke="#2e548a" stroke-width="2"></line>
+          <text x="417" y="196" text-anchor="middle" font-size="20" font-weight="800" fill="#1d1d1f">Vector store</text>
+          <text x="417" y="218" text-anchor="middle" font-size="14" font-weight="600" fill="#86868b">last update: yesterday</text>
+          <rect x="400" y="72" width="84" height="24" rx="12" fill="#f59e0b"></rect>
+          <text x="442" y="89" text-anchor="middle" font-size="13" font-weight="800" fill="#1d1d1f">stale data</text>
 
-          <rect x="372" y="272" width="170" height="92" rx="22" fill="white" stroke="rgba(13,115,119,0.18)" stroke-width="2"></rect>
-          <text x="456" y="304" text-anchor="middle" font-size="18" font-weight="800" fill="#1d1d1f">Agent answer</text>
-          <rect x="404" y="316" width="104" height="28" rx="14" fill="#fff4d8"></rect>
-          <text x="456" y="334" text-anchor="middle" font-size="14" font-weight="800" fill="#1d1d1f">“Refund 14 ngày”</text>
-          <text x="456" y="356" text-anchor="middle" font-size="13" font-weight="700" fill="#c83538">user says policy is 7 ngày</text>
+          <!-- Row 2: agent card lower so arrow from vector does not crowd the CTA strip -->
+          <rect x="372" y="288" width="170" height="88" rx="22" fill="white" stroke="rgba(13,115,119,0.18)" stroke-width="2"></rect>
+          <text x="457" y="318" text-anchor="middle" font-size="18" font-weight="800" fill="#1d1d1f">Agent answer</text>
+          <rect x="405" y="328" width="104" height="28" rx="14" fill="#fff4d8"></rect>
+          <text x="457" y="346" text-anchor="middle" font-size="14" font-weight="800" fill="#1d1d1f">“Refund 14 ngày”</text>
+          <text x="457" y="366" text-anchor="middle" font-size="13" font-weight="700" fill="#c83538">user says policy is 7 ngày</text>
 
-          <path d="M138 162 C 146 162, 154 162, 166 162" fill="none" stroke="#2e548a" stroke-width="5" marker-end="url(#brokenBlue)"></path>
-          <path d="M316 162 C 324 162, 332 162, 344 162" fill="none" stroke="#c83538" stroke-width="5" stroke-dasharray="10 8" marker-end="url(#brokenRed)"></path>
-          <path d="M444 252 C 450 264, 452 270, 456 272" fill="none" stroke="#2e548a" stroke-width="5" marker-end="url(#brokenBlue)"></path>
-          <rect x="148" y="282" width="204" height="26" rx="13" fill="#c83538"></rect>
-          <text x="250" y="300" text-anchor="middle" font-size="13" font-weight="800" fill="white">detect before users complain</text>
+          <path d="M138 154 L 166 154" fill="none" stroke="#2e548a" stroke-width="5" marker-end="url(#brokenBlue)"></path>
+          <path d="M316 154 L 344 154" fill="none" stroke="#c83538" stroke-width="5" stroke-dasharray="10 8" marker-end="url(#brokenRed)"></path>
+          <path d="M417 236 L 417 258 Q 417 278 457 288" fill="none" stroke="#2e548a" stroke-width="5" marker-end="url(#brokenBlue)"></path>
+          <rect x="148" y="384" width="264" height="26" rx="13" fill="#c83538"></rect>
+          <text x="280" y="402" text-anchor="middle" font-size="13" font-weight="800" fill="white">detect before users complain</text>
         </svg>
       </div>
     </div>
@@ -720,6 +764,66 @@
   </aside>
 </div>
 
+<!-- Phần A — Mở đầu & khung ngày (chi tiết) -->
+<div class="slide content-slide">
+  <div class="frame-header"><div class="detail-part-kicker">Phần A · 1/4</div><div class="frame-title">Triệu chứng agent ↔ tầng data bị lỗi</div><div class="frame-sub">Đọc “sai” đúng tầng trước khi sửa prompt hay model</div><div class="thin-rule"></div></div>
+  <div class="slide-body">
+    <div class="split-50-50">
+      <div class="pillar-col">
+        <div class="pillar-card"><b>Trả lời đúng fact nhưng cũ</b><span>freshness · publish · cache vector</span></div>
+        <div class="pillar-card"><b>Trả lời lẫn lộn nguồn / chunk</b><span>dedupe · version metadata · chunk boundary</span></div>
+        <div class="pillar-card"><b>Trả lời “tự bịa” có vẻ hợp lý</b><span>missing grounding + retrieval gap — vẫn kiểm data trước</span></div>
+      </div>
+      <div class="pillar-col">
+        <div class="pillar-card"><b>Chỉ một loại ticket sai</b><span>OCR/API cụ thể — isolate theo lineage nguồn</span></div>
+        <div class="pillar-card"><b>Đột biến sau deploy pipeline</b><span>schema/parser change — so sánh distribution trước/sau</span></div>
+        <div class="pillar-card"><b>Nguyên tắc</b><span>đo freshness + volume trước khi mở notebook fine-tune</span></div>
+      </div>
+    </div>
+  </div>
+  <aside class="notes"><div class="note-block"><div class="note-title">Giảng viên</div><p>Slide cầu nối từ case 3 ngày sang hoạt động ETL/ELT.</p></div></aside>
+</div>
+<div class="slide content-slide">
+  <div class="frame-header"><div class="detail-part-kicker">Phần A · 2/4</div><div class="frame-title">Ai làm gì? (bản tối giản RACI)</div><div class="frame-sub">Tránh “AI engineer ôm trọn data platform” không có ranh giới</div><div class="thin-rule"></div></div>
+  <div class="slide-body">
+    <table class="plan-table" style="margin-top:4px">
+      <thead><tr><th>Vai trò</th><th>Trách nhiệm chính</th><th>Artifact</th></tr></thead>
+      <tbody>
+        <tr><td>AI / Applied</td><td>data contract cho corpus agent · eval before/after</td><td>data_contract.md · golden questions</td></tr>
+        <tr><td>Data Eng</td><td>ingest robust · modeling · pipeline SLA</td><td>pipeline_architecture.md · lineage</td></tr>
+        <tr><td>SRE / Platform</td><td>alert · on-call runbook · quota/secret</td><td>runbook.md · dashboards</td></tr>
+        <tr><td>Product / SME</td><td>định nghĩa “đúng” policy · sign-off version</td><td>source-of-truth link</td></tr>
+      </tbody>
+    </table>
+    <div class="sub-caption">Nhóm nhỏ lab: có thể một người đóng nhiều vai — nhưng vẫn ghi rõ owner trên từng nguồn.</div>
+  </div>
+  <aside class="notes"><div class="note-block"><div class="note-title">Giảng viên</div><p>Giảm căng thẳng vai trò trong lớp corporate vs startup.</p></div></aside>
+</div>
+<div class="slide content-slide">
+  <div class="frame-header"><div class="detail-part-kicker">Phần A · 3/4</div><div class="frame-title">SLA freshness nói bằng ngôn ngữ nghiệp vụ</div><div class="frame-sub">Ví dụ: policy refund phải reflect trong agent ≤ 4 giờ sau khi PDF ký</div><div class="thin-rule"></div></div>
+  <div class="slide-body">
+    <div class="prompt-list">
+      <div class="prompt-item"><b>Đo điểm cuối</b> — thời điểm document “active” trên bảng cleaned hoặc vector index</div>
+      <div class="prompt-item"><b>Ngưỡng cảnh báo</b> — warning ở 50% SLA, page ở 100% SLA</div>
+      <div class="prompt-item"><b>Phân loại nguồn</b> — static PDF vs ticket stream không dùng chung một SLA</div>
+      <div class="prompt-item"><b>Hiển thị cho user</b> — “Dữ liệu tri thức cập nhật tới: …” giảm kỳ vọng sai</div>
+    </div>
+  </div>
+  <aside class="notes"><div class="note-block"><div class="note-title">Giảng viên</div><p>Liên hệ chip refund 7 ngày trên slide continuity.</p></div></aside>
+</div>
+<div class="slide content-slide">
+  <div class="frame-header"><div class="detail-part-kicker">Phần A · 4/4</div><div class="frame-title">Checklist trước khi embed lần đầu</div><div class="frame-sub">Copy vào docs nhóm lab nếu cần</div><div class="thin-rule"></div></div>
+  <div class="slide-body">
+    <div class="prompt-list">
+      <div class="prompt-item">Schema canonical + kiểu cột + primary key / natural key thống nhất</div>
+      <div class="prompt-item">Encoding UTF-8 · test vài dòng tiếng Việt có dấu</div>
+      <div class="prompt-item">Version / effective_date / source_uri ghi nhận được trong metadata chunk</div>
+      <div class="prompt-item">Sample 20 row manual skim + 3 câu hỏi golden đặt trước cho agent</div>
+    </div>
+  </div>
+  <aside class="notes"><div class="note-block"><div class="note-title">Giảng viên</div><p>Chốt trước Hoạt động 1: học viên đã có khung “vì sao phân loại ETL/ELT”.</p></div></aside>
+</div>
+
 <!-- 6 -->
 <div class="slide content-slide">
   <div class="frame-header"><div class="frame-title">Hoạt động 1 — ETL hay ELT? Batch hay Streaming?</div><div class="frame-sub">Phân loại 4 tình huống thực tế trước khi đi vào chi tiết</div><div class="thin-rule"></div></div>
@@ -754,6 +858,23 @@
     <div class="note-block"><div class="note-title">Tương tác</div><p>Làm cá nhân 4 phút, đối chiếu nhóm 4 phút, chốt lớp 4 phút.</p></div>
     <div class="note-block"><div class="note-title">[Sources]</div><p>day10_slide_blueprint.yaml · D10-S04</p></div>
   </aside>
+</div>
+
+<div class="slide content-slide">
+  <div class="frame-header"><div class="sample-answer-kicker">Đáp án mẫu</div><div class="frame-title">Hoạt động 1 — Gợi ý phân loại + lý do ngắn</div><div class="frame-sub">Đáp án không nhất thiết duy nhất; cần biện minh latency / governance / cost</div><div class="thin-rule"></div></div>
+  <div class="slide-body">
+    <table class="plan-table">
+      <thead><tr><th>#</th><th>Gợi ý ô</th><th>Lý do (1 dòng)</th></tr></thead>
+      <tbody>
+        <tr><td>1 Mask PII log</td><td><b>ETL + streaming</b></td><td>phải che PII <i>trước</i> khi vào lake/warehouse → transform trước load; log tới liên tục</td></tr>
+        <tr><td>2 Nightly PDF</td><td><b>ETL + batch</b></td><td>khối lượng ổn định theo lịch; extract/chuẩn hoá text &amp; metadata trước khi nạp staging</td></tr>
+        <tr><td>3 P1 webhook</td><td><b>ELT + streaming</b></td><td>ghi event/raw nhanh; aggregate/dashboard transform sau trong warehouse</td></tr>
+        <tr><td>4 Monthly CSV</td><td><b>ELT + batch</b></td><td>load file định kỳ vào lake trước; SQL/Notebook transform phía sau (debug dễ, chi phí hợp lý)</td></tr>
+      </tbody>
+    </table>
+    <div class="sub-caption">Nếu nhóm chọn khác: hợp lệ nếu nêu rõ trade-off (ví dụ streaming ELT nhưng thêm bước mask sớm).</div>
+  </div>
+  <aside class="notes"><div class="note-block"><div class="note-title">Giảng viên</div><p>Dùng để chốt lớp sau 4 phút share.</p></div></aside>
 </div>
 
 <!-- 7 -->
@@ -849,54 +970,166 @@
   </aside>
 </div>
 
+<!-- Phần B — Pipeline & ingestion (chi tiết) -->
+<div class="slide content-slide">
+  <div class="frame-header"><div class="detail-part-kicker">Phần B · 1/4</div><div class="frame-title">CDC vs snapshot: khi nào dùng gì?</div><div class="frame-sub">Database là nguồn hay thay đổi nhất cho policy nội bộ</div><div class="thin-rule"></div></div>
+  <div class="slide-body">
+    <div class="split-50-50">
+      <div class="pillar-col">
+        <div class="pillar-card"><b>Snapshot / batch query</b><span>full hoặc incremental theo watermark <code style="font-size:0.88em">updated_at</code> — đơn giản, dễ hiểu</span></div>
+        <div class="pillar-card"><b>CDC (log-based)</b><span>độ trễ thấp, ít miss update nếu có slot WAL</span></div>
+        <div class="pillar-card"><b>Trade-off</b><span>CDC phức tạp hơn vận hành; snapshot dễ “đọc quá nhiều”</span></div>
+      </div>
+      <div class="pillar-col">
+        <div class="pillar-card"><b>Monitor snapshot</b><span>watermark stall · duration query · rows/sec</span></div>
+        <div class="pillar-card"><b>Monitor CDC</b><span>replication lag · consumer offset · poison message</span></div>
+        <div class="pillar-card"><b>Agent note</b><span>CDC trễ vài phút vẫn có thể làm policy “cũ” với ticket P1</span></div>
+      </div>
+    </div>
+  </div>
+  <aside class="notes"><div class="note-block"><div class="note-title">Giảng viên</div><p>Không bắt buộc triển khai CDC trong lab; chỉ cần hiểu trade-off.</p></div></aside>
+</div>
+<div class="slide content-slide">
+  <div class="frame-header"><div class="detail-part-kicker">Phần B · 2/4</div><div class="frame-title">API ingestion — pagination, cursor, quota</div><div class="frame-sub">Thiết kế để không bị 429 làm “đứng hình” pipeline</div><div class="thin-rule"></div></div>
+  <div class="slide-body">
+    <div class="prompt-list">
+      <div class="prompt-item"><b>Token bucket / rate limit header</b> — respect <code style="font-size:0.88em">Retry-After</code>, exponential backoff + jitter</div>
+      <div class="prompt-item"><b>Pagination</b> — cursor ổn định hơn offset khi data đang thay đổi</div>
+      <div class="prompt-item"><b>Checkpoint</b> — lưu <code style="font-size:0.88em">last_synced_id</code> idempotent; rerun không double-fetch toàn bộ</div>
+      <div class="prompt-item"><b>Partial page failure</b> — ghi page đã fail vào DLQ để replay có chủ đích</div>
+    </div>
+  </div>
+  <aside class="notes"><div class="note-block"><div class="note-title">Giảng viên</div><p>Liên hệ Hoạt động 2: mỗi API phải có owner + checkpoint.</p></div></aside>
+</div>
+<div class="slide content-slide">
+  <div class="frame-header"><div class="detail-part-kicker">Phần B · 3/4</div><div class="frame-title">Files (PDF/HTML) — parse, hash, version</div><div class="frame-sub">Tránh embed nhầm bản policy cũ chỉ vì tên file giống</div><div class="thin-rule"></div></div>
+  <div class="slide-body">
+    <div class="prompt-list">
+      <div class="prompt-item"><b>Content hash</b> — <code style="font-size:0.88em">sha256</code> của bytes; đổi nhẹ metadata không làm re-embed oan</div>
+      <div class="prompt-item"><b>Logical version</b> — <code style="font-size:0.88em">policy_v4</code> gắn metadata cho vector filter</div>
+      <div class="prompt-item"><b>OCR path</b> — confidence score; thấp → flag human review trước publish</div>
+      <div class="prompt-item"><b>Chunk boundary</b> — heading-aware chunk giảm câu trả lời “cắt nửa điều khoản”</div>
+    </div>
+  </div>
+  <aside class="notes"><div class="note-block"><div class="note-title">Giảng viên</div><p>Nhắc case refund-v4 trong continuity 3 ngày.</p></div></aside>
+</div>
+<div class="slide content-slide">
+  <div class="frame-header"><div class="detail-part-kicker">Phần B · 4/4</div><div class="frame-title">Queue · backpressure · DLQ (một sơ đồ tư duy)</div><div class="frame-sub">Tách ingest nhanh khỏi transform chậm</div><div class="thin-rule"></div></div>
+  <div class="slide-body">
+    <div class="bridge-row">
+      <div class="bridge-card gray">
+        <div class="bridge-head blue">Producer</div>
+        <div class="bridge-title">Webhook / poll</div>
+        <div class="bridge-copy">ghi event vào queue<br>ack nhanh</div>
+      </div>
+      <div class="bridge-arrow">→</div>
+      <div class="bridge-card teal">
+        <div class="bridge-head teal">Buffer</div>
+        <div class="bridge-title">Queue + depth metric</div>
+        <div class="bridge-copy">backpressure khi consumer chậm<br>alert depth &gt; ngưỡng</div>
+      </div>
+      <div class="bridge-arrow">→</div>
+      <div class="bridge-card red">
+        <div class="bridge-head red">Consumer</div>
+        <div class="bridge-title">Transform + validate</div>
+        <div class="bridge-copy">retry có giới hạn<br>poison → DLQ + ticket</div>
+      </div>
+    </div>
+    <div class="sub-caption">DLQ không phải “thất bại”; là điểm quan sát để không làm mất sự kiện.</div>
+  </div>
+  <aside class="notes"><div class="note-block"><div class="note-title">Giảng viên</div><p>Chốt trước Hoạt động 2: mỗi luồng có buffer và owner.</p></div></aside>
+</div>
+
 <!-- 10 -->
 <div class="slide content-slide">
-  <div class="frame-header"><div class="frame-title">Hoạt động 2 — Source map &amp; failure points</div><div class="frame-sub">Thiết kế ingestion plan cho use case DB + API + PDF</div><div class="thin-rule"></div></div>
+  <div class="frame-header"><div class="frame-title">Hoạt động 2 — Mapping Ingestion Risks</div><div class="frame-sub">Thiết kế ingestion plan cho use case CS & IT Helpdesk</div><div class="thin-rule"></div></div>
   <div class="slide-body">
-    <div class="split-34-66">
+    <div class="split-42-58">
       <div class="brief-col">
-        <div class="brief-box"><div class="brief-head">Input</div><div class="brief-text">1 use case có PostgreSQL + external API + PDF docs</div></div>
-        <div class="brief-box"><div class="brief-head">Task</div><div class="brief-text">Vẽ source map · đánh dấu 2 rủi ro chính · chọn 1 cách monitor</div></div>
-        <div class="legend"><span style="background:rgba(200,53,56,0.12)">rate limit</span><span style="background:rgba(245,158,11,0.18)">OCR error</span><span style="background:rgba(46,84,138,0.14)">timeout</span><span>schema drift</span></div>
-      </div>
-      <div class="worksheet map-canvas">
-        <div class="mini-diagram-title">Worksheet: source map + failure points</div>
-        <div class="map-board">
-          <div class="map-node"><b>PostgreSQL</b><span>CDC / snapshot</span></div>
-          <div class="map-node"><b>External API</b><span>poll / pagination</span></div>
-          <div class="map-node"><b>PDF docs</b><span>parse / OCR / metadata</span></div>
+        <div class="brief-box" style="background:var(--light-blue); border-color:var(--vin-blue)">
+          <div class="brief-head" style="background:var(--vin-blue)">Case Study: CS & IT Support</div>
+          <div class="brief-text" style="font-size:16px">
+            • <b>PostgreSQL</b>: Thông tin khách hàng & lịch sử ticket.<br>
+            • <b>Jira API</b>: Trạng thái xử lý lỗi thời gian thực.<br>
+            • <b>PDF Docs</b>: Quy trình (SOP) & Policy bảo mật.
+          </div>
         </div>
-        <div class="map-arrow-row">
-          <div class="map-arrow">3 nguồn → 1 ingestion plan</div>
-          <div class="map-arrow">đánh dấu risk + monitor</div>
+        <div class="brief-box" style="background:var(--green-light); border-color:var(--green)">
+          <div class="brief-head" style="background:var(--green)">Nhiệm vụ (3 Bước)</div>
+          <div class="brief-text" style="font-size:16px">
+            <b>1. Identify</b>: Xác định logic kéo data cho từng nguồn.<br>
+            <b>2. Foresee</b>: Đánh dấu các "điểm đứt" (failures).<br>
+            <b>3. Protect</b>: Đề xuất cách monitor để phát hiện sớm.
+          </div>
         </div>
-        <div class="map-node core" style="margin-bottom:14px"><b>Ingestion plan</b><span>method · checks · owner · rerun path</span></div>
-        <div class="hazard-row">
+        <div class="legend">
           <span class="hazard-tag red">schema drift</span>
+          <span class="hazard-tag amber">OCR error</span>
           <span class="hazard-tag blue">timeout</span>
           <span class="hazard-tag red">rate limit</span>
-          <span class="hazard-tag amber">OCR error</span>
-          <span class="hazard-tag gray">manual review</span>
         </div>
-        <div style="margin-top:14px">
-          <table class="plan-table">
-            <thead><tr><th>Source</th><th>Method</th><th>Check</th><th>Owner</th></tr></thead>
-            <tbody>
-              <tr><td>DB</td><td>CDC</td><td>freshness</td><td class="muted">owner</td></tr>
-              <tr><td>API</td><td>poll</td><td>rate limit</td><td class="muted">owner</td></tr>
-              <tr><td>PDF</td><td>parse/OCR</td><td>schema</td><td class="muted">owner</td></tr>
-              <tr><td>Queue</td><td>buffer</td><td>retry/DLQ</td><td class="muted">owner</td></tr>
-            </tbody>
-          </table>
+      </div>
+      <div class="worksheet map-canvas" style="display:flex; flex-direction:column; gap:16px; min-height:430px">
+        <div class="mini-diagram-title">Pipeline Funnel: Từ Nguồn đến Agent</div>
+        <div style="display:flex; align-items:center; gap:10px; justify-content:space-between; margin:10px 0">
+          <div style="display:flex; flex-direction:column; gap:8px; flex:1">
+            <div class="map-node" style="min-height:55px; padding:10px"><b>DB (SQL)</b></div>
+            <div class="map-node" style="min-height:55px; padding:10px"><b>API (Jira)</b></div>
+            <div class="map-node" style="min-height:55px; padding:10px"><b>PDF (SOP)</b></div>
+          </div>
+          <div style="font-size:32px; color:var(--vin-blue); font-weight:900">→</div>
+          <div class="ingest-core" style="flex:1.2; padding:15px; border-style:dashed; border-width:2px; background:rgba(13,115,119,0.04)">
+            <b style="color:var(--teal); font-size:20px">Pipeline Layer</b>
+            <div style="font-size:13px; color:var(--apple-gray); margin-top:5px; font-weight:700">Clean · Validate · Embed</div>
+          </div>
+          <div style="font-size:32px; color:var(--vin-blue); font-weight:900">→</div>
+          <div class="map-node core" style="flex:0.8; min-height:55px; padding:10px"><b>AI Agent</b></div>
+        </div>
+
+        <table class="plan-table" style="margin-top:auto">
+          <thead><tr><th>Source</th><th>Risk (What breaks?)</th><th>Monitor (How to detect?)</th></tr></thead>
+          <tbody>
+            <tr><td>PostgreSQL</td><td>CDC Lag / Schema drift</td><td class="muted">?</td></tr>
+            <tr><td>Jira API</td><td>429 Rate Limit / Auth</td><td class="muted">?</td></tr>
+            <tr><td>PDF SOPs</td><td>Bad OCR / Formatting</td><td class="muted">?</td></tr>
+          </tbody>
+        </table>
+        <div class="board-note" style="position:static; transform:none; width:100%; margin-top:8px; font-size:14px; padding:10px">
+          <b>Goal</b>: Điền các dấu "?" và đánh dấu rủi ro vào sơ đồ.
         </div>
       </div>
     </div>
   </div>
   <aside class="notes">
-    <div class="note-block"><div class="note-title">Giảng viên</div><p>Hoạt động này giúp học viên chuyển từ nghe khái niệm sang thiết kế sơ đồ có trách nhiệm. Hỏi cụ thể: API bị rate limit thì sao? PDF OCR lỗi thì check ở đâu? DB connection timeout thì monitor gì? Mục tiêu không phải sơ đồ hoàn hảo mà là biết nhìn ingestion như một lớp có failure modes rõ ràng.</p></div>
-    <div class="note-block"><div class="note-title">Tương tác</div><p>Nhóm 10 phút, 4 phút share.</p></div>
-    <div class="note-block"><div class="note-title">[Sources]</div><p>day10_slide_blueprint.yaml · D10-S07</p></div>
+    <div class="note-block"><div class="note-title">Giảng viên</div><p>Sử dụng case CS & IT Helpdesk để học viên dễ hình dung. Phân tích: Jira API hay bị rate limit nhất, PDF hay bị lỗi nội dung (OCR), còn DB thì sợ nhất là schema thay đổi làm pipeline crash. Nhấn mạnh việc thiết kế "Checkpoint" cho mỗi nguồn.</p></div>
+    <div class="note-block"><div class="note-title">Tương tác</div><p>Nhóm 10 phút: Điền các dấu "?" vào bảng và thảo luận về phương án backup cho từng nguồn.</p></div>
+    <div class="note-block"><div class="note-title">[Sources]</div><p>day10_slide_blueprint.yaml · D10-S07 updated with Story Context</p></div>
   </aside>
+</div>
+
+<div class="slide content-slide">
+  <div class="frame-header"><div class="sample-answer-kicker">Đáp án mẫu</div><div class="frame-title">Hoạt động 2 — Source map &amp; bảng ingestion (ví dụ)</div><div class="frame-sub">Use case: CS/IT Helpdesk — PostgreSQL + CRM API + PDF SOP</div><div class="thin-rule"></div></div>
+  <div class="slide-body">
+    <div class="split-34-66">
+      <div class="brief-col">
+        <div class="brief-box"><div class="brief-head">2 rủi ro chính</div><div class="brief-text"><b>1)</b> API CRM rate limit 429 làm mất nhịp sync.<br><b>2)</b> PDF scan OCR confidence thấp → text rác vào RAG.</div></div>
+        <div class="brief-box"><div class="brief-head">1 monitor ưu tiên</div><div class="brief-text"><b>freshness_sla</b> trên bảng <code style="font-size:0.88em">kb_documents</code> (end-to-end tới vector publish).</div></div>
+      </div>
+      <div>
+        <table class="plan-table">
+          <thead><tr><th>Source</th><th>Method</th><th>Check</th><th>Owner</th></tr></thead>
+          <tbody>
+            <tr><td>PostgreSQL tickets</td><td>CDC / watermark <code style="font-size:0.88em">updated_at</code></td><td>freshness + replication lag</td><td>Data Eng</td></tr>
+            <tr><td>CRM API</td><td>poll + cursor checkpoint</td><td>429 rate + checkpoint stall</td><td>AI Eng</td></tr>
+            <tr><td>PDF SOP</td><td>parse + OCR confidence</td><td>% row flag review &gt; 5%</td><td>AI Eng</td></tr>
+            <tr><td>Buffer</td><td>queue (Redis/SQS)</td><td>depth + DLQ count</td><td>SRE</td></tr>
+          </tbody>
+        </table>
+        <div class="template-strip" style="margin-top:12px">Sơ đồ một dòng: <b>3 nguồn → queue → ingest worker → raw → clean → validate → embed → publish</b></div>
+      </div>
+    </div>
+  </div>
+  <aside class="notes"><div class="note-block"><div class="note-title">Giảng viên</div><p>Nhấn owner có thể thay đổi theo tổ chức; bắt buộc có tên vai.</p></div></aside>
 </div>
 
 <!-- 11 -->
@@ -970,6 +1203,18 @@
     <div class="note-block"><div class="note-title">Tương tác</div><p>Làm nhóm 8–10 phút; nộp 5 rules tối thiểu.</p></div>
     <div class="note-block"><div class="note-title">[Sources]</div><p>day10_slide_blueprint.yaml · D10-S09</p></div>
   </aside>
+</div>
+
+<div class="slide content-slide">
+  <div class="frame-header"><div class="sample-answer-kicker">Đáp án mẫu</div><div class="frame-title">Hoạt động 3 — Bộ cleaning rules (≥5 rule)</div><div class="frame-sub">Áp dụng trực tiếp lên bảng dirty trên slide hoạt động</div><div class="thin-rule"></div></div>
+  <div class="slide-body">
+    <div class="rule-columns">
+      <div class="rule-col"><div class="head teal">Clean / normalize</div><div class="body"><b>1.</b> Trim whitespace cột content và notes.<br><b>2.</b> Parse date đa định dạng → <code style="font-size:0.88em">YYYY-MM-DD</code> UTC.<br><b>3.</b> Unicode NFC + thay thế ký tự thay thế cho “”.</div></div>
+      <div class="rule-col"><div class="head red">Reject cứng</div><div class="body"><b>4.</b> Drop row nếu <code style="font-size:0.88em">content</code> rỗng sau trim.<br><b>5.</b> Drop duplicate theo khóa <code style="font-size:0.88em">(doc_id, source, normalized_content_hash)</code> — giữ bản mới nhất theo date parse được.</div></div>
+      <div class="rule-col"><div class="head amber">Flag / quarantine</div><div class="body"><b>6.</b> Nếu date NULL nhưng content có → flag <code style="font-size:0.88em">review_missing_date</code>, không embed cho đến khi SME điền.<br><b>7.</b> Log mọi drop/flag vào <code style="font-size:0.88em">quarantine.csv</code> kèm <code style="font-size:0.88em">run_id</code>.</div></div>
+    </div>
+  </div>
+  <aside class="notes"><div class="note-block"><div class="note-title">Giảng viên</div><p>7 rule để dư cho nhóm chỉ nộp 5; nhấn quarantine vs silent drop.</p></div></aside>
 </div>
 
 <!-- 13 -->
@@ -1050,6 +1295,65 @@ if expectations_fail:
   </aside>
 </div>
 
+<!-- Phần C — Transform, quality & observability (chi tiết) -->
+<div class="slide content-slide">
+  <div class="frame-header"><div class="detail-part-kicker">Phần C · 1/4</div><div class="frame-title">Schema evolution: additive vs breaking</div><div class="frame-sub">Giữ agent không “gãy” khi nguồn đổi cột</div><div class="thin-rule"></div></div>
+  <div class="slide-body">
+    <div class="split-50-50">
+      <div class="pillar-col">
+        <div class="pillar-card"><b>Additive (ưu tiên)</b><span>thêm cột optional · default null · version field</span></div>
+        <div class="pillar-card"><b>Contract ở biên</b><span>parser ra canonical schema trước khi embed</span></div>
+        <div class="pillar-card"><b>Breaking change</b><span>đổi kiểu / đổi ý nghĩa cột → cần migration + backfill có run_id</span></div>
+      </div>
+      <div class="pillar-col">
+        <div class="pillar-card"><b>Quan sát</b><span>alert khi % null tăng đột biến sau deploy parser</span></div>
+        <div class="pillar-card"><b>Rollback</b><span>giữ 2 version schema song song trong staging</span></div>
+        <div class="pillar-card"><b>Agent impact</b><span>chunk boundary đổi → retrieval lệch dù “data vẫn có”</span></div>
+      </div>
+    </div>
+  </div>
+  <aside class="notes"><div class="note-block"><div class="note-title">Giảng viên</div><p>Nối transform với versioning corpus RAG.</p></div></aside>
+</div>
+<div class="slide content-slide">
+  <div class="frame-header"><div class="detail-part-kicker">Phần C · 2/4</div><div class="frame-title">Mức độ nghiêm trọng expectation: warn · quarantine · halt</div><div class="frame-sub">Không phải mọi lỗi đều dừng pipeline</div><div class="thin-rule"></div></div>
+  <div class="slide-body">
+    <div class="prompt-list">
+      <div class="prompt-item"><b>Halt</b> — duplicate primary key, encoding không recover, schema contract fail cứng</div>
+      <div class="prompt-item"><b>Quarantine</b> — row đúng key nhưng content nghi ngờ → bảng <code style="font-size:0.88em">quarantine</code> + review</div>
+      <div class="prompt-item"><b>Warn + tiếp tục</b> — missing optional field, typos trong metadata ít rủi ro</div>
+      <div class="prompt-item"><b>Policy</b> — ghi rõ trong data_contract.md để agent không đọc nhầm nguồn “review”</div>
+    </div>
+  </div>
+  <aside class="notes"><div class="note-block"><div class="note-title">Giảng viên</div><p>Tránh học viên chỉ có binary pass/fail.</p></div></aside>
+</div>
+<div class="slide content-slide">
+  <div class="frame-header"><div class="detail-part-kicker">Phần C · 3/4</div><div class="frame-title">Distribution &amp; anomaly — ngoài “đủ record”</div><div class="frame-sub">Phát hiện ingest “chạy nhưng sai”</div><div class="thin-rule"></div></div>
+  <div class="slide-body">
+    <div class="quality-grid">
+      <div class="quality-card"><b>Null rate</b><span>effective_date null % tăng sau đổi API</span></div>
+      <div class="quality-card"><b>Length</b><span>content quá ngắn / quá dài bất thường</span></div>
+      <div class="quality-card"><b>Cardinality</b><span>số doc_id unique giảm mạnh → dedupe lỗi</span></div>
+      <div class="quality-card"><b>Entropy / language</b><span>mix ngôn ngữ hoặc OCR noise spike</span></div>
+      <div class="quality-card"><b>Cross-field</b><span>end &lt; start · version &lt; predecessor</span></div>
+      <div class="quality-card"><b>Time travel</b><span>future_effective_date &gt; clock skew ngưỡng</span></div>
+    </div>
+  </div>
+  <aside class="notes"><div class="note-block"><div class="note-title">Giảng viên</div><p>Volume ổn nhưng distribution lệch vẫn là incident.</p></div></aside>
+</div>
+<div class="slide content-slide">
+  <div class="frame-header"><div class="detail-part-kicker">Phần C · 4/4</div><div class="frame-title">SLI gợi ý cho tầng RAG / agent</div><div class="frame-sub">Liên kết observability data với trải nghiệm user</div><div class="thin-rule"></div></div>
+  <div class="slide-body">
+    <div class="prompt-list">
+      <div class="prompt-item"><b>Citation freshness</b> — tuổi của chunk được trích dẫn trung bình / p95</div>
+      <div class="prompt-item"><b>Grounding rate</b> — % câu trả lời có trích nguồn hợp lệ (nếu thiết kế yêu cầu)</div>
+      <div class="prompt-item"><b>Retrieval hit@k</b> — trên tập câu hỏi regression (golden set nhỏ)</div>
+      <div class="prompt-item"><b>Latency pipeline</b> — ingest→publish p95; tách biệt latency LLM</div>
+    </div>
+    <div class="sub-caption">Khi SLI xấu, quay lại 5 pillars trước khi tin vào “model bị lỗi”.</div>
+  </div>
+  <aside class="notes"><div class="note-block"><div class="note-title">Giảng viên</div><p>Cầu nối sang slide dark-statement tiếp theo.</p></div></aside>
+</div>
+
 <!-- 15 -->
 <div class="slide dark-statement">
   <div class="statement-text">Khi agent trả lời cũ, đừng debug model trước.</div>
@@ -1093,6 +1397,24 @@ if expectations_fail:
   </aside>
 </div>
 
+<div class="slide content-slide">
+  <div class="frame-header"><div class="sample-answer-kicker">Đáp án mẫu</div><div class="frame-title">Hoạt động 4 — Ví dụ triage flow + metric từng bước</div><div class="frame-sub">Học viên có thể đối chiếu hoặc chỉnh theo hệ thực tế</div><div class="thin-rule"></div></div>
+  <div class="slide-body">
+    <div class="flow-stack">
+      <div class="flow-card"><b>1 · Detect</b><span><b>Metric:</b> <code style="font-size:0.88em">freshness_hours</code> trên bảng <code style="font-size:0.88em">kb_documents</code> = 17h (ngưỡng 4h) → <b>giả thuyết:</b> sync trễ hoặc fail</span></div>
+      <div class="flow-arrow">↓</div>
+      <div class="flow-card"><b>2 · Isolate</b><span><b>Metric:</b> <code style="font-size:0.88em">rows_ingested</code> giảm −28% so với 7 ngày trước; <code style="font-size:0.88em">embed_task</code> success nhưng input nhỏ bất thường</span></div>
+      <div class="flow-arrow">↓</div>
+      <div class="flow-card"><b>3 · Validate</b><span><b>Check:</b> schema contract PDF parser — không drift; <b>log:</b> <code style="font-size:0.88em">ingest_02:00</code> retry exhausted</span></div>
+      <div class="flow-arrow">↓</div>
+      <div class="flow-card"><b>4 · Lineage</b><span>refund-v4.pdf → ingest job → clean → chunk → vector <code style="font-size:0.88em">policy_v4</code> — điểm đứt: ingest (không phải model)</span></div>
+      <div class="flow-arrow">↓</div>
+      <div class="flow-card final"><b>5 · Fix + verify</b><span>rerun idempotent ingest + publish; verify: freshness &lt; 4h + agent trả lời “7 ngày” khớp policy mới</span></div>
+    </div>
+  </div>
+  <aside class="notes"><div class="note-block"><div class="note-title">Giảng viên</div><p>Nhấn mạnh đáp án mẫu gắn metric cụ thể, không chỉ thứ tự chữ.</p></div></aside>
+</div>
+
 <!-- 17 -->
 <div class="slide content-slide">
   <div class="frame-header"><div class="frame-title">Orchestration, scheduling, retry và idempotency</div><div class="frame-sub">Batch pipeline tốt không chỉ chạy theo cron; nó còn phải re-run an toàn</div><div class="thin-rule"></div></div>
@@ -1130,6 +1452,65 @@ if expectations_fail:
     <div class="note-block"><div class="note-title">Tương tác</div><p>“Trong pipeline của bạn, step nào nếu rerun 2 lần sẽ dễ gây duplicate nhất?”</p></div>
     <div class="note-block"><div class="note-title">[Sources]</div><p>day10_slide_blueprint.yaml · D10-S13</p></div>
   </aside>
+</div>
+
+<!-- Phần D — Incident & orchestration (chi tiết) -->
+<div class="slide content-slide">
+  <div class="frame-header"><div class="detail-part-kicker">Phần D · 1/4</div><div class="frame-title">Triage có timebox — tránh “mở hết dashboard”</div><div class="frame-sub">Áp dụng khi user đang chờ (P1 / policy)</div><div class="thin-rule"></div></div>
+  <div class="slide-body">
+    <div class="split-50-50">
+      <div class="pillar-col">
+        <div class="pillar-card"><b>0–5 phút</b><span>Freshness + last_success_run — có trễ SLA không?</span></div>
+        <div class="pillar-card"><b>5–12 phút</b><span>Volume + error rate step — step nào “im lặng” hoặc spike?</span></div>
+        <div class="pillar-card"><b>12–20 phút</b><span>Schema/contract + lineage tới bảng/file nguồn</span></div>
+      </div>
+      <div class="pillar-col">
+        <div class="pillar-card"><b>Nếu chưa ra root cause</b><span>chuyển sang “giảm thiểu”: rollback publish hoặc banner “data đang cập nhật”</span></div>
+        <div class="pillar-card"><b>Ghi incident note</b><span>metric đã xem + kết luận từng bước (dù fail)</span></div>
+        <div class="pillar-card"><b>Sau khi fix</b><span>verify bằng cùng run_id trên cleaned + embed + 1 query agent</span></div>
+      </div>
+    </div>
+  </div>
+  <aside class="notes"><div class="note-block"><div class="note-title">Giảng viên</div><p>Timebox giúp học viên thấy on-call không phải đoán mò vô hạn.</p></div></aside>
+</div>
+<div class="slide content-slide">
+  <div class="frame-header"><div class="detail-part-kicker">Phần D · 2/4</div><div class="frame-title">Idempotency — pattern thực dụng</div><div class="frame-sub">Rerun an toàn cho embed và warehouse</div><div class="thin-rule"></div></div>
+  <div class="slide-body">
+    <div class="prompt-list">
+      <div class="prompt-item"><b>Natural key</b> — upsert theo (doc_id, version) thay vì random UUID mỗi lần</div>
+      <div class="prompt-item"><b>Partition theo ngày</b> — ghi đè partition cùng run_id thay vì append mù</div>
+      <div class="prompt-item"><b>Delete-then-insert</b> trong transaction cho phạm vi doc_id (cẩn thận lock)</div>
+      <div class="prompt-item"><b>Vector store</b> — policy “replace collection staging → alias swap” giảm partial read</div>
+    </div>
+  </div>
+  <aside class="notes"><div class="note-block"><div class="note-title">Giảng viên</div><p>Cho ví dụ duplicate embedding khi rerun không có key ổn định.</p></div></aside>
+</div>
+<div class="slide content-slide">
+  <div class="frame-header"><div class="detail-part-kicker">Phần D · 3/4</div><div class="frame-title">Orchestrator = dependency graph + visibility</div><div class="frame-sub">Airflow / Prefect / Dagster — cùng một câu hỏi thiết kế</div><div class="thin-rule"></div></div>
+  <div class="slide-body">
+    <div class="quality-grid">
+      <div class="quality-card"><b>Trigger</b><span>cron vs event vs upstream success</span></div>
+      <div class="quality-card"><b>Retry policy</b><span>max_attempt, backoff, retry_only_failed_task</span></div>
+      <div class="quality-card"><b>SLA / alert</b><span>task duration, queue depth, missed schedule</span></div>
+      <div class="quality-card"><b>Data awareness</b><span>sensor đợi file/partition có mặt</span></div>
+      <div class="quality-card"><b>Observability</b><span>task log + lineage tag run_id</span></div>
+      <div class="quality-card"><b>Backfill</b><span>chạy lại range ngày không phá production alias</span></div>
+    </div>
+  </div>
+  <aside class="notes"><div class="note-block"><div class="note-title">Giảng viên</div><p>Tránh cuộc tranh luận công cụ; tập trung dependency và alert.</p></div></aside>
+</div>
+<div class="slide content-slide">
+  <div class="frame-header"><div class="detail-part-kicker">Phần D · 4/4</div><div class="frame-title">Sau incident: cập nhật runbook (template)</div><div class="frame-sub">Biến sự cố thành tài sản cho lần sau</div><div class="thin-rule"></div></div>
+  <div class="slide-body">
+    <div class="runbook-col">
+      <div class="runbook-card"><b>Symptom</b><span>user thấy gì · agent trả lời sai kiểu gì</span></div>
+      <div class="runbook-card"><b>Detection</b><span>metric/dashboard nào đã báo (hoặc chưa → gap)</span></div>
+      <div class="runbook-card"><b>Diagnosis</b><span>root cause · step pipeline · bảng/file</span></div>
+      <div class="runbook-card"><b>Mitigation</b><span>rollback / rerun / feature flag</span></div>
+      <div class="runbook-card"><b>Prevention</b><span>expectation mới · alert mới · owner</span></div>
+    </div>
+  </div>
+  <aside class="notes"><div class="note-block"><div class="note-title">Giảng viên</div><p>Liên hệ Day 11 safety: runbook là guardrail vận hành.</p></div></aside>
 </div>
 
 <!-- 18 -->
@@ -1252,6 +1633,66 @@ run_id=2026-02-10T14:35</pre></div>
     <div class="note-block"><div class="note-title">Giảng viên</div><p>Slide hướng dẫn chi tiết 2 cho Sprint 3–4. Nhấn mạnh rằng nhóm phải cố tình làm hỏng dữ liệu rồi đo ảnh hưởng lên agent; đồng thời nộp evidence như quality report, monitor screenshot và báo cáo cá nhân.</p></div>
     <div class="note-block"><div class="note-title">[Sources]</div><p>Derived from day10_slide_blueprint.yaml · practice_4h sprints 3–4 + report_template</p></div>
   </aside>
+</div>
+
+<!-- Phần E — Lab & đóng gói (chi tiết) -->
+<div class="slide content-slide">
+  <div class="frame-header"><div class="detail-part-kicker">Phần E · 1/4</div><div class="frame-title">Definition of Done cho pipeline ngày hôm nay</div><div class="frame-sub">Dùng làm checklist trước khi nộp bài</div><div class="thin-rule"></div></div>
+  <div class="slide-body">
+    <div class="prompt-list">
+      <div class="prompt-item">Có <b>run_id</b> hoặc timestamp gắn mọi artifact (log, cleaned, embed)</div>
+      <div class="prompt-item">Có log <b>số record</b> raw → cleaned → embedded (drop/flag có giải thích)</div>
+      <div class="prompt-item">Expectation suite chạy được; fail thì pipeline <b>dừng có kiểm soát</b></div>
+      <div class="prompt-item">Có ít nhất 1 bằng chứng <b>before/after</b> ảnh hưởng tới câu trả lời agent</div>
+    </div>
+    <div class="sub-caption">“Chạy được trên máy giảng viên” = script + README + lệnh chạy một dòng.</div>
+  </div>
+  <aside class="notes"><div class="note-block"><div class="note-title">Giảng viên</div><p>Chốt DoD để nhóm không tranh cãi về “xong”. Nhấn run_id để chấm bài và debug.</p></div></aside>
+</div>
+<div class="slide content-slide">
+  <div class="frame-header"><div class="detail-part-kicker">Phần E · 2/4</div><div class="frame-title">Peer review nhanh giữa các nhóm</div><div class="frame-sub">10 phút đổi bàn — giảm lỗi cấu hình trước khi chấm</div><div class="thin-rule"></div></div>
+  <div class="slide-body">
+    <div class="split-50-50">
+      <div class="pillar-col">
+        <div class="pillar-card"><b>Người review hỏi</b><span>“Rerun 2 lần có duplicate vector không?”</span></div>
+        <div class="pillar-card"><b>Người review hỏi</b><span>“Freshness đo ở bước nào — ingest hay publish?”</span></div>
+        <div class="pillar-card"><b>Người review hỏi</b><span>“Record bị flag đi đâu — quarantine hay vẫn embed?”</span></div>
+      </div>
+      <div class="pillar-col">
+        <div class="pillar-card"><b>Nhóm trả lời tối thiểu</b><span>chỉ vào file + dòng log minh chứng</span></div>
+        <div class="pillar-card"><b>Nếu không rõ</b><span>ghi vào runbook.md là “gap” cần bổ sung</span></div>
+        <div class="pillar-card"><b>Kết quả</b><span>mỗi nhóm có 3 bullet feedback đã xử lý hoặc đã ghi nhận</span></div>
+      </div>
+    </div>
+  </div>
+  <aside class="notes"><div class="note-block"><div class="note-title">Giảng viên</div><p>Khuyến khích đổi repo/script zip 10 phút; tập trung idempotency và freshness.</p></div></aside>
+</div>
+<div class="slide content-slide">
+  <div class="frame-header"><div class="detail-part-kicker">Phần E · 3/4</div><div class="frame-title">Git &amp; artifact hygiene cho data pipeline</div><div class="frame-sub">Nhỏ nhưng tránh nộp bài “chỉ chạy trên máy tôi”</div><div class="thin-rule"></div></div>
+  <div class="slide-body">
+    <div class="prompt-list">
+      <div class="prompt-item"><b>.env.example</b> — liệt kê biến; không commit secret</div>
+      <div class="prompt-item"><b>Pin version</b> thư viện (requirements.txt / pyproject) có version cụ thể</div>
+      <div class="prompt-item"><b>Sample data</b> trong <code style="font-size:0.9em">data/sample/</code> đủ nhỏ để chấm nhanh</div>
+      <div class="prompt-item"><b>docs/</b> — pipeline_architecture + data_contract + runbook cùng commit cuối</div>
+    </div>
+  </div>
+  <aside class="notes"><div class="note-block"><div class="note-title">Giảng viên</div><p>Nhắc học viên chấm điểm documentation 25% — README rõ ràng là điểm cộng.</p></div></aside>
+</div>
+<div class="slide content-slide">
+  <div class="frame-header"><div class="detail-part-kicker">Phần E · 4/4</div><div class="frame-title">Kịch bản demo 3 phút trước lớp</div><div class="frame-sub">Cấu trúc cố định: bệnh → đo → sửa → chứng minh</div><div class="thin-rule"></div></div>
+  <div class="slide-body">
+    <div class="flow-stack">
+      <div class="flow-card"><b>0:00–0:45</b><span>Giả thích use case + nguồn (DB/API/file)</span></div>
+      <div class="flow-arrow">↓</div>
+      <div class="flow-card"><b>0:45–1:30</b><span>Inject corruption → chỉ freshness/volume trên dashboard hoặc log</span></div>
+      <div class="flow-arrow">↓</div>
+      <div class="flow-card"><b>1:30–2:30</b><span>Rerun pipeline idempotent → expectation pass</span></div>
+      <div class="flow-arrow">↓</div>
+      <div class="flow-card final"><b>2:30–3:00</b><span>So sánh câu agent trước/sau + run_id khớp evidence</span></div>
+    </div>
+  </div>
+  <aside class="notes"><div class="note-block"><div class="note-title">Giảng viên</div><p>Giao cho mỗi nhóm chuẩn bị demo ngắn; giúp củng cố narrative Day 10.</p></div></aside>
 </div>
 
 <!-- 21 -->
