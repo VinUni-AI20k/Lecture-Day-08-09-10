@@ -1,0 +1,43 @@
+{
+  "task": "ERR-403-AUTH là lỗi gì và cách xử lý?",
+  "route_reason": "task contains unknown error code | risk_high flagged | human approved → retrieval",
+  "risk_high": true,
+  "needs_tool": false,
+  "hitl_triggered": true,
+  "retrieved_chunks": [
+    {
+      "text": "SLA P1: phản hồi 15 phút, xử lý 4 giờ.",
+      "source": "sla_p1_2026.txt",
+      "score": 0.92
+    }
+  ],
+  "retrieved_sources": [
+    "sla_p1_2026.txt"
+  ],
+  "policy_result": {},
+  "mcp_tools_used": [],
+  "final_answer": "[PLACEHOLDER] Câu trả lời được tổng hợp từ 1 chunks.",
+  "sources": [
+    "sla_p1_2026.txt"
+  ],
+  "confidence": 0.75,
+  "history": [
+    "[supervisor] received task: ERR-403-AUTH là lỗi gì và cách xử lý?",
+    "[supervisor] route=human_review reason=task contains unknown error code | risk_high flagged",
+    "[human_review] HITL triggered — awaiting human input",
+    "[retrieval_worker] called",
+    "[retrieval_worker] retrieved 1 chunks",
+    "[synthesis_worker] called",
+    "[synthesis_worker] answer generated, confidence=0.75",
+    "[graph] completed in 0ms"
+  ],
+  "workers_called": [
+    "human_review",
+    "retrieval_worker",
+    "synthesis_worker"
+  ],
+  "supervisor_route": "retrieval_worker",
+  "latency_ms": 0,
+  "run_id": "run_20260414_165558_692980",
+  "question_id": "q09"
+}

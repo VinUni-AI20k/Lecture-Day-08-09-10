@@ -3,7 +3,7 @@
 
 version: "1.0"
 dataset: "kb_chunk_export"
-owner_team: "__TODO__"
+owner_team: "Team 61 - Data Pipeline"
 
 schema_cleaned:
   chunk_id:
@@ -36,7 +36,7 @@ quality_rules:
 freshness:
   measured_at: "publish"  # ingest | cleaned | publish
   sla_hours: 24
-  alert_channel: "__TODO__"
+  alert_channel: "slack:#team61-data-alert"
 
 canonical_sources:
   - path: "data/docs/policy_refund_v4.txt"

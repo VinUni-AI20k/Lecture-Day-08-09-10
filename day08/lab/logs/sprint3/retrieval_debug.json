@@ -1,0 +1,416 @@
+{
+  "timestamp": "2026-04-13T17:20:15",
+  "top_k_search": 10,
+  "queries": [
+    {
+      "query": "Approval Matrix để cấp quyền hệ thống là tài liệu nào?",
+      "dense": [
+        {
+          "source": "it/access-control-sop.md",
+          "section": "Section 1: Phạm vi và mục đích",
+          "effective_date": "2026-01-01",
+          "score": 0.5585038065910339,
+          "text_preview": "Tài liệu này quy định quy trình cấp phép truy cập vào các hệ thống nội bộ của công ty.\nÁp dụng cho tất cả nhân viên, contractor, và third-party vendor."
+        },
+        {
+          "source": "it/access-control-sop.md",
+          "section": "Section 3: Quy trình yêu cầu cấp quyền",
+          "effective_date": "2026-01-01",
+          "score": 0.5102283954620361,
+          "text_preview": "Bước 1: Nhân viên tạo Access Request ticket trên Jira (project IT-ACCESS).\nBước 2: Line Manager phê duyệt yêu cầu trong 1 ngày làm việc.\nBước 3: IT Admin kiểm tra compliance và cấp quyền.\nBước 4: IT S"
+        },
+        {
+          "source": "it/access-control-sop.md",
+          "section": "Section 2: Phân cấp quyền truy cập",
+          "effective_date": "2026-01-01",
+          "score": 0.45216017961502075,
+          "text_preview": "Level 1 — Read Only:\nÁp dụng cho: Tất cả nhân viên mới trong 30 ngày đầu.\nPhê duyệt: Line Manager.\nThời gian xử lý: 1 ngày làm việc.\n\nLevel 2 — Standard Access:\nÁp dụng cho: Nhân viên chính thức đã qu"
+        },
+        {
+          "source": "it/access-control-sop.md",
+          "section": "Section 4: Escalation khi cần thay đổi quyền hệ thống",
+          "effective_date": "2026-01-01",
+          "score": 0.44974517822265625,
+          "text_preview": "Escalation chỉ áp dụng khi cần thay đổi quyền hệ thống ngoài quy trình thông thường.\nVí dụ: Khẩn cấp trong sự cố P1, cần cấp quyền tạm thời để fix incident.\n\nQuy trình escalation khẩn cấp:\n1. On-call "
+        },
+        {
+          "source": "support/helpdesk-faq.md",
+          "section": "Section 3: Phần mềm và license",
+          "effective_date": "2026-01-20",
+          "score": 0.43523263931274414,
+          "text_preview": "Q: Tôi cần cài phần mềm mới, phải làm gì?\nA: Gửi yêu cầu qua Jira project IT-SOFTWARE. Line Manager phải phê duyệt trước khi IT cài đặt.\n\nQ: Ai chịu trách nhiệm gia hạn license phần mềm?\nA: IT Procure"
+        },
+        {
+          "source": "support/helpdesk-faq.md",
+          "section": "Section 4: Thiết bị và phần cứng",
+          "effective_date": "2026-01-20",
+          "score": 0.41782230138778687,
+          "text_preview": "Q: Laptop mới được cấp sau bao lâu khi vào công ty?\nA: Laptop được cấp trong ngày onboarding đầu tiên. Nếu có vấn đề, liên hệ HR hoặc IT Admin.\n\nQ: Laptop bị hỏng phải báo cáo như thế nào?\nA: Tạo tick"
+        },
+        {
+          "source": "support/sla-p1-2026.pdf",
+          "section": "Phần 1: Định nghĩa mức độ ưu tiên",
+          "effective_date": "2026-01-15",
+          "score": 0.41425395011901855,
+          "text_preview": "P1 — CRITICAL (Khẩn cấp):\nĐịnh nghĩa: Sự cố ảnh hưởng toàn bộ hệ thống production, không có workaround.\nVí dụ: Database sập, API gateway down, toàn bộ người dùng không thể đăng nhập.\n\nP2 — HIGH (Nghiê"
+        },
+        {
+          "source": "support/helpdesk-faq.md",
+          "section": "Section 1: Tài khoản và mật khẩu",
+          "effective_date": "2026-01-20",
+          "score": 0.402557909488678,
+          "text_preview": "Q: Tôi quên mật khẩu, phải làm gì?\nA: Truy cập https://sso.company.internal/reset hoặc liên hệ Helpdesk qua ext. 9000. Mật khẩu mới sẽ được gửi qua email công ty trong vòng 5 phút.\n\nQ: Tài khoản bị kh"
+        },
+        {
+          "source": "it/access-control-sop.md",
+          "section": "Section 6: Audit và review định kỳ",
+          "effective_date": "2026-01-01",
+          "score": 0.39703404903411865,
+          "text_preview": "IT Security thực hiện access review mỗi 6 tháng.\nMọi bất thường phải được báo cáo lên CISO trong vòng 24 giờ."
+        },
+        {
+          "source": "hr/leave-policy-2026.pdf",
+          "section": "Phần 4: Remote work policy",
+          "effective_date": "2026-01-01",
+          "score": 0.3886774778366089,
+          "text_preview": "4.1 Điều kiện remote:\n- Nhân viên sau probation period có thể làm remote tối đa 2 ngày/tuần.\n- Team Lead phải phê duyệt lịch remote qua HR Portal.\n- Ngày onsite bắt buộc: Thứ 3 và Thứ 5 theo lịch team"
+        }
+      ],
+      "sparse": [
+        {
+          "source": "it/access-control-sop.md",
+          "section": "Section 1: Phạm vi và mục đích",
+          "effective_date": "2026-01-01",
+          "score": 10.293280068360023,
+          "text_preview": "Tài liệu này quy định quy trình cấp phép truy cập vào các hệ thống nội bộ của công ty.\nÁp dụng cho tất cả nhân viên, contractor, và third-party vendor."
+        },
+        {
+          "source": "it/access-control-sop.md",
+          "section": "Section 4: Escalation khi cần thay đổi quyền hệ thống",
+          "effective_date": "2026-01-01",
+          "score": 9.120687997927131,
+          "text_preview": "Escalation chỉ áp dụng khi cần thay đổi quyền hệ thống ngoài quy trình thông thường.\nVí dụ: Khẩn cấp trong sự cố P1, cần cấp quyền tạm thời để fix incident.\n\nQuy trình escalation khẩn cấp:\n1. On-call "
+        },
+        {
+          "source": "support/helpdesk-faq.md",
+          "section": "Section 4: Thiết bị và phần cứng",
+          "effective_date": "2026-01-20",
+          "score": 7.748083493246537,
+          "text_preview": "Q: Laptop mới được cấp sau bao lâu khi vào công ty?\nA: Laptop được cấp trong ngày onboarding đầu tiên. Nếu có vấn đề, liên hệ HR hoặc IT Admin.\n\nQ: Laptop bị hỏng phải báo cáo như thế nào?\nA: Tạo tick"
+        },
+        {
+          "source": "support/helpdesk-faq.md",
+          "section": "Section 1: Tài khoản và mật khẩu",
+          "effective_date": "2026-01-20",
+          "score": 5.021603322384463,
+          "text_preview": "Q: Tôi quên mật khẩu, phải làm gì?\nA: Truy cập https://sso.company.internal/reset hoặc liên hệ Helpdesk qua ext. 9000. Mật khẩu mới sẽ được gửi qua email công ty trong vòng 5 phút.\n\nQ: Tài khoản bị kh"
+        },
+        {
+          "source": "it/access-control-sop.md",
+          "section": "Section 3: Quy trình yêu cầu cấp quyền",
+          "effective_date": "2026-01-01",
+          "score": 3.5576019380609973,
+          "text_preview": "Bước 1: Nhân viên tạo Access Request ticket trên Jira (project IT-ACCESS).\nBước 2: Line Manager phê duyệt yêu cầu trong 1 ngày làm việc.\nBước 3: IT Admin kiểm tra compliance và cấp quyền.\nBước 4: IT S"
+        },
+        {
+          "source": "policy/refund-v4.pdf",
+          "section": "Điều 4: Quy trình xử lý yêu cầu hoàn tiền",
+          "effective_date": "2026-02-01",
+          "score": 3.0497390881955995,
+          "text_preview": "Bước 1: Khách hàng gửi yêu cầu qua hệ thống ticket nội bộ với category \"Refund Request\".\nBước 2: CS Agent xem xét trong vòng 1 ngày làm việc và xác nhận điều kiện đủ điều kiện.\nBước 3: Nếu đủ điều kiệ"
+        },
+        {
+          "source": "support/helpdesk-faq.md",
+          "section": "Section 5: Email và lịch",
+          "effective_date": "2026-01-20",
+          "score": 3.0194671524747587,
+          "text_preview": "Q: Hộp thư đến đầy, phải làm gì?\nA: Xóa email cũ hoặc yêu cầu tăng dung lượng qua ticket IT-ACCESS. Dung lượng tiêu chuẩn là 50GB.\n\nQ: Tôi không nhận được email từ bên ngoài?\nA: Kiểm tra thư mục Spam "
+        },
+        {
+          "source": "it/access-control-sop.md",
+          "section": "Section 5: Thu hồi quyền truy cập",
+          "effective_date": "2026-01-01",
+          "score": 2.0517030313551436,
+          "text_preview": "Quyền phải được thu hồi trong các trường hợp:\n- Nhân viên nghỉ việc: Thu hồi ngay trong ngày cuối.\n- Hết hạn contract: Thu hồi đúng ngày hết hạn.\n- Chuyển bộ phận: Điều chỉnh trong 3 ngày làm việc."
+        },
+        {
+          "source": "policy/refund-v4.pdf",
+          "section": "Điều 1: Phạm vi áp dụng",
+          "effective_date": "2026-02-01",
+          "score": 1.814372988284107,
+          "text_preview": "Chính sách này áp dụng cho tất cả các đơn hàng được đặt trên hệ thống nội bộ kể từ ngày 01/02/2026.\nCác đơn hàng đặt trước ngày có hiệu lực sẽ áp dụng theo chính sách hoàn tiền phiên bản 3."
+        },
+        {
+          "source": "policy/refund-v4.pdf",
+          "section": "Điều 2: Điều kiện được hoàn tiền",
+          "effective_date": "2026-02-01",
+          "score": 1.7528946550459574,
+          "text_preview": "Khách hàng được quyền yêu cầu hoàn tiền khi đáp ứng đủ các điều kiện sau:\n- Sản phẩm bị lỗi do nhà sản xuất, không phải do người dùng.\n- Yêu cầu được gửi trong vòng 7 ngày làm việc kể từ thời điểm xác"
+        }
+      ],
+      "hybrid": [
+        {
+          "source": "it/access-control-sop.md",
+          "section": "Section 1: Phạm vi và mục đích",
+          "effective_date": "2026-01-01",
+          "score": 0.01639344262295082,
+          "text_preview": "Tài liệu này quy định quy trình cấp phép truy cập vào các hệ thống nội bộ của công ty.\nÁp dụng cho tất cả nhân viên, contractor, và third-party vendor."
+        },
+        {
+          "source": "it/access-control-sop.md",
+          "section": "Section 3: Quy trình yêu cầu cấp quyền",
+          "effective_date": "2026-01-01",
+          "score": 0.015831265508684862,
+          "text_preview": "Bước 1: Nhân viên tạo Access Request ticket trên Jira (project IT-ACCESS).\nBước 2: Line Manager phê duyệt yêu cầu trong 1 ngày làm việc.\nBước 3: IT Admin kiểm tra compliance và cấp quyền.\nBước 4: IT S"
+        },
+        {
+          "source": "it/access-control-sop.md",
+          "section": "Section 4: Escalation khi cần thay đổi quyền hệ thống",
+          "effective_date": "2026-01-01",
+          "score": 0.015826612903225807,
+          "text_preview": "Escalation chỉ áp dụng khi cần thay đổi quyền hệ thống ngoài quy trình thông thường.\nVí dụ: Khẩn cấp trong sự cố P1, cần cấp quyền tạm thời để fix incident.\n\nQuy trình escalation khẩn cấp:\n1. On-call "
+        },
+        {
+          "source": "support/helpdesk-faq.md",
+          "section": "Section 4: Thiết bị và phần cứng",
+          "effective_date": "2026-01-20",
+          "score": 0.01544011544011544,
+          "text_preview": "Q: Laptop mới được cấp sau bao lâu khi vào công ty?\nA: Laptop được cấp trong ngày onboarding đầu tiên. Nếu có vấn đề, liên hệ HR hoặc IT Admin.\n\nQ: Laptop bị hỏng phải báo cáo như thế nào?\nA: Tạo tick"
+        },
+        {
+          "source": "support/helpdesk-faq.md",
+          "section": "Section 1: Tài khoản và mật khẩu",
+          "effective_date": "2026-01-20",
+          "score": 0.015073529411764706,
+          "text_preview": "Q: Tôi quên mật khẩu, phải làm gì?\nA: Truy cập https://sso.company.internal/reset hoặc liên hệ Helpdesk qua ext. 9000. Mật khẩu mới sẽ được gửi qua email công ty trong vòng 5 phút.\n\nQ: Tài khoản bị kh"
+        },
+        {
+          "source": "support/sla-p1-2026.pdf",
+          "section": "Phần 1: Định nghĩa mức độ ưu tiên",
+          "effective_date": "2026-01-15",
+          "score": 0.01436062928600242,
+          "text_preview": "P1 — CRITICAL (Khẩn cấp):\nĐịnh nghĩa: Sự cố ảnh hưởng toàn bộ hệ thống production, không có workaround.\nVí dụ: Database sập, API gateway down, toàn bộ người dùng không thể đăng nhập.\n\nP2 — HIGH (Nghiê"
+        },
+        {
+          "source": "hr/leave-policy-2026.pdf",
+          "section": "Phần 4: Remote work policy",
+          "effective_date": "2026-01-01",
+          "score": 0.01405088062622309,
+          "text_preview": "4.1 Điều kiện remote:\n- Nhân viên sau probation period có thể làm remote tối đa 2 ngày/tuần.\n- Team Lead phải phê duyệt lịch remote qua HR Portal.\n- Ngày onsite bắt buộc: Thứ 3 và Thứ 5 theo lịch team"
+        },
+        {
+          "source": "it/access-control-sop.md",
+          "section": "Section 5: Thu hồi quyền truy cập",
+          "effective_date": "2026-01-01",
+          "score": 0.01388235294117647,
+          "text_preview": "Quyền phải được thu hồi trong các trường hợp:\n- Nhân viên nghỉ việc: Thu hồi ngay trong ngày cuối.\n- Hết hạn contract: Thu hồi đúng ngày hết hạn.\n- Chuyển bộ phận: Điều chỉnh trong 3 ngày làm việc."
+        },
+        {
+          "source": "hr/leave-policy-2026.pdf",
+          "section": "Phần 2: Quy trình xin nghỉ phép",
+          "effective_date": "2026-01-01",
+          "score": 0.013666666666666667,
+          "text_preview": "Bước 1: Nhân viên gửi yêu cầu nghỉ phép qua hệ thống HR Portal (https://hr.company.internal) ít nhất 3 ngày làm việc trước ngày nghỉ.\nBước 2: Line Manager phê duyệt hoặc từ chối trong vòng 1 ngày làm "
+        },
+        {
+          "source": "support/helpdesk-faq.md",
+          "section": "Section 2: VPN và kết nối từ xa",
+          "effective_date": "2026-01-20",
+          "score": 0.013663663663663665,
+          "text_preview": "Q: Phần mềm VPN nào công ty dùng?\nA: Công ty sử dụng Cisco AnyConnect. Download tại https://vpn.company.internal/download.\n\nQ: Tôi bị mất kết nối VPN liên tục, phải làm gì?\nA: Kiểm tra kết nối Interne"
+        }
+      ]
+    },
+    {
+      "query": "ERR-403-AUTH là lỗi gì?",
+      "dense": [
+        {
+          "source": "it/access-control-sop.md",
+          "section": "Section 3: Quy trình yêu cầu cấp quyền",
+          "effective_date": "2026-01-01",
+          "score": 0.37064647674560547,
+          "text_preview": "Bước 1: Nhân viên tạo Access Request ticket trên Jira (project IT-ACCESS).\nBước 2: Line Manager phê duyệt yêu cầu trong 1 ngày làm việc.\nBước 3: IT Admin kiểm tra compliance và cấp quyền.\nBước 4: IT S"
+        },
+        {
+          "source": "it/access-control-sop.md",
+          "section": "Section 6: Audit và review định kỳ",
+          "effective_date": "2026-01-01",
+          "score": 0.3488028049468994,
+          "text_preview": "IT Security thực hiện access review mỗi 6 tháng.\nMọi bất thường phải được báo cáo lên CISO trong vòng 24 giờ."
+        },
+        {
+          "source": "support/sla-p1-2026.pdf",
+          "section": "Phần 1: Định nghĩa mức độ ưu tiên",
+          "effective_date": "2026-01-15",
+          "score": 0.3450414538383484,
+          "text_preview": "P1 — CRITICAL (Khẩn cấp):\nĐịnh nghĩa: Sự cố ảnh hưởng toàn bộ hệ thống production, không có workaround.\nVí dụ: Database sập, API gateway down, toàn bộ người dùng không thể đăng nhập.\n\nP2 — HIGH (Nghiê"
+        },
+        {
+          "source": "support/helpdesk-faq.md",
+          "section": "Section 1: Tài khoản và mật khẩu",
+          "effective_date": "2026-01-20",
+          "score": 0.32797253131866455,
+          "text_preview": "Q: Tôi quên mật khẩu, phải làm gì?\nA: Truy cập https://sso.company.internal/reset hoặc liên hệ Helpdesk qua ext. 9000. Mật khẩu mới sẽ được gửi qua email công ty trong vòng 5 phút.\n\nQ: Tài khoản bị kh"
+        },
+        {
+          "source": "it/access-control-sop.md",
+          "section": "Section 2: Phân cấp quyền truy cập",
+          "effective_date": "2026-01-01",
+          "score": 0.3245137929916382,
+          "text_preview": "Level 1 — Read Only:\nÁp dụng cho: Tất cả nhân viên mới trong 30 ngày đầu.\nPhê duyệt: Line Manager.\nThời gian xử lý: 1 ngày làm việc.\n\nLevel 2 — Standard Access:\nÁp dụng cho: Nhân viên chính thức đã qu"
+        },
+        {
+          "source": "support/helpdesk-faq.md",
+          "section": "Section 3: Phần mềm và license",
+          "effective_date": "2026-01-20",
+          "score": 0.323215126991272,
+          "text_preview": "Q: Tôi cần cài phần mềm mới, phải làm gì?\nA: Gửi yêu cầu qua Jira project IT-SOFTWARE. Line Manager phải phê duyệt trước khi IT cài đặt.\n\nQ: Ai chịu trách nhiệm gia hạn license phần mềm?\nA: IT Procure"
+        },
+        {
+          "source": "it/access-control-sop.md",
+          "section": "Section 4: Escalation khi cần thay đổi quyền hệ thống",
+          "effective_date": "2026-01-01",
+          "score": 0.31787776947021484,
+          "text_preview": "Escalation chỉ áp dụng khi cần thay đổi quyền hệ thống ngoài quy trình thông thường.\nVí dụ: Khẩn cấp trong sự cố P1, cần cấp quyền tạm thời để fix incident.\n\nQuy trình escalation khẩn cấp:\n1. On-call "
+        },
+        {
+          "source": "support/helpdesk-faq.md",
+          "section": "Section 2: VPN và kết nối từ xa",
+          "effective_date": "2026-01-20",
+          "score": 0.3172229528427124,
+          "text_preview": "Q: Phần mềm VPN nào công ty dùng?\nA: Công ty sử dụng Cisco AnyConnect. Download tại https://vpn.company.internal/download.\n\nQ: Tôi bị mất kết nối VPN liên tục, phải làm gì?\nA: Kiểm tra kết nối Interne"
+        },
+        {
+          "source": "support/helpdesk-faq.md",
+          "section": "Section 5: Email và lịch",
+          "effective_date": "2026-01-20",
+          "score": 0.31309688091278076,
+          "text_preview": "Q: Hộp thư đến đầy, phải làm gì?\nA: Xóa email cũ hoặc yêu cầu tăng dung lượng qua ticket IT-ACCESS. Dung lượng tiêu chuẩn là 50GB.\n\nQ: Tôi không nhận được email từ bên ngoài?\nA: Kiểm tra thư mục Spam "
+        },
+        {
+          "source": "policy/refund-v4.pdf",
+          "section": "Điều 2: Điều kiện được hoàn tiền",
+          "effective_date": "2026-02-01",
+          "score": 0.3093392848968506,
+          "text_preview": "Khách hàng được quyền yêu cầu hoàn tiền khi đáp ứng đủ các điều kiện sau:\n- Sản phẩm bị lỗi do nhà sản xuất, không phải do người dùng.\n- Yêu cầu được gửi trong vòng 7 ngày làm việc kể từ thời điểm xác"
+        }
+      ],
+      "sparse": [
+        {
+          "source": "support/helpdesk-faq.md",
+          "section": "Section 5: Email và lịch",
+          "effective_date": "2026-01-20",
+          "score": 4.798268121505258,
+          "text_preview": "Q: Hộp thư đến đầy, phải làm gì?\nA: Xóa email cũ hoặc yêu cầu tăng dung lượng qua ticket IT-ACCESS. Dung lượng tiêu chuẩn là 50GB.\n\nQ: Tôi không nhận được email từ bên ngoài?\nA: Kiểm tra thư mục Spam "
+        },
+        {
+          "source": "support/sla-p1-2026.pdf",
+          "section": "Phần 1: Định nghĩa mức độ ưu tiên",
+          "effective_date": "2026-01-15",
+          "score": 2.8220157191609507,
+          "text_preview": "P1 — CRITICAL (Khẩn cấp):\nĐịnh nghĩa: Sự cố ảnh hưởng toàn bộ hệ thống production, không có workaround.\nVí dụ: Database sập, API gateway down, toàn bộ người dùng không thể đăng nhập.\n\nP2 — HIGH (Nghiê"
+        },
+        {
+          "source": "policy/refund-v4.pdf",
+          "section": "Điều 2: Điều kiện được hoàn tiền",
+          "effective_date": "2026-02-01",
+          "score": 2.423184163293259,
+          "text_preview": "Khách hàng được quyền yêu cầu hoàn tiền khi đáp ứng đủ các điều kiện sau:\n- Sản phẩm bị lỗi do nhà sản xuất, không phải do người dùng.\n- Yêu cầu được gửi trong vòng 7 ngày làm việc kể từ thời điểm xác"
+        },
+        {
+          "source": "support/helpdesk-faq.md",
+          "section": "Section 3: Phần mềm và license",
+          "effective_date": "2026-01-20",
+          "score": 1.7920434189839187,
+          "text_preview": "Q: Tôi cần cài phần mềm mới, phải làm gì?\nA: Gửi yêu cầu qua Jira project IT-SOFTWARE. Line Manager phải phê duyệt trước khi IT cài đặt.\n\nQ: Ai chịu trách nhiệm gia hạn license phần mềm?\nA: IT Procure"
+        },
+        {
+          "source": "support/helpdesk-faq.md",
+          "section": "Section 2: VPN và kết nối từ xa",
+          "effective_date": "2026-01-20",
+          "score": 1.6013062374450673,
+          "text_preview": "Q: Phần mềm VPN nào công ty dùng?\nA: Công ty sử dụng Cisco AnyConnect. Download tại https://vpn.company.internal/download.\n\nQ: Tôi bị mất kết nối VPN liên tục, phải làm gì?\nA: Kiểm tra kết nối Interne"
+        },
+        {
+          "source": "support/helpdesk-faq.md",
+          "section": "Section 1: Tài khoản và mật khẩu",
+          "effective_date": "2026-01-20",
+          "score": 1.3498753889125585,
+          "text_preview": "Q: Tôi quên mật khẩu, phải làm gì?\nA: Truy cập https://sso.company.internal/reset hoặc liên hệ Helpdesk qua ext. 9000. Mật khẩu mới sẽ được gửi qua email công ty trong vòng 5 phút.\n\nQ: Tài khoản bị kh"
+        }
+      ],
+      "hybrid": [
+        {
+          "source": "support/sla-p1-2026.pdf",
+          "section": "Phần 1: Định nghĩa mức độ ưu tiên",
+          "effective_date": "2026-01-15",
+          "score": 0.01597542242703533,
+          "text_preview": "P1 — CRITICAL (Khẩn cấp):\nĐịnh nghĩa: Sự cố ảnh hưởng toàn bộ hệ thống production, không có workaround.\nVí dụ: Database sập, API gateway down, toàn bộ người dùng không thể đăng nhập.\n\nP2 — HIGH (Nghiê"
+        },
+        {
+          "source": "support/helpdesk-faq.md",
+          "section": "Section 1: Tài khoản và mật khẩu",
+          "effective_date": "2026-01-20",
+          "score": 0.015435606060606061,
+          "text_preview": "Q: Tôi quên mật khẩu, phải làm gì?\nA: Truy cập https://sso.company.internal/reset hoặc liên hệ Helpdesk qua ext. 9000. Mật khẩu mới sẽ được gửi qua email công ty trong vòng 5 phút.\n\nQ: Tài khoản bị kh"
+        },
+        {
+          "source": "support/helpdesk-faq.md",
+          "section": "Section 3: Phần mềm và license",
+          "effective_date": "2026-01-20",
+          "score": 0.01534090909090909,
+          "text_preview": "Q: Tôi cần cài phần mềm mới, phải làm gì?\nA: Gửi yêu cầu qua Jira project IT-SOFTWARE. Line Manager phải phê duyệt trước khi IT cài đặt.\n\nQ: Ai chịu trách nhiệm gia hạn license phần mềm?\nA: IT Procure"
+        },
+        {
+          "source": "support/helpdesk-faq.md",
+          "section": "Section 5: Email và lịch",
+          "effective_date": "2026-01-20",
+          "score": 0.015253029223093371,
+          "text_preview": "Q: Hộp thư đến đầy, phải làm gì?\nA: Xóa email cũ hoặc yêu cầu tăng dung lượng qua ticket IT-ACCESS. Dung lượng tiêu chuẩn là 50GB.\n\nQ: Tôi không nhận được email từ bên ngoài?\nA: Kiểm tra thư mục Spam "
+        },
+        {
+          "source": "support/helpdesk-faq.md",
+          "section": "Section 2: VPN và kết nối từ xa",
+          "effective_date": "2026-01-20",
+          "score": 0.014977375565610861,
+          "text_preview": "Q: Phần mềm VPN nào công ty dùng?\nA: Công ty sử dụng Cisco AnyConnect. Download tại https://vpn.company.internal/download.\n\nQ: Tôi bị mất kết nối VPN liên tục, phải làm gì?\nA: Kiểm tra kết nối Interne"
+        },
+        {
+          "source": "policy/refund-v4.pdf",
+          "section": "Điều 2: Điều kiện được hoàn tiền",
+          "effective_date": "2026-02-01",
+          "score": 0.01492063492063492,
+          "text_preview": "Khách hàng được quyền yêu cầu hoàn tiền khi đáp ứng đủ các điều kiện sau:\n- Sản phẩm bị lỗi do nhà sản xuất, không phải do người dùng.\n- Yêu cầu được gửi trong vòng 7 ngày làm việc kể từ thời điểm xác"
+        },
+        {
+          "source": "it/access-control-sop.md",
+          "section": "Section 3: Quy trình yêu cầu cấp quyền",
+          "effective_date": "2026-01-01",
+          "score": 0.009836065573770493,
+          "text_preview": "Bước 1: Nhân viên tạo Access Request ticket trên Jira (project IT-ACCESS).\nBước 2: Line Manager phê duyệt yêu cầu trong 1 ngày làm việc.\nBước 3: IT Admin kiểm tra compliance và cấp quyền.\nBước 4: IT S"
+        },
+        {
+          "source": "it/access-control-sop.md",
+          "section": "Section 6: Audit và review định kỳ",
+          "effective_date": "2026-01-01",
+          "score": 0.009677419354838708,
+          "text_preview": "IT Security thực hiện access review mỗi 6 tháng.\nMọi bất thường phải được báo cáo lên CISO trong vòng 24 giờ."
+        },
+        {
+          "source": "it/access-control-sop.md",
+          "section": "Section 2: Phân cấp quyền truy cập",
+          "effective_date": "2026-01-01",
+          "score": 0.009230769230769232,
+          "text_preview": "Level 1 — Read Only:\nÁp dụng cho: Tất cả nhân viên mới trong 30 ngày đầu.\nPhê duyệt: Line Manager.\nThời gian xử lý: 1 ngày làm việc.\n\nLevel 2 — Standard Access:\nÁp dụng cho: Nhân viên chính thức đã qu"
+        },
+        {
+          "source": "it/access-control-sop.md",
+          "section": "Section 4: Escalation khi cần thay đổi quyền hệ thống",
+          "effective_date": "2026-01-01",
+          "score": 0.008955223880597014,
+          "text_preview": "Escalation chỉ áp dụng khi cần thay đổi quyền hệ thống ngoài quy trình thông thường.\nVí dụ: Khẩn cấp trong sự cố P1, cần cấp quyền tạm thời để fix incident.\n\nQuy trình escalation khẩn cấp:\n1. On-call "
+        }
+      ]
+    }
+  ]
+}

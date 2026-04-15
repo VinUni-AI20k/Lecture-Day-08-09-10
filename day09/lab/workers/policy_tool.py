@@ -20,6 +20,18 @@ import os
 import sys
 from typing import Optional
 
+# Ensure UTF-8 output on Windows terminals
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8")
+
+# load_dotenv = lambda: None  # Placeholder nếu chưa dùng dotenv package
+# try:
+#     from dotenv import load_dotenv as _load_dotenv
+#     load_dotenv = _load_dotenv
+# except ImportError:
+#     pass
+# load_dotenv()
+
 WORKER_NAME = "policy_tool_worker"
 
 
@@ -38,16 +50,51 @@ def _call_mcp_tool(tool_name: str, tool_input: dict) -> dict:
     from datetime import datetime
 
     try:
-        # TODO Sprint 3: Thay bằng real MCP client nếu dùng HTTP server
-        from mcp_server import dispatch_tool
-        result = dispatch_tool(tool_name, tool_input)
-        return {
-            "tool": tool_name,
-            "input": tool_input,
-            "output": result,
-            "error": None,
-            "timestamp": datetime.now().isoformat(),
-        }
+        mode = os.getenv("MCP_SERVER_MODE", "mock").lower()
+        url = os.getenv("MCP_SERVER_URL")
+        # if mode == "http" and not url:
+        #     raise ValueError("MCP_SERVER_URL must be set when MCP_SERVER_MODE is 'http'.")
+        # elif mode not in ["mock", "http"]:
+        #     raise ValueError(f"Invalid MCP_SERVER_MODE: {mode}. Must be 'mock' or 'http'.")
+        # elif mode == "http" and not url.startswith("http://") and not url.startswith("https://"):
+        #     raise ValueError(f"Invalid MCP_SERVER_URL: {url}. Must start with 'http://' or 'https://'.")
+        # elif mode == "http" and not url.endswith("/dispatch"):
+        #     raise ValueError(f"Invalid MCP_SERVER_URL: {url}. Must end with '/dispatch'.")
+        if mode == "http":
+            # --- Stage 1: Validation (Fail Fast) ---
+            if not url:
+                raise ValueError("MCP_SERVER_URL must be set when mode is 'http'.")
+            if not url.startswith(("http://", "https://")):
+                raise ValueError(f"Invalid URL schema: {url}")
+            # Đảm bảo url kết thúc bằng /dispatch một cách thông minh
+            if not url.endswith("/dispatch"):
+                url = url.rstrip("/") + "/dispatch"
+        elif mode != "mock":
+            raise ValueError(f"Invalid MCP_SERVER_MODE: {mode}")
+        if mode == "http":
+            import httpx
+            response = httpx.post(url, json={"tool": tool_name, "input": tool_input}, timeout=10)
+            response.raise_for_status()
+            result = response.json()
+            return {
+                "tool": tool_name,
+                "input": tool_input,
+                "output": result,
+                "error": None,
+                "timestamp": datetime.now().isoformat(),
+            }
+        elif mode == "mock":
+            # TODO Sprint 3: Thay bằng real MCP client nếu dùng HTTP server
+            from mcp_server import dispatch_tool
+            result = dispatch_tool(tool_name, tool_input)
+            return {
+                "tool": tool_name,
+                "input": tool_input,
+                "output": result,
+                "error": None,
+                "timestamp": datetime.now().isoformat(),
+            }
+
     except Exception as e:
         return {
             "tool": tool_name,
@@ -80,66 +127,93 @@ def analyze_policy(task: str, chunks: list) -> dict:
     task_lower = task.lower()
     context_text = " ".join([c.get("text", "") for c in chunks]).lower()
 
-    # --- Rule-based exception detection ---
-    exceptions_found = []
-
-    # Exception 1: Flash Sale
-    if "flash sale" in task_lower or "flash sale" in context_text:
-        exceptions_found.append({
-            "type": "flash_sale_exception",
-            "rule": "Đơn hàng Flash Sale không được hoàn tiền (Điều 3, chính sách v4).",
-            "source": "policy_refund_v4.txt",
-        })
-
-    # Exception 2: Digital product
-    if any(kw in task_lower for kw in ["license key", "license", "subscription", "kỹ thuật số"]):
-        exceptions_found.append({
-            "type": "digital_product_exception",
-            "rule": "Sản phẩm kỹ thuật số (license key, subscription) không được hoàn tiền (Điều 3).",
-            "source": "policy_refund_v4.txt",
-        })
-
-    # Exception 3: Activated product
-    if any(kw in task_lower for kw in ["đã kích hoạt", "đã đăng ký", "đã sử dụng"]):
-        exceptions_found.append({
-            "type": "activated_exception",
-            "rule": "Sản phẩm đã kích hoạt hoặc đăng ký tài khoản không được hoàn tiền (Điều 3).",
-            "source": "policy_refund_v4.txt",
-        })
-
-    # Determine policy_applies
-    policy_applies = len(exceptions_found) == 0
-
-    # Determine which policy version applies (temporal scoping)
-    # TODO: Check nếu đơn hàng trước 01/02/2026 → v3 applies (không có docs, nên flag cho synthesis)
-    policy_name = "refund_policy_v4"
-    policy_version_note = ""
-    if "31/01" in task_lower or "30/01" in task_lower or "trước 01/02" in task_lower:
-        policy_version_note = "Đơn hàng đặt trước 01/02/2026 áp dụng chính sách v3 (không có trong tài liệu hiện tại)."
-
+    # Lấy provider để quyết định logic phân tích (nếu cần)
+    provider = os.getenv("LLM_PROVIDER", "openai").lower()
     # TODO Sprint 2: Gọi LLM để phân tích phức tạp hơn
-    # Ví dụ:
-    # from openai import OpenAI
-    # client = OpenAI()
-    # response = client.chat.completions.create(
-    #     model="gpt-4o-mini",
-    #     messages=[
-    #         {"role": "system", "content": "Bạn là policy analyst. Dựa vào context, xác định policy áp dụng và các exceptions."},
-    #         {"role": "user", "content": f"Task: {task}\n\nContext:\n" + "\n".join([c['text'] for c in chunks])}
-    #     ]
-    # )
-    # analysis = response.choices[0].message.content
+    if provider == "gemini":
+        # Thực hiện gọi Google Gemini API tại đây
+        from google import generativeai as genai
+        genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
+        client = genai.GenerativeModel("gemini-1.5-flash")
+        response = client.generate_content(
+            f"Task: {task}\n\nContext:\n" + "\n".join([c['text'] for c in chunks])
+        )
+        analysis = response.text
+        return analysis
+    elif provider == "openai":
+        # Thực hiện gọi OpenAI API tại đây
+        from openai import OpenAI
+        client = OpenAI()
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": "Bạn là policy analyst. Dựa vào context, xác định policy áp dụng và các exceptions."},
+                {"role": "user", "content": f"Task: {task}\n\nContext:\n" + "\n".join([c['text'] for c in chunks])}
+            ]
+        )
+        analysis = response.choices[0].message.content
+        return analysis
+    else:
+        # --- Rule-based exception detection ---
+        exceptions_found = []
 
-    sources = list({c.get("source", "unknown") for c in chunks if c})
+        # Exception 1: Flash Sale
+        if "flash sale" in task_lower or "flash sale" in context_text:
+            exceptions_found.append({
+                "type": "flash_sale_exception",
+                "rule": "Đơn hàng Flash Sale không được hoàn tiền (Điều 3, chính sách v4).",
+                "source": "policy_refund_v4.txt",
+            })
 
-    return {
-        "policy_applies": policy_applies,
-        "policy_name": policy_name,
-        "exceptions_found": exceptions_found,
-        "source": sources,
-        "policy_version_note": policy_version_note,
-        "explanation": "Analyzed via rule-based policy check. TODO: upgrade to LLM-based analysis.",
-    }
+        # Exception 2: Digital product
+        if any(kw in task_lower for kw in ["license key", "license", "subscription", "kỹ thuật số"]):
+            exceptions_found.append({
+                "type": "digital_product_exception",
+                "rule": "Sản phẩm kỹ thuật số (license key, subscription) không được hoàn tiền (Điều 3).",
+                "source": "policy_refund_v4.txt",
+            })
+
+        # Exception 3: Activated product
+        if any(kw in task_lower for kw in ["đã kích hoạt", "đã đăng ký", "đã sử dụng"]):
+            exceptions_found.append({
+                "type": "activated_exception",
+                "rule": "Sản phẩm đã kích hoạt hoặc đăng ký tài khoản không được hoàn tiền (Điều 3).",
+                "source": "policy_refund_v4.txt",
+            })
+
+        # Determine policy_applies
+        policy_applies = len(exceptions_found) == 0
+
+        # Determine which policy version applies (temporal scoping)
+        # TODO: Check nếu đơn hàng trước 01/02/2026 → v3 applies (không có docs, nên flag cho synthesis)
+        policy_name = "refund_policy_v4"
+        policy_version_note = ""
+        if "31/01" in task_lower or "30/01" in task_lower or "trước 01/02" in task_lower:
+            policy_version_note = "Đơn hàng đặt trước 01/02/2026 áp dụng chính sách v3 (không có trong tài liệu hiện tại)."
+
+        # TODO Sprint 2: Gọi LLM để phân tích phức tạp hơn
+        # Ví dụ:
+        # from openai import OpenAI
+        # client = OpenAI()
+        # response = client.chat.completions.create(
+        #     model="gpt-4o-mini",
+        #     messages=[
+        #         {"role": "system", "content": "Bạn là policy analyst. Dựa vào context, xác định policy áp dụng và các exceptions."},
+        #         {"role": "user", "content": f"Task: {task}\n\nContext:\n" + "\n".join([c['text'] for c in chunks])}
+        #     ]
+        # )
+        # analysis = response.choices[0].message.content
+
+        sources = list({c.get("source", "unknown") for c in chunks if c})
+
+        return {
+            "policy_applies": policy_applies,
+            "policy_name": policy_name,
+            "exceptions_found": exceptions_found,
+            "source": sources,
+            "policy_version_note": policy_version_note,
+            "explanation": "Analyzed via rule-based policy check. TODO: upgrade to LLM-based analysis.",
+        }
 
 
 # ─────────────────────────────────────────────

@@ -132,37 +132,117 @@ TOOL_SCHEMAS = {
 # Tool Implementations
 # ─────────────────────────────────────────────
 
+def _get_embedding_fn():
+    """
+    Trả về embedding function cho semantic search.
+
+    Ưu tiên: SentenceTransformers (offline) → OpenAI embeddings.
+    Nếu không có dependency/API key: raise để tool_search_kb trả error (không hallucinate).
+    """
+    try:
+        from sentence_transformers import SentenceTransformer
+        model = SentenceTransformer("all-MiniLM-L6-v2")
+
+        def embed(text: str) -> list:
+            return model.encode([text])[0].tolist()
+
+        return embed
+    except Exception:
+        pass
+
+    try:
+        from openai import OpenAI
+        api_key = os.getenv("OPENAI_API_KEY")
+        if not api_key:
+            raise RuntimeError("OPENAI_API_KEY is missing")
+        client = OpenAI(api_key=api_key)
+
+        def embed(text: str) -> list:
+            resp = client.embeddings.create(input=text, model="text-embedding-3-small")
+            return resp.data[0].embedding
+
+        return embed
+    except Exception:
+        pass
+
+    raise RuntimeError(
+        "No embedding backend available. Install sentence-transformers or set OPENAI_API_KEY."
+    )
+
+
+def _get_collection():
+    """
+    Kết nối ChromaDB collection theo env vars:
+      - CHROMA_DB_PATH (default: ./chroma_db)
+      - CHROMA_COLLECTION (default: day09_docs)
+    """
+    import chromadb
+
+    chroma_path = os.getenv("CHROMA_DB_PATH", "./chroma_db")
+    collection_name = os.getenv("CHROMA_COLLECTION", "day09_docs")
+    client = chromadb.PersistentClient(path=chroma_path)
+    return client.get_or_create_collection(
+        collection_name,
+        metadata={"hnsw:space": "cosine"},
+    )
+
+
 def tool_search_kb(query: str, top_k: int = 3) -> dict:
     """
     Tìm kiếm Knowledge Base bằng semantic search.
 
-    TODO Sprint 3: Kết nối với ChromaDB thực.
-    Hiện tại: Delegate sang retrieval worker.
+    Sprint 3: Kết nối với ChromaDB thực (dense retrieval).
     """
     try:
-        # Tái dùng retrieval logic từ workers/retrieval.py
-        import sys
-        sys.path.insert(0, os.path.dirname(__file__))
-        from workers.retrieval import retrieve_dense
-        chunks = retrieve_dense(query, top_k=top_k)
-        sources = list({c["source"] for c in chunks})
+        if not isinstance(query, str) or not query.strip():
+            return {"chunks": [], "sources": [], "total_found": 0, "error": "query is empty"}
+
+        if not isinstance(top_k, int) or top_k <= 0:
+            top_k = 3
+
+        embed = _get_embedding_fn()
+        query_embedding = embed(query)
+
+        collection = _get_collection()
+        results = collection.query(
+            query_embeddings=[query_embedding],
+            n_results=top_k,
+            include=["documents", "distances", "metadatas"],
+        )
+
+        chunks: List[Dict[str, Any]] = []
+        docs = (results.get("documents") or [[]])[0]
+        dists = (results.get("distances") or [[]])[0]
+        metas = (results.get("metadatas") or [[]])[0]
+
+        for doc, dist, meta in zip(docs, dists, metas):
+            meta = meta or {}
+            source = meta.get("source") or "unknown"
+            try:
+                score = round(1 - float(dist), 4)
+            except Exception:
+                score = 0.0
+            chunks.append(
+                {
+                    "text": doc,
+                    "source": source,
+                    "score": score,
+                    "metadata": meta,
+                }
+            )
+
+        sources = list({c.get("source", "unknown") for c in chunks})
         return {
             "chunks": chunks,
             "sources": sources,
             "total_found": len(chunks),
         }
     except Exception as e:
-        # Fallback: return mock data nếu ChromaDB chưa setup
         return {
-            "chunks": [
-                {
-                    "text": f"[MOCK] Không thể query ChromaDB: {e}. Kết quả giả lập.",
-                    "source": "mock_data",
-                    "score": 0.5,
-                }
-            ],
-            "sources": ["mock_data"],
-            "total_found": 1,
+            "chunks": [],
+            "sources": [],
+            "total_found": 0,
+            "error": f"search_kb failed: {e}",
         }
 
 

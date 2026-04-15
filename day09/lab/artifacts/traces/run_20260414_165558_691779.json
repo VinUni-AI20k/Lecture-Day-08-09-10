@@ -1,0 +1,49 @@
+{
+  "task": "Sản phẩm kỹ thuật số (license key) có được hoàn tiền không?",
+  "route_reason": "task contains policy/access keywords",
+  "risk_high": false,
+  "needs_tool": true,
+  "hitl_triggered": false,
+  "retrieved_chunks": [
+    {
+      "text": "SLA P1: phản hồi 15 phút, xử lý 4 giờ.",
+      "source": "sla_p1_2026.txt",
+      "score": 0.92
+    }
+  ],
+  "retrieved_sources": [
+    "sla_p1_2026.txt"
+  ],
+  "policy_result": {
+    "policy_applies": true,
+    "policy_name": "refund_policy_v4",
+    "exceptions_found": [],
+    "source": "policy_refund_v4.txt"
+  },
+  "mcp_tools_used": [],
+  "final_answer": "[PLACEHOLDER] Câu trả lời được tổng hợp từ 1 chunks.",
+  "sources": [
+    "sla_p1_2026.txt"
+  ],
+  "confidence": 0.75,
+  "history": [
+    "[supervisor] received task: Sản phẩm kỹ thuật số (license key) có được hoàn tiền không?",
+    "[supervisor] route=policy_tool_worker reason=task contains policy/access keywords",
+    "[policy_tool_worker] called",
+    "[policy_tool_worker] policy check complete",
+    "[retrieval_worker] called",
+    "[retrieval_worker] retrieved 1 chunks",
+    "[synthesis_worker] called",
+    "[synthesis_worker] answer generated, confidence=0.75",
+    "[graph] completed in 0ms"
+  ],
+  "workers_called": [
+    "policy_tool_worker",
+    "retrieval_worker",
+    "synthesis_worker"
+  ],
+  "supervisor_route": "policy_tool_worker",
+  "latency_ms": 0,
+  "run_id": "run_20260414_165558_691779",
+  "question_id": "q07"
+}

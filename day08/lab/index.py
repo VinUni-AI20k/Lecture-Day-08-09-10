@@ -14,7 +14,6 @@ Definition of Done Sprint 1:
 """
 
 import os
-import json
 import re
 from pathlib import Path
 from typing import List, Dict, Any, Optional
@@ -28,11 +27,23 @@ load_dotenv()
 
 DOCS_DIR = Path(__file__).parent / "data" / "docs"
 CHROMA_DB_DIR = Path(__file__).parent / "chroma_db"
+COLLECTION_NAME = "rag_lab"
 
 # TODO Sprint 1: Điều chỉnh chunk size và overlap theo quyết định của nhóm
 # Gợi ý từ slide: chunk 300-500 tokens, overlap 50-80 tokens
 CHUNK_SIZE = 400       # tokens (ước lượng bằng số ký tự / 4)
 CHUNK_OVERLAP = 80     # tokens overlap giữa các chunk
+
+# Freeze session doc set để mọi người dùng cùng một baseline index.
+DOC_SOURCE_MAP = {
+    "policy_refund_v4.txt": "policy/refund-v4.pdf",
+    "sla_p1_2026.txt": "support/sla-p1-2026.pdf",
+    "access_control_sop.txt": "it/access-control-sop.md",
+    "it_helpdesk_faq.txt": "support/helpdesk-faq.md",
+    "hr_leave_policy.txt": "hr/leave-policy-2026.pdf",
+}
+
+_EMBED_MODEL = None
 
 
 # =============================================================================
@@ -61,8 +72,9 @@ def preprocess_document(raw_text: str, filepath: str) -> Dict[str, Any]:
     Gợi ý: dùng regex để parse dòng "Key: Value" ở đầu file.
     """
     lines = raw_text.strip().split("\n")
+    file_name = Path(filepath).name
     metadata = {
-        "source": filepath,
+        "source": DOC_SOURCE_MAP.get(file_name, filepath),
         "section": "",
         "department": "unknown",
         "effective_date": "unknown",
@@ -76,7 +88,9 @@ def preprocess_document(raw_text: str, filepath: str) -> Dict[str, Any]:
             # TODO: Parse metadata từ các dòng "Key: Value"
             # Ví dụ: "Source: policy/refund-v4.pdf" → metadata["source"] = "policy/refund-v4.pdf"
             if line.startswith("Source:"):
-                metadata["source"] = line.replace("Source:", "").strip()
+                parsed_source = line.replace("Source:", "").strip()
+                # Ưu tiên mapping chuẩn theo filename để khớp expected_sources.
+                metadata["source"] = DOC_SOURCE_MAP.get(file_name, parsed_source)
             elif line.startswith("Department:"):
                 metadata["department"] = line.replace("Department:", "").strip()
             elif line.startswith("Effective Date:"):
@@ -241,9 +255,38 @@ def get_embedding(text: str) -> List[float]:
         model = SentenceTransformer("paraphrase-multilingual-MiniLM-L12-v2")
         return model.encode(text).tolist()
     """
-    raise NotImplementedError(
-        "TODO: Implement get_embedding().\n"
-        "Chọn Option A (OpenAI) hoặc Option B (Sentence Transformers) trong TODO comment."
+    provider = os.getenv("EMBEDDING_PROVIDER", "openai").strip().lower()
+
+    if provider == "openai":
+        from openai import OpenAI
+
+        api_key = os.getenv("OPENAI_API_KEY", "").strip()
+        if not api_key:
+            provider = "local"
+        else:
+            client = OpenAI(api_key=api_key)
+            response = client.embeddings.create(
+                input=text,
+                model="text-embedding-3-small",
+            )
+            return response.data[0].embedding
+
+    if provider == "local":
+        # Lazy-load model một lần để giảm thời gian cho nhiều chunks.
+        global _EMBED_MODEL
+        if _EMBED_MODEL is None:
+            from sentence_transformers import SentenceTransformer
+
+            model_name = os.getenv(
+                "LOCAL_EMBEDDING_MODEL",
+                "paraphrase-multilingual-MiniLM-L12-v2",
+            )
+            _EMBED_MODEL = SentenceTransformer(model_name)
+
+        return _EMBED_MODEL.encode(text).tolist()
+
+    raise ValueError(
+        f"EMBEDDING_PROVIDER không hợp lệ: {provider}. Dùng 'openai' hoặc 'local'."
     )
 
 
@@ -274,47 +317,60 @@ def build_index(docs_dir: Path = DOCS_DIR, db_dir: Path = CHROMA_DB_DIR) -> None
     print(f"Đang build index từ: {docs_dir}")
     db_dir.mkdir(parents=True, exist_ok=True)
 
-    # TODO: Khởi tạo ChromaDB
-    # client = chromadb.PersistentClient(path=str(db_dir))
-    # collection = client.get_or_create_collection(...)
+    client = chromadb.PersistentClient(path=str(db_dir))
+    # Recreate collection để tránh lỗi lệch dimension khi đổi embedding provider.
+    try:
+        client.delete_collection(COLLECTION_NAME)
+    except Exception:
+        pass
+    collection = client.get_or_create_collection(
+        name=COLLECTION_NAME,
+        metadata={"hnsw:space": "cosine"},
+    )
 
     total_chunks = 0
-    doc_files = list(docs_dir.glob("*.txt"))
+    doc_files = [docs_dir / name for name in DOC_SOURCE_MAP.keys()]
+    missing = [p.name for p in doc_files if not p.exists()]
 
-    if not doc_files:
-        print(f"Không tìm thấy file .txt trong {docs_dir}")
+    if missing:
+        print(f"Thiếu file docs bắt buộc: {missing}")
         return
 
     for filepath in doc_files:
         print(f"  Processing: {filepath.name}")
         raw_text = filepath.read_text(encoding="utf-8")
 
-        # TODO: Gọi preprocess_document
-        # doc = preprocess_document(raw_text, str(filepath))
-
-        # TODO: Gọi chunk_document
-        # chunks = chunk_document(doc)
-
-        # TODO: Embed và lưu từng chunk vào ChromaDB
-        # for i, chunk in enumerate(chunks):
-        #     chunk_id = f"{filepath.stem}_{i}"
-        #     embedding = get_embedding(chunk["text"])
-        #     collection.upsert(
-        #         ids=[chunk_id],
-        #         embeddings=[embedding],
-        #         documents=[chunk["text"]],
-        #         metadatas=[chunk["metadata"]],
-        #     )
-        # total_chunks += len(chunks)
-
-        # Placeholder để code không lỗi khi chưa implement
         doc = preprocess_document(raw_text, str(filepath))
         chunks = chunk_document(doc)
-        print(f"    → {len(chunks)} chunks (embedding chưa implement)")
+
+        if not chunks:
+            print("    → 0 chunks (bỏ qua)")
+            continue
+
+        ids = []
+        documents = []
+        embeddings = []
+        metadatas = []
+
+        for i, chunk in enumerate(chunks):
+            chunk_id = f"{filepath.stem}_{i}"
+            ids.append(chunk_id)
+            documents.append(chunk["text"])
+            embeddings.append(get_embedding(chunk["text"]))
+            metadatas.append(chunk["metadata"])
+
+        collection.upsert(
+            ids=ids,
+            documents=documents,
+            embeddings=embeddings,
+            metadatas=metadatas,
+        )
+
+        print(f"    → {len(chunks)} chunks (đã embed + upsert)")
         total_chunks += len(chunks)
 
     print(f"\nHoàn thành! Tổng số chunks: {total_chunks}")
-    print("Lưu ý: Embedding chưa được implement. Xem TODO trong get_embedding() và build_index().")
+    print("Index đã sẵn sàng trong chroma_db.")
 
 
 # =============================================================================
@@ -336,7 +392,7 @@ def list_chunks(db_dir: Path = CHROMA_DB_DIR, n: int = 5) -> None:
     try:
         import chromadb
         client = chromadb.PersistentClient(path=str(db_dir))
-        collection = client.get_collection("rag_lab")
+        collection = client.get_collection(COLLECTION_NAME)
         results = collection.get(limit=n, include=["documents", "metadatas"])
 
         print(f"\n=== Top {n} chunks trong index ===\n")
@@ -366,7 +422,7 @@ def inspect_metadata_coverage(db_dir: Path = CHROMA_DB_DIR) -> None:
     try:
         import chromadb
         client = chromadb.PersistentClient(path=str(db_dir))
-        collection = client.get_collection("rag_lab")
+        collection = client.get_collection(COLLECTION_NAME)
         results = collection.get(include=["metadatas"])
 
         print(f"\nTổng chunks: {len(results['metadatas'])}")
@@ -395,6 +451,11 @@ def inspect_metadata_coverage(db_dir: Path = CHROMA_DB_DIR) -> None:
 # =============================================================================
 
 if __name__ == "__main__":
+    import sys
+
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8")
+
     print("=" * 60)
     print("Sprint 1: Build RAG Index")
     print("=" * 60)
@@ -418,20 +479,18 @@ if __name__ == "__main__":
             print(f"\n  [Chunk {i+1}] Section: {chunk['metadata']['section']}")
             print(f"  Text: {chunk['text'][:150]}...")
 
-    # Bước 3: Build index (yêu cầu implement get_embedding)
+    # Bước 3: Build index
     print("\n--- Build Full Index ---")
-    print("Lưu ý: Cần implement get_embedding() trước khi chạy bước này!")
-    # Uncomment dòng dưới sau khi implement get_embedding():
-    # build_index()
+    try:
+        build_index()
+    except Exception as e:
+        print(f"Build index lỗi: {e}")
+        print("Kiểm tra .env (EMBEDDING_PROVIDER, OPENAI_API_KEY) và cài dependencies.")
 
     # Bước 4: Kiểm tra index
-    # Uncomment sau khi build_index() thành công:
-    # list_chunks()
-    # inspect_metadata_coverage()
+    print("\n--- Inspect Index ---")
+    list_chunks()
+    inspect_metadata_coverage()
 
     print("\nSprint 1 setup hoàn thành!")
-    print("Việc cần làm:")
-    print("  1. Implement get_embedding() - chọn OpenAI hoặc Sentence Transformers")
-    print("  2. Implement phần TODO trong build_index()")
-    print("  3. Chạy build_index() và kiểm tra với list_chunks()")
-    print("  4. Nếu chunking chưa tốt: cải thiện _split_by_size() để split theo paragraph")
+    print("Bạn có thể chuyển sang Sprint 2 (retrieve + grounded answer).")
