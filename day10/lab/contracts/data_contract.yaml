@@ -1,9 +1,9 @@
 # Data contract — Lab Day 10 (tiếp nối artifact CS + IT Helpdesk)
-# Sinh viên bổ sung owner, SLA freshness, và nguồn canonical.
+# Sprint 1 — Ingest & Schema (2026-04-15)
 
 version: "1.0"
 dataset: "kb_chunk_export"
-owner_team: "__TODO__"
+owner_team: "C401_B4"
 
 schema_cleaned:
   chunk_id:
@@ -27,16 +27,32 @@ schema_cleaned:
     required: true
 
 quality_rules:
+  - id: "min_one_row"
+    description: "Cleaned dataset must have at least 1 record"
+    severity: "halt"
+  - id: "no_empty_doc_id"
+    description: "All records must have non-empty doc_id"
+    severity: "halt"
   - id: "no_duplicate_chunk_text"
+    description: "Auto-dedup by normalized text; quarantine duplicates"
     severity: "warn"
   - id: "no_stale_refund_window"
-    description: "Không được để chunk policy refund chứa cửa sổ 14 ngày (lệch so với v4 = 7 ngày)"
+    description: "Policy refund v4 must contain '7 ngày' not '14 ngày'; auto-fix if apply_refund_window_fix=True"
+    severity: "halt"
+  - id: "chunk_min_length_8"
+    description: "All chunk_text must be ≥ 8 characters"
+    severity: "warn"
+  - id: "effective_date_iso_yyyy_mm_dd"
+    description: "All effective_date must be ISO YYYY-MM-DD format"
+    severity: "halt"
+  - id: "hr_leave_no_stale_10d_annual"
+    description: "HR leave policy must have effective_date ≥ 2026-01-01"
     severity: "halt"
 
 freshness:
   measured_at: "publish"  # ingest | cleaned | publish
   sla_hours: 24
-  alert_channel: "__TODO__"
+  alert_channel: "stdout + manifest JSON"
 
 canonical_sources:
   - path: "data/docs/policy_refund_v4.txt"
@@ -54,6 +70,62 @@ allowed_doc_ids:
   - sla_p1_2026
   - it_helpdesk_faq
   - hr_leave_policy
+
+# Policy version baseline (immutable for policy enforcement)
+policy_versioning:
+  policy_refund_v4_version: "v4"
+  policy_refund_v4_effective: "2026-02-01"
+  policy_refund_v4_rule: "7-day refund window (NOT 14 days from v3)"
+  
+  sla_p1_2026_effective: "2026-01-01"
+  sla_p1_2026_rule: "P1 ticket = 15 min response + 4h resolution"
+  
+  hr_leave_min_effective_date: "2026-01-01"
+  hr_leave_rule: "Reject records with effective_date < cutoff (prevents stale guidance)
+    mode: stale_refund_window
+    metric: "% of records with '14 ngày' (should be '7 ngày')"
+    sprint1_count: 1 (auto-fixed)
+    
+  - doc_id: sla_p1_2026
+    mode: duplicate_chunk_text
+    metric: "% of records dedup'd (migration residue)"
+    sprint1_count: 1 (quarantined)
+    
+  - doc_id: sla_p1_2026
+    mode: missing_effective_date
+    metric: "Count of records with empty effective_date"
+    sprint1_count: 1 (quarantined)
+    
+  - doc_id: all
+    mode: unknown_doc_id
+    metric: "Count of records with doc_id not in allowlist"
+    sprint1_count: 1 (quarantined)
+    
+  - doc_id: hr_leave_policy
+    mode: stale_hr_policy_effective_date
+    metric: "Count of records with effective_date < 2026-01-01"
+    sprint1_count: 1 (quarantined)
+
+# Raw input file
+raw_export:
+  path: "data/raw/policy_export_dirty.csv"
+  format: "CSV: chunk_id, doc_id, chunk_text, effective_date, exported_at"
+  size_bytes: 1530
+  encoding: "UTF-8"
+  
+# Sprint 1 Processing Result
+sprint1_result:
+  timestamp_run: "2026-04-15T04:56:28.402273+00:00"
+  raw_records: 10
+  cleaned_records: 6
+  quarantine_records: 4
+  artifacts:
+    - "artifacts/logs/run_sprint1.log"
+    - "artifacts/cleaned/cleaned_sprint1.csv"
+    - "artifacts/quarantine/quarantine_sprint1.csv"
+    - "artifacts/manifests/manifest_sprint1.json"
+  embeddings: "6 vectors upserted to ChromaDB (collection: day10_kb)"
+  freshness_sla_status: "FAIL (test data old)"
 
 # Merit/Distinction: có thể đưa cutoff versioning vào env và tham chiếu ở đây (tránh hard-code trong code).
 policy_versioning:

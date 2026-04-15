@@ -43,14 +43,18 @@ def check_manifest_freshness(
         return "FAIL", {"reason": "manifest_missing", "path": str(manifest_path)}
 
     data: Dict[str, Any] = json.loads(manifest_path.read_text(encoding="utf-8"))
+
     ts_raw = data.get("latest_exported_at") or data.get("run_timestamp")
+    publish_raw = data.get("publish_timestamp")
     dt = parse_iso(str(ts_raw)) if ts_raw else None
     if dt is None:
         return "WARN", {"reason": "no_timestamp_in_manifest", "manifest": data}
 
     age_hours = (now - dt).total_seconds() / 3600.0
     detail = {
+
         "latest_exported_at": ts_raw,
+        "publish_timestamp": publish_raw,
         "age_hours": round(age_hours, 3),
         "sla_hours": sla_hours,
     }

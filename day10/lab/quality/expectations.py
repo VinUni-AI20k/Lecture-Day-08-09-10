@@ -112,5 +112,62 @@ def run_expectations(cleaned_rows: List[Dict[str, Any]]) -> Tuple[List[Expectati
         )
     )
 
+    # E7: không còn effective_date rỗng sau clean
+    missing_effective_date = [
+        r
+        for r in cleaned_rows
+        if not (r.get("effective_date") or "").strip()
+    ]
+    ok7 = len(missing_effective_date) == 0
+    results.append(
+        ExpectationResult(
+            "no_missing_effective_date",
+            ok7,
+            "halt",
+            f"missing_effective_date_rows={len(missing_effective_date)}",
+        )
+    )
+
+    # E8: exported_at phải chứa định dạng ISO datetime (VD: YYYY-MM-DDTHH:MM:SS)
+    exported_at_bad = [
+        r
+        for r in cleaned_rows
+        if not re.search(
+            r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}",
+            (r.get("exported_at") or "").strip(),
+        )
+    ]
+    ok9 = len(exported_at_bad) == 0
+    results.append(
+        ExpectationResult(
+            "exported_at_iso_datetime",
+            ok9,
+            "halt",
+            f"non_iso_exported_at_rows={len(exported_at_bad)}",
+        )
+    )
+    
+    #E9: SLA P1 nên là 15 phút / 4 giờ (chấp nhận cả dạng 15p, 4h)
+    bad_sla = [
+        r
+        for r in cleaned_rows
+        if r.get("doc_id") == "sla_p1_2026"
+        and not (
+            re.search(r"\b15\s*(phút|p)\b", (r.get("chunk_text") or ""), re.IGNORECASE)
+            and re.search(r"\b4\s*(giờ|h)\b", (r.get("chunk_text") or ""), re.IGNORECASE)
+        )
+    ]
+    ok_w1 = len(bad_sla) == 0
+    results.append(
+        ExpectationResult(
+            "sla_p1_expected_response_and_resolution",
+            ok_w1,
+            "warn",
+            f"suspicious_sla_rows={len(bad_sla)}",
+        )
+    )
+
     halt = any(not r.passed and r.severity == "halt" for r in results)
     return results, halt
+
+    

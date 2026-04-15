@@ -6,3 +6,9 @@
 day08/lab/data/grading_questions.json
 day09/lab/data/grading_questions.json
 day10/lab/data/grading_questions.json
+
+*.env
+
+day10/sprint2.md
+day10/sprint3.md
+day10/sprint4.md

@@ -1,14 +1,15 @@
 {
-  "run_id": "ci-smoke2",
-  "run_timestamp": "2026-04-14T19:54:31.156431+00:00",
+  "run_id": "2026-04-15T10-20Z",
+  "run_timestamp": "2026-04-15T10:21:14.511553+00:00",
   "raw_path": "data/raw/policy_export_dirty.csv",
   "raw_records": 10,
   "cleaned_records": 6,
   "quarantine_records": 4,
   "latest_exported_at": "2026-04-10T08:00:00",
+  "publish_timestamp": "2026-04-15T10:21:14.511582+00:00",
   "no_refund_fix": false,
   "skipped_validate": false,
-  "cleaned_csv": "artifacts/cleaned/cleaned_ci-smoke2.csv",
+  "cleaned_csv": "artifacts/cleaned/cleaned_2026-04-15T10-20Z.csv",
   "chroma_path": "./chroma_db",
   "chroma_collection": "day10_kb"
 }
