@@ -111,6 +111,33 @@ def run_expectations(cleaned_rows: List[Dict[str, Any]]) -> Tuple[List[Expectati
             f"violations={len(bad_hr_annual)}",
         )
     )
+    # --- ADD THESE TO run_expectations in quality/expectations.py ---
+    
+    # E7: No PII Leakage (Halt)
+    pii_leaks = [r for r in cleaned_rows if "@company.internal" in (r.get("chunk_text") or "")]
+    results.append(
+        ExpectationResult(
+            "no_pii_leakage",
+            len(pii_leaks) == 0,
+            "halt",
+            f"found_{len(pii_leaks)}_leaks"
+        )
+    )
+    
+    # E8: SLA Resolution Check (Warn)
+    # If a P1 doc still mentions 6 hours, it's a warning that the cleaning logic might be incomplete
+    sla_stale = [
+        r for r in cleaned_rows 
+        if r.get("doc_id") == "sla_p1_2026" and "6 giờ" in r.get("chunk_text", "")
+    ]
+    results.append(
+        ExpectationResult(
+            "sla_p1_resolution_correct",
+            len(sla_stale) == 0,
+            "warn",
+            f"stale_sla_found={len(sla_stale)}"
+        )
+    )
 
     halt = any(not r.passed and r.severity == "halt" for r in results)
     return results, halt
