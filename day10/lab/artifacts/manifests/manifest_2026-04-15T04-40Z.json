@@ -1,0 +1,86 @@
+{
+  "run_id": "2026-04-15T04-40Z",
+  "run_token": "2026-04-15T04-40Z",
+  "run_timestamp": "2026-04-15T04:40:33.864911+00:00",
+  "command": "python etl_pipeline.py run",
+  "raw_path": "data/raw/policy_export_dirty.csv",
+  "raw_records": 10,
+  "cleaned_records": 6,
+  "quarantine_records": 4,
+  "latest_exported_at": "2026-04-10T08:00:00",
+  "no_refund_fix": false,
+  "skip_validate": false,
+  "skipped_validate": false,
+  "artifacts": {
+    "log_path": "artifacts/logs/run_2026-04-15T04-40Z.log",
+    "cleaned_csv": "artifacts/cleaned/cleaned_2026-04-15T04-40Z.csv",
+    "quarantine_csv": "artifacts/quarantine/quarantine_2026-04-15T04-40Z.csv",
+    "manifest_path": "artifacts/manifests/manifest_2026-04-15T04-40Z.json"
+  },
+  "validation": {
+    "halt": false,
+    "halt_failures": 0,
+    "warn_failures": 0,
+    "results": [
+      {
+        "name": "min_one_row",
+        "passed": true,
+        "severity": "halt",
+        "detail": "cleaned_rows=6"
+      },
+      {
+        "name": "no_empty_doc_id",
+        "passed": true,
+        "severity": "halt",
+        "detail": "empty_doc_id_count=0"
+      },
+      {
+        "name": "refund_no_stale_14d_window",
+        "passed": true,
+        "severity": "halt",
+        "detail": "violations=0"
+      },
+      {
+        "name": "chunk_min_length_8",
+        "passed": true,
+        "severity": "warn",
+        "detail": "short_chunks=0"
+      },
+      {
+        "name": "effective_date_iso_yyyy_mm_dd",
+        "passed": true,
+        "severity": "halt",
+        "detail": "non_iso_rows=0"
+      },
+      {
+        "name": "hr_leave_no_stale_10d_annual",
+        "passed": true,
+        "severity": "halt",
+        "detail": "violations=0"
+      }
+    ]
+  },
+  "embed": {
+    "attempted": true,
+    "status": "completed",
+    "collection": "day10_kb",
+    "db_path": "C:\\Users\\DELL\\OneDrive\\Desktop\\VinAI\\Ass_day8_9_10\\assignments\\C401-B3\\day10\\lab\\chroma_db"
+  },
+  "freshness": {
+    "status": "FAIL",
+    "detail": {
+      "latest_exported_at": "2026-04-10T08:00:00",
+      "age_hours": 116.696,
+      "sla_hours": 24.0,
+      "reason": "freshness_sla_exceeded"
+    },
+    "sla_hours": 24.0
+  },
+  "pipeline_status": "ok",
+  "exit_code": 0,
+  "cleaned_csv": "artifacts/cleaned/cleaned_2026-04-15T04-40Z.csv",
+  "quarantine_csv": "artifacts/quarantine/quarantine_2026-04-15T04-40Z.csv",
+  "log_path": "artifacts/logs/run_2026-04-15T04-40Z.log",
+  "chroma_path": "C:\\Users\\DELL\\OneDrive\\Desktop\\VinAI\\Ass_day8_9_10\\assignments\\C401-B3\\day10\\lab\\chroma_db",
+  "chroma_collection": "day10_kb"
+}

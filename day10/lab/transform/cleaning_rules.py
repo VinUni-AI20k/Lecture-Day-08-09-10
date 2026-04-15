@@ -10,6 +10,8 @@ from __future__ import annotations
 import csv
 import hashlib
 import re
+import unicodedata
+from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Tuple
 
@@ -25,6 +27,8 @@ ALLOWED_DOC_IDS = frozenset(
 
 _ISO_DATE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 _DMY_SLASH = re.compile(r"^(\d{2})/(\d{2})/(\d{4})$")
+# Zero-width / BOM — thường gặp khi copy-paste từ PDF/Slack; làm lệch dedupe và retrieval.
+_INVISIBLE_CHARS = dict.fromkeys(map(ord, "\u200b\u200c\u200d\ufeff"), None)
 
 
 def _norm_text(s: str) -> str:
@@ -53,6 +57,52 @@ def _normalize_effective_date(raw: str) -> Tuple[str, str]:
     return "", "invalid_effective_date_format"
 
 
+def _sanitize_chunk_text_unicode(text: str) -> Tuple[str, bool]:
+    """
+    Rule: **unicode_whitespace_hygiene**
+
+    Chuẩn hoá NFC, bỏ ký tự zero-width/BOM, gom khoảng trắng Unicode về space rồi collapse.
+    Chuỗi chỉ còn khoảng trắng → rỗng (giúp bắt whitespace-only mà strip đơn giản không bắt được).
+
+    metric_impact: thay đổi `chunk_text` (và `chunk_id` phụ thuộc hash) khi có ký tự ẩn / NBSP;
+    có thể làm tăng/giảm duplicate hoặc quarantine nếu text trở thành rỗng.
+    """
+    if not text:
+        return "", False
+    t = unicodedata.normalize("NFC", text)
+    t = t.translate(_INVISIBLE_CHARS)
+    # NBSP và một số khoảng trắng phổ biến → ASCII space trước khi collapse
+    t = t.replace("\u00a0", " ").replace("\u1680", " ").replace("\u2000", " ").replace("\u2001", " ")
+    t = t.replace("\u2002", " ").replace("\u2003", " ").replace("\u2004", " ").replace("\u2005", " ")
+    t = t.replace("\u2006", " ").replace("\u2007", " ").replace("\u2008", " ").replace("\u2009", " ")
+    t = t.replace("\u200a", " ").replace("\u202f", " ").replace("\u205f", " ").replace("\u3000", " ")
+    t = " ".join(t.split())
+    return t, t != text
+
+
+def _canonical_exported_at(raw: str) -> Tuple[str, str]:
+    """
+    Rule: **exported_at_iso_or_quarantine**
+
+    Parse `exported_at` về dạng ISO `YYYY-MM-DDTHH:MM:SS` (UTC-naive, không timezone offset trong string).
+    Thiếu hoặc không parse được → lỗi để quarantine.
+
+    metric_impact: tăng `quarantine_records` khi timestamp export sai; chuẩn hoá giá trị hợp lệ cho downstream.
+    """
+    s = (raw or "").strip()
+    if not s:
+        return "", "missing_exported_at"
+    # Cho phép 'Z' cuối (UTC) rồi bỏ khi canonical
+    if s.endswith("Z"):
+        s = s[:-1]
+    s = s.replace(" ", "T", 1) if " " in s and "T" not in s else s
+    try:
+        dt = datetime.fromisoformat(s)
+    except ValueError:
+        return "", "invalid_exported_at"
+    return dt.strftime("%Y-%m-%dT%H:%M:%S"), ""
+
+
 def load_raw_csv(path: Path) -> List[Dict[str, str]]:
     rows: List[Dict[str, str]] = []
     with path.open(encoding="utf-8", newline="") as f:
@@ -75,11 +125,13 @@ def clean_rows(
     2) Chuẩn hoá effective_date sang YYYY-MM-DD; quarantine nếu không parse được.
     3) Quarantine: chunk hr_leave_policy có effective_date < 2026-01-01 (bản HR cũ / conflict version).
     4) Quarantine: chunk_text rỗng hoặc effective_date rỗng sau chuẩn hoá.
-    5) Loại trùng nội dung chunk_text (giữ bản đầu).
-    6) Fix stale refund: policy_refund_v4 chứa '14 ngày làm việc' → 7 ngày.
+    5) **unicode_whitespace_hygiene**: NFC + bỏ zero-width/BOM + collapse whitespace (metric_impact khi có ký tự ẩn).
+    6) **exported_at_iso_or_quarantine**: exported_at bắt buộc parse được → canonical ISO datetime string.
+    7) **dedupe_doc_scoped_content**: loại trùng theo (doc_id, normalized chunk_text), không gộp nhầm giữa các doc (giữ bản đầu).
+    8) Fix stale refund: policy_refund_v4 chứa '14 ngày làm việc' → 7 ngày.
     """
     quarantine: List[Dict[str, Any]] = []
-    seen_text: set[str] = set()
+    seen_doc_text: set[Tuple[str, str]] = set()
     cleaned: List[Dict[str, Any]] = []
     seq = 0
 
@@ -87,7 +139,7 @@ def clean_rows(
         doc_id = raw.get("doc_id", "")
         text = raw.get("chunk_text", "")
         eff_raw = raw.get("effective_date", "")
-        exported_at = raw.get("exported_at", "")
+        exported_raw = raw.get("exported_at", "")
 
         if doc_id not in ALLOWED_DOC_IDS:
             quarantine.append({**raw, "reason": "unknown_doc_id"})
@@ -111,17 +163,32 @@ def clean_rows(
             )
             continue
 
+        text, unicode_changed = _sanitize_chunk_text_unicode(text)
         if not text:
             quarantine.append({**raw, "reason": "missing_chunk_text"})
             continue
 
-        key = _norm_text(text)
-        if key in seen_text:
+        exported_at, exp_err = _canonical_exported_at(exported_raw)
+        if exp_err:
+            quarantine.append(
+                {
+                    **raw,
+                    "reason": exp_err,
+                    "exported_at_raw": exported_raw,
+                }
+            )
+            continue
+
+        # Rule: **dedupe_doc_scoped_content** — cùng nội dung ở hai doc_id khác nhau không bị coi là trùng.
+        dedupe_key = (doc_id, _norm_text(text))
+        if dedupe_key in seen_doc_text:
             quarantine.append({**raw, "reason": "duplicate_chunk_text"})
             continue
-        seen_text.add(key)
+        seen_doc_text.add(dedupe_key)
 
         fixed_text = text
+        if unicode_changed:
+            fixed_text += " [cleaned: unicode_whitespace_hygiene]"
         if apply_refund_window_fix and doc_id == "policy_refund_v4":
             if "14 ngày làm việc" in fixed_text:
                 fixed_text = fixed_text.replace(
