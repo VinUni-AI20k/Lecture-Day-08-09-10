@@ -1,7 +1,9 @@
 """
-Expectation suite đơn giản (không bắt buộc Great Expectations).
+Simple expectation suite for cleaned data.
 
-Sinh viên có thể thay bằng GE / pydantic / custom — miễn là có halt có kiểm soát.
+This file keeps baseline checks and adds non-trivial checks for:
+- exported_at normalized format
+- temporal consistency between effective_date and exported_at
 """
 
 from __future__ import annotations
@@ -20,14 +22,8 @@ class ExpectationResult:
 
 
 def run_expectations(cleaned_rows: List[Dict[str, Any]]) -> Tuple[List[ExpectationResult], bool]:
-    """
-    Trả về (results, should_halt).
-
-    should_halt = True nếu có bất kỳ expectation severity halt nào fail.
-    """
     results: List[ExpectationResult] = []
 
-    # E1: có ít nhất 1 dòng sau clean
     ok = len(cleaned_rows) >= 1
     results.append(
         ExpectationResult(
@@ -38,8 +34,7 @@ def run_expectations(cleaned_rows: List[Dict[str, Any]]) -> Tuple[List[Expectati
         )
     )
 
-    # E2: không doc_id rỗng
-    bad_doc = [r for r in cleaned_rows if not (r.get("doc_id") or "").strip()]
+    bad_doc = [row for row in cleaned_rows if not (row.get("doc_id") or "").strip()]
     ok2 = len(bad_doc) == 0
     results.append(
         ExpectationResult(
@@ -50,12 +45,11 @@ def run_expectations(cleaned_rows: List[Dict[str, Any]]) -> Tuple[List[Expectati
         )
     )
 
-    # E3: policy refund không được chứa cửa sổ sai 14 ngày (sau khi đã fix)
     bad_refund = [
-        r
-        for r in cleaned_rows
-        if r.get("doc_id") == "policy_refund_v4"
-        and "14 ngày làm việc" in (r.get("chunk_text") or "")
+        row
+        for row in cleaned_rows
+        if row.get("doc_id") == "policy_refund_v4"
+        and "14 ngày làm việc" in (row.get("chunk_text") or "")
     ]
     ok3 = len(bad_refund) == 0
     results.append(
@@ -67,8 +61,7 @@ def run_expectations(cleaned_rows: List[Dict[str, Any]]) -> Tuple[List[Expectati
         )
     )
 
-    # E4: chunk_text đủ dài
-    short = [r for r in cleaned_rows if len((r.get("chunk_text") or "")) < 8]
+    short = [row for row in cleaned_rows if len((row.get("chunk_text") or "")) < 8]
     ok4 = len(short) == 0
     results.append(
         ExpectationResult(
@@ -79,11 +72,10 @@ def run_expectations(cleaned_rows: List[Dict[str, Any]]) -> Tuple[List[Expectati
         )
     )
 
-    # E5: effective_date đúng định dạng ISO sau clean (phát hiện parser lỏng)
     iso_bad = [
-        r
-        for r in cleaned_rows
-        if not re.match(r"^\d{4}-\d{2}-\d{2}$", (r.get("effective_date") or "").strip())
+        row
+        for row in cleaned_rows
+        if not re.match(r"^\d{4}-\d{2}-\d{2}$", (row.get("effective_date") or "").strip())
     ]
     ok5 = len(iso_bad) == 0
     results.append(
@@ -95,12 +87,11 @@ def run_expectations(cleaned_rows: List[Dict[str, Any]]) -> Tuple[List[Expectati
         )
     )
 
-    # E6: không còn marker phép năm cũ 10 ngày trên doc HR (conflict version sau clean)
     bad_hr_annual = [
-        r
-        for r in cleaned_rows
-        if r.get("doc_id") == "hr_leave_policy"
-        and "10 ngày phép năm" in (r.get("chunk_text") or "")
+        row
+        for row in cleaned_rows
+        if row.get("doc_id") == "hr_leave_policy"
+        and "10 ngày phép năm" in (row.get("chunk_text") or "")
     ]
     ok6 = len(bad_hr_annual) == 0
     results.append(
@@ -112,5 +103,35 @@ def run_expectations(cleaned_rows: List[Dict[str, Any]]) -> Tuple[List[Expectati
         )
     )
 
-    halt = any(not r.passed and r.severity == "halt" for r in results)
+    bad_exported_at = [
+        row
+        for row in cleaned_rows
+        if not re.match(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$", (row.get("exported_at") or "").strip())
+    ]
+    ok7 = len(bad_exported_at) == 0
+    results.append(
+        ExpectationResult(
+            "exported_at_iso_utc",
+            ok7,
+            "halt",
+            f"non_iso_utc_rows={len(bad_exported_at)}",
+        )
+    )
+
+    temporal_bad = [
+        row
+        for row in cleaned_rows
+        if (row.get("effective_date") or "") > (row.get("exported_at") or "")[:10]
+    ]
+    ok8 = len(temporal_bad) == 0
+    results.append(
+        ExpectationResult(
+            "effective_not_after_exported",
+            ok8,
+            "halt",
+            f"violations={len(temporal_bad)}",
+        )
+    )
+
+    halt = any((not result.passed) and result.severity == "halt" for result in results)
     return results, halt

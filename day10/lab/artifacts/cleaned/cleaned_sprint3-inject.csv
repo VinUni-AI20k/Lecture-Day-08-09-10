@@ -1,0 +1,4 @@
+chunk_id,doc_id,chunk_text,effective_date,exported_at
+policy_refund_v4_1_3b11f30cc4b49d25,policy_refund_v4,Yêu cầu được gửi trong vòng 7 ngày làm việc kể từ thời điểm xác nhận đơn hàng.,2026-02-01,2026-04-10T08:00:00Z
+policy_refund_v4_2_45eb043f3cd16916,policy_refund_v4,Yêu cầu hoàn tiền được chấp nhận trong vòng 14 ngày làm việc kể từ xác nhận đơn (ghi chú: bản sync cũ policy-v3 — lỗi migration).,2026-02-01,2026-04-10T08:00:00Z
+sla_p1_2026_3_ab622211ba880896,sla_p1_2026,Ticket P1 có SLA phản hồi ban đầu 15 phút và resolution trong 4 giờ.,2026-02-01,2026-04-10T08:00:00Z

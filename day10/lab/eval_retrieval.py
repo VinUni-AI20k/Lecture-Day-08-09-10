@@ -17,6 +17,8 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
+from embedding_provider import build_embedding_function
+
 load_dotenv()
 
 ROOT = Path(__file__).resolve().parent
@@ -39,9 +41,8 @@ def main() -> int:
 
     try:
         import chromadb
-        from chromadb.utils import embedding_functions
     except ImportError:
-        print("Install: pip install chromadb sentence-transformers", file=sys.stderr)
+        print("Install: pip install -r requirements.txt", file=sys.stderr)
         return 1
 
     qpath = Path(args.questions)
@@ -52,10 +53,14 @@ def main() -> int:
     questions = json.loads(qpath.read_text(encoding="utf-8"))
     db_path = os.environ.get("CHROMA_DB_PATH", str(ROOT / "chroma_db"))
     collection_name = os.environ.get("CHROMA_COLLECTION", "day10_kb")
-    model_name = os.environ.get("EMBEDDING_MODEL", "all-MiniLM-L6-v2")
 
     client = chromadb.PersistentClient(path=db_path)
-    emb = embedding_functions.SentenceTransformerEmbeddingFunction(model_name=model_name)
+    try:
+        emb, provider_name = build_embedding_function()
+    except Exception as exc:
+        print(f"Embedding provider error: {exc}", file=sys.stderr)
+        return 1
+    print(f"Using embedding provider: {provider_name}")
     try:
         col = client.get_collection(name=collection_name, embedding_function=emb)
     except Exception as e:
@@ -83,9 +88,10 @@ def main() -> int:
             res = col.query(query_texts=[text], n_results=args.top_k)
             docs = (res.get("documents") or [[]])[0]
             metas = (res.get("metadatas") or [[]])[0]
+            safe_docs = [d if isinstance(d, str) else "" for d in docs]
             top_doc = (metas[0] or {}).get("doc_id", "") if metas else ""
-            preview = (docs[0] or "")[:180].replace("\n", " ") if docs else ""
-            blob = " ".join(docs).lower()
+            preview = (safe_docs[0] or "")[:180].replace("\n", " ") if safe_docs else ""
+            blob = " ".join(safe_docs).lower()
             must_any = [x.lower() for x in q.get("must_contain_any", [])]
             forbidden = [x.lower() for x in q.get("must_not_contain", [])]
             ok_any = any(m in blob for m in must_any) if must_any else True

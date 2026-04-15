@@ -1,8 +1,10 @@
 """
-Cleaning rules — raw export → cleaned rows + quarantine.
+Cleaning rules for raw export -> cleaned rows + quarantine.
 
-Baseline gồm các failure mode mở rộng (allowlist doc_id, parse ngày, HR stale version).
-Sinh viên thêm ≥3 rule mới: mỗi rule phải ghi `metric_impact` (xem README — chống trivial).
+Baseline rules are preserved and extended with measurable rules:
+- validate and normalize exported_at
+- reject temporal inconsistency (effective_date > exported_at)
+- reject coarse off-topic chunks by doc keyword checks
 """
 
 from __future__ import annotations
@@ -10,10 +12,10 @@ from __future__ import annotations
 import csv
 import hashlib
 import re
+from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Mapping, Tuple
 
-# Khớp export hợp lệ trong lab (mở rộng khi nhóm thêm doc mới — phải đồng bộ contract).
 ALLOWED_DOC_IDS = frozenset(
     {
         "policy_refund_v4",
@@ -22,6 +24,13 @@ ALLOWED_DOC_IDS = frozenset(
         "hr_leave_policy",
     }
 )
+
+DEFAULT_DOC_KEYWORDS: Mapping[str, Tuple[str, ...]] = {
+    "policy_refund_v4": ("hoàn tiền", "refund", "ngày làm việc"),
+    "sla_p1_2026": ("p1", "sla"),
+    "it_helpdesk_faq": ("đăng nhập", "mật khẩu", "tài khoản"),
+    "hr_leave_policy": ("phép năm", "chính sách"),
+}
 
 _ISO_DATE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 _DMY_SLASH = re.compile(r"^(\d{2})/(\d{2})/(\d{4})$")
@@ -32,15 +41,11 @@ def _norm_text(s: str) -> str:
 
 
 def _stable_chunk_id(doc_id: str, chunk_text: str, seq: int) -> str:
-    h = hashlib.sha256(f"{doc_id}|{chunk_text}|{seq}".encode("utf-8")).hexdigest()[:16]
-    return f"{doc_id}_{seq}_{h}"
+    digest = hashlib.sha256(f"{doc_id}|{chunk_text}|{seq}".encode("utf-8")).hexdigest()[:16]
+    return f"{doc_id}_{seq}_{digest}"
 
 
 def _normalize_effective_date(raw: str) -> Tuple[str, str]:
-    """
-    Trả về (iso_date, error_reason).
-    iso_date rỗng nếu không parse được.
-    """
     s = (raw or "").strip()
     if not s:
         return "", "empty_effective_date"
@@ -53,12 +58,29 @@ def _normalize_effective_date(raw: str) -> Tuple[str, str]:
     return "", "invalid_effective_date_format"
 
 
+def _normalize_exported_at(raw: str) -> Tuple[str, str]:
+    s = (raw or "").strip()
+    if not s:
+        return "", "missing_exported_at"
+    try:
+        if s.endswith("Z"):
+            dt = datetime.fromisoformat(s.replace("Z", "+00:00"))
+        else:
+            dt = datetime.fromisoformat(s)
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        dt = dt.astimezone(timezone.utc)
+        return dt.replace(tzinfo=None).isoformat(timespec="seconds") + "Z", ""
+    except ValueError:
+        return "", "invalid_exported_at_format"
+
+
 def load_raw_csv(path: Path) -> List[Dict[str, str]]:
     rows: List[Dict[str, str]] = []
-    with path.open(encoding="utf-8", newline="") as f:
-        reader = csv.DictReader(f)
-        for r in reader:
-            rows.append({k: (v or "").strip() for k, v in r.items()})
+    with path.open(encoding="utf-8", newline="") as file:
+        reader = csv.DictReader(file)
+        for row in reader:
+            rows.append({key: (value or "").strip() for key, value in row.items()})
     return rows
 
 
@@ -66,47 +88,53 @@ def clean_rows(
     rows: List[Dict[str, str]],
     *,
     apply_refund_window_fix: bool = True,
+    refund_window_days: int = 7,
+    hr_leave_min_effective_date: str = "2026-01-01",
+    doc_keywords: Mapping[str, Tuple[str, ...]] | None = None,
 ) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
-    """
-    Trả về (cleaned, quarantine).
-
-    Baseline (mở rộng theo narrative Day 10):
-    1) Quarantine: doc_id không thuộc allowlist (export lạ / catalog sai).
-    2) Chuẩn hoá effective_date sang YYYY-MM-DD; quarantine nếu không parse được.
-    3) Quarantine: chunk hr_leave_policy có effective_date < 2026-01-01 (bản HR cũ / conflict version).
-    4) Quarantine: chunk_text rỗng hoặc effective_date rỗng sau chuẩn hoá.
-    5) Loại trùng nội dung chunk_text (giữ bản đầu).
-    6) Fix stale refund: policy_refund_v4 chứa '14 ngày làm việc' → 7 ngày.
-    """
     quarantine: List[Dict[str, Any]] = []
-    seen_text: set[str] = set()
     cleaned: List[Dict[str, Any]] = []
+    seen_text: set[str] = set()
     seq = 0
+
+    keyword_map = dict(DEFAULT_DOC_KEYWORDS)
+    if doc_keywords:
+        keyword_map.update(dict(doc_keywords))
+
+    refund_from = "14 ngày làm việc"
+    refund_to = f"{max(1, int(refund_window_days))} ngày làm việc"
 
     for raw in rows:
         doc_id = raw.get("doc_id", "")
         text = raw.get("chunk_text", "")
-        eff_raw = raw.get("effective_date", "")
-        exported_at = raw.get("exported_at", "")
+        effective_date_raw = raw.get("effective_date", "")
+        exported_at_raw = raw.get("exported_at", "")
 
         if doc_id not in ALLOWED_DOC_IDS:
             quarantine.append({**raw, "reason": "unknown_doc_id"})
             continue
 
-        eff_norm, eff_err = _normalize_effective_date(eff_raw)
-        if eff_err == "empty_effective_date":
+        effective_date_norm, effective_date_err = _normalize_effective_date(effective_date_raw)
+        if effective_date_err == "empty_effective_date":
             quarantine.append({**raw, "reason": "missing_effective_date"})
             continue
-        if eff_err == "invalid_effective_date_format":
-            quarantine.append({**raw, "reason": eff_err, "effective_date_raw": eff_raw})
+        if effective_date_err:
+            quarantine.append(
+                {
+                    **raw,
+                    "reason": effective_date_err,
+                    "effective_date_raw": effective_date_raw,
+                }
+            )
             continue
 
-        if doc_id == "hr_leave_policy" and eff_norm < "2026-01-01":
+        if doc_id == "hr_leave_policy" and effective_date_norm < hr_leave_min_effective_date:
             quarantine.append(
                 {
                     **raw,
                     "reason": "stale_hr_policy_effective_date",
-                    "effective_date_normalized": eff_norm,
+                    "effective_date_normalized": effective_date_norm,
+                    "hr_leave_min_effective_date": hr_leave_min_effective_date,
                 }
             )
             continue
@@ -115,20 +143,45 @@ def clean_rows(
             quarantine.append({**raw, "reason": "missing_chunk_text"})
             continue
 
-        key = _norm_text(text)
-        if key in seen_text:
+        exported_at_norm, exported_at_err = _normalize_exported_at(exported_at_raw)
+        if exported_at_err:
+            quarantine.append({**raw, "reason": exported_at_err})
+            continue
+
+        if effective_date_norm > exported_at_norm[:10]:
+            quarantine.append(
+                {
+                    **raw,
+                    "reason": "effective_date_after_exported_at",
+                    "effective_date_normalized": effective_date_norm,
+                    "exported_at_normalized": exported_at_norm,
+                }
+            )
+            continue
+
+        required_keywords = keyword_map.get(doc_id) or ()
+        normalized_for_topic = _norm_text(text)
+        if required_keywords and not any(keyword in normalized_for_topic for keyword in required_keywords):
+            quarantine.append(
+                {
+                    **raw,
+                    "reason": "topic_keyword_mismatch",
+                    "required_keywords": "|".join(required_keywords),
+                }
+            )
+            continue
+
+        normalized_text = " ".join(text.strip().split())
+        dedupe_key = _norm_text(normalized_text)
+        if dedupe_key in seen_text:
             quarantine.append({**raw, "reason": "duplicate_chunk_text"})
             continue
-        seen_text.add(key)
+        seen_text.add(dedupe_key)
 
-        fixed_text = text
-        if apply_refund_window_fix and doc_id == "policy_refund_v4":
-            if "14 ngày làm việc" in fixed_text:
-                fixed_text = fixed_text.replace(
-                    "14 ngày làm việc",
-                    "7 ngày làm việc",
-                )
-                fixed_text += " [cleaned: stale_refund_window]"
+        fixed_text = normalized_text
+        if apply_refund_window_fix and doc_id == "policy_refund_v4" and refund_from in fixed_text:
+            fixed_text = fixed_text.replace(refund_from, refund_to)
+            fixed_text += " [cleaned: stale_refund_window]"
 
         seq += 1
         cleaned.append(
@@ -136,8 +189,8 @@ def clean_rows(
                 "chunk_id": _stable_chunk_id(doc_id, fixed_text, seq),
                 "doc_id": doc_id,
                 "chunk_text": fixed_text,
-                "effective_date": eff_norm,
-                "exported_at": exported_at or "",
+                "effective_date": effective_date_norm,
+                "exported_at": exported_at_norm,
             }
         )
 
@@ -146,15 +199,15 @@ def clean_rows(
 
 def write_cleaned_csv(path: Path, rows: List[Dict[str, Any]]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    if not rows:
-        path.write_text("chunk_id,doc_id,chunk_text,effective_date,exported_at\n", encoding="utf-8")
-        return
     fieldnames = ["chunk_id", "doc_id", "chunk_text", "effective_date", "exported_at"]
-    with path.open("w", encoding="utf-8", newline="") as f:
-        w = csv.DictWriter(f, fieldnames=fieldnames)
-        w.writeheader()
-        for r in rows:
-            w.writerow({k: r.get(k, "") for k in fieldnames})
+    if not rows:
+        path.write_text(",".join(fieldnames) + "\n", encoding="utf-8")
+        return
+    with path.open("w", encoding="utf-8", newline="") as file:
+        writer = csv.DictWriter(file, fieldnames=fieldnames)
+        writer.writeheader()
+        for row in rows:
+            writer.writerow({key: row.get(key, "") for key in fieldnames})
 
 
 def write_quarantine_csv(path: Path, rows: List[Dict[str, Any]]) -> None:
@@ -162,15 +215,17 @@ def write_quarantine_csv(path: Path, rows: List[Dict[str, Any]]) -> None:
     if not rows:
         path.write_text("chunk_id,doc_id,chunk_text,effective_date,exported_at,reason\n", encoding="utf-8")
         return
-    keys: List[str] = []
-    seen_k: set[str] = set()
-    for r in rows:
-        for k in r.keys():
-            if k not in seen_k:
-                seen_k.add(k)
-                keys.append(k)
-    with path.open("w", encoding="utf-8", newline="") as f:
-        w = csv.DictWriter(f, fieldnames=keys, extrasaction="ignore", restval="")
-        w.writeheader()
-        for r in rows:
-            w.writerow(r)
+
+    ordered_keys: List[str] = []
+    seen_keys: set[str] = set()
+    for row in rows:
+        for key in row.keys():
+            if key not in seen_keys:
+                seen_keys.add(key)
+                ordered_keys.append(key)
+
+    with path.open("w", encoding="utf-8", newline="") as file:
+        writer = csv.DictWriter(file, fieldnames=ordered_keys, extrasaction="ignore", restval="")
+        writer.writeheader()
+        for row in rows:
+            writer.writerow(row)

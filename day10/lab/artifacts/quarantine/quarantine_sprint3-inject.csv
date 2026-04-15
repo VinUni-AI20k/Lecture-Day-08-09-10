@@ -1,0 +1,7 @@
+chunk_id,doc_id,chunk_text,effective_date,exported_at,reason,required_keywords,effective_date_normalized,hr_leave_min_effective_date,exported_at_normalized
+2,policy_refund_v4,Thông báo bảo trì hệ thống nội bộ theo lịch tuần.,2026-02-01,2026-04-10T08:00:00,topic_keyword_mismatch,hoàn tiền|refund|ngày làm việc,,,
+5,it_helpdesk_faq,Tài khoản bị khóa sau 5 lần đăng nhập sai liên tiếp.,2026-02-01,2026/04/10 08:00:00,invalid_exported_at_format,,,,
+6,hr_leave_policy,Nhân viên dưới 3 năm kinh nghiệm được 10 ngày phép năm (bản HR 2025).,2025-01-01,2026-04-10T08:00:00,stale_hr_policy_effective_date,,2025-01-01,2026-01-01,
+7,hr_leave_policy,Nhân viên dưới 3 năm kinh nghiệm được 12 ngày phép năm theo chính sách 2026.,2026-07-01,2026-04-10T08:00:00,effective_date_after_exported_at,,2026-07-01,,2026-04-10T08:00:00Z
+8,it_helpdesk_faq,,2026-02-01,2026-04-10T08:00:00,missing_chunk_text,,,,
+9,legacy_catalog_xyz_zzz,Chunk nội dung đủ dài để vượt ngưỡng expectation độ dài tối thiểu trong cleaned export.,2026-02-01,2026-04-10T08:00:00,unknown_doc_id,,,,

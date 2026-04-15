@@ -1,0 +1,20 @@
+{
+  "run_id": "sprint3-inject",
+  "run_timestamp": "2026-04-15T05:00:39.463945+00:00",
+  "raw_path": "data\\raw\\policy_export_inject.csv",
+  "contract_path": "contracts\\data_contract.yaml",
+  "raw_records": 9,
+  "cleaned_records": 3,
+  "quarantine_records": 6,
+  "latest_raw_exported_at": "2026/04/10 08:00:00",
+  "latest_exported_at": "2026-04-10T08:00:00Z",
+  "latest_cleaned_exported_at": "2026-04-10T08:00:00Z",
+  "hr_leave_min_effective_date": "2026-01-01",
+  "refund_window_days": 7,
+  "no_refund_fix": true,
+  "skipped_validate": true,
+  "cleaned_csv": "artifacts\\cleaned\\cleaned_sprint3-inject.csv",
+  "chroma_path": "./chroma_db",
+  "chroma_collection": "day10_kb",
+  "embedding_provider": "text-embedding-3-small"
+}
