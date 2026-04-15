@@ -1,0 +1,8 @@
+{
+  "timestamp": "2026-04-13T17:23:14",
+  "baseline_label": "baseline_dense",
+  "variant_label": "variant_hybrid",
+  "baseline_rows": 10,
+  "variant_rows": 10,
+  "ab_csv": "e:/VinUNI_thuc_chien/lab_8/Lab08_09_10_E403_Team61/day08/lab/results/sprint4/ab_comparison.csv"
+}

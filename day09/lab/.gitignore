@@ -1,0 +1,15 @@
+# Environments
+venv/
+.venv/
+env/
+.env
+
+# Dependencies
+__pycache__/
+*.pyc
+
+# Local Vector Database
+chroma_db/
+
+# MacOS
+.DS_Store

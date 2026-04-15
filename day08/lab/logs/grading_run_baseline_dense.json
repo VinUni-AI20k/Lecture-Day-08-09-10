@@ -1,0 +1,610 @@
+{
+  "timestamp": "2026-04-14T16:43:50.398042",
+  "config": {
+    "retrieval_mode": "dense",
+    "top_k_search": 10,
+    "top_k_select": 3,
+    "use_rerank": false,
+    "label": "baseline_dense"
+  },
+  "results": [
+    {
+      "id": "gq01",
+      "category": "SLA",
+      "difficulty": "hard",
+      "query": "SLA xử lý ticket P1 đã thay đổi như thế nào so với phiên bản trước?",
+      "answer": "SLA xử lý ticket P1 đã thay đổi từ 6 giờ xuống 4 giờ trong phiên bản v2026.1 (2026-01-15) [1].",
+      "sources": [
+        "support/sla-p1-2026.pdf",
+        "support/sla-p1-2026.pdf",
+        "support/sla-p1-2026.pdf"
+      ],
+      "chunks_used": [
+        {
+          "text": "v2026.1 (2026-01-15): Cập nhật SLA P1 resolution từ 6 giờ xuống 4 giờ.\nv2025.3 (2025-09-01): Thêm quy trình escalation tự động.\nv2025.1 (2025-03-01): Phiên bản đầu tiên.",
+          "metadata": {
+            "access": "internal",
+            "section": "Phần 5: Lịch sử phiên bản",
+            "source": "support/sla-p1-2026.pdf",
+            "effective_date": "2026-01-15",
+            "department": "IT"
+          },
+          "score": 0.5503220558166504
+        },
+        {
+          "text": "Ticket system: Jira (project IT-SUPPORT)\nSlack channel: #incident-p1, #incident-p2\nPagerDuty: Tự động nhắn on-call khi P1 ticket mới\nHotline on-call: ext. 9999 (24/7)",
+          "metadata": {
+            "section": "Phần 4: Công cụ và kênh liên lạc",
+            "source": "support/sla-p1-2026.pdf",
+            "access": "internal",
+            "department": "IT",
+            "effective_date": "2026-01-15"
+          },
+          "score": 0.5418956875801086
+        },
+        {
+          "text": "Ticket P1:\n- Phản hồi ban đầu (first response): 15 phút kể từ khi ticket được tạo.\n- Xử lý và khắc phục (resolution): 4 giờ.\n- Escalation: Tự động escalate lên Senior Engineer nếu không có phản hồi trong 10 phút.\n- Thông báo stakeholder: Ngay khi nhận ticket, update mỗi 30 phút cho đến khi resolve.\n\nTicket P2:\n- Phản hồi ban đầu: 2 giờ.\n- Xử lý và khắc phục: 1 ngày làm việc.\n- Escalation: Tự động escalate sau 90 phút không có phản hồi.\n\nTicket P3:\n- Phản hồi ban đầu: 1 ngày làm việc.\n- Xử lý và khắc phục: 5 ngày làm việc.\n\nTicket P4:\n- Phản hồi ban đầu: 3 ngày làm việc.\n- Xử lý và khắc phục: Theo sprint cycle (thông thường 2-4 tuần).",
+          "metadata": {
+            "access": "internal",
+            "department": "IT",
+            "effective_date": "2026-01-15",
+            "source": "support/sla-p1-2026.pdf",
+            "section": "Phần 2: SLA theo mức độ ưu tiên"
+          },
+          "score": 0.45571666955947876
+        }
+      ],
+      "expected_sources": [
+        "support/sla-p1-2026.pdf"
+      ],
+      "expected_answer": "Phiên bản hiện tại (v2026.1, có hiệu lực từ 2026-01-15) đã cập nhật SLA P1 resolution từ 6 giờ xuống còn 4 giờ. Phiên bản trước (v2025.3) không thay đổi SLA này.",
+      "confidence": 0.5503220558166504,
+      "latency_ms": 29375,
+      "abstained": false,
+      "faithfulness": null,
+      "faithfulness_notes": "Skipped (use_llm_judge=False).",
+      "relevance": null,
+      "relevance_notes": "Skipped (use_llm_judge=False).",
+      "context_recall": 5,
+      "context_recall_notes": "Found: 1/1. Missing: []",
+      "completeness": null,
+      "completeness_notes": "Skipped (use_llm_judge=False).",
+      "config_label": "baseline_dense"
+    },
+    {
+      "id": "gq02",
+      "category": "Cross-Document",
+      "difficulty": "hard",
+      "query": "Khi làm việc remote, tôi phải dùng VPN và được kết nối trên tối đa bao nhiêu thiết bị?",
+      "answer": "Không tìm thấy thông tin về 'Khi làm việc remote, tôi phải dùng VPN và được kết nối trên tối đa bao nhiêu thiết bị?' trong tài liệu hiện có.",
+      "sources": [
+        "support/helpdesk-faq.md",
+        "hr/leave-policy-2026.pdf",
+        "support/helpdesk-faq.md"
+      ],
+      "chunks_used": [
+        {
+          "text": "Q: Phần mềm VPN nào công ty dùng?\nA: Công ty sử dụng Cisco AnyConnect. Download tại https://vpn.company.internal/download.\n\nQ: Tôi bị mất kết nối VPN liên tục, phải làm gì?\nA: Kiểm tra kết nối Internet trước. Nếu vẫn lỗi, tạo ticket P3 với log file VPN đính kèm.\n\nQ: VPN có giới hạn số thiết bị không?\nA: Mỗi tài khoản được kết nối VPN trên tối đa 2 thiết bị cùng lúc.",
+          "metadata": {
+            "access": "internal",
+            "section": "Section 2: VPN và kết nối từ xa",
+            "source": "support/helpdesk-faq.md",
+            "effective_date": "2026-01-20",
+            "department": "IT"
+          },
+          "score": 0.6822736859321594
+        },
+        {
+          "text": "4.1 Điều kiện remote:\n- Nhân viên sau probation period có thể làm remote tối đa 2 ngày/tuần.\n- Team Lead phải phê duyệt lịch remote qua HR Portal.\n- Ngày onsite bắt buộc: Thứ 3 và Thứ 5 theo lịch team.\n\n4.2 Yêu cầu kỹ thuật khi remote:\n- Kết nối VPN bắt buộc khi làm việc với hệ thống nội bộ.\n- Camera bật trong các cuộc họp team.",
+          "metadata": {
+            "access": "internal",
+            "department": "HR",
+            "effective_date": "2026-01-01",
+            "source": "hr/leave-policy-2026.pdf",
+            "section": "Phần 4: Remote work policy"
+          },
+          "score": 0.5046177506446838
+        },
+        {
+          "text": "Q: Tôi quên mật khẩu, phải làm gì?\nA: Truy cập https://sso.company.internal/reset hoặc liên hệ Helpdesk qua ext. 9000. Mật khẩu mới sẽ được gửi qua email công ty trong vòng 5 phút.\n\nQ: Tài khoản bị khóa sau bao nhiêu lần đăng nhập sai?\nA: Tài khoản bị khóa sau 5 lần đăng nhập sai liên tiếp. Để mở khóa, liên hệ IT Helpdesk hoặc tự reset qua portal SSO.\n\nQ: Mật khẩu cần thay đổi định kỳ không?\nA: Có. Mật khẩu phải được thay đổi mỗi 90 ngày. Hệ thống sẽ nhắc nhở 7 ngày trước khi hết hạn.",
+          "metadata": {
+            "department": "IT",
+            "section": "Section 1: Tài khoản và mật khẩu",
+            "source": "support/helpdesk-faq.md",
+            "access": "internal",
+            "effective_date": "2026-01-20"
+          },
+          "score": 0.3136873245239258
+        }
+      ],
+      "expected_sources": [
+        "hr/leave-policy-2026.pdf",
+        "support/helpdesk-faq.md"
+      ],
+      "expected_answer": "Khi làm việc remote và truy cập hệ thống nội bộ, VPN là bắt buộc (theo HR Leave Policy). Phần mềm VPN là Cisco AnyConnect và mỗi tài khoản được kết nối VPN trên tối đa 2 thiết bị cùng lúc (theo IT Helpdesk FAQ).",
+      "confidence": 0.6822736859321594,
+      "latency_ms": 2661,
+      "abstained": true,
+      "faithfulness": null,
+      "faithfulness_notes": "Skipped (use_llm_judge=False).",
+      "relevance": null,
+      "relevance_notes": "Skipped (use_llm_judge=False).",
+      "context_recall": 5,
+      "context_recall_notes": "Found: 2/2. Missing: []",
+      "completeness": null,
+      "completeness_notes": "Skipped (use_llm_judge=False).",
+      "config_label": "baseline_dense"
+    },
+    {
+      "id": "gq03",
+      "category": "Refund",
+      "difficulty": "hard",
+      "query": "Đơn hàng mua trong chương trình Flash Sale và đã kích hoạt sản phẩm có được hoàn tiền không?",
+      "answer": "Không tìm thấy thông tin về 'Đơn hàng mua trong chương trình Flash Sale và đã kích hoạt sản phẩm có được hoàn tiền không?' trong tài liệu hiện có.",
+      "sources": [
+        "policy/refund-v4.pdf",
+        "policy/refund-v4.pdf",
+        "policy/refund-v4.pdf"
+      ],
+      "chunks_used": [
+        {
+          "text": "Hoàn tiền — Điều kiện áp dụng:\nYêu cầu được gửi trong vòng 7 ngày kể từ thời điểm xác nhận đơn hàng.\n\nNgoại lệ không được hoàn tiền:\n- Sản phẩm thuộc danh mục hàng kỹ thuật số (license key, subscription).\n- Đơn hàng đã áp dụng mã giảm giá đặc biệt theo chương trình khuyến mãi Flash Sale.\n- Sản phẩm đã được kích hoạt hoặc đăng ký tài khoản.",
+          "metadata": {
+            "effective_date": "2026-02-01",
+            "section": "Điều 3: Điều kiện áp dụng và ngoại lệ",
+            "source": "policy/refund-v4.pdf",
+            "department": "CS",
+            "access": "internal"
+          },
+          "score": 0.7088170051574707
+        },
+        {
+          "text": "Khách hàng được quyền yêu cầu hoàn tiền khi đáp ứng đủ các điều kiện sau:\n- Sản phẩm bị lỗi do nhà sản xuất, không phải do người dùng.\n- Yêu cầu được gửi trong vòng 7 ngày làm việc kể từ thời điểm xác nhận đơn hàng.\n- Đơn hàng chưa được sử dụng hoặc chưa bị mở seal.",
+          "metadata": {
+            "source": "policy/refund-v4.pdf",
+            "department": "CS",
+            "section": "Điều 2: Điều kiện được hoàn tiền",
+            "effective_date": "2026-02-01",
+            "access": "internal"
+          },
+          "score": 0.4546452760696411
+        },
+        {
+          "text": "- Hoàn tiền qua phương thức thanh toán gốc: áp dụng trong 100% trường hợp đủ điều kiện.\n- Hoàn tiền qua credit nội bộ (store credit): khách hàng có thể chọn nhận store credit thay thế với giá trị 110% so với số tiền hoàn.",
+          "metadata": {
+            "section": "Điều 5: Hình thức hoàn tiền",
+            "department": "CS",
+            "source": "policy/refund-v4.pdf",
+            "access": "internal",
+            "effective_date": "2026-02-01"
+          },
+          "score": 0.35863447189331055
+        }
+      ],
+      "expected_sources": [
+        "policy/refund-v4.pdf"
+      ],
+      "expected_answer": "Không được hoàn tiền. Đơn hàng rơi vào hai ngoại lệ cùng lúc: (1) đơn hàng áp dụng mã giảm giá chương trình Flash Sale và (2) sản phẩm đã được kích hoạt — cả hai đều thuộc danh sách ngoại lệ không được hoàn tiền theo Điều 3 của chính sách.",
+      "confidence": 0.7088170051574707,
+      "latency_ms": 1828,
+      "abstained": true,
+      "faithfulness": null,
+      "faithfulness_notes": "Skipped (use_llm_judge=False).",
+      "relevance": null,
+      "relevance_notes": "Skipped (use_llm_judge=False).",
+      "context_recall": 5,
+      "context_recall_notes": "Found: 1/1. Missing: []",
+      "completeness": null,
+      "completeness_notes": "Skipped (use_llm_judge=False).",
+      "config_label": "baseline_dense"
+    },
+    {
+      "id": "gq04",
+      "category": "Refund",
+      "difficulty": "medium",
+      "query": "Nếu chọn nhận store credit thay vì hoàn tiền, tôi được bao nhiêu phần trăm so với số tiền gốc?",
+      "answer": "Nếu chọn nhận store credit thay vì hoàn tiền, bạn sẽ nhận được giá trị 110% so với số tiền hoàn [1].",
+      "sources": [
+        "policy/refund-v4.pdf",
+        "hr/leave-policy-2026.pdf",
+        "policy/refund-v4.pdf"
+      ],
+      "chunks_used": [
+        {
+          "text": "- Hoàn tiền qua phương thức thanh toán gốc: áp dụng trong 100% trường hợp đủ điều kiện.\n- Hoàn tiền qua credit nội bộ (store credit): khách hàng có thể chọn nhận store credit thay thế với giá trị 110% so với số tiền hoàn.",
+          "metadata": {
+            "effective_date": "2026-02-01",
+            "department": "CS",
+            "access": "internal",
+            "section": "Điều 5: Hình thức hoàn tiền",
+            "source": "policy/refund-v4.pdf"
+          },
+          "score": 0.8035824298858643
+        },
+        {
+          "text": "3.1 Điều kiện làm thêm:\nLàm thêm giờ phải được Line Manager phê duyệt trước bằng văn bản.\n\n3.2 Hệ số lương làm thêm:\n- Ngày thường: 150% lương giờ tiêu chuẩn.\n- Ngày cuối tuần: 200% lương giờ tiêu chuẩn.\n- Ngày lễ: 300% lương giờ tiêu chuẩn.",
+          "metadata": {
+            "effective_date": "2026-01-01",
+            "source": "hr/leave-policy-2026.pdf",
+            "access": "internal",
+            "department": "HR",
+            "section": "Phần 3: Chính sách làm thêm giờ"
+          },
+          "score": 0.4255978465080261
+        },
+        {
+          "text": "Hoàn tiền — Điều kiện áp dụng:\nYêu cầu được gửi trong vòng 7 ngày kể từ thời điểm xác nhận đơn hàng.\n\nNgoại lệ không được hoàn tiền:\n- Sản phẩm thuộc danh mục hàng kỹ thuật số (license key, subscription).\n- Đơn hàng đã áp dụng mã giảm giá đặc biệt theo chương trình khuyến mãi Flash Sale.\n- Sản phẩm đã được kích hoạt hoặc đăng ký tài khoản.",
+          "metadata": {
+            "access": "internal",
+            "source": "policy/refund-v4.pdf",
+            "section": "Điều 3: Điều kiện áp dụng và ngoại lệ",
+            "department": "CS",
+            "effective_date": "2026-02-01"
+          },
+          "score": 0.34271788597106934
+        }
+      ],
+      "expected_sources": [
+        "policy/refund-v4.pdf"
+      ],
+      "expected_answer": "Khách hàng có thể chọn nhận store credit (credit nội bộ) thay thế với giá trị 110% so với số tiền hoàn gốc. Đây là tùy chọn, không phải bắt buộc.",
+      "confidence": 0.8035824298858643,
+      "latency_ms": 1744,
+      "abstained": false,
+      "faithfulness": null,
+      "faithfulness_notes": "Skipped (use_llm_judge=False).",
+      "relevance": null,
+      "relevance_notes": "Skipped (use_llm_judge=False).",
+      "context_recall": 5,
+      "context_recall_notes": "Found: 1/1. Missing: []",
+      "completeness": null,
+      "completeness_notes": "Skipped (use_llm_judge=False).",
+      "config_label": "baseline_dense"
+    },
+    {
+      "id": "gq05",
+      "category": "Access Control",
+      "difficulty": "hard",
+      "query": "Contractor từ bên ngoài công ty có thể được cấp quyền Admin Access không? Nếu có, cần bao nhiêu ngày và có yêu cầu đặc biệt gì?",
+      "answer": "Không tìm thấy thông tin về 'Contractor từ bên ngoài công ty có thể được cấp quyền Admin Access không? Nếu có, cần bao nhiêu ngày và có yêu cầu đặc biệt gì?' trong tài liệu hiện có.",
+      "sources": [
+        "it/access-control-sop.md",
+        "hr/leave-policy-2026.pdf",
+        "policy/refund-v4.pdf"
+      ],
+      "chunks_used": [
+        {
+          "text": "Quyền phải được thu hồi trong các trường hợp:\n- Nhân viên nghỉ việc: Thu hồi ngay trong ngày cuối.\n- Hết hạn contract: Thu hồi đúng ngày hết hạn.\n- Chuyển bộ phận: Điều chỉnh trong 3 ngày làm việc.",
+          "metadata": {
+            "access": "internal",
+            "effective_date": "2026-01-01",
+            "department": "IT Security",
+            "section": "Section 5: Thu hồi quyền truy cập",
+            "source": "it/access-control-sop.md"
+          },
+          "score": 0.5961098074913025
+        },
+        {
+          "text": "Bước 1: Nhân viên gửi yêu cầu nghỉ phép qua hệ thống HR Portal (https://hr.company.internal) ít nhất 3 ngày làm việc trước ngày nghỉ.\nBước 2: Line Manager phê duyệt hoặc từ chối trong vòng 1 ngày làm việc.\nBước 3: Nhân viên nhận thông báo qua email sau khi được phê duyệt.\n\nTrường hợp khẩn cấp: Có thể gửi yêu cầu muộn hơn nhưng phải được Line Manager đồng ý qua tin nhắn trực tiếp.",
+          "metadata": {
+            "source": "hr/leave-policy-2026.pdf",
+            "effective_date": "2026-01-01",
+            "department": "HR",
+            "access": "internal",
+            "section": "Phần 2: Quy trình xin nghỉ phép"
+          },
+          "score": 0.5594437122344971
+        },
+        {
+          "text": "Khách hàng được quyền yêu cầu hoàn tiền khi đáp ứng đủ các điều kiện sau:\n- Sản phẩm bị lỗi do nhà sản xuất, không phải do người dùng.\n- Yêu cầu được gửi trong vòng 7 ngày làm việc kể từ thời điểm xác nhận đơn hàng.\n- Đơn hàng chưa được sử dụng hoặc chưa bị mở seal.",
+          "metadata": {
+            "department": "CS",
+            "effective_date": "2026-02-01",
+            "section": "Điều 2: Điều kiện được hoàn tiền",
+            "source": "policy/refund-v4.pdf",
+            "access": "internal"
+          },
+          "score": 0.5315240621566772
+        }
+      ],
+      "expected_sources": [
+        "it/access-control-sop.md"
+      ],
+      "expected_answer": "Có. Theo Access Control SOP, quy trình áp dụng cho tất cả nhân viên, contractor và third-party vendor. Admin Access (Level 4) cần phê duyệt từ IT Manager và CISO, thời gian xử lý 5 ngày làm việc, và có yêu cầu thêm: training bắt buộc về security policy.",
+      "confidence": 0.5961098074913025,
+      "latency_ms": 1929,
+      "abstained": true,
+      "faithfulness": null,
+      "faithfulness_notes": "Skipped (use_llm_judge=False).",
+      "relevance": null,
+      "relevance_notes": "Skipped (use_llm_judge=False).",
+      "context_recall": 5,
+      "context_recall_notes": "Found: 1/1. Missing: []",
+      "completeness": null,
+      "completeness_notes": "Skipped (use_llm_judge=False).",
+      "config_label": "baseline_dense"
+    },
+    {
+      "id": "gq06",
+      "category": "Cross-Document",
+      "difficulty": "hard",
+      "query": "Lúc 2 giờ sáng xảy ra sự cố P1, on-call engineer cần cấp quyền tạm thời cho một engineer xử lý incident. Quy trình cụ thể như thế nào và quyền này tồn tại bao lâu?",
+      "answer": "Không tìm thấy thông tin về 'Lúc 2 giờ sáng xảy ra sự cố P1, on-call engineer cần cấp quyền tạm thời cho một engineer xử lý incident. Quy trình cụ thể như thế nào và quyền này tồn tại bao lâu?' trong tài liệu hiện có.",
+      "sources": [
+        "it/access-control-sop.md",
+        "support/sla-p1-2026.pdf",
+        "support/sla-p1-2026.pdf"
+      ],
+      "chunks_used": [
+        {
+          "text": "Escalation chỉ áp dụng khi cần thay đổi quyền hệ thống ngoài quy trình thông thường.\nVí dụ: Khẩn cấp trong sự cố P1, cần cấp quyền tạm thời để fix incident.\n\nQuy trình escalation khẩn cấp:\n1. On-call IT Admin có thể cấp quyền tạm thời (max 24 giờ) sau khi được Tech Lead phê duyệt bằng lời.\n2. Sau 24 giờ, phải có ticket chính thức hoặc quyền bị thu hồi tự động.\n3. Mọi quyền tạm thời phải được ghi log vào hệ thống Security Audit.",
+          "metadata": {
+            "access": "internal",
+            "effective_date": "2026-01-01",
+            "source": "it/access-control-sop.md",
+            "department": "IT Security",
+            "section": "Section 4: Escalation khi cần thay đổi quyền hệ thống"
+          },
+          "score": 0.6784965991973877
+        },
+        {
+          "text": "Bước 1: Tiếp nhận\nOn-call engineer nhận alert hoặc ticket, xác nhận severity trong 5 phút.\n\nBước 2: Thông báo\nGửi thông báo tới Slack #incident-p1 và email incident@company.internal ngay lập tức.\n\nBước 3: Triage và phân công\nLead Engineer phân công engineer xử lý trong 10 phút.\n\nBước 4: Xử lý\nEngineer cập nhật tiến độ lên ticket mỗi 30 phút. Nếu cần hỗ trợ thêm, escalate ngay.\n\nBước 5: Resolution\nSau khi khắc phục, viết incident report trong vòng 24 giờ.",
+          "metadata": {
+            "department": "IT",
+            "section": "Phần 3: Quy trình xử lý sự cố P1",
+            "access": "internal",
+            "effective_date": "2026-01-15",
+            "source": "support/sla-p1-2026.pdf"
+          },
+          "score": 0.6652586460113525
+        },
+        {
+          "text": "Ticket P1:\n- Phản hồi ban đầu (first response): 15 phút kể từ khi ticket được tạo.\n- Xử lý và khắc phục (resolution): 4 giờ.\n- Escalation: Tự động escalate lên Senior Engineer nếu không có phản hồi trong 10 phút.\n- Thông báo stakeholder: Ngay khi nhận ticket, update mỗi 30 phút cho đến khi resolve.\n\nTicket P2:\n- Phản hồi ban đầu: 2 giờ.\n- Xử lý và khắc phục: 1 ngày làm việc.\n- Escalation: Tự động escalate sau 90 phút không có phản hồi.\n\nTicket P3:\n- Phản hồi ban đầu: 1 ngày làm việc.\n- Xử lý và khắc phục: 5 ngày làm việc.\n\nTicket P4:\n- Phản hồi ban đầu: 3 ngày làm việc.\n- Xử lý và khắc phục: Theo sprint cycle (thông thường 2-4 tuần).",
+          "metadata": {
+            "section": "Phần 2: SLA theo mức độ ưu tiên",
+            "effective_date": "2026-01-15",
+            "source": "support/sla-p1-2026.pdf",
+            "access": "internal",
+            "department": "IT"
+          },
+          "score": 0.5625215768814087
+        }
+      ],
+      "expected_sources": [
+        "it/access-control-sop.md",
+        "support/sla-p1-2026.pdf"
+      ],
+      "expected_answer": "On-call IT Admin có thể cấp quyền tạm thời (tối đa 24 giờ) sau khi được Tech Lead phê duyệt bằng lời. Sau 24 giờ, phải có ticket chính thức hoặc quyền bị thu hồi tự động. Mọi quyền tạm thời phải được ghi log vào hệ thống Security Audit. Liên hệ on-call qua hotline ext. 9999 (24/7) theo SLA P1.",
+      "confidence": 0.6784965991973877,
+      "latency_ms": 2817,
+      "abstained": true,
+      "faithfulness": null,
+      "faithfulness_notes": "Skipped (use_llm_judge=False).",
+      "relevance": null,
+      "relevance_notes": "Skipped (use_llm_judge=False).",
+      "context_recall": 5,
+      "context_recall_notes": "Found: 2/2. Missing: []",
+      "completeness": null,
+      "completeness_notes": "Skipped (use_llm_judge=False).",
+      "config_label": "baseline_dense"
+    },
+    {
+      "id": "gq07",
+      "category": "Insufficient Context",
+      "difficulty": "medium",
+      "query": "Công ty sẽ phạt bao nhiêu nếu team IT vi phạm cam kết SLA P1?",
+      "answer": "Không đủ dữ liệu trong tài liệu hiện có để trả lời câu hỏi này.",
+      "sources": [],
+      "chunks_used": [],
+      "expected_sources": [],
+      "expected_answer": "Tài liệu hiện có không quy định mức phạt hay hình thức xử lý khi vi phạm SLA P1. Tài liệu sla-p1-2026.pdf chỉ mô tả quy trình xử lý và SLA target, không có điều khoản về penalty.",
+      "confidence": 0.0,
+      "latency_ms": 64,
+      "abstained": true,
+      "faithfulness": null,
+      "faithfulness_notes": "Skipped (use_llm_judge=False).",
+      "relevance": null,
+      "relevance_notes": "Skipped (use_llm_judge=False).",
+      "context_recall": 5,
+      "context_recall_notes": "No expected sources (abstain case) - treated as perfect recall.",
+      "completeness": null,
+      "completeness_notes": "Skipped (use_llm_judge=False).",
+      "config_label": "baseline_dense"
+    },
+    {
+      "id": "gq08",
+      "category": "HR Policy",
+      "difficulty": "hard",
+      "query": "Nhân viên phải báo trước bao nhiêu ngày để xin nghỉ phép năm? Con số này có giống với số ngày cần giấy tờ khi nghỉ ốm không?",
+      "answer": "Nhân viên phải báo trước ít nhất 3 ngày làm việc để xin nghỉ phép năm [3]. Không tìm thấy thông tin về 'Con số này có giống với số ngày cần giấy tờ khi nghỉ ốm không?' trong tài liệu hiện có.",
+      "sources": [
+        "hr/leave-policy-2026.pdf",
+        "it/access-control-sop.md",
+        "hr/leave-policy-2026.pdf"
+      ],
+      "chunks_used": [
+        {
+          "text": "1.1 Nghỉ phép năm (Annual Leave):\n- Số ngày: 12 ngày/năm cho nhân viên dưới 3 năm kinh nghiệm.\n- Số ngày: 15 ngày/năm cho nhân viên từ 3-5 năm kinh nghiệm.\n- Số ngày: 18 ngày/năm cho nhân viên trên 5 năm kinh nghiệm.\n- Chuyển năm sau: Tối đa 5 ngày phép năm chưa dùng được chuyển sang năm tiếp theo.\n\n1.2 Nghỉ ốm (Sick Leave):\n- Số ngày: 10 ngày/năm có trả lương.\n- Yêu cầu: Thông báo cho Line Manager trước 9:00 sáng ngày nghỉ.\n- Nếu nghỉ trên 3 ngày liên tiếp: Cần giấy tờ y tế từ bệnh viện.\n\n1.3 Nghỉ thai sản:\n- Nghỉ sinh con: 6 tháng theo quy định Luật Lao động.\n- Nghỉ nuôi con nhỏ: 1 tiếng/ngày trong 12 tháng đầu sau sinh.\n\n1.4 Nghỉ lễ tết:\nTheo lịch nghỉ lễ quốc gia do HR công bố hàng năm vào tháng 12.",
+          "metadata": {
+            "section": "Phần 1: Các loại nghỉ phép",
+            "department": "HR",
+            "access": "internal",
+            "source": "hr/leave-policy-2026.pdf",
+            "effective_date": "2026-01-01"
+          },
+          "score": 0.7575410604476929
+        },
+        {
+          "text": "Quyền phải được thu hồi trong các trường hợp:\n- Nhân viên nghỉ việc: Thu hồi ngay trong ngày cuối.\n- Hết hạn contract: Thu hồi đúng ngày hết hạn.\n- Chuyển bộ phận: Điều chỉnh trong 3 ngày làm việc.",
+          "metadata": {
+            "section": "Section 5: Thu hồi quyền truy cập",
+            "access": "internal",
+            "effective_date": "2026-01-01",
+            "source": "it/access-control-sop.md",
+            "department": "IT Security"
+          },
+          "score": 0.6764740943908691
+        },
+        {
+          "text": "Bước 1: Nhân viên gửi yêu cầu nghỉ phép qua hệ thống HR Portal (https://hr.company.internal) ít nhất 3 ngày làm việc trước ngày nghỉ.\nBước 2: Line Manager phê duyệt hoặc từ chối trong vòng 1 ngày làm việc.\nBước 3: Nhân viên nhận thông báo qua email sau khi được phê duyệt.\n\nTrường hợp khẩn cấp: Có thể gửi yêu cầu muộn hơn nhưng phải được Line Manager đồng ý qua tin nhắn trực tiếp.",
+          "metadata": {
+            "access": "internal",
+            "department": "HR",
+            "effective_date": "2026-01-01",
+            "section": "Phần 2: Quy trình xin nghỉ phép",
+            "source": "hr/leave-policy-2026.pdf"
+          },
+          "score": 0.6500256657600403
+        }
+      ],
+      "expected_sources": [
+        "hr/leave-policy-2026.pdf"
+      ],
+      "expected_answer": "Nghỉ phép năm cần báo trước ít nhất 3 ngày làm việc qua HR Portal. Nghỉ ốm cũng liên quan đến mốc 3 ngày: nếu nghỉ TRÊN 3 ngày liên tiếp thì cần giấy tờ y tế từ bệnh viện. Hai con số '3 ngày' này áp dụng cho hai tình huống khác nhau.",
+      "confidence": 0.7575410604476929,
+      "latency_ms": 2261,
+      "abstained": true,
+      "faithfulness": null,
+      "faithfulness_notes": "Skipped (use_llm_judge=False).",
+      "relevance": null,
+      "relevance_notes": "Skipped (use_llm_judge=False).",
+      "context_recall": 5,
+      "context_recall_notes": "Found: 1/1. Missing: []",
+      "completeness": null,
+      "completeness_notes": "Skipped (use_llm_judge=False).",
+      "config_label": "baseline_dense"
+    },
+    {
+      "id": "gq09",
+      "category": "IT Helpdesk",
+      "difficulty": "medium",
+      "query": "Mật khẩu tài khoản công ty cần đổi định kỳ không? Nếu có, hệ thống sẽ nhắc nhở trước bao nhiêu ngày và đổi qua đâu?",
+      "answer": "Có. Mật khẩu phải được thay đổi mỗi 90 ngày. Hệ thống sẽ nhắc nhở 7 ngày trước khi hết hạn [1]. Không có thông tin về việc đổi mật khẩu qua đâu trong tài liệu hiện có.",
+      "sources": [
+        "support/helpdesk-faq.md",
+        "it/access-control-sop.md",
+        "policy/refund-v4.pdf"
+      ],
+      "chunks_used": [
+        {
+          "text": "Q: Tôi quên mật khẩu, phải làm gì?\nA: Truy cập https://sso.company.internal/reset hoặc liên hệ Helpdesk qua ext. 9000. Mật khẩu mới sẽ được gửi qua email công ty trong vòng 5 phút.\n\nQ: Tài khoản bị khóa sau bao nhiêu lần đăng nhập sai?\nA: Tài khoản bị khóa sau 5 lần đăng nhập sai liên tiếp. Để mở khóa, liên hệ IT Helpdesk hoặc tự reset qua portal SSO.\n\nQ: Mật khẩu cần thay đổi định kỳ không?\nA: Có. Mật khẩu phải được thay đổi mỗi 90 ngày. Hệ thống sẽ nhắc nhở 7 ngày trước khi hết hạn.",
+          "metadata": {
+            "section": "Section 1: Tài khoản và mật khẩu",
+            "access": "internal",
+            "effective_date": "2026-01-20",
+            "source": "support/helpdesk-faq.md",
+            "department": "IT"
+          },
+          "score": 0.7221949100494385
+        },
+        {
+          "text": "Quyền phải được thu hồi trong các trường hợp:\n- Nhân viên nghỉ việc: Thu hồi ngay trong ngày cuối.\n- Hết hạn contract: Thu hồi đúng ngày hết hạn.\n- Chuyển bộ phận: Điều chỉnh trong 3 ngày làm việc.",
+          "metadata": {
+            "effective_date": "2026-01-01",
+            "department": "IT Security",
+            "source": "it/access-control-sop.md",
+            "section": "Section 5: Thu hồi quyền truy cập",
+            "access": "internal"
+          },
+          "score": 0.5463748574256897
+        },
+        {
+          "text": "Khách hàng được quyền yêu cầu hoàn tiền khi đáp ứng đủ các điều kiện sau:\n- Sản phẩm bị lỗi do nhà sản xuất, không phải do người dùng.\n- Yêu cầu được gửi trong vòng 7 ngày làm việc kể từ thời điểm xác nhận đơn hàng.\n- Đơn hàng chưa được sử dụng hoặc chưa bị mở seal.",
+          "metadata": {
+            "department": "CS",
+            "effective_date": "2026-02-01",
+            "source": "policy/refund-v4.pdf",
+            "section": "Điều 2: Điều kiện được hoàn tiền",
+            "access": "internal"
+          },
+          "score": 0.5243530869483948
+        }
+      ],
+      "expected_sources": [
+        "support/helpdesk-faq.md"
+      ],
+      "expected_answer": "Có. Mật khẩu phải được thay đổi mỗi 90 ngày. Hệ thống sẽ nhắc nhở 7 ngày trước khi hết hạn. Để đổi mật khẩu, truy cập https://sso.company.internal/reset hoặc liên hệ Helpdesk qua ext. 9000.",
+      "confidence": 0.7221949100494385,
+      "latency_ms": 2162,
+      "abstained": false,
+      "faithfulness": null,
+      "faithfulness_notes": "Skipped (use_llm_judge=False).",
+      "relevance": null,
+      "relevance_notes": "Skipped (use_llm_judge=False).",
+      "context_recall": 5,
+      "context_recall_notes": "Found: 1/1. Missing: []",
+      "completeness": null,
+      "completeness_notes": "Skipped (use_llm_judge=False).",
+      "config_label": "baseline_dense"
+    },
+    {
+      "id": "gq10",
+      "category": "Refund",
+      "difficulty": "hard",
+      "query": "Chính sách hoàn tiền hiện tại áp dụng cho đơn hàng đặt trước ngày 01/02/2026 không?",
+      "answer": "Không tìm thấy thông tin về 'Chính sách hoàn tiền hiện tại áp dụng cho đơn hàng đặt trước ngày 01/02/2026 không?' trong tài liệu hiện có.",
+      "sources": [
+        "policy/refund-v4.pdf",
+        "policy/refund-v4.pdf",
+        "it/access-control-sop.md"
+      ],
+      "chunks_used": [
+        {
+          "text": "Chính sách này áp dụng cho tất cả các đơn hàng được đặt trên hệ thống nội bộ kể từ ngày 01/02/2026.\nCác đơn hàng đặt trước ngày có hiệu lực sẽ áp dụng theo chính sách hoàn tiền phiên bản 3.",
+          "metadata": {
+            "effective_date": "2026-02-01",
+            "source": "policy/refund-v4.pdf",
+            "department": "CS",
+            "section": "Điều 1: Phạm vi áp dụng",
+            "access": "internal"
+          },
+          "score": 0.7055779695510864
+        },
+        {
+          "text": "Hoàn tiền — Điều kiện áp dụng:\nYêu cầu được gửi trong vòng 7 ngày kể từ thời điểm xác nhận đơn hàng.\n\nNgoại lệ không được hoàn tiền:\n- Sản phẩm thuộc danh mục hàng kỹ thuật số (license key, subscription).\n- Đơn hàng đã áp dụng mã giảm giá đặc biệt theo chương trình khuyến mãi Flash Sale.\n- Sản phẩm đã được kích hoạt hoặc đăng ký tài khoản.",
+          "metadata": {
+            "effective_date": "2026-02-01",
+            "source": "policy/refund-v4.pdf",
+            "access": "internal",
+            "department": "CS",
+            "section": "Điều 3: Điều kiện áp dụng và ngoại lệ"
+          },
+          "score": 0.5541874170303345
+        },
+        {
+          "text": "Quyền phải được thu hồi trong các trường hợp:\n- Nhân viên nghỉ việc: Thu hồi ngay trong ngày cuối.\n- Hết hạn contract: Thu hồi đúng ngày hết hạn.\n- Chuyển bộ phận: Điều chỉnh trong 3 ngày làm việc.",
+          "metadata": {
+            "section": "Section 5: Thu hồi quyền truy cập",
+            "effective_date": "2026-01-01",
+            "source": "it/access-control-sop.md",
+            "department": "IT Security",
+            "access": "internal"
+          },
+          "score": 0.5203935503959656
+        }
+      ],
+      "expected_sources": [
+        "policy/refund-v4.pdf"
+      ],
+      "expected_answer": "Không. Chính sách hoàn tiền phiên bản 4 có hiệu lực từ ngày 01/02/2026 và chỉ áp dụng cho các đơn hàng được đặt kể từ ngày đó. Các đơn hàng đặt trước ngày này sẽ áp dụng theo chính sách hoàn tiền phiên bản 3.",
+      "confidence": 0.7055779695510864,
+      "latency_ms": 1732,
+      "abstained": true,
+      "faithfulness": null,
+      "faithfulness_notes": "Skipped (use_llm_judge=False).",
+      "relevance": null,
+      "relevance_notes": "Skipped (use_llm_judge=False).",
+      "context_recall": 5,
+      "context_recall_notes": "Found: 1/1. Missing: []",
+      "completeness": null,
+      "completeness_notes": "Skipped (use_llm_judge=False).",
+      "config_label": "baseline_dense"
+    }
+  ],
+  "summary": {
+    "faithfulness": null,
+    "relevance": null,
+    "context_recall": 5.0,
+    "completeness": null
+  }
+}

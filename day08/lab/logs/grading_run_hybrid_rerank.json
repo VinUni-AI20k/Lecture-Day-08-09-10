@@ -1,0 +1,636 @@
+{
+  "timestamp": "2026-04-13T16:29:00.215051",
+  "config": {
+    "retrieval_mode": "hybrid",
+    "top_k_search": 20,
+    "top_k_select": 3,
+    "use_rerank": true,
+    "label": "hybrid_rerank"
+  },
+  "results": [
+    {
+      "id": "q01",
+      "category": "SLA",
+      "query": "SLA xử lý ticket P1 là bao lâu?",
+      "answer": "SLA xử lý ticket P1 là 15 phút cho phản hồi ban đầu và 4 giờ cho xử lý và khắc phục [1].",
+      "sources": [
+        "support/sla-p1-2026.pdf",
+        "support/sla-p1-2026.pdf",
+        "support/helpdesk-faq.md"
+      ],
+      "chunks_used": [
+        {
+          "text": "Ticket P1:\n- Phản hồi ban đầu (first response): 15 phút kể từ khi ticket được tạo.\n- Xử lý và khắc phục (resolution): 4 giờ.\n- Escalation: Tự động escalate lên Senior Engineer nếu không có phản hồi trong 10 phút.\n- Thông báo stakeholder: Ngay khi nhận ticket, update mỗi 30 phút cho đến khi resolve.\n\nTicket P2:\n- Phản hồi ban đầu: 2 giờ.\n- Xử lý và khắc phục: 1 ngày làm việc.\n- Escalation: Tự động escalate sau 90 phút không có phản hồi.\n\nTicket P3:\n- Phản hồi ban đầu: 1 ngày làm việc.\n- Xử lý và khắc phục: 5 ngày làm việc.\n\nTicket P4:\n- Phản hồi ban đầu: 3 ngày làm việc.\n- Xử lý và khắc phục: Theo sprint cycle (thông thường 2-4 tuần).",
+          "metadata": {
+            "access": "internal",
+            "effective_date": "2026-01-15",
+            "department": "IT",
+            "section": "Phần 2: SLA theo mức độ ưu tiên",
+            "source": "support/sla-p1-2026.pdf"
+          },
+          "score": 0.0162876784769963,
+          "rerank_score": 3.329244613647461
+        },
+        {
+          "text": "Bước 1: Tiếp nhận\nOn-call engineer nhận alert hoặc ticket, xác nhận severity trong 5 phút.\n\nBước 2: Thông báo\nGửi thông báo tới Slack #incident-p1 và email incident@company.internal ngay lập tức.\n\nBước 3: Triage và phân công\nLead Engineer phân công engineer xử lý trong 10 phút.\n\nBước 4: Xử lý\nEngineer cập nhật tiến độ lên ticket mỗi 30 phút. Nếu cần hỗ trợ thêm, escalate ngay.\n\nBước 5: Resolution\nSau khi khắc phục, viết incident report trong vòng 24 giờ.",
+          "metadata": {
+            "access": "internal",
+            "source": "support/sla-p1-2026.pdf",
+            "effective_date": "2026-01-15",
+            "department": "IT",
+            "section": "Phần 3: Quy trình xử lý sự cố P1"
+          },
+          "score": 0.015073529411764706,
+          "rerank_score": 1.4605461359024048
+        },
+        {
+          "text": "Q: Laptop mới được cấp sau bao lâu khi vào công ty?\nA: Laptop được cấp trong ngày onboarding đầu tiên. Nếu có vấn đề, liên hệ HR hoặc IT Admin.\n\nQ: Laptop bị hỏng phải báo cáo như thế nào?\nA: Tạo ticket P2 hoặc P3 tùy mức độ nghiêm trọng. Mang thiết bị đến IT Room (tầng 3) để kiểm tra.",
+          "metadata": {
+            "source": "support/helpdesk-faq.md",
+            "effective_date": "2026-01-20",
+            "section": "Section 4: Thiết bị và phần cứng",
+            "department": "IT",
+            "access": "internal"
+          },
+          "score": 0.014189327335923124,
+          "rerank_score": -0.9584968090057373
+        }
+      ],
+      "expected_sources": [
+        "support/sla-p1-2026.pdf"
+      ],
+      "expected_answer": "Ticket P1 có SLA phản hồi ban đầu 15 phút và thời gian xử lý (resolution) là 4 giờ.",
+      "faithfulness": 5,
+      "faithfulness_notes": "The answer is completely grounded in the provided context, as it accurately reflects the SLA for ticket P1 regarding the initial response time and resolution time.",
+      "relevance": 5,
+      "relevance_notes": "The answer directly addresses the user's question by providing specific information about the SLA for P1 tickets, including both the initial response time and the resolution time.",
+      "context_recall": 5,
+      "context_recall_notes": "Found: 1/1. Missing: []",
+      "completeness": 5,
+      "completeness_notes": "Câu trả lời thực tế đã bao gồm đầy đủ các điểm chính từ câu trả lời mong đợi, cụ thể là SLA phản hồi ban đầu 15 phút và thời gian xử lý 4 giờ, với cách diễn đạt rõ ràng và chính xác.",
+      "config_label": "hybrid_rerank"
+    },
+    {
+      "id": "q02",
+      "category": "Refund",
+      "query": "Khách hàng có thể yêu cầu hoàn tiền trong bao nhiêu ngày?",
+      "answer": "Khách hàng có thể yêu cầu hoàn tiền trong vòng 7 ngày làm việc kể từ thời điểm xác nhận đơn hàng [1].",
+      "sources": [
+        "policy/refund-v4.pdf",
+        "policy/refund-v4.pdf",
+        "policy/refund-v4.pdf"
+      ],
+      "chunks_used": [
+        {
+          "text": "Khách hàng được quyền yêu cầu hoàn tiền khi đáp ứng đủ các điều kiện sau:\n- Sản phẩm bị lỗi do nhà sản xuất, không phải do người dùng.\n- Yêu cầu được gửi trong vòng 7 ngày làm việc kể từ thời điểm xác nhận đơn hàng.\n- Đơn hàng chưa được sử dụng hoặc chưa bị mở seal.",
+          "metadata": {
+            "access": "internal",
+            "effective_date": "2026-02-01",
+            "source": "policy/refund-v4.pdf",
+            "section": "Điều 2: Điều kiện được hoàn tiền",
+            "department": "CS"
+          },
+          "score": 0.0162876784769963,
+          "rerank_score": 7.726716041564941
+        },
+        {
+          "text": "Bước 1: Khách hàng gửi yêu cầu qua hệ thống ticket nội bộ với category \"Refund Request\".\nBước 2: CS Agent xem xét trong vòng 1 ngày làm việc và xác nhận điều kiện đủ điều kiện.\nBước 3: Nếu đủ điều kiện, chuyển yêu cầu sang Finance Team để xử lý hoàn tiền.\nBước 4: Finance Team xử lý trong 3-5 ngày làm việc và thông báo kết quả cho khách hàng.",
+          "metadata": {
+            "section": "Điều 4: Quy trình xử lý yêu cầu hoàn tiền",
+            "source": "policy/refund-v4.pdf",
+            "effective_date": "2026-02-01",
+            "access": "internal",
+            "department": "CS"
+          },
+          "score": 0.016026625704045058,
+          "rerank_score": 6.6504316329956055
+        },
+        {
+          "text": "Hoàn tiền — Điều kiện áp dụng:\nYêu cầu được gửi trong vòng 7 ngày kể từ thời điểm xác nhận đơn hàng.\n\nNgoại lệ không được hoàn tiền:\n- Sản phẩm thuộc danh mục hàng kỹ thuật số (license key, subscription).\n- Đơn hàng đã áp dụng mã giảm giá đặc biệt theo chương trình khuyến mãi Flash Sale.\n- Sản phẩm đã được kích hoạt hoặc đăng ký tài khoản.",
+          "metadata": {
+            "section": "Điều 3: Điều kiện áp dụng và ngoại lệ",
+            "effective_date": "2026-02-01",
+            "department": "CS",
+            "source": "policy/refund-v4.pdf",
+            "access": "internal"
+          },
+          "score": 0.015625,
+          "rerank_score": 6.5562896728515625
+        }
+      ],
+      "expected_sources": [
+        "policy/refund-v4.pdf"
+      ],
+      "expected_answer": "Khách hàng có thể yêu cầu hoàn tiền trong vòng 7 ngày làm việc kể từ thời điểm xác nhận đơn hàng.",
+      "faithfulness": 5,
+      "faithfulness_notes": "The answer is directly derived from the provided context, which states that customers can request a refund within 7 working days from the order confirmation. It accurately reflects the information without any additional assumptions or inaccuracies.",
+      "relevance": 5,
+      "relevance_notes": "The answer directly addresses the user's question by providing a specific timeframe (7 days) for requesting a refund, which is exactly what the user asked for.",
+      "context_recall": 5,
+      "context_recall_notes": "Found: 1/1. Missing: []",
+      "completeness": 5,
+      "completeness_notes": "The actual answer fully matches the expected answer, covering all key points regarding the timeframe for requesting a refund.",
+      "config_label": "hybrid_rerank"
+    },
+    {
+      "id": "q03",
+      "category": "Access Control",
+      "query": "Ai phải phê duyệt để cấp quyền Level 3?",
+      "answer": "Để cấp quyền Level 3, cần có sự phê duyệt của Line Manager, IT Admin và IT Security [2].",
+      "sources": [
+        "it/access-control-sop.md",
+        "it/access-control-sop.md",
+        "it/access-control-sop.md"
+      ],
+      "chunks_used": [
+        {
+          "text": "Bước 1: Nhân viên tạo Access Request ticket trên Jira (project IT-ACCESS).\nBước 2: Line Manager phê duyệt yêu cầu trong 1 ngày làm việc.\nBước 3: IT Admin kiểm tra compliance và cấp quyền.\nBước 4: IT Security review với Level 3 và Level 4.\nBước 5: Nhân viên nhận thông báo qua email khi quyền được cấp.",
+          "metadata": {
+            "effective_date": "2026-01-01",
+            "source": "it/access-control-sop.md",
+            "access": "internal",
+            "section": "Section 3: Quy trình yêu cầu cấp quyền",
+            "department": "IT Security"
+          },
+          "score": 0.015826612903225807,
+          "rerank_score": 5.273052215576172
+        },
+        {
+          "text": "Level 1 — Read Only:\nÁp dụng cho: Tất cả nhân viên mới trong 30 ngày đầu.\nPhê duyệt: Line Manager.\nThời gian xử lý: 1 ngày làm việc.\n\nLevel 2 — Standard Access:\nÁp dụng cho: Nhân viên chính thức đã qua thử việc.\nPhê duyệt: Line Manager + IT Admin.\nThời gian xử lý: 2 ngày làm việc.\n\nLevel 3 — Elevated Access:\nÁp dụng cho: Team Lead, Senior Engineer, Manager.\nPhê duyệt: Line Manager + IT Admin + IT Security.\nThời gian xử lý: 3 ngày làm việc.\n\nLevel 4 — Admin Access:\nÁp dụng cho: DevOps, SRE, IT Admin.\nPhê duyệt: IT Manager + CISO.\nThời gian xử lý: 5 ngày làm việc.\nYêu cầu thêm: Training bắt buộc về security policy.",
+          "metadata": {
+            "section": "Section 2: Phân cấp quyền truy cập",
+            "effective_date": "2026-01-01",
+            "access": "internal",
+            "source": "it/access-control-sop.md",
+            "department": "IT Security"
+          },
+          "score": 0.01592741935483871,
+          "rerank_score": 4.280106544494629
+        },
+        {
+          "text": "Escalation chỉ áp dụng khi cần thay đổi quyền hệ thống ngoài quy trình thông thường.\nVí dụ: Khẩn cấp trong sự cố P1, cần cấp quyền tạm thời để fix incident.\n\nQuy trình escalation khẩn cấp:\n1. On-call IT Admin có thể cấp quyền tạm thời (max 24 giờ) sau khi được Tech Lead phê duyệt bằng lời.\n2. Sau 24 giờ, phải có ticket chính thức hoặc quyền bị thu hồi tự động.\n3. Mọi quyền tạm thời phải được ghi log vào hệ thống Security Audit.",
+          "metadata": {
+            "section": "Section 4: Escalation khi cần thay đổi quyền hệ thống",
+            "department": "IT Security",
+            "access": "internal",
+            "effective_date": "2026-01-01",
+            "source": "it/access-control-sop.md"
+          },
+          "score": 0.01564828614008942,
+          "rerank_score": 2.9845800399780273
+        }
+      ],
+      "expected_sources": [
+        "it/access-control-sop.md"
+      ],
+      "expected_answer": "Level 3 (Elevated Access) cần phê duyệt từ Line Manager, IT Admin, và IT Security.",
+      "faithfulness": 5,
+      "faithfulness_notes": "The answer accurately reflects the requirements for granting Level 3 access as outlined in the provided context, specifically mentioning the necessary approvals from Line Manager, IT Admin, and IT Security.",
+      "relevance": 5,
+      "relevance_notes": "Câu trả lời trực tiếp trả lời câu hỏi về ai cần phê duyệt để cấp quyền Level 3, liệt kê rõ ràng các bên liên quan.",
+      "context_recall": 5,
+      "context_recall_notes": "Found: 1/1. Missing: []",
+      "completeness": 5,
+      "completeness_notes": "Câu trả lời thực tế đã bao gồm đầy đủ tất cả các điểm chính từ câu trả lời mong đợi, xác nhận rằng cần có sự phê duyệt từ Line Manager, IT Admin và IT Security để cấp quyền Level 3.",
+      "config_label": "hybrid_rerank"
+    },
+    {
+      "id": "q04",
+      "category": "Refund",
+      "query": "Sản phẩm kỹ thuật số có được hoàn tiền không?",
+      "answer": "Sản phẩm kỹ thuật số không được hoàn tiền, trừ khi có lỗi do nhà sản xuất và đáp ứng các điều kiện khác [1].",
+      "sources": [
+        "policy/refund-v4.pdf",
+        "policy/refund-v4.pdf",
+        "policy/refund-v4.pdf"
+      ],
+      "chunks_used": [
+        {
+          "text": "Hoàn tiền — Điều kiện áp dụng:\nYêu cầu được gửi trong vòng 7 ngày kể từ thời điểm xác nhận đơn hàng.\n\nNgoại lệ không được hoàn tiền:\n- Sản phẩm thuộc danh mục hàng kỹ thuật số (license key, subscription).\n- Đơn hàng đã áp dụng mã giảm giá đặc biệt theo chương trình khuyến mãi Flash Sale.\n- Sản phẩm đã được kích hoạt hoặc đăng ký tài khoản.",
+          "metadata": {
+            "source": "policy/refund-v4.pdf",
+            "section": "Điều 3: Điều kiện áp dụng và ngoại lệ",
+            "effective_date": "2026-02-01",
+            "department": "CS",
+            "access": "internal"
+          },
+          "score": 0.01639344262295082,
+          "rerank_score": 7.616682529449463
+        },
+        {
+          "text": "Khách hàng được quyền yêu cầu hoàn tiền khi đáp ứng đủ các điều kiện sau:\n- Sản phẩm bị lỗi do nhà sản xuất, không phải do người dùng.\n- Yêu cầu được gửi trong vòng 7 ngày làm việc kể từ thời điểm xác nhận đơn hàng.\n- Đơn hàng chưa được sử dụng hoặc chưa bị mở seal.",
+          "metadata": {
+            "access": "internal",
+            "department": "CS",
+            "section": "Điều 2: Điều kiện được hoàn tiền",
+            "effective_date": "2026-02-01",
+            "source": "policy/refund-v4.pdf"
+          },
+          "score": 0.016129032258064516,
+          "rerank_score": 5.125335216522217
+        },
+        {
+          "text": "- Hoàn tiền qua phương thức thanh toán gốc: áp dụng trong 100% trường hợp đủ điều kiện.\n- Hoàn tiền qua credit nội bộ (store credit): khách hàng có thể chọn nhận store credit thay thế với giá trị 110% so với số tiền hoàn.",
+          "metadata": {
+            "source": "policy/refund-v4.pdf",
+            "section": "Điều 5: Hình thức hoàn tiền",
+            "effective_date": "2026-02-01",
+            "department": "CS",
+            "access": "internal"
+          },
+          "score": 0.015044858523119393,
+          "rerank_score": 2.3258254528045654
+        }
+      ],
+      "expected_sources": [
+        "policy/refund-v4.pdf"
+      ],
+      "expected_answer": "Không. Theo chính sách hoàn tiền, sản phẩm thuộc danh mục hàng kỹ thuật số (license key, subscription) là ngoại lệ không được hoàn tiền.",
+      "faithfulness": 5,
+      "faithfulness_notes": "The answer accurately reflects the conditions outlined in the provided context regarding the non-refundable status of digital products, while also acknowledging the exception for manufacturer defects and the requirement to meet other conditions. It is logically derived from the context.",
+      "relevance": 5,
+      "relevance_notes": "The answer directly addresses the user's question about the refund policy for digital products, clearly stating that they are generally non-refundable except under specific conditions.",
+      "context_recall": 5,
+      "context_recall_notes": "Found: 1/1. Missing: []",
+      "completeness": 3,
+      "completeness_notes": "The actual answer states that digital products are generally non-refundable but allows for exceptions in case of manufacturer errors, which deviates from the expected answer that categorically states they are non-refundable without exceptions. Key points from the expected answer are partially covered but not completely aligned.",
+      "config_label": "hybrid_rerank"
+    },
+    {
+      "id": "q05",
+      "category": "IT Helpdesk",
+      "query": "Tài khoản bị khóa sau bao nhiêu lần đăng nhập sai?",
+      "answer": "Tài khoản bị khóa sau 5 lần đăng nhập sai liên tiếp. Để mở khóa, bạn cần liên hệ IT Helpdesk hoặc tự reset qua portal SSO [1].",
+      "sources": [
+        "support/helpdesk-faq.md",
+        "policy/refund-v4.pdf",
+        "policy/refund-v4.pdf"
+      ],
+      "chunks_used": [
+        {
+          "text": "Q: Tôi quên mật khẩu, phải làm gì?\nA: Truy cập https://sso.company.internal/reset hoặc liên hệ Helpdesk qua ext. 9000. Mật khẩu mới sẽ được gửi qua email công ty trong vòng 5 phút.\n\nQ: Tài khoản bị khóa sau bao nhiêu lần đăng nhập sai?\nA: Tài khoản bị khóa sau 5 lần đăng nhập sai liên tiếp. Để mở khóa, liên hệ IT Helpdesk hoặc tự reset qua portal SSO.\n\nQ: Mật khẩu cần thay đổi định kỳ không?\nA: Có. Mật khẩu phải được thay đổi mỗi 90 ngày. Hệ thống sẽ nhắc nhở 7 ngày trước khi hết hạn.",
+          "metadata": {
+            "source": "support/helpdesk-faq.md",
+            "access": "internal",
+            "effective_date": "2026-01-20",
+            "section": "Section 1: Tài khoản và mật khẩu",
+            "department": "IT"
+          },
+          "score": 0.01639344262295082,
+          "rerank_score": 6.929988861083984
+        },
+        {
+          "text": "Hoàn tiền — Điều kiện áp dụng:\nYêu cầu được gửi trong vòng 7 ngày kể từ thời điểm xác nhận đơn hàng.\n\nNgoại lệ không được hoàn tiền:\n- Sản phẩm thuộc danh mục hàng kỹ thuật số (license key, subscription).\n- Đơn hàng đã áp dụng mã giảm giá đặc biệt theo chương trình khuyến mãi Flash Sale.\n- Sản phẩm đã được kích hoạt hoặc đăng ký tài khoản.",
+          "metadata": {
+            "access": "internal",
+            "effective_date": "2026-02-01",
+            "source": "policy/refund-v4.pdf",
+            "department": "CS",
+            "section": "Điều 3: Điều kiện áp dụng và ngoại lệ"
+          },
+          "score": 0.015773809523809523,
+          "rerank_score": 1.712449312210083
+        },
+        {
+          "text": "Khách hàng được quyền yêu cầu hoàn tiền khi đáp ứng đủ các điều kiện sau:\n- Sản phẩm bị lỗi do nhà sản xuất, không phải do người dùng.\n- Yêu cầu được gửi trong vòng 7 ngày làm việc kể từ thời điểm xác nhận đơn hàng.\n- Đơn hàng chưa được sử dụng hoặc chưa bị mở seal.",
+          "metadata": {
+            "effective_date": "2026-02-01",
+            "source": "policy/refund-v4.pdf",
+            "access": "internal",
+            "section": "Điều 2: Điều kiện được hoàn tiền",
+            "department": "CS"
+          },
+          "score": 0.015647568608570053,
+          "rerank_score": 1.10836923122406
+        }
+      ],
+      "expected_sources": [
+        "support/helpdesk-faq.md"
+      ],
+      "expected_answer": "Tài khoản bị khóa sau 5 lần đăng nhập sai liên tiếp.",
+      "faithfulness": 5,
+      "faithfulness_notes": "The answer is directly derived from the provided context regarding account lockout after multiple failed login attempts, and it accurately reflects the information given about how to unlock the account.",
+      "relevance": 5,
+      "relevance_notes": "The answer directly addresses the user's question by providing the specific number of failed login attempts that lead to account lockout and also includes information on how to unlock the account.",
+      "context_recall": 5,
+      "context_recall_notes": "Found: 1/1. Missing: []",
+      "completeness": 5,
+      "completeness_notes": "The actual answer includes all key points from the expected answer, stating that the account is locked after 5 consecutive failed login attempts and also provides additional information on how to unlock the account.",
+      "config_label": "hybrid_rerank"
+    },
+    {
+      "id": "q06",
+      "category": "SLA",
+      "query": "Escalation trong sự cố P1 diễn ra như thế nào?",
+      "answer": "Escalation trong sự cố P1 diễn ra tự động lên Senior Engineer nếu không có phản hồi trong 10 phút. Ngoài ra, quy trình escalation khẩn cấp cho phép On-call IT Admin cấp quyền tạm thời (tối đa 24 giờ) sau khi được Tech Lead phê duyệt bằng lời, và mọi quyền tạm thời phải được ghi log vào hệ thống Security Audit [1][2].",
+      "sources": [
+        "it/access-control-sop.md",
+        "support/sla-p1-2026.pdf",
+        "support/sla-p1-2026.pdf"
+      ],
+      "chunks_used": [
+        {
+          "text": "Escalation chỉ áp dụng khi cần thay đổi quyền hệ thống ngoài quy trình thông thường.\nVí dụ: Khẩn cấp trong sự cố P1, cần cấp quyền tạm thời để fix incident.\n\nQuy trình escalation khẩn cấp:\n1. On-call IT Admin có thể cấp quyền tạm thời (max 24 giờ) sau khi được Tech Lead phê duyệt bằng lời.\n2. Sau 24 giờ, phải có ticket chính thức hoặc quyền bị thu hồi tự động.\n3. Mọi quyền tạm thời phải được ghi log vào hệ thống Security Audit.",
+          "metadata": {
+            "source": "it/access-control-sop.md",
+            "department": "IT Security",
+            "access": "internal",
+            "effective_date": "2026-01-01",
+            "section": "Section 4: Escalation khi cần thay đổi quyền hệ thống"
+          },
+          "score": 0.015826612903225807,
+          "rerank_score": 3.7037696838378906
+        },
+        {
+          "text": "Ticket P1:\n- Phản hồi ban đầu (first response): 15 phút kể từ khi ticket được tạo.\n- Xử lý và khắc phục (resolution): 4 giờ.\n- Escalation: Tự động escalate lên Senior Engineer nếu không có phản hồi trong 10 phút.\n- Thông báo stakeholder: Ngay khi nhận ticket, update mỗi 30 phút cho đến khi resolve.\n\nTicket P2:\n- Phản hồi ban đầu: 2 giờ.\n- Xử lý và khắc phục: 1 ngày làm việc.\n- Escalation: Tự động escalate sau 90 phút không có phản hồi.\n\nTicket P3:\n- Phản hồi ban đầu: 1 ngày làm việc.\n- Xử lý và khắc phục: 5 ngày làm việc.\n\nTicket P4:\n- Phản hồi ban đầu: 3 ngày làm việc.\n- Xử lý và khắc phục: Theo sprint cycle (thông thường 2-4 tuần).",
+          "metadata": {
+            "department": "IT",
+            "source": "support/sla-p1-2026.pdf",
+            "access": "internal",
+            "section": "Phần 2: SLA theo mức độ ưu tiên",
+            "effective_date": "2026-01-15"
+          },
+          "score": 0.014805624483043837,
+          "rerank_score": 3.1511664390563965
+        },
+        {
+          "text": "v2026.1 (2026-01-15): Cập nhật SLA P1 resolution từ 6 giờ xuống 4 giờ.\nv2025.3 (2025-09-01): Thêm quy trình escalation tự động.\nv2025.1 (2025-03-01): Phiên bản đầu tiên.",
+          "metadata": {
+            "source": "support/sla-p1-2026.pdf",
+            "department": "IT",
+            "access": "internal",
+            "effective_date": "2026-01-15",
+            "section": "Phần 5: Lịch sử phiên bản"
+          },
+          "score": 0.016086065573770493,
+          "rerank_score": 2.9220168590545654
+        }
+      ],
+      "expected_sources": [
+        "support/sla-p1-2026.pdf"
+      ],
+      "expected_answer": "Ticket P1 tự động escalate lên Senior Engineer nếu không có phản hồi trong 10 phút sau khi tạo ticket.",
+      "faithfulness": 5,
+      "faithfulness_notes": "The answer accurately reflects the information provided in the context regarding the escalation process for P1 incidents and the emergency escalation procedure, including the conditions for temporary permissions and logging requirements.",
+      "relevance": 5,
+      "relevance_notes": "The answer directly addresses the user's question about how escalation occurs in a P1 incident, providing specific details about the process and conditions involved.",
+      "context_recall": 5,
+      "context_recall_notes": "Found: 1/1. Missing: []",
+      "completeness": 4,
+      "completeness_notes": "The actual answer covers the key point about the automatic escalation of the P1 ticket to a Senior Engineer if there is no response within 10 minutes. However, it includes additional information about the emergency escalation process and temporary permissions, which, while relevant, are not part of the expected answer.",
+      "config_label": "hybrid_rerank"
+    },
+    {
+      "id": "q07",
+      "category": "Access Control",
+      "query": "Approval Matrix để cấp quyền hệ thống là tài liệu nào?",
+      "answer": "Tài liệu quy định quy trình cấp phép truy cập vào các hệ thống nội bộ của công ty là \"Approval Matrix\" để cấp quyền hệ thống [1].",
+      "sources": [
+        "it/access-control-sop.md",
+        "it/access-control-sop.md",
+        "policy/refund-v4.pdf"
+      ],
+      "chunks_used": [
+        {
+          "text": "Tài liệu này quy định quy trình cấp phép truy cập vào các hệ thống nội bộ của công ty.\nÁp dụng cho tất cả nhân viên, contractor, và third-party vendor.",
+          "metadata": {
+            "access": "internal",
+            "section": "Section 1: Phạm vi và mục đích",
+            "effective_date": "2026-01-01",
+            "department": "IT Security",
+            "source": "it/access-control-sop.md"
+          },
+          "score": 0.01639344262295082,
+          "rerank_score": 3.9636569023132324
+        },
+        {
+          "text": "Escalation chỉ áp dụng khi cần thay đổi quyền hệ thống ngoài quy trình thông thường.\nVí dụ: Khẩn cấp trong sự cố P1, cần cấp quyền tạm thời để fix incident.\n\nQuy trình escalation khẩn cấp:\n1. On-call IT Admin có thể cấp quyền tạm thời (max 24 giờ) sau khi được Tech Lead phê duyệt bằng lời.\n2. Sau 24 giờ, phải có ticket chính thức hoặc quyền bị thu hồi tự động.\n3. Mọi quyền tạm thời phải được ghi log vào hệ thống Security Audit.",
+          "metadata": {
+            "section": "Section 4: Escalation khi cần thay đổi quyền hệ thống",
+            "effective_date": "2026-01-01",
+            "access": "internal",
+            "department": "IT Security",
+            "source": "it/access-control-sop.md"
+          },
+          "score": 0.015023041474654376,
+          "rerank_score": 2.062196969985962
+        },
+        {
+          "text": "Bước 1: Khách hàng gửi yêu cầu qua hệ thống ticket nội bộ với category \"Refund Request\".\nBước 2: CS Agent xem xét trong vòng 1 ngày làm việc và xác nhận điều kiện đủ điều kiện.\nBước 3: Nếu đủ điều kiện, chuyển yêu cầu sang Finance Team để xử lý hoàn tiền.\nBước 4: Finance Team xử lý trong 3-5 ngày làm việc và thông báo kết quả cho khách hàng.",
+          "metadata": {
+            "effective_date": "2026-02-01",
+            "source": "policy/refund-v4.pdf",
+            "section": "Điều 4: Quy trình xử lý yêu cầu hoàn tiền",
+            "access": "internal",
+            "department": "CS"
+          },
+          "score": 0.014279784142797841,
+          "rerank_score": -1.1723886728286743
+        }
+      ],
+      "expected_sources": [
+        "it/access-control-sop.md"
+      ],
+      "expected_answer": "Tài liệu 'Approval Matrix for System Access' hiện tại có tên mới là 'Access Control SOP' (access-control-sop.md).",
+      "faithfulness": 1,
+      "faithfulness_notes": "The answer incorrectly identifies the document as 'Approval Matrix', which is not mentioned in the provided context. The context discusses a process for granting access to internal systems but does not refer to an 'Approval Matrix'.",
+      "relevance": 5,
+      "relevance_notes": "The answer directly addresses the user's question by clearly defining what the 'Approval Matrix' is and its purpose in the context of granting system access rights.",
+      "context_recall": 5,
+      "context_recall_notes": "Found: 1/1. Missing: []",
+      "completeness": 2,
+      "completeness_notes": "The actual answer mentions the 'Approval Matrix' but does not acknowledge the updated name 'Access Control SOP' as stated in the expected answer. Key points regarding the current name change are missing.",
+      "config_label": "hybrid_rerank"
+    },
+    {
+      "id": "q08",
+      "category": "HR Policy",
+      "query": "Nhân viên được làm remote tối đa mấy ngày mỗi tuần?",
+      "answer": "Nhân viên được làm remote tối đa 2 ngày mỗi tuần sau khi đã qua probation period, và lịch remote phải được phê duyệt bởi Team Lead qua HR Portal [1].",
+      "sources": [
+        "hr/leave-policy-2026.pdf",
+        "hr/leave-policy-2026.pdf",
+        "it/access-control-sop.md"
+      ],
+      "chunks_used": [
+        {
+          "text": "4.1 Điều kiện remote:\n- Nhân viên sau probation period có thể làm remote tối đa 2 ngày/tuần.\n- Team Lead phải phê duyệt lịch remote qua HR Portal.\n- Ngày onsite bắt buộc: Thứ 3 và Thứ 5 theo lịch team.\n\n4.2 Yêu cầu kỹ thuật khi remote:\n- Kết nối VPN bắt buộc khi làm việc với hệ thống nội bộ.\n- Camera bật trong các cuộc họp team.",
+          "metadata": {
+            "effective_date": "2026-01-01",
+            "section": "Phần 4: Remote work policy",
+            "source": "hr/leave-policy-2026.pdf",
+            "department": "HR",
+            "access": "internal"
+          },
+          "score": 0.01639344262295082,
+          "rerank_score": 6.303936958312988
+        },
+        {
+          "text": "Bước 1: Nhân viên gửi yêu cầu nghỉ phép qua hệ thống HR Portal (https://hr.company.internal) ít nhất 3 ngày làm việc trước ngày nghỉ.\nBước 2: Line Manager phê duyệt hoặc từ chối trong vòng 1 ngày làm việc.\nBước 3: Nhân viên nhận thông báo qua email sau khi được phê duyệt.\n\nTrường hợp khẩn cấp: Có thể gửi yêu cầu muộn hơn nhưng phải được Line Manager đồng ý qua tin nhắn trực tiếp.",
+          "metadata": {
+            "department": "HR",
+            "effective_date": "2026-01-01",
+            "section": "Phần 2: Quy trình xin nghỉ phép",
+            "access": "internal",
+            "source": "hr/leave-policy-2026.pdf"
+          },
+          "score": 0.015773809523809523,
+          "rerank_score": 3.6249821186065674
+        },
+        {
+          "text": "Level 1 — Read Only:\nÁp dụng cho: Tất cả nhân viên mới trong 30 ngày đầu.\nPhê duyệt: Line Manager.\nThời gian xử lý: 1 ngày làm việc.\n\nLevel 2 — Standard Access:\nÁp dụng cho: Nhân viên chính thức đã qua thử việc.\nPhê duyệt: Line Manager + IT Admin.\nThời gian xử lý: 2 ngày làm việc.\n\nLevel 3 — Elevated Access:\nÁp dụng cho: Team Lead, Senior Engineer, Manager.\nPhê duyệt: Line Manager + IT Admin + IT Security.\nThời gian xử lý: 3 ngày làm việc.\n\nLevel 4 — Admin Access:\nÁp dụng cho: DevOps, SRE, IT Admin.\nPhê duyệt: IT Manager + CISO.\nThời gian xử lý: 5 ngày làm việc.\nYêu cầu thêm: Training bắt buộc về security policy.",
+          "metadata": {
+            "source": "it/access-control-sop.md",
+            "access": "internal",
+            "section": "Section 2: Phân cấp quyền truy cập",
+            "effective_date": "2026-01-01",
+            "department": "IT Security"
+          },
+          "score": 0.015200918484500576,
+          "rerank_score": 3.4321112632751465
+        }
+      ],
+      "expected_sources": [
+        "hr/leave-policy-2026.pdf"
+      ],
+      "expected_answer": "Nhân viên sau probation period có thể làm remote tối đa 2 ngày/tuần, với điều kiện được Team Lead phê duyệt.",
+      "faithfulness": 5,
+      "faithfulness_notes": "The answer is completely grounded in the provided context, accurately reflecting the conditions for remote work after the probation period and the requirement for Team Lead approval through the HR Portal.",
+      "relevance": 5,
+      "relevance_notes": "Câu trả lời trực tiếp và đầy đủ thông tin về số ngày nhân viên được làm remote mỗi tuần, cũng như điều kiện cần thiết để thực hiện điều đó.",
+      "context_recall": 5,
+      "context_recall_notes": "Found: 1/1. Missing: []",
+      "completeness": 5,
+      "completeness_notes": "The actual answer covers all key points from the expected answer, including the maximum number of remote days (2 days/week), the condition of having completed the probation period, and the requirement for Team Lead approval.",
+      "config_label": "hybrid_rerank"
+    },
+    {
+      "id": "q09",
+      "category": "Insufficient Context",
+      "query": "ERR-403-AUTH là lỗi gì và cách xử lý?",
+      "answer": "Tôi không biết.",
+      "sources": [
+        "support/sla-p1-2026.pdf",
+        "policy/refund-v4.pdf",
+        "support/sla-p1-2026.pdf"
+      ],
+      "chunks_used": [
+        {
+          "text": "Ticket P1:\n- Phản hồi ban đầu (first response): 15 phút kể từ khi ticket được tạo.\n- Xử lý và khắc phục (resolution): 4 giờ.\n- Escalation: Tự động escalate lên Senior Engineer nếu không có phản hồi trong 10 phút.\n- Thông báo stakeholder: Ngay khi nhận ticket, update mỗi 30 phút cho đến khi resolve.\n\nTicket P2:\n- Phản hồi ban đầu: 2 giờ.\n- Xử lý và khắc phục: 1 ngày làm việc.\n- Escalation: Tự động escalate sau 90 phút không có phản hồi.\n\nTicket P3:\n- Phản hồi ban đầu: 1 ngày làm việc.\n- Xử lý và khắc phục: 5 ngày làm việc.\n\nTicket P4:\n- Phản hồi ban đầu: 3 ngày làm việc.\n- Xử lý và khắc phục: Theo sprint cycle (thông thường 2-4 tuần).",
+          "metadata": {
+            "department": "IT",
+            "source": "support/sla-p1-2026.pdf",
+            "effective_date": "2026-01-15",
+            "section": "Phần 2: SLA theo mức độ ưu tiên",
+            "access": "internal"
+          },
+          "score": 0.01405737704918033,
+          "rerank_score": -3.8454384803771973
+        },
+        {
+          "text": "Bước 1: Khách hàng gửi yêu cầu qua hệ thống ticket nội bộ với category \"Refund Request\".\nBước 2: CS Agent xem xét trong vòng 1 ngày làm việc và xác nhận điều kiện đủ điều kiện.\nBước 3: Nếu đủ điều kiện, chuyển yêu cầu sang Finance Team để xử lý hoàn tiền.\nBước 4: Finance Team xử lý trong 3-5 ngày làm việc và thông báo kết quả cho khách hàng.",
+          "metadata": {
+            "source": "policy/refund-v4.pdf",
+            "effective_date": "2026-02-01",
+            "department": "CS",
+            "section": "Điều 4: Quy trình xử lý yêu cầu hoàn tiền",
+            "access": "internal"
+          },
+          "score": 0.013756613756613755,
+          "rerank_score": -4.8992600440979
+        },
+        {
+          "text": "Bước 1: Tiếp nhận\nOn-call engineer nhận alert hoặc ticket, xác nhận severity trong 5 phút.\n\nBước 2: Thông báo\nGửi thông báo tới Slack #incident-p1 và email incident@company.internal ngay lập tức.\n\nBước 3: Triage và phân công\nLead Engineer phân công engineer xử lý trong 10 phút.\n\nBước 4: Xử lý\nEngineer cập nhật tiến độ lên ticket mỗi 30 phút. Nếu cần hỗ trợ thêm, escalate ngay.\n\nBước 5: Resolution\nSau khi khắc phục, viết incident report trong vòng 24 giờ.",
+          "metadata": {
+            "department": "IT",
+            "source": "support/sla-p1-2026.pdf",
+            "access": "internal",
+            "section": "Phần 3: Quy trình xử lý sự cố P1",
+            "effective_date": "2026-01-15"
+          },
+          "score": 0.014700704225352112,
+          "rerank_score": -6.252306938171387
+        }
+      ],
+      "expected_sources": [],
+      "expected_answer": "Không tìm thấy thông tin về ERR-403-AUTH trong tài liệu hiện có. Đây có thể là lỗi liên quan đến xác thực (authentication), hãy liên hệ IT Helpdesk.",
+      "faithfulness": 1,
+      "faithfulness_notes": "The answer 'Tôi không biết' (I don't know) does not logically derive from the provided context, which contains specific procedures and timelines for handling tickets and incidents. The context does not support a lack of knowledge as a valid response.",
+      "relevance": 1,
+      "relevance_notes": "The answer does not address the user's question at all, providing no information about the ERR-403-AUTH error or how to handle it.",
+      "context_recall": 5,
+      "context_recall_notes": "No expected sources (abstain case) - treated as perfect recall.",
+      "completeness": 1,
+      "completeness_notes": "The actual answer does not provide any information about ERR-403-AUTH or how to handle it, failing to address the expected points regarding the nature of the error and the suggestion to contact IT Helpdesk.",
+      "config_label": "hybrid_rerank"
+    },
+    {
+      "id": "q10",
+      "category": "Refund",
+      "query": "Nếu cần hoàn tiền khẩn cấp cho khách hàng VIP, quy trình có khác không?",
+      "answer": "Không có thông tin cụ thể nào trong bối cảnh về quy trình hoàn tiền khẩn cấp cho khách hàng VIP. Do đó, tôi không biết.",
+      "sources": [
+        "policy/refund-v4.pdf",
+        "policy/refund-v4.pdf",
+        "it/access-control-sop.md"
+      ],
+      "chunks_used": [
+        {
+          "text": "Khách hàng được quyền yêu cầu hoàn tiền khi đáp ứng đủ các điều kiện sau:\n- Sản phẩm bị lỗi do nhà sản xuất, không phải do người dùng.\n- Yêu cầu được gửi trong vòng 7 ngày làm việc kể từ thời điểm xác nhận đơn hàng.\n- Đơn hàng chưa được sử dụng hoặc chưa bị mở seal.",
+          "metadata": {
+            "department": "CS",
+            "effective_date": "2026-02-01",
+            "access": "internal",
+            "section": "Điều 2: Điều kiện được hoàn tiền",
+            "source": "policy/refund-v4.pdf"
+          },
+          "score": 0.015435606060606061,
+          "rerank_score": 3.3221588134765625
+        },
+        {
+          "text": "- Hoàn tiền qua phương thức thanh toán gốc: áp dụng trong 100% trường hợp đủ điều kiện.\n- Hoàn tiền qua credit nội bộ (store credit): khách hàng có thể chọn nhận store credit thay thế với giá trị 110% so với số tiền hoàn.",
+          "metadata": {
+            "section": "Điều 5: Hình thức hoàn tiền",
+            "access": "internal",
+            "source": "policy/refund-v4.pdf",
+            "effective_date": "2026-02-01",
+            "department": "CS"
+          },
+          "score": 0.014346349745331069,
+          "rerank_score": 3.2715585231781006
+        },
+        {
+          "text": "Escalation chỉ áp dụng khi cần thay đổi quyền hệ thống ngoài quy trình thông thường.\nVí dụ: Khẩn cấp trong sự cố P1, cần cấp quyền tạm thời để fix incident.\n\nQuy trình escalation khẩn cấp:\n1. On-call IT Admin có thể cấp quyền tạm thời (max 24 giờ) sau khi được Tech Lead phê duyệt bằng lời.\n2. Sau 24 giờ, phải có ticket chính thức hoặc quyền bị thu hồi tự động.\n3. Mọi quyền tạm thời phải được ghi log vào hệ thống Security Audit.",
+          "metadata": {
+            "department": "IT Security",
+            "source": "it/access-control-sop.md",
+            "effective_date": "2026-01-01",
+            "access": "internal",
+            "section": "Section 4: Escalation khi cần thay đổi quyền hệ thống"
+          },
+          "score": 0.01639344262295082,
+          "rerank_score": 3.17468523979187
+        }
+      ],
+      "expected_sources": [
+        "policy/refund-v4.pdf"
+      ],
+      "expected_answer": "Tài liệu chính sách hoàn tiền không đề cập đến quy trình đặc biệt cho khách hàng VIP. Theo chính sách hiện hành, tất cả yêu cầu hoàn tiền đều theo cùng quy trình tiêu chuẩn trong 3-5 ngày làm việc.",
+      "faithfulness": 5,
+      "faithfulness_notes": "The answer correctly identifies that there is no specific information regarding an expedited refund process for VIP customers in the provided context. It logically derives from the absence of such details in the context.",
+      "relevance": 2,
+      "relevance_notes": "The answer acknowledges the lack of specific information regarding the refund process for VIP customers, but it does not directly address the user's question about whether the process is different or not.",
+      "context_recall": 5,
+      "context_recall_notes": "Found: 1/1. Missing: []",
+      "completeness": 2,
+      "completeness_notes": "The actual answer acknowledges the lack of specific information regarding the refund process for VIP customers, but it fails to mention that the existing refund policy does not specify a special process for VIP customers, which is a key point from the expected answer.",
+      "config_label": "hybrid_rerank"
+    }
+  ],
+  "summary": {
+    "faithfulness": 4.2,
+    "relevance": 4.3,
+    "context_recall": 5.0,
+    "completeness": 3.7
+  }
+}

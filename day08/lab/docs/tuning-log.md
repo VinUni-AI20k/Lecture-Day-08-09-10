@@ -7,100 +7,107 @@
 
 ## Baseline (Sprint 2)
 
-**Ngày:** ___________  
+**Ngày:** 13/04/2026  
 **Config:**
 ```
 retrieval_mode = "dense"
-chunk_size = _____ tokens
-overlap = _____ tokens
+chunk_size = 400 tokens
+overlap = 80 tokens
 top_k_search = 10
 top_k_select = 3
 use_rerank = False
-llm_model = _____
+llm_model = gpt-4o-mini
 ```
 
 **Scorecard Baseline:**
 | Metric | Average Score |
 |--------|--------------|
-| Faithfulness | ? /5 |
-| Answer Relevance | ? /5 |
-| Context Recall | ? /5 |
-| Completeness | ? /5 |
+| Faithfulness | 4.80 /5 |
+| Answer Relevance | 2.40 /5 |
+| Context Recall | 5.00 /5 |
+| Completeness | 2.10 /5 |
 
 **Câu hỏi yếu nhất (điểm thấp):**
-> TODO: Liệt kê 2-3 câu hỏi có điểm thấp nhất và lý do tại sao.
-> Ví dụ: "q07 (Approval Matrix) - context recall = 1/5 vì dense bỏ lỡ alias."
+> gq01 (SLA thay đổi theo phiên bản): retrieve đúng nguồn nhưng answer vẫn theo hướng "không tìm thấy", làm relevance/completeness thấp.
+>
+> gq02 (Remote + VPN + số thiết bị): lấy đúng 2 nguồn nhưng generation không tổng hợp, dẫn tới completeness thấp.
+>
+> gq03 (Flash Sale + đã kích hoạt): chưa trả lời đầy đủ logic ngoại lệ kép dù evidence có trong corpus.
 
 **Giả thuyết nguyên nhân (Error Tree):**
-- [ ] Indexing: Chunking cắt giữa điều khoản
+- [x] Indexing: Chunking cắt giữa điều khoản
 - [ ] Indexing: Metadata thiếu effective_date
 - [ ] Retrieval: Dense bỏ lỡ exact keyword / alias
 - [ ] Retrieval: Top-k quá ít → thiếu evidence
-- [ ] Generation: Prompt không đủ grounding
-- [ ] Generation: Context quá dài → lost in the middle
+- [x] Generation: Prompt không đủ grounding
+- [x] Generation: Context quá dài → lost in the middle
 
 ---
 
 ## Variant 1 (Sprint 3)
 
-**Ngày:** ___________  
-**Biến thay đổi:** ___________  
+**Ngày:** 13/04/2026  
+**Biến thay đổi:** retrieval_mode: dense -> hybrid (Dense + BM25 + RRF)  
 **Lý do chọn biến này:**
-> TODO: Giải thích theo evidence từ baseline results.
-> Ví dụ: "Chọn hybrid vì q07 (alias query) và q09 (mã lỗi ERR-403) đều thất bại với dense.
-> Corpus có cả ngôn ngữ tự nhiên (policy) lẫn tên riêng/mã lỗi (ticket code, SLA label)."
+> Chọn hybrid vì baseline dense trả lời chưa tốt các câu multi-signal trong grading set, đặc biệt các câu cần tổng hợp nhiều chi tiết trong cùng chủ đề.
 
 **Config thay đổi:**
 ```
-retrieval_mode = "hybrid"   # hoặc biến khác
+retrieval_mode = "hybrid"
 # Các tham số còn lại giữ nguyên như baseline
+top_k_search = 10
+top_k_select = 3
+use_rerank = False
+llm_model = gpt-4o-mini
 ```
 
 **Scorecard Variant 1:**
 | Metric | Baseline | Variant 1 | Delta |
 |--------|----------|-----------|-------|
-| Faithfulness | ?/5 | ?/5 | +/- |
-| Answer Relevance | ?/5 | ?/5 | +/- |
-| Context Recall | ?/5 | ?/5 | +/- |
-| Completeness | ?/5 | ?/5 | +/- |
+| Faithfulness | 4.80/5 | 4.70/5 | -0.10 |
+| Answer Relevance | 2.40/5 | 2.30/5 | -0.10 |
+| Context Recall | 5.00/5 | 5.00/5 | 0.00 |
+| Completeness | 2.10/5 | 2.10/5 | 0.00 |
 
 **Nhận xét:**
-> TODO: Variant 1 cải thiện ở câu nào? Tại sao?
-> Có câu nào kém hơn không? Tại sao?
+> Trên grading_questions, hybrid không tạo cải thiện đáng kể so với baseline.
+>
+> Context recall giữ nguyên 5.0 nhưng relevance giảm nhẹ, cho thấy vấn đề chính nằm ở generation tổng hợp hơn là ở retrieve.
+>
+> Một số câu vẫn trả lời theo mẫu "không tìm thấy" dù đã có context phù hợp.
 
 **Kết luận:**
-> TODO: Variant 1 có tốt hơn baseline không?
-> Bằng chứng là gì? (điểm số, câu hỏi cụ thể)
+> Variant 1 chưa tốt hơn baseline trên bộ grading_questions. Delta gần như không cải thiện, trong khi relevance giảm nhẹ. Baseline dense vẫn là cấu hình ổn định hơn để nộp.
 
 ---
 
 ## Variant 2 (nếu có thời gian)
 
-**Biến thay đổi:** ___________  
+**Biến thay đổi:** Chưa chạy (N/A)  
 **Config:**
 ```
-# TODO
+# Chưa thực hiện trong phiên hiện tại
 ```
 
 **Scorecard Variant 2:**
 | Metric | Baseline | Variant 1 | Variant 2 | Best |
 |--------|----------|-----------|-----------|------|
-| Faithfulness | ? | ? | ? | ? |
-| Answer Relevance | ? | ? | ? | ? |
-| Context Recall | ? | ? | ? | ? |
-| Completeness | ? | ? | ? | ? |
+| Faithfulness | 4.80 | 4.70 | N/A | Baseline |
+| Answer Relevance | 2.40 | 2.30 | N/A | Baseline |
+| Context Recall | 5.00 | 5.00 | N/A | Tie |
+| Completeness | 2.10 | 2.10 | N/A | Tie |
 
 ---
 
 ## Tóm tắt học được
 
-> TODO (Sprint 4): Điền sau khi hoàn thành evaluation.
+Hoàn thành sau evaluation ngày 13/04/2026.
 
 1. **Lỗi phổ biến nhất trong pipeline này là gì?**
-   > _____________
+   > Generation chưa tận dụng đủ context đã retrieve, hay trả lời an toàn kiểu "không tìm thấy" dù evidence đã có.
 
 2. **Biến nào có tác động lớn nhất tới chất lượng?**
-   > _____________
+   > Prompt và logic generation tác động mạnh hơn retrieval_mode trong bộ grading hiện tại, vì cả baseline và hybrid đều đạt recall cao nhưng answer quality vẫn thấp.
 
 3. **Nếu có thêm 1 giờ, nhóm sẽ thử gì tiếp theo?**
-   > _____________
+   > Thử variant 2 với rerank (giữ retrieval_mode cố định) và siết prompt theo format bắt buộc: trả lời theo bullet, trích rõ điều khoản, chỉ abstain khi toàn bộ top-k không chứa evidence.

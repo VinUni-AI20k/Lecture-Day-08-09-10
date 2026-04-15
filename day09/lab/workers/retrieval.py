@@ -17,6 +17,12 @@ Gọi độc lập để test:
 
 import os
 import sys
+from dotenv import load_dotenv
+
+load_dotenv()
+
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8")
 
 # ─────────────────────────────────────────────
 # Worker Contract (xem contracts/worker_contracts.yaml)
@@ -28,38 +34,50 @@ WORKER_NAME = "retrieval_worker"
 DEFAULT_TOP_K = 3
 
 
+_EMBED_FN_CACHE = None
+
+
 def _get_embedding_fn():
     """
-    Trả về embedding function.
-    TODO Sprint 1: Implement dùng OpenAI hoặc Sentence Transformers.
+    Trả về embedding function. Sử dụng OpenAI text-embedding-3-small
+    để khớp với metadata trong worker_contracts.yaml.
     """
-    # Option A: Sentence Transformers (offline, không cần API key)
+    global _EMBED_FN_CACHE
+    if _EMBED_FN_CACHE:
+        return _EMBED_FN_CACHE
+
+    # Option A: OpenAI (Ưu tiên theo yêu cầu)
+    api_key = os.getenv("OPENAI_API_KEY")
+    if api_key:
+        try:
+            from openai import OpenAI
+            client = OpenAI(api_key=api_key)
+            def embed_openai(text: str) -> list:
+                resp = client.embeddings.create(input=text, model="text-embedding-3-small")
+                return resp.data[0].embedding
+            _EMBED_FN_CACHE = embed_openai
+            return _EMBED_FN_CACHE
+        except Exception as e:
+            print(f"⚠️  Lỗi khi khởi tạo OpenAI: {e}")
+
+    # Option B: Sentence Transformers (Fallback nếu không có API key)
     try:
         from sentence_transformers import SentenceTransformer
         model = SentenceTransformer("all-MiniLM-L6-v2")
-        def embed(text: str) -> list:
+        def embed_st(text: str) -> list:
             return model.encode([text])[0].tolist()
-        return embed
-    except ImportError:
-        pass
-
-    # Option B: OpenAI (cần API key)
-    try:
-        from openai import OpenAI
-        client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-        def embed(text: str) -> list:
-            resp = client.embeddings.create(input=text, model="text-embedding-3-small")
-            return resp.data[0].embedding
-        return embed
+        _EMBED_FN_CACHE = embed_st
+        return _EMBED_FN_CACHE
     except ImportError:
         pass
 
     # Fallback: random embeddings cho test (KHÔNG dùng production)
     import random
-    def embed(text: str) -> list:
-        return [random.random() for _ in range(384)]
-    print("⚠️  WARNING: Using random embeddings (test only). Install sentence-transformers.")
-    return embed
+    def embed_random(text: str) -> list:
+        return [random.random() for _ in range(1536)]  # Dùng dim 1536 cho OpenAI compatibility
+    print("⚠️  WARNING: Using random embeddings (test only).")
+    _EMBED_FN_CACHE = embed_random
+    return _EMBED_FN_CACHE
 
 
 def _get_collection():
@@ -85,15 +103,9 @@ def retrieve_dense(query: str, top_k: int = DEFAULT_TOP_K) -> list:
     """
     Dense retrieval: embed query → query ChromaDB → trả về top_k chunks.
 
-    TODO Sprint 2: Implement phần này.
-    - Dùng _get_embedding_fn() để embed query
-    - Query collection với n_results=top_k
-    - Format result thành list of dict
-
     Returns:
         list of {"text": str, "source": str, "score": float, "metadata": dict}
     """
-    # TODO: Implement dense retrieval
     embed = _get_embedding_fn()
     query_embedding = embed(query)
 
@@ -111,10 +123,13 @@ def retrieve_dense(query: str, top_k: int = DEFAULT_TOP_K) -> list:
             results["distances"][0],
             results["metadatas"][0]
         )):
+            # Score similarity trong khoảng [0, 1] cho contract
+            score = max(0.0, min(1.0, round(1 - dist, 4)))
+            
             chunks.append({
                 "text": doc,
                 "source": meta.get("source", "unknown"),
-                "score": round(1 - dist, 4),  # cosine similarity
+                "score": score,
                 "metadata": meta,
             })
         return chunks
@@ -160,8 +175,8 @@ def run(state: dict) -> dict:
         state["retrieved_sources"] = sources
 
         worker_io["output"] = {
-            "chunks_count": len(chunks),
-            "sources": sources,
+            "retrieved_chunks": chunks,
+            "retrieved_sources": sources,
         }
         state["history"].append(
             f"[{WORKER_NAME}] retrieved {len(chunks)} chunks from {sources}"
@@ -195,12 +210,18 @@ if __name__ == "__main__":
     ]
 
     for query in test_queries:
-        print(f"\n▶ Query: {query}")
+        print(f"\n> Query: {query}")
         result = run({"task": query})
         chunks = result.get("retrieved_chunks", [])
         print(f"  Retrieved: {len(chunks)} chunks")
         for c in chunks[:2]:
-            print(f"    [{c['score']:.3f}] {c['source']}: {c['text'][:80]}...")
+            text_preview = c['text'][:80].replace("\n", " ")
+            try:
+                print(f"    [{c['score']:.3f}] {c['source']}: {text_preview}...")
+            except UnicodeEncodeError:
+                # Fallback for consoles with limited encoding
+                safe_text = text_preview.encode('ascii', errors='replace').decode('ascii')
+                print(f"    [{c['score']:.3f}] {c['source']}: {safe_text}...")
         print(f"  Sources: {result.get('retrieved_sources', [])}")
 
-    print("\n✅ retrieval_worker test done.")
+    print("\n[OK] retrieval_worker test done.")

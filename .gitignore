@@ -2,6 +2,12 @@
 *.swp
 *~
 
+.venv
+.cursor/
+day08/lab/.env
+day09/lab/.env
+day10/lab/.env
+
 # Grading questions — không public trước 17:00
 day08/lab/data/grading_questions.json
 day09/lab/data/grading_questions.json
