@@ -62,6 +62,20 @@ def load_raw_csv(path: Path) -> List[Dict[str, str]]:
     return rows
 
 
+def _collapse_whitespace(s: str) -> str:
+    """
+    Rule 8 — normalize_whitespace_in_chunk_text:
+    Thu gọn khoảng trắng liên tiếp (space/tab) thành một dấu cách đơn.
+    Ngăn false-negative trong duplicate-detection khi text chỉ khác nhau ở whitespace.
+
+    metric_impact: chunk_text normalize đồng nhất → dedup chính xác hơn cho trường hợp
+    whitespace extra được inject.  Không thay đổi quarantine_records trên bộ mẫu sạch nhưng
+    khi inject "text   với   khoảng  trắng  thừa" duplicate sẽ bị bắt đúng.
+    """
+    import re as _re
+    return _re.sub(r"[ \t]+", " ", s).strip()
+
+
 def clean_rows(
     rows: List[Dict[str, str]],
     *,
@@ -74,9 +88,13 @@ def clean_rows(
     1) Quarantine: doc_id không thuộc allowlist (export lạ / catalog sai).
     2) Chuẩn hoá effective_date sang YYYY-MM-DD; quarantine nếu không parse được.
     3) Quarantine: chunk hr_leave_policy có effective_date < 2026-01-01 (bản HR cũ / conflict version).
-    4) Quarantine: chunk_text rỗng hoặc effective_date rỗng sau chuẩn hoá.
-    5) Loại trùng nội dung chunk_text (giữ bản đầu).
-    6) Fix stale refund: policy_refund_v4 chứa '14 ngày làm việc' → 7 ngày.
+    4) [NEW] Quarantine: chunk sla_p1_2026 có effective_date < 2026-01-01 (bản SLA cũ).
+    5) [NEW] Chuẩn hoá whitespace liên tiếp trong chunk_text (collapse).
+    6) Quarantine: chunk_text rỗng hoặc effective_date rỗng sau chuẩn hoá.
+    7) [NEW] Quarantine: chunk chứa marker "lỗi migration" — bản snapshot bị lỗi pipeline trước đó;
+       nghiêm ngặt hơn baseline (không "fix" mà quarantine hoàn toàn).
+    8) Loại trùng nội dung chunk_text (giữ bản đầu; so sánh sau normalize whitespace).
+    9) Fix stale refund: policy_refund_v4 chứa '14 ngày làm việc' → 7 ngày.
     """
     quarantine: List[Dict[str, Any]] = []
     seen_text: set[str] = set()
@@ -89,10 +107,12 @@ def clean_rows(
         eff_raw = raw.get("effective_date", "")
         exported_at = raw.get("exported_at", "")
 
+        # Rule 1 — allowlist doc_id
         if doc_id not in ALLOWED_DOC_IDS:
             quarantine.append({**raw, "reason": "unknown_doc_id"})
             continue
 
+        # Rule 2 — parse effective_date
         eff_norm, eff_err = _normalize_effective_date(eff_raw)
         if eff_err == "empty_effective_date":
             quarantine.append({**raw, "reason": "missing_effective_date"})
@@ -101,6 +121,7 @@ def clean_rows(
             quarantine.append({**raw, "reason": eff_err, "effective_date_raw": eff_raw})
             continue
 
+        # Rule 3 — HR stale version (baseline)
         if doc_id == "hr_leave_policy" and eff_norm < "2026-01-01":
             quarantine.append(
                 {
@@ -111,16 +132,45 @@ def clean_rows(
             )
             continue
 
+        # Rule 4 (NEW) — stale_sla_effective_date
+        # metric_impact: quarantine_records tăng khi inject sla_p1_2026 với effective_date < 2026-01-01.
+        # Trên bộ mẫu hiện tại: sla_p1_2026 có effective_date=2026-02-01 → pass (không ảnh hưởng).
+        # Chứng cứ inject: thêm row sla_p1_2026 với effective_date=2025-06-01 → quarantine_records +1.
+        if doc_id == "sla_p1_2026" and eff_norm < "2026-01-01":
+            quarantine.append(
+                {
+                    **raw,
+                    "reason": "stale_sla_effective_date",
+                    "effective_date_normalized": eff_norm,
+                }
+            )
+            continue
+
+        # Rule 5 (NEW) — normalize_whitespace_in_chunk_text (xem _collapse_whitespace ở trên)
+        text = _collapse_whitespace(text)
+
+        # Rule 6 — empty text (baseline)
         if not text:
             quarantine.append({**raw, "reason": "missing_chunk_text"})
             continue
 
+        # Rule 7 (NEW) — quarantine_migration_error_marker
+        # metric_impact: row 3 trong policy_export_dirty.csv chứa "lỗi migration"
+        # → trên bộ mẫu chuẩn: quarantine_records=5, cleaned_records=5 (so với baseline 4/6).
+        # Lý do nghiêm ngặt hơn baseline: không nên "ẩn" chunk có marker lỗi pipeline vào vector store,
+        # dù đã sửa cửa sổ hoàn tiền — nguy cơ context nhiễu vẫn cao.
+        if "lỗi migration" in text.lower():
+            quarantine.append({**raw, "reason": "migration_error_marker_detected", "chunk_text_norm": text})
+            continue
+
+        # Rule 8 — deduplicate (baseline; so sánh sau collapse-whitespace)
         key = _norm_text(text)
         if key in seen_text:
             quarantine.append({**raw, "reason": "duplicate_chunk_text"})
             continue
         seen_text.add(key)
 
+        # Rule 9 — fix stale refund window (baseline)
         fixed_text = text
         if apply_refund_window_fix and doc_id == "policy_refund_v4":
             if "14 ngày làm việc" in fixed_text:
