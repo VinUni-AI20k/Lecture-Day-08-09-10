@@ -25,6 +25,13 @@ ALLOWED_DOC_IDS = frozenset(
 
 _ISO_DATE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 _DMY_SLASH = re.compile(r"^(\d{2})/(\d{2})/(\d{4})$")
+_ISO_DATETIME = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}")
+
+# Rule C: độ dài tối đa chunk_text
+MAX_CHUNK_LEN = 800
+
+# Rule A: các marker ghi chú nội bộ / migration artifact không được xuất ra KB
+_MIGRATION_MARKERS = ("(ghi chú:", "[lỗi migration]", "[draft]", "[wip]")
 
 
 def _norm_text(s: str) -> str:
@@ -93,6 +100,12 @@ def clean_rows(
             quarantine.append({**raw, "reason": "unknown_doc_id"})
             continue
 
+        # Rule B (mới): exported_at phải có giá trị và đúng định dạng ISO datetime.
+        # Chunk thiếu timestamp xuất không thể truy vết freshness.
+        if not exported_at or not _ISO_DATETIME.match(exported_at):
+            quarantine.append({**raw, "reason": "missing_or_invalid_exported_at"})
+            continue
+
         eff_norm, eff_err = _normalize_effective_date(eff_raw)
         if eff_err == "empty_effective_date":
             quarantine.append({**raw, "reason": "missing_effective_date"})
@@ -115,11 +128,24 @@ def clean_rows(
             quarantine.append({**raw, "reason": "missing_chunk_text"})
             continue
 
+        # Rule C (mới): chunk_text quá dài (> MAX_CHUNK_LEN ký tự) cho thấy
+        # bộ tách đoạn bị lỗi — chunk khổng lồ làm giảm chất lượng tìm kiếm.
+        if len(text) > MAX_CHUNK_LEN:
+            quarantine.append({**raw, "reason": f"chunk_text_too_long_{len(text)}_chars"})
+            continue
+
         key = _norm_text(text)
         if key in seen_text:
             quarantine.append({**raw, "reason": "duplicate_chunk_text"})
             continue
         seen_text.add(key)
+
+        # Rule A (mới): loại chunk chứa ghi chú nội bộ / migration artifact.
+        # Các marker này chỉ dành cho dev, không được xuất ra knowledge base.
+        text_lower = text.lower()
+        if any(marker in text_lower for marker in _MIGRATION_MARKERS):
+            quarantine.append({**raw, "reason": "internal_migration_note"})
+            continue
 
         fixed_text = text
         if apply_refund_window_fix and doc_id == "policy_refund_v4":
