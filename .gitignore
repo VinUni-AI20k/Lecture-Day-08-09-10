@@ -9,10 +9,15 @@ __pycache__/
 # Local secrets
 *.env
 day08/lab/.env
+day09/lab/.env
+
 
 # Local vector DB artifacts
 day08/lab/chroma_db/
 day09/lab/chroma_db/
+
+# Run trace artifacts
+day09/lab/artifacts/traces/
 
 # Grading questions — theo SCORING, cần track khi nộp
 
