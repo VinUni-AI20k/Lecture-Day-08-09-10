@@ -81,5 +81,45 @@
     "difficulty": "hard",
     "category": "Refund",
     "note": "Câu hỏi thiếu context đặc biệt — kiểm tra grounding khi model không có đủ thông tin"
+  },
+  {
+    "id": "q11",
+    "question": "Nếu khách hàng chọn hoàn tiền bằng store credit thì nhận bao nhiêu giá trị so với số tiền hoàn?",
+    "expected_answer": "Nếu chọn hoàn tiền bằng store credit, khách hàng nhận giá trị 110% so với số tiền hoàn.",
+    "expected_sources": ["policy/refund-v4.pdf"],
+    "difficulty": "easy",
+    "category": "Refund"
+  },
+  {
+    "id": "q12",
+    "question": "Ticket P2 có SLA phản hồi ban đầu và thời gian xử lý là bao lâu?",
+    "expected_answer": "Ticket P2 có SLA phản hồi ban đầu trong 2 giờ và thời gian xử lý là 1 ngày làm việc.",
+    "expected_sources": ["support/sla-p1-2026.pdf"],
+    "difficulty": "easy",
+    "category": "SLA"
+  },
+  {
+    "id": "q13",
+    "question": "Để được cấp Level 4 Admin Access cần những phê duyệt nào và yêu cầu thêm gì?",
+    "expected_answer": "Level 4 Admin Access cần phải được IT Manager và CISO phê duyệt. Ngoài ra còn yêu cầu training bắt buộc về security policy.",
+    "expected_sources": ["it/access-control-sop.md"],
+    "difficulty": "medium",
+    "category": "Access Control"
+  },
+  {
+    "id": "q14",
+    "question": "Mật khẩu công ty phải được thay đổi định kỳ bao lâu một lần?",
+    "expected_answer": "Mật khẩu phải được thay đổi mỗi 90 ngày và hệ thống sẽ nhắc nhở 7 ngày trước khi hết hạn.",
+    "expected_sources": ["support/helpdesk-faq.md"],
+    "difficulty": "easy",
+    "category": "IT Helpdesk"
+  },
+  {
+    "id": "q15",
+    "question": "Nhân viên được chuyển tối đa bao nhiêu ngày phép năm chưa dùng sang năm sau?",
+    "expected_answer": "Nhân viên được chuyển tối đa 5 ngày phép năm chưa dùng sang năm tiếp theo.",
+    "expected_sources": ["hr/leave-policy-2026.pdf"],
+    "difficulty": "easy",
+    "category": "HR Policy"
   }
 ]

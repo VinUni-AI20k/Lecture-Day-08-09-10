@@ -76,10 +76,48 @@ def retrieve_dense(query: str, top_k: int = TOP_K_SEARCH) -> List[Dict[str, Any]
         # Lưu ý: distances trong ChromaDB cosine = 1 - similarity
         # Score = 1 - distance
     """
-    raise NotImplementedError(
-        "TODO Sprint 2: Implement retrieve_dense().\n"
-        "Tham khảo comment trong hàm để biết cách query ChromaDB."
+    try:
+        import chromadb
+        from index import get_embedding, CHROMA_DB_DIR
+    except ImportError as e:
+        raise ImportError(f"Lỗi import: {e}. Đảm bảo index.py có sẵn trong cùng directory.")
+    
+    try:
+        client = chromadb.PersistentClient(path=str(CHROMA_DB_DIR))
+        collection = client.get_collection("rag_lab")
+    except Exception as e:
+        raise Exception(
+            f"ChromaDB collection not found: {e}\n"
+            f"Hãy chạy `python index.py` để build index trước."
+        )
+    
+    # Embed query bằng cùng model đã dùng khi index
+    query_embedding = get_embedding(query)
+    
+    # Query ChromaDB
+    results = collection.query(
+        query_embeddings=[query_embedding],
+        n_results=top_k,
+        include=["documents", "metadatas", "distances"]
     )
+    
+    # Reformat lại kết quả
+    # Lưu ý: distance trong ChromaDB cosine = 1 - similarity, nên score = 1 - distance
+    chunks = []
+    if results and results.get("documents"):
+        for doc, meta, distance in zip(
+            results["documents"][0],
+            results["metadatas"][0],
+            results["distances"][0]
+        ):
+            score = 1 - distance  # Chuyển distance thành similarity score
+            chunks.append({
+                "text": doc,
+                "metadata": meta,
+                "score": float(score),
+            })
+    
+    return chunks
 
 
 # =============================================================================
@@ -316,10 +354,48 @@ def call_llm(prompt: str) -> str:
 
     Lưu ý: Dùng temperature=0 hoặc thấp để output ổn định cho evaluation.
     """
-    raise NotImplementedError(
-        "TODO Sprint 2: Implement call_llm().\n"
-        "Chọn Option A (OpenAI) hoặc Option B (Gemini) trong TODO comment."
-    )
+    # Kiểm tra API key có sẵn
+    openai_key = os.getenv("OPENAI_API_KEY")
+    gemini_key = os.getenv("GOOGLE_API_KEY")
+    
+    if openai_key:
+        try:
+            from openai import OpenAI
+        except ImportError as e:
+            raise ImportError("OpenAI package chưa cài. Cài: pip install openai")
+        
+        client = OpenAI(api_key=openai_key)
+        response = client.chat.completions.create(
+            model=LLM_MODEL,
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0,  # temperature=0 để output ổn định cho evaluation
+            max_tokens=512,
+        )
+        return response.choices[0].message.content
+    
+    elif gemini_key:
+        try:
+            import google.generativeai as genai
+        except ImportError as e:
+            raise ImportError("google-generativeai package chưa cài. Cài: pip install google-generativeai")
+        
+        genai.configure(api_key=gemini_key)
+        model = genai.GenerativeModel("gemini-1.5-flash")
+        generation_config = {
+            "temperature": 0,
+            "max_output_tokens": 512,
+        }
+        response = model.generate_content(prompt, generation_config=generation_config)
+        return response.text
+    
+    else:
+        raise ValueError(
+            "Không tìm thấy API key.\n"
+            "Cấu hình trong .env:\n"
+            "  - OPENAI_API_KEY=sk-...\n"
+            "  hoặc\n"
+            "  - GOOGLE_API_KEY=..."
+        )
 
 
 def rag_answer(
