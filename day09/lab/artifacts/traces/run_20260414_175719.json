@@ -1,0 +1,179 @@
+{
+  "task": "Contractor cần Admin Access (Level 3) để khắc phục sự cố P1 đang active. Quy trình cấp quyền tạm thời như thế nào?",
+  "route_reason": "multi-hop: access control + SLA context | risk_high flagged",
+  "risk_high": true,
+  "needs_tool": true,
+  "hitl_triggered": false,
+  "retrieved_chunks": [
+    {
+      "text": "QUY TRÌNH KIỂM SOÁT TRUY CẬP HỆ THỐNG (ACCESS CONTROL SOP) Source: it/access-control-sop.md Department: IT Security Effective Date: 2026-01-01 Access: internal Ghi chú: Tài liệu này trước đây có tên \"Approval Matrix for System Access\". === Section 1: Phạm vi và mục đích === Tài liệu này quy định quy trình cấp phép truy cập vào các hệ thống nội bộ của công ty. Áp dụng cho tất cả nhân viên, contractor, và third-party vendor. === Section 2: Phân cấp quyền truy cập === Level 1 — Read Only: Áp dụng cho: Tất cả nhân viên mới trong 30 ngày đầu. Phê duyệt: Line Manager. Thời gian xử lý: 1 ngày làm việc. Level 2 — Standard Access: Áp dụng cho: Nhân viên chính thức đã qua thử việc. Phê duyệt: Line Manager + IT Admin. Thời gian xử lý: 2 ngày làm việc. Level 3 — Elevated Access: Áp dụng cho: Team Lead, Senior Engineer, Manager. Phê duyệt: Line Manager + IT Admin + IT Security. Thời gian xử lý: 3 ngày làm việc. Level 4 — Admin Access: Áp dụng cho: DevOps, SRE, IT Admin. Phê duyệt: IT Manager + CISO. Thời gian xử lý: 5 ngày làm việc. Yêu cầu thêm: Training bắt buộc về security policy. === Section 3: Quy trình yêu cầu cấp quyền === Bước 1: Nhân viên tạo Access Request ticket trên Jira (project IT-ACCESS). Bước 2: Line Manager phê duyệt yêu cầu trong 1 ngày làm việc. Bước 3: IT Admin kiểm tra compliance và cấp quyền. Bước 4: IT Security review với Level 3 và Level 4. Bước 5: Nhân viên nhận thông báo qua email khi quyền được cấp. === Section 4: Escalation khi cần thay đổi quyền hệ thống === Escalation chỉ áp dụng khi cần thay đổi quyền",
+      "source": "access_control_sop.txt",
+      "score": 0.6908,
+      "metadata": {
+        "chunk_id": "access_control_sop.txt__chunk0",
+        "source": "access_control_sop.txt"
+      }
+    },
+    {
+      "text": "IT HELPDESK FAQ — CÂU HỎI THƯỜNG GẶP Source: support/helpdesk-faq.md Department: IT Effective Date: 2026-01-20 Access: internal === Section 1: Tài khoản và mật khẩu === Q: Tôi quên mật khẩu, phải làm gì? A: Truy cập https://sso.company.internal/reset hoặc liên hệ Helpdesk qua ext. 9000. Mật khẩu mới sẽ được gửi qua email công ty trong vòng 5 phút. Q: Tài khoản bị khóa sau bao nhiêu lần đăng nhập sai? A: Tài khoản bị khóa sau 5 lần đăng nhập sai liên tiếp. Để mở khóa, liên hệ IT Helpdesk hoặc tự reset qua portal SSO. Q: Mật khẩu cần thay đổi định kỳ không? A: Có. Mật khẩu phải được thay đổi mỗi 90 ngày. Hệ thống sẽ nhắc nhở 7 ngày trước khi hết hạn. === Section 2: VPN và kết nối từ xa === Q: Phần mềm VPN nào công ty dùng? A: Công ty sử dụng Cisco AnyConnect. Download tại https://vpn.company.internal/download. Q: Tôi bị mất kết nối VPN liên tục, phải làm gì? A: Kiểm tra kết nối Internet trước. Nếu vẫn lỗi, tạo ticket P3 với log file VPN đính kèm. Q: VPN có giới hạn số thiết bị không? A: Mỗi tài khoản được kết nối VPN trên tối đa 2 thiết bị cùng lúc. === Section 3: Phần mềm và license === Q: Tôi cần cài phần mềm mới, phải làm gì? A: Gửi yêu cầu qua Jira project IT-SOFTWARE. Line Manager phải phê duyệt trước khi IT cài đặt. Q: Ai chịu trách nhiệm gia hạn license phần mềm? A: IT Procurement team quản lý tất cả license. Nhắc nhở sẽ được gửi 30 ngày trước khi hết hạn. === Section 4: Thiết bị và phần cứng === Q: Laptop mới được cấp sau bao lâu khi vào công ty? A:",
+      "source": "it_helpdesk_faq.txt",
+      "score": 0.5794,
+      "metadata": {
+        "source": "it_helpdesk_faq.txt",
+        "chunk_id": "it_helpdesk_faq.txt__chunk0"
+      }
+    },
+    {
+      "text": "tra compliance và cấp quyền. Bước 4: IT Security review với Level 3 và Level 4. Bước 5: Nhân viên nhận thông báo qua email khi quyền được cấp. === Section 4: Escalation khi cần thay đổi quyền hệ thống === Escalation chỉ áp dụng khi cần thay đổi quyền hệ thống ngoài quy trình thông thường. Ví dụ: Khẩn cấp trong sự cố P1, cần cấp quyền tạm thời để fix incident. Quy trình escalation khẩn cấp: 1. On-call IT Admin có thể cấp quyền tạm thời (max 24 giờ) sau khi được Tech Lead phê duyệt bằng lời. 2. Sau 24 giờ, phải có ticket chính thức hoặc quyền bị thu hồi tự động. 3. Mọi quyền tạm thời phải được ghi log vào hệ thống Security Audit. === Section 5: Thu hồi quyền truy cập === Quyền phải được thu hồi trong các trường hợp: - Nhân viên nghỉ việc: Thu hồi ngay trong ngày cuối. - Hết hạn contract: Thu hồi đúng ngày hết hạn. - Chuyển bộ phận: Điều chỉnh trong 3 ngày làm việc. === Section 6: Audit và review định kỳ === IT Security thực hiện access review mỗi 6 tháng. Mọi bất thường phải được báo cáo lên CISO trong vòng 24 giờ. === Section 7: Công cụ liên quan === Ticket system: Jira (project IT-ACCESS) IAM system: Okta Audit log: Splunk Email: it-access@company.internal",
+      "source": "access_control_sop.txt",
+      "score": 0.5777,
+      "metadata": {
+        "chunk_id": "access_control_sop.txt__chunk1",
+        "source": "access_control_sop.txt"
+      }
+    },
+    {
+      "text": "chịu trách nhiệm gia hạn license phần mềm? A: IT Procurement team quản lý tất cả license. Nhắc nhở sẽ được gửi 30 ngày trước khi hết hạn. === Section 4: Thiết bị và phần cứng === Q: Laptop mới được cấp sau bao lâu khi vào công ty? A: Laptop được cấp trong ngày onboarding đầu tiên. Nếu có vấn đề, liên hệ HR hoặc IT Admin. Q: Laptop bị hỏng phải báo cáo như thế nào? A: Tạo ticket P2 hoặc P3 tùy mức độ nghiêm trọng. Mang thiết bị đến IT Room (tầng 3) để kiểm tra. === Section 5: Email và lịch === Q: Hộp thư đến đầy, phải làm gì? A: Xóa email cũ hoặc yêu cầu tăng dung lượng qua ticket IT-ACCESS. Dung lượng tiêu chuẩn là 50GB. Q: Tôi không nhận được email từ bên ngoài? A: Kiểm tra thư mục Spam trước. Nếu vẫn không có, tạo ticket P2 kèm địa chỉ email gửi và thời gian gửi. === Section 6: Liên hệ IT Helpdesk === Hotline: ext. 9000 (8:00 - 18:00, Thứ 2 - Thứ 6) Email: helpdesk@company.internal Jira: project IT-SUPPORT Slack: #it-helpdesk Emergency (ngoài giờ): ext. 9999",
+      "source": "it_helpdesk_faq.txt",
+      "score": 0.5586,
+      "metadata": {
+        "chunk_id": "it_helpdesk_faq.txt__chunk1",
+        "source": "it_helpdesk_faq.txt"
+      }
+    },
+    {
+      "text": "muộn hơn nhưng phải được Line Manager đồng ý qua tin nhắn trực tiếp. === Phần 3: Chính sách làm thêm giờ === 3.1 Điều kiện làm thêm: Làm thêm giờ phải được Line Manager phê duyệt trước bằng văn bản. 3.2 Hệ số lương làm thêm: - Ngày thường: 150% lương giờ tiêu chuẩn. - Ngày cuối tuần: 200% lương giờ tiêu chuẩn. - Ngày lễ: 300% lương giờ tiêu chuẩn. === Phần 4: Remote work policy === 4.1 Điều kiện remote: - Nhân viên sau probation period có thể làm remote tối đa 2 ngày/tuần. - Team Lead phải phê duyệt lịch remote qua HR Portal. - Ngày onsite bắt buộc: Thứ 3 và Thứ 5 theo lịch team. 4.2 Yêu cầu kỹ thuật khi remote: - Kết nối VPN bắt buộc khi làm việc với hệ thống nội bộ. - Camera bật trong các cuộc họp team. === Phần 5: Liên hệ HR === Email: hr@company.internal Hotline: ext. 2000 HR Portal: https://hr.company.internal Giờ làm việc: Thứ 2 - Thứ 6, 8:30 - 17:30",
+      "source": "hr_leave_policy.txt",
+      "score": 0.5175,
+      "metadata": {
+        "chunk_id": "hr_leave_policy.txt__chunk1",
+        "source": "hr_leave_policy.txt"
+      }
+    }
+  ],
+  "retrieved_sources": [
+    "access_control_sop.txt",
+    "it_helpdesk_faq.txt",
+    "hr_leave_policy.txt"
+  ],
+  "policy_result": {
+    "policy_applies": true,
+    "policy_name": "refund_policy_v4",
+    "exceptions_found": [
+      {
+        "type": "Escalation",
+        "rule": "Cấp quyền tạm thời trong sự cố P1",
+        "source": "IT Security SOP"
+      }
+    ],
+    "source": [
+      "access_control_sop.txt",
+      "it_helpdesk_faq.txt",
+      "hr_leave_policy.txt"
+    ],
+    "policy_version_note": "",
+    "explanation": "Hybrid rule-based + LLM analysis"
+  },
+  "mcp_tools_used": [
+    {
+      "tool": "get_ticket_info",
+      "input": {
+        "ticket_id": "P1-LATEST"
+      },
+      "output": {
+        "ticket_id": "IT-9847",
+        "priority": "P1",
+        "title": "API Gateway down — toàn bộ người dùng không đăng nhập được",
+        "status": "in_progress",
+        "assignee": "nguyen.van.a@company.internal",
+        "created_at": "2026-04-13T22:47:00",
+        "sla_deadline": "2026-04-14T02:47:00",
+        "escalated": true,
+        "escalated_to": "senior_engineer_team",
+        "notifications_sent": [
+          "slack:#incident-p1",
+          "email:incident@company.internal",
+          "pagerduty:oncall"
+        ]
+      },
+      "error": null,
+      "timestamp": "2026-04-14T17:57:29.007486"
+    }
+  ],
+  "final_answer": "Quy trình cấp quyền tạm thời cho Contractor cần Admin Access (Level 3) trong sự cố P1 như sau:\n\n1. On-call IT Admin có thể cấp quyền tạm thời (tối đa 24 giờ) sau khi được Tech Lead phê duyệt bằng lời.\n2. Sau 24 giờ, phải có ticket chính thức hoặc quyền sẽ bị thu hồi tự động.\n3. Mọi quyền tạm thời phải được ghi log vào hệ thống Security Audit [3].\n\nLưu ý: Đây là trường hợp ngoại lệ chính sách cho việc cấp quyền tạm thời trong sự cố P1 [3].",
+  "sources": [
+    "access_control_sop.txt"
+  ],
+  "confidence": 0.72,
+  "history": [
+    "[supervisor] received task: Contractor cần Admin Access (Level 3) để khắc phục sự cố P1 đang active. Quy trì",
+    "[supervisor] route=policy_tool_worker reason=multi-hop: access control + SLA context | risk_high flagged",
+    "[retrieval_worker] retrieved 5 chunks from ['access_control_sop.txt', 'it_helpdesk_faq.txt', 'hr_leave_policy.txt']",
+    "[policy_tool_worker] called get_ticket_info",
+    "[policy_tool_worker] policy_applies=True, exceptions=1",
+    "[synthesis_worker] answer_len=442, confidence=0.72, sources=['access_control_sop.txt']",
+    "[graph] completed in 14001ms"
+  ],
+  "workers_called": [
+    "retrieval_worker",
+    "policy_tool_worker",
+    "synthesis_worker"
+  ],
+  "supervisor_route": "policy_tool_worker",
+  "latency_ms": 14001,
+  "run_id": "run_20260414_175719",
+  "worker_io_logs": [
+    {
+      "worker": "retrieval_worker",
+      "input": {
+        "task": "Contractor cần Admin Access (Level 3) để khắc phục sự cố P1 đang active. Quy trình cấp quyền tạm thời như thế nào?",
+        "top_k": 5
+      },
+      "output": {
+        "chunks_count": 5,
+        "sources": [
+          "access_control_sop.txt",
+          "it_helpdesk_faq.txt",
+          "hr_leave_policy.txt"
+        ]
+      },
+      "error": null
+    },
+    {
+      "worker": "policy_tool_worker",
+      "input": {
+        "task": "Contractor cần Admin Access (Level 3) để khắc phục sự cố P1 đang active. Quy trình cấp quyền tạm thời như thế nào?",
+        "chunks_count": 5,
+        "needs_tool": true
+      },
+      "output": {
+        "policy_applies": true,
+        "exceptions_count": 1,
+        "mcp_calls": 1
+      },
+      "error": null
+    },
+    {
+      "worker": "synthesis_worker",
+      "timestamp": "2026-04-14T10:57:29.007486+00:00",
+      "input": {
+        "task": "Contractor cần Admin Access (Level 3) để khắc phục sự cố P1 đang active. Quy trình cấp quyền tạm thời như thế nào?",
+        "chunks_count": 5,
+        "has_policy": true,
+        "exceptions_count": 1
+      },
+      "output": {
+        "answer_length": 442,
+        "sources": [
+          "access_control_sop.txt"
+        ],
+        "sources_count": 1,
+        "confidence": 0.72,
+        "abstained": false,
+        "hitl_triggered": false
+      },
+      "error": null
+    }
+  ],
+  "question_id": "q13"
+}
