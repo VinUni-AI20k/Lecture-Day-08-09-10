@@ -153,23 +153,61 @@ python index.py    # Xem preview preprocess + chunking (không cần API key)
 
 | Item | File | Owner |
 |------|------|-------|
-| Code pipeline | `index.py`, `rag_answer.py`, `eval.py` | Tech Lead |
-| Test questions | `data/test_questions.json` (đã có mẫu) | Eval Owner |
+| Indexing pipeline | `index.py` | Indexing Owner |
+| Retrieval & Generation | `rag_answer.py` | Retrieval Owner (Dense) + Retrieval Owner (Hybrid/Rerank) |
+| Evaluation | `eval.py` | Eval Owner |
+| Test questions | `data/test_questions.json` | Eval Owner |
 | Scorecard | `results/scorecard_baseline.md`, `scorecard_variant.md` | Eval Owner |
 | Architecture docs | `docs/architecture.md` | Documentation Owner |
-| Tuning log | `docs/tuning-log.md` | Documentation Owner |
+| Tuning log | `docs/tuning-log.md` | Retrieval Owner (Hybrid/Rerank) + Documentation Owner |
 | Báo cáo cá nhân | `reports/individual/[ten].md` | Từng người |
 
 ---
 
 ## Phân vai (Giao ngay phút đầu)
 
-| Vai trò | Trách nhiệm chính | Sprint lead |
-|---------|------------------|------------|
-| **Tech Lead** | Giữ nhịp sprint, nối code end-to-end | 1, 2 |
-| **Retrieval Owner** | Chunking, metadata, retrieval strategy, rerank | 1, 3 |
-| **Eval Owner** | Test questions, expected evidence, scorecard, A/B | 3, 4 |
-| **Documentation Owner** | architecture.md, tuning-log, báo cáo nhóm | 4 |
+> **5 người — Retrieval được tách thành 2 vai riêng để đi sâu hơn.**
+
+| Vai trò | Trách nhiệm chính | Sprint lead | File chính |
+|---------|------------------|------------|------------|
+| **Tech Lead** | Giữ nhịp sprint, `.env` setup, kết nối end-to-end, review PR | 1, 2 | `index.py`, `rag_answer.py` (nối) |
+| **Indexing Owner** | `preprocess_document()`, `chunk_document()`, metadata schema, `build_index()`, kiểm tra chunk quality | 1 | `index.py` |
+| **Retrieval Owner — Dense & Prompt** | `retrieve_dense()`, `call_llm()`, `build_grounded_prompt()`, baseline `rag_answer()` | 2 | `rag_answer.py` |
+| **Retrieval Owner — Hybrid & Rerank** | `retrieve_sparse()` (BM25), `retrieve_hybrid()` (RRF), `rerank()`, so sánh variant vs baseline, ghi `tuning-log.md` | 3 | `rag_answer.py`, `docs/tuning-log.md` |
+| **Eval & Docs Owner** | Test questions, expected evidence, `run_scorecard()`, `compare_ab()`, `architecture.md`, báo cáo nhóm | 3, 4 | `eval.py`, `docs/` |
+
+### Chi tiết trách nhiệm từng vai
+
+**Tech Lead**
+- Tạo repo, clone, cài `requirements.txt`, kiểm tra `.env` cho cả nhóm
+- Chạy smoke test sau mỗi sprint: `python index.py && python rag_answer.py`
+- Giải quyết conflict khi merge code giữa Indexing Owner và Retrieval Owner
+
+**Indexing Owner**
+- Thiết kế metadata schema: `source`, `section`, `effective_date`, `access`
+- Quyết định chiến lược chunk: section-first hay paragraph-first, overlap bao nhiêu
+- Kiểm tra output `list_chunks()`: chunk không bị cắt giữa điều khoản
+- Đảm bảo dedup trước khi upsert vào ChromaDB
+
+**Retrieval Owner — Dense & Prompt**
+- Implement `retrieve_dense()` dùng embedding OpenAI hoặc SentenceTransformer
+- Implement `call_llm()` (OpenAI hoặc Gemini)
+- Viết và tinh chỉnh `build_grounded_prompt()`: evidence-only, abstain, citation
+- Test `rag_answer()` với ≥ 3 câu hỏi mẫu, đảm bảo abstain hoạt động đúng
+
+**Retrieval Owner — Hybrid & Rerank**
+- Implement `retrieve_sparse()` dùng BM25Okapi trên toàn corpus
+- Implement `retrieve_hybrid()` dùng RRF fusion (dense + sparse)
+- Implement `rerank()` — lexical fallback hoặc cross-encoder
+- Chạy A/B: so sánh dense vs hybrid, có rerank vs không, ghi delta vào `tuning-log.md`
+- Justify lựa chọn variant cuối cùng bằng số liệu scorecard
+
+**Eval & Docs Owner**
+- Chuẩn bị `test_questions.json`: 10 câu với `expected_answer` và `expected_sources`
+- Implement `run_scorecard()`: 4 metrics (Faithfulness, Relevance, Context Recall, Completeness)
+- Implement `compare_ab()`: in bảng delta baseline vs variant
+- Điền `docs/architecture.md`: mô tả pipeline, decision choices
+- Tổng hợp báo cáo nhóm, nhắc từng người nộp `reports/individual/`
 
 ---
 

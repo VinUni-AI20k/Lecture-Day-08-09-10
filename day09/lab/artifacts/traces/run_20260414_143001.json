@@ -1,0 +1,42 @@
+{
+  "task": "Hệ thống báo lỗi ERR-9999 không rõ nguyên nhân, khẩn cấp cần xử lý",
+  "route_reason": "unknown error code with risk_high context → human review required | human approved → retrieval",
+  "risk_high": true,
+  "needs_tool": false,
+  "hitl_triggered": true,
+  "retrieved_chunks": [
+    {
+      "text": "SLA P1: phản hồi 15 phút, xử lý 4 giờ.",
+      "source": "sla_p1_2026.txt",
+      "score": 0.92
+    }
+  ],
+  "retrieved_sources": [
+    "sla_p1_2026.txt"
+  ],
+  "policy_result": {},
+  "mcp_tools_used": [],
+  "final_answer": "[PLACEHOLDER] Câu trả lời được tổng hợp từ 1 chunks.",
+  "sources": [
+    "sla_p1_2026.txt"
+  ],
+  "confidence": 0.75,
+  "history": [
+    "[supervisor] received task: Hệ thống báo lỗi ERR-9999 không rõ nguyên nhân, khẩn cấp cần xử lý",
+    "[supervisor] route=human_review reason=unknown error code with risk_high context → human review required",
+    "[human_review] HITL triggered — awaiting human input",
+    "[retrieval_worker] called",
+    "[retrieval_worker] retrieved 1 chunks",
+    "[synthesis_worker] called",
+    "[synthesis_worker] answer generated, confidence=0.75",
+    "[graph] completed in 1ms"
+  ],
+  "workers_called": [
+    "human_review",
+    "retrieval_worker",
+    "synthesis_worker"
+  ],
+  "supervisor_route": "retrieval_worker",
+  "latency_ms": 1,
+  "run_id": "run_20260414_143001"
+}
