@@ -4,10 +4,10 @@
 **Thành viên:**
 | Tên | Vai trò (Day 10) | Email |
 |---|---|---|
-| Nam | Ingestion Owner | nam@example.com |
-| Cao | Cleaning / Quality Owner | cao@example.com |
-| Tuấn | Embed Owner | tuan@example.com |
-| Ly | Monitoring / Docs Owner | ly@example.com |
+| Nam | Ingestion Owner | dauvannam321@gmail.com |
+| Cao | Cleaning / Quality Owner | tricao2003@gmail.com |
+| Tuấn | Embed Owner | leminhtuan.ai.work@gmail.com |
+| Ly | Monitoring / Docs Owner | caodieuly1508@gmail.com |
 
 **Ngày nộp:** 2026-04-15  
 **Repo:** `day10/lab`
