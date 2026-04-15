@@ -9,3 +9,6 @@ chunk_id,doc_id,chunk_text,effective_date,exported_at
 8,hr_leave_policy,"Nhân viên dưới 3 năm kinh nghiệm được 12 ngày phép năm theo chính sách 2026.",2026-02-01,2026-04-10T08:00:00
 9,legacy_catalog_xyz_zzz,"Chunk nội dung đủ dài để vượt ngưỡng expectation độ dài tối thiểu trong cleaned export.",2026-02-01,2026-04-10T08:00:00
 10,it_helpdesk_faq,"FAQ bổ sung: đổi mật khẩu qua portal self-service có thể mất tối đa 24 giờ để đồng bộ toàn hệ thống.",01/02/2026,2026-04-10T08:00:00
+11,it_helpdesk_faq,"Ngắn quá",2026-02-01,2026-04-10T08:00:00
+12,sla_p1_2026,"Ticket P2 không có SLA.",2026-02-01,
+13,policy_refund_v4,"﻿Chunk bắt đầu với BOM — dữ liệu từ Excel export cũ có dấu BOM (\ufeff) — cần normalize.",2026-02-01,2026-04-10T08:00:00

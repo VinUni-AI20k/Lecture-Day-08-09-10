@@ -1,0 +1,14 @@
+{
+  "run_id": "van-restored",
+  "run_timestamp": "2026-04-15T09:10:02.329365+00:00",
+  "raw_path": "data/raw/policy_export_dirty.csv",
+  "raw_records": 13,
+  "cleaned_records": 7,
+  "quarantine_records": 6,
+  "latest_exported_at": "2026-04-10T08:00:00",
+  "no_refund_fix": false,
+  "skipped_validate": false,
+  "cleaned_csv": "artifacts/cleaned/cleaned_van-restored.csv",
+  "chroma_path": "./chroma_db",
+  "chroma_collection": "day10_kb"
+}
