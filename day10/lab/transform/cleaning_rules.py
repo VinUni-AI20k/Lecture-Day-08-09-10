@@ -26,6 +26,13 @@ ALLOWED_DOC_IDS = frozenset(
 _ISO_DATE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 _DMY_SLASH = re.compile(r"^(\d{2})/(\d{2})/(\d{4})$")
 
+_REASON_UNKNOWN_DOC_ID = "unknown_doc_id"
+_REASON_MISSING_EFFECTIVE_DATE = "missing_effective_date"
+_REASON_INVALID_EFFECTIVE_DATE_FORMAT = "invalid_effective_date_format"
+_REASON_STALE_HR_POLICY_EFFECTIVE_DATE = "stale_hr_policy_effective_date"
+_REASON_MISSING_CHUNK_TEXT = "missing_chunk_text"
+_REASON_DUPLICATE_CHUNK_TEXT = "duplicate_chunk_text"
+
 
 def _norm_text(s: str) -> str:
     return " ".join((s or "").strip().split()).lower()
@@ -50,7 +57,26 @@ def _normalize_effective_date(raw: str) -> Tuple[str, str]:
     if m:
         dd, mm, yyyy = m.group(1), m.group(2), m.group(3)
         return f"{yyyy}-{mm}-{dd}", ""
-    return "", "invalid_effective_date_format"
+    return "", _REASON_INVALID_EFFECTIVE_DATE_FORMAT
+
+
+def _quarantine_row(raw: Dict[str, str], reason: str, **extra: Any) -> Dict[str, Any]:
+    """Create a consistent quarantine payload for downstream observability."""
+    row: Dict[str, Any] = {**raw, "reason": reason}
+    if extra:
+        row.update(extra)
+    return row
+
+
+def _apply_refund_window_fix(text: str, doc_id: str, enabled: bool) -> str:
+    """Apply 14-day -> 7-day refund correction for policy_refund_v4 when enabled."""
+    if not enabled or doc_id != "policy_refund_v4":
+        return text
+    if "14 ngày làm việc" not in text:
+        return text
+
+    fixed = text.replace("14 ngày làm việc", "7 ngày làm việc")
+    return fixed + " [cleaned: stale_refund_window]"
 
 
 def load_raw_csv(path: Path) -> List[Dict[str, str]]:
@@ -90,45 +116,44 @@ def clean_rows(
         exported_at = raw.get("exported_at", "")
 
         if doc_id not in ALLOWED_DOC_IDS:
-            quarantine.append({**raw, "reason": "unknown_doc_id"})
+            quarantine.append(_quarantine_row(raw, _REASON_UNKNOWN_DOC_ID))
             continue
 
         eff_norm, eff_err = _normalize_effective_date(eff_raw)
         if eff_err == "empty_effective_date":
-            quarantine.append({**raw, "reason": "missing_effective_date"})
+            quarantine.append(_quarantine_row(raw, _REASON_MISSING_EFFECTIVE_DATE))
             continue
-        if eff_err == "invalid_effective_date_format":
-            quarantine.append({**raw, "reason": eff_err, "effective_date_raw": eff_raw})
+        if eff_err == _REASON_INVALID_EFFECTIVE_DATE_FORMAT:
+            quarantine.append(
+                _quarantine_row(
+                    raw,
+                    _REASON_INVALID_EFFECTIVE_DATE_FORMAT,
+                    effective_date_raw=eff_raw,
+                )
+            )
             continue
 
         if doc_id == "hr_leave_policy" and eff_norm < "2026-01-01":
             quarantine.append(
-                {
-                    **raw,
-                    "reason": "stale_hr_policy_effective_date",
-                    "effective_date_normalized": eff_norm,
-                }
+                _quarantine_row(
+                    raw,
+                    _REASON_STALE_HR_POLICY_EFFECTIVE_DATE,
+                    effective_date_normalized=eff_norm,
+                )
             )
             continue
 
         if not text:
-            quarantine.append({**raw, "reason": "missing_chunk_text"})
+            quarantine.append(_quarantine_row(raw, _REASON_MISSING_CHUNK_TEXT))
             continue
 
         key = _norm_text(text)
         if key in seen_text:
-            quarantine.append({**raw, "reason": "duplicate_chunk_text"})
+            quarantine.append(_quarantine_row(raw, _REASON_DUPLICATE_CHUNK_TEXT))
             continue
         seen_text.add(key)
 
-        fixed_text = text
-        if apply_refund_window_fix and doc_id == "policy_refund_v4":
-            if "14 ngày làm việc" in fixed_text:
-                fixed_text = fixed_text.replace(
-                    "14 ngày làm việc",
-                    "7 ngày làm việc",
-                )
-                fixed_text += " [cleaned: stale_refund_window]"
+        fixed_text = _apply_refund_window_fix(text, doc_id, apply_refund_window_fix)
 
         seq += 1
         cleaned.append(
