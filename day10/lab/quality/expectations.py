@@ -112,5 +112,32 @@ def run_expectations(cleaned_rows: List[Dict[str, Any]]) -> Tuple[List[Expectati
         )
     )
 
+    # E7 (mới): tất cả chunk trong cleaned phải có exported_at (belt-and-suspenders cho Rule B).
+    # Nếu Rule B trong cleaning bị tắt nhưng dòng thiếu exported_at lọt vào, E7 bắt lại ở đây.
+    missing_exported = [r for r in cleaned_rows if not (r.get("exported_at") or "").strip()]
+    ok7 = len(missing_exported) == 0
+    results.append(
+        ExpectationResult(
+            "exported_at_not_empty",
+            ok7,
+            "halt",
+            f"missing_exported_at={len(missing_exported)}",
+        )
+    )
+
+    # E8 (mới): tất cả doc_id trong cleaned phải thuộc allowlist đã định nghĩa.
+    # Đây là kiểm tra an toàn kép — nếu cleaning_rules có bug và để lọt doc_id lạ, E8 chặn lại.
+    _ALLOWED = frozenset({"policy_refund_v4", "sla_p1_2026", "it_helpdesk_faq", "hr_leave_policy"})
+    bad_ids = [r for r in cleaned_rows if r.get("doc_id", "") not in _ALLOWED]
+    ok8 = len(bad_ids) == 0
+    results.append(
+        ExpectationResult(
+            "all_doc_ids_in_allowlist",
+            ok8,
+            "halt",
+            f"unknown_doc_id_count={len(bad_ids)}",
+        )
+    )
+
     halt = any(not r.passed and r.severity == "halt" for r in results)
     return results, halt
