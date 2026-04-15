@@ -26,8 +26,8 @@ load_dotenv()
 # CẤU HÌNH
 # =============================================================================
 
-DOCS_DIR = Path(__file__).parent / "data" / "docs"
-CHROMA_DB_DIR = Path(__file__).parent / "chroma_db"
+DOCS_DIR = Path(__file__).parent.parent / "data" / "docs"
+CHROMA_DB_DIR = Path(__file__).parent.parent / "chroma_db"
 
 # TODO Sprint 1: Điều chỉnh chunk size và overlap theo quyết định của nhóm
 # Gợi ý từ slide: chunk 300-500 tokens, overlap 50-80 tokens
@@ -389,7 +389,7 @@ def build_index(docs_dir: Path = DOCS_DIR, db_dir: Path = CHROMA_DB_DIR) -> None
     
     # Check if collection exists and handle dimension mismatch
     try:
-        collection = client.get_collection("rag_lab")
+        collection = client.get_collection("day09_docs")
         print("Existing collection found. Checking embedding dimension...")
         
         # Test with a sample embedding to check dimension
@@ -403,20 +403,20 @@ def build_index(docs_dir: Path = DOCS_DIR, db_dir: Path = CHROMA_DB_DIR) -> None
         except Exception as e:
             if "dimension" in str(e).lower():
                 print(f"Dimension mismatch detected. Deleting existing collection...")
-                client.delete_collection("rag_lab")
+                client.delete_collection("day09_docs")
                 print("Creating new collection with correct embedding dimension.")
                 collection = client.create_collection(
-                    name="rag_lab",
+                    name="day09_docs",
                     metadata={"hnsw:space": "cosine"}
                 )
             else:
                 raise e
                 
-    except ValueError:
+    except chromadb.errors.NotFoundError:
         # Collection doesn't exist, create new one
         print("Creating new collection...")
         collection = client.create_collection(
-            name="rag_lab",
+            name="day09_docs",
             metadata={"hnsw:space": "cosine"}
         )
 
@@ -497,7 +497,7 @@ def list_chunks(db_dir: Path = CHROMA_DB_DIR, n: int = 5) -> None:
     try:
         import chromadb
         client = chromadb.PersistentClient(path=str(db_dir))
-        collection = client.get_collection("rag_lab")
+        collection = client.get_collection("day09_docs")
         results = collection.get(limit=n, include=["documents", "metadatas"])
 
         print(f"\n=== Top {n} chunks in index ===\n")
@@ -524,7 +524,7 @@ def inspect_metadata_coverage(db_dir: Path = CHROMA_DB_DIR) -> None:
     try:
         import chromadb
         client = chromadb.PersistentClient(path=str(db_dir))
-        collection = client.get_collection("rag_lab")
+        collection = client.get_collection("day09_docs")
         results = collection.get(include=["metadatas"])
 
         print(f"\nTotal chunks: {len(results['metadatas'])}")

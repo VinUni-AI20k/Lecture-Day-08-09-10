@@ -17,6 +17,10 @@ Gọi độc lập để test:
 
 import os
 import sys
+from typing import List, Dict, Any, Optional, Tuple, Callable
+from dotenv import load_dotenv
+import chromadb
+from openai import OpenAI
 
 # ─────────────────────────────────────────────
 # Worker Contract (xem contracts/worker_contracts.yaml)
@@ -24,42 +28,21 @@ import sys
 # Output: {"retrieved_chunks": list, "retrieved_sources": list, "error": dict | None}
 # ─────────────────────────────────────────────
 
+from pathlib import Path
+
 WORKER_NAME = "retrieval_worker"
 DEFAULT_TOP_K = 3
-
+CHROMA_DB_PATH = str(Path(__file__).parent.parent / "chroma_db")
 
 def _get_embedding_fn():
     """
-    Trả về embedding function.
-    TODO Sprint 1: Implement dùng OpenAI hoặc Sentence Transformers.
+    Trả về embedding function — dùng cùng logic với index.py để đảm bảo nhất quán.
     """
-    # Option A: Sentence Transformers (offline, không cần API key)
     try:
-        from sentence_transformers import SentenceTransformer
-        model = SentenceTransformer("all-MiniLM-L6-v2")
-        def embed(text: str) -> list:
-            return model.encode([text])[0].tolist()
-        return embed
+        from workers.index import get_embedding  # khi import từ day09/lab/
     except ImportError:
-        pass
-
-    # Option B: OpenAI (cần API key)
-    try:
-        from openai import OpenAI
-        client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-        def embed(text: str) -> list:
-            resp = client.embeddings.create(input=text, model="text-embedding-3-small")
-            return resp.data[0].embedding
-        return embed
-    except ImportError:
-        pass
-
-    # Fallback: random embeddings cho test (KHÔNG dùng production)
-    import random
-    def embed(text: str) -> list:
-        return [random.random() for _ in range(384)]
-    print("⚠️  WARNING: Using random embeddings (test only). Install sentence-transformers.")
-    return embed
+        from index import get_embedding           # khi chạy trực tiếp: python3 workers/retrieval.py
+    return get_embedding
 
 
 def _get_collection():
@@ -68,7 +51,8 @@ def _get_collection():
     TODO Sprint 2: Đảm bảo collection đã được build từ Step 3 trong README.
     """
     import chromadb
-    client = chromadb.PersistentClient(path="./chroma_db")
+    print("Working dir:", os.getcwd())
+    client = chromadb.PersistentClient(path=CHROMA_DB_PATH)
     try:
         collection = client.get_collection("day09_docs")
     except Exception:
@@ -78,10 +62,11 @@ def _get_collection():
             metadata={"hnsw:space": "cosine"}
         )
         print(f"⚠️  Collection 'day09_docs' chưa có data. Chạy index script trong README trước.")
+    print("Collection count:", collection.count())
     return collection
 
 
-def retrieve_dense(query: str, top_k: int = DEFAULT_TOP_K) -> list:
+def retrieve_dense(query: str, top_k: int = DEFAULT_TOP_K) -> List[Dict[str, Any]]:
     """
     Dense retrieval: embed query → query ChromaDB → trả về top_k chunks.
 
@@ -93,36 +78,36 @@ def retrieve_dense(query: str, top_k: int = DEFAULT_TOP_K) -> list:
     Returns:
         list of {"text": str, "source": str, "score": float, "metadata": dict}
     """
-    # TODO: Implement dense retrieval
-    embed = _get_embedding_fn()
-    query_embedding = embed(query)
+    collection = _get_collection()
 
-    try:
-        collection = _get_collection()
-        results = collection.query(
-            query_embeddings=[query_embedding],
-            n_results=top_k,
-            include=["documents", "distances", "metadatas"]
-        )
+    embed_fn = _get_embedding_fn()
+    
+    query_embedding = embed_fn(query)
+    print("Query:", query)
+    print("Embedding dim:", len(query_embedding))
+    collection.peek()
+    results = collection.query(
+        query_embeddings=[query_embedding],
+        n_results=top_k,
+        include=["documents", "metadatas", "distances"]
+    )
 
-        chunks = []
-        for i, (doc, dist, meta) in enumerate(zip(
-            results["documents"][0],
-            results["distances"][0],
-            results["metadatas"][0]
-        )):
-            chunks.append({
-                "text": doc,
-                "source": meta.get("source", "unknown"),
-                "score": round(1 - dist, 4),  # cosine similarity
-                "metadata": meta,
-            })
-        return chunks
+    documents = results.get("documents", [[]])[0]
+    metadatas = results.get("metadatas", [[]])[0]
+    distances = results.get("distances", [[]])[0]
 
-    except Exception as e:
-        print(f"⚠️  ChromaDB query failed: {e}")
-        # Fallback: return empty (abstain)
-        return []
+    chunks: List[Dict[str, Any]] = []
+    for idx, doc_text in enumerate(documents):
+        metadata = metadatas[idx] if idx < len(metadatas) else {}
+        distance = distances[idx] if idx < len(distances) else None
+        score = 1 - distance if isinstance(distance, (int, float)) else 0.0
+        chunks.append({
+            "text": doc_text,
+            "metadata": metadata,
+            "score": score,
+        })
+
+    return chunks
 
 
 def run(state: dict) -> dict:
@@ -153,8 +138,7 @@ def run(state: dict) -> dict:
 
     try:
         chunks = retrieve_dense(task, top_k=top_k)
-
-        sources = list({c["source"] for c in chunks})
+        sources = list({c["metadata"].get("source", "unknown") for c in chunks})
 
         state["retrieved_chunks"] = chunks
         state["retrieved_sources"] = sources
@@ -200,7 +184,7 @@ if __name__ == "__main__":
         chunks = result.get("retrieved_chunks", [])
         print(f"  Retrieved: {len(chunks)} chunks")
         for c in chunks[:2]:
-            print(f"    [{c['score']:.3f}] {c['source']}: {c['text'][:80]}...")
+            print(f"    [{c['score']:.3f}] {c['metadata'].get('source', 'unknown')}: {c['text'][:80]}...")
         print(f"  Sources: {result.get('retrieved_sources', [])}")
 
     print("\n✅ retrieval_worker test done.")
