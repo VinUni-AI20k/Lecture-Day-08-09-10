@@ -3,7 +3,9 @@
 
 version: "1.0"
 dataset: "kb_chunk_export"
-owner_team: "__TODO__"
+owner_team: "Data Engineering & Knowledge Base Team"
+owner_contact: "data-eng@company.com"
+last_updated: "2026-04-15"
 
 schema_cleaned:
   chunk_id:
@@ -29,24 +31,68 @@ schema_cleaned:
 quality_rules:
   - id: "no_duplicate_chunk_text"
     severity: "warn"
+    description: "Phát hiện chunk_text trùng lặp hoàn toàn (có thể do lỗi export)"
   - id: "no_stale_refund_window"
     description: "Không được để chunk policy refund chứa cửa sổ 14 ngày (lệch so với v4 = 7 ngày)"
     severity: "halt"
+  - id: "no_empty_chunk_text"
+    description: "Chunk text không được rỗng hoặc chỉ chứa khoảng trắng"
+    severity: "halt"
+  - id: "valid_doc_id_allowlist"
+    description: "doc_id phải nằm trong danh sách allowed_doc_ids"
+    severity: "halt"
+  - id: "effective_date_iso_format"
+    description: "effective_date phải theo định dạng ISO (YYYY-MM-DD)"
+    severity: "halt"
+  - id: "hr_policy_version_consistency"
+    description: "Chính sách HR phải theo version 2026 (12 ngày phép), không chấp nhận version 2025 (10 ngày)"
+    severity: "warn"
 
 freshness:
   measured_at: "publish"  # ingest | cleaned | publish
   sla_hours: 24
-  alert_channel: "__TODO__"
+  alert_channel: "slack://data-quality-alerts"
+  alert_recipients:
+    - "data-eng@company.com"
+    - "kb-ops@company.com"
+  monitoring_enabled: true
 
 canonical_sources:
   - path: "data/docs/policy_refund_v4.txt"
     doc_id: "policy_refund_v4"
+    description: "Chính sách hoàn tiền version 4 (7 ngày làm việc)"
+    version: "v4"
+    effective_from: "2026-02-01"
+    failure_mode: "Sync lỗi từ v3 (14 ngày) hoặc duplicate export"
+    metric: "hits_forbidden (eval), quarantine_records"
   - path: "data/docs/sla_p1_2026.txt"
     doc_id: "sla_p1_2026"
+    description: "SLA cho ticket P1 năm 2026"
+    version: "2026"
+    effective_from: "2026-01-01"
+    failure_mode: "Thiếu timestamp hoặc format ngày không chuẩn"
+    metric: "cleaned_records, expectation_fail_count"
   - path: "data/docs/it_helpdesk_faq.txt"
     doc_id: "it_helpdesk_faq"
+    description: "FAQ IT Helpdesk (tài khoản, mật khẩu, hệ thống)"
+    version: "latest"
+    effective_from: "2026-02-01"
+    failure_mode: "Format ngày DD/MM/YYYY thay vì ISO"
+    metric: "quarantine_records (invalid date format)"
   - path: "data/docs/hr_leave_policy.txt"
     doc_id: "hr_leave_policy"
+    description: "Chính sách nghỉ phép nhân viên"
+    version: "2026"
+    effective_from: "2026-01-01"
+    failure_mode: "Xung đột version 2025 (10 ngày) vs 2026 (12 ngày)"
+    metric: "quarantine_records (stale HR policy)"
+  - path: "data/docs/access_control_sop.txt"
+    doc_id: "access_control_sop"
+    description: "Quy trình kiểm soát truy cập"
+    version: "latest"
+    effective_from: "2026-02-01"
+    failure_mode: "Thiếu metadata hoặc chunk quá ngắn"
+    metric: "expectation_fail (min_length)"
 
 # Baseline allowlist export — nhóm mở rộng doc mới phải đồng bộ cleaning_rules + contract.
 allowed_doc_ids:
@@ -54,7 +100,42 @@ allowed_doc_ids:
   - sla_p1_2026
   - it_helpdesk_faq
   - hr_leave_policy
+  - access_control_sop
 
 # Merit/Distinction: có thể đưa cutoff versioning vào env và tham chiếu ở đây (tránh hard-code trong code).
 policy_versioning:
   hr_leave_min_effective_date: "2026-01-01"
+  hr_leave_days_2026: 12
+  hr_leave_days_2025: 10  # deprecated - không chấp nhận
+  refund_window_days_v4: 7
+  refund_window_days_v3: 14  # deprecated - không chấp nhận
+
+# Quarantine rules - record bị flag sẽ được xử lý như thế nào
+quarantine_policy:
+  action: "isolate"  # isolate | drop | flag
+  review_required: true
+  approval_workflow: "data-eng-lead"
+  retention_days: 30
+  reasons:
+    - "invalid_date_format"
+    - "stale_hr_policy"
+    - "unknown_doc_id"
+    - "empty_chunk_text"
+    - "duplicate_chunk"
+
+# Lineage và traceability
+lineage:
+  upstream_systems:
+    - name: "Policy Management System"
+      type: "database"
+      refresh_schedule: "daily"
+    - name: "HR System"
+      type: "api"
+      refresh_schedule: "weekly"
+  downstream_consumers:
+    - name: "RAG System (Day 08)"
+      type: "vector_store"
+    - name: "Multi-agent System (Day 09)"
+      type: "orchestration"
+  run_id_tracking: true
+  manifest_retention_days: 90
