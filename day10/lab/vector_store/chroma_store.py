@@ -48,7 +48,8 @@ def connect_collection(root: Path):
 
 
 def sync_cleaned_rows(collection, rows: List[Dict[str, Any]], *, run_id: str) -> Dict[str, Any]:
-    ids = [str(r["chunk_id"]) for r in rows]
+    content_hashes = [_row_content_hash(r) for r in rows]
+    ids = content_hashes
     unique_ids = set(ids)
     duplicate_ids_in_batch = len(ids) - len(unique_ids)
     content_hashes = [_row_content_hash(r) for r in rows]

@@ -1,0 +1,9 @@
+chunk_id,doc_id,chunk_text,effective_date,exported_at,reason,effective_date_normalized,effective_date_raw
+3,policy_refund_v4,Yêu cầu hoàn tiền được chấp nhận trong vòng 14 ngày làm việc kể từ xác nhận đơn (ghi chú: bản sync cũ policy-v3 — lỗi migration).,2026-02-01,2026-04-10T08:00:00,stale_refund_window_v3,,
+5,policy_refund_v4,,,2026-04-10T08:00:00,missing_effective_date,,
+7,hr_leave_policy,Nhân viên dưới 3 năm kinh nghiệm được 10 ngày phép năm (bản HR 2025).,2025-01-01,2026-04-10T08:00:00,stale_hr_policy_effective_date,2025-01-01,
+9,legacy_catalog_xyz_zzz,Chunk nội dung đủ dài để vượt ngưỡng expectation độ dài tối thiểu trong cleaned export.,2026-02-01,2026-04-10T08:00:00,unknown_doc_id,,
+11,policy_refund_v4,Yêu cầu hoàn tiền với định dạng ngày tháng phức tạp.,15-04-2026,2026-04-10T08:00:00,invalid_effective_date_format,,15-04-2026
+12,it_helpdesk_faq,Ngắn.,2026-02-01,2026-04-10T08:00:00,insufficient_chunk_text_length,,
+13,hr_leave_policy,Chính sách nghỉ phép năm 2024 không còn hiệu lực.,2024-12-31,2026-04-10T08:00:00,stale_hr_policy_effective_date,2024-12-31,
+15,unknown_security_doc,Tài liệu này không được phép xuất hiện trong Knowledge Base.,2026-02-01,2026-04-10T08:00:00,unknown_doc_id,,

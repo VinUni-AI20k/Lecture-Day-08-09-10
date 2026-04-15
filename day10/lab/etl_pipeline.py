@@ -90,7 +90,7 @@ def cmd_run(args: argparse.Namespace) -> int:
         log("PIPELINE_HALT: stale refund window (14 ngày) detected in policy_refund_v4 — fix required (--no-refund-fix for demo only).")
         return 2
     if has_stale_refund and args.no_refund_fix:
-        log("WARN: stale refund window detected but --no-refund-fix → proceed (demo mode for before/after eval).")
+        log("WARN: stale refund window detected but --no-refund-fix -> proceed (demo mode for before/after eval).")
 
     results, halt = run_expectations(cleaned)
     for r in results:
@@ -100,7 +100,7 @@ def cmd_run(args: argparse.Namespace) -> int:
         log("PIPELINE_HALT: expectation suite failed (halt).")
         return 2
     if halt and args.skip_validate:
-        log("WARN: expectation failed but --skip-validate → tiếp tục embed (chỉ dùng cho demo Sprint 3).")
+        log("WARN: expectation failed but --skip-validate -> tiếp tục embed (chỉ dùng cho demo Sprint 3).")
 
     # Embed
     embed_ok = cmd_embed_internal(
@@ -141,51 +141,28 @@ def cmd_run(args: argparse.Namespace) -> int:
 
 
 def cmd_embed_internal(cleaned_csv: Path, *, run_id: str, log) -> bool:
-    try:
-        import chromadb
-        from chromadb.utils import embedding_functions
-    except ImportError:
-        log("ERROR: chromadb chưa cài. pip install -r requirements.txt")
-        return False
-
-    db_path = os.environ.get("CHROMA_DB_PATH", str(ROOT / "chroma_db"))
-    collection_name = os.environ.get("CHROMA_COLLECTION", "day10_kb")
-    model_name = os.environ.get("EMBEDDING_MODEL", "all-MiniLM-L6-v2")
-
-    from transform.cleaning_rules import load_raw_csv as load_csv  # same loader
-
+    from transform.cleaning_rules import load_raw_csv as load_csv
     rows = load_csv(cleaned_csv)
     if not rows:
         log("WARN: cleaned CSV rỗng — không embed.")
         return True
 
-    client = chromadb.PersistentClient(path=db_path)
-    emb = embedding_functions.SentenceTransformerEmbeddingFunction(model_name=model_name)
-    col = client.get_or_create_collection(name=collection_name, embedding_function=emb)
-
-    ids = [r["chunk_id"] for r in rows]
-    # Tránh “mồi cũ” trong top-k: xóa id không còn trong cleaned run này (index = snapshot publish).
     try:
-        prev = col.get(include=[])
-        prev_ids = set(prev.get("ids") or [])
-        drop = sorted(prev_ids - set(ids))
-        if drop:
-            col.delete(ids=drop)
-            log(f"embed_prune_removed={len(drop)}")
+        from vector_store.chroma_store import connect_collection, sync_cleaned_rows
+        cfg, client, col = connect_collection(ROOT)
     except Exception as e:
-        log(f"WARN: embed prune skip: {e}")
-    documents = [r["chunk_text"] for r in rows]
-    metadatas = [
-        {
-            "doc_id": r.get("doc_id", ""),
-            "effective_date": r.get("effective_date", ""),
-            "run_id": run_id,
-        }
-        for r in rows
-    ]
-    # Idempotent: upsert theo chunk_id
-    col.upsert(ids=ids, documents=documents, metadatas=metadatas)
-    log(f"embed_upsert count={len(ids)} collection={collection_name}")
+        log(f"ERROR: failed to connect to chroma: {e}")
+        return False
+
+    try:
+        metrics = sync_cleaned_rows(col, rows, run_id=run_id)
+        for k, v in sorted(metrics.items()):
+            log(f"{k}={v}")
+        log(f"embed_upsert count={metrics.get('embed_upsert_count')} collection={cfg.collection_name}")
+    except Exception as e:
+        log(f"ERROR: failed to sync rows to chroma: {e}")
+        return False
+
     return True
 
 
