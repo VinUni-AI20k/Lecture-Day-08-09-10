@@ -146,10 +146,10 @@ Câu hỏi đơn giản, single-document (VD: "Chính sách hoàn tiền trong b
 
 | Thành viên | Phần đã làm | Sprint |
 |------------|-------------|--------|
-| ___ | Supervisor node (`graph.py`): AgentState schema, LLM routing logic, fallback, HITL node, graph orchestration | Sprint 1 |
-| ___ | Workers: `retrieval.py` (ChromaDB semantic search), `policy_tool.py` (rule-based + MCP dispatch), `synthesis.py` (LLM grounding + confidence) | Sprint 1–2 |
-| ___ | MCP Server (`mcp_server.py`): `search_kb`, `check_access_permission`, dispatch layer, tool registry | Sprint 2 |
-| Nguyễn Tùng Lâm | Trace & Docs: `system_architecture.md`, `single_vs_multi_comparison.md`, theo dõi tiến độ, tổng kết metrics từ trace | Sprint 1–2 |
+| Trần Văn Gia Bân | Supervisor node (`graph.py`): AgentState schema, LLM routing logic, fallback, HITL node, graph orchestration | Sprint 1 |
+| Trần Phan Văn Nhân | Workers: `retrieval.py` (ChromaDB semantic search), `policy_tool.py` (rule-based + MCP dispatch), `synthesis.py` (LLM grounding + confidence) | Sprint 1–2 |
+| Võ Đại Phước | MCP Server (`mcp_server.py`): `search_kb`, `check_access_permission`, dispatch layer, tool registry | Sprint 2 |
+| Nguyễn Tùng Lâm, Kiều Đức Lâm | Trace & Docs: `system_architecture.md`, `single_vs_multi_comparison.md`, theo dõi tiến độ, tổng kết metrics từ trace | Sprint 1–2 |
 
 **Điều nhóm làm tốt:**
 
