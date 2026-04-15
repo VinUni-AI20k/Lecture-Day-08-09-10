@@ -10,6 +10,7 @@ from __future__ import annotations
 import csv
 import hashlib
 import re
+from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Tuple
 
@@ -32,6 +33,9 @@ _REASON_INVALID_EFFECTIVE_DATE_FORMAT = "invalid_effective_date_format"
 _REASON_STALE_HR_POLICY_EFFECTIVE_DATE = "stale_hr_policy_effective_date"
 _REASON_MISSING_CHUNK_TEXT = "missing_chunk_text"
 _REASON_DUPLICATE_CHUNK_TEXT = "duplicate_chunk_text"
+_REASON_NON_ISO_EFFECTIVE_DATE_SOURCE = "non_iso_effective_date_source"
+_REASON_MISSING_EXPORTED_AT = "missing_exported_at"
+_REASON_INVALID_EXPORTED_AT_FORMAT = "invalid_exported_at_format"
 
 
 def _norm_text(s: str) -> str:
@@ -58,6 +62,25 @@ def _normalize_effective_date(raw: str) -> Tuple[str, str]:
         dd, mm, yyyy = m.group(1), m.group(2), m.group(3)
         return f"{yyyy}-{mm}-{dd}", ""
     return "", _REASON_INVALID_EFFECTIVE_DATE_FORMAT
+
+
+def _validate_exported_at(raw: str) -> Tuple[str, str]:
+    """Validate exported_at as ISO datetime; return normalized raw value if valid."""
+    s = (raw or "").strip()
+    if not s:
+        return "", _REASON_MISSING_EXPORTED_AT
+
+    try:
+        datetime.fromisoformat(s.replace("Z", "+00:00"))
+        return s, ""
+    except ValueError:
+        return "", _REASON_INVALID_EXPORTED_AT_FORMAT
+
+
+def _is_non_iso_source_effective_date(raw: str) -> bool:
+    """Detect source dates that are parseable but violate ISO input contract."""
+    s = (raw or "").strip()
+    return bool(_DMY_SLASH.match(s))
 
 
 def _quarantine_row(raw: Dict[str, str], reason: str, **extra: Any) -> Dict[str, Any]:
@@ -103,6 +126,8 @@ def clean_rows(
     4) Quarantine: chunk_text rỗng hoặc effective_date rỗng sau chuẩn hoá.
     5) Loại trùng nội dung chunk_text (giữ bản đầu).
     6) Fix stale refund: policy_refund_v4 chứa '14 ngày làm việc' → 7 ngày.
+    7) Quarantine bản ghi có effective_date nguồn không phải ISO (ví dụ DD/MM/YYYY).
+    8) Quarantine bản ghi có exported_at thiếu hoặc sai định dạng datetime ISO.
     """
     quarantine: List[Dict[str, Any]] = []
     seen_text: set[str] = set()
@@ -117,6 +142,29 @@ def clean_rows(
 
         if doc_id not in ALLOWED_DOC_IDS:
             quarantine.append(_quarantine_row(raw, _REASON_UNKNOWN_DOC_ID))
+            continue
+
+        exported_at_norm, exported_at_err = _validate_exported_at(exported_at)
+        if exported_at_err:
+            quarantine.append(
+                _quarantine_row(
+                    raw,
+                    exported_at_err,
+                    exported_at_raw=exported_at,
+                )
+            )
+            continue
+
+        if _is_non_iso_source_effective_date(eff_raw):
+            eff_norm_preview, _ = _normalize_effective_date(eff_raw)
+            quarantine.append(
+                _quarantine_row(
+                    raw,
+                    _REASON_NON_ISO_EFFECTIVE_DATE_SOURCE,
+                    effective_date_raw=eff_raw,
+                    suggested_effective_date=eff_norm_preview,
+                )
+            )
             continue
 
         eff_norm, eff_err = _normalize_effective_date(eff_raw)
@@ -162,7 +210,7 @@ def clean_rows(
                 "doc_id": doc_id,
                 "chunk_text": fixed_text,
                 "effective_date": eff_norm,
-                "exported_at": exported_at or "",
+                "exported_at": exported_at_norm,
             }
         )
 
