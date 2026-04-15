@@ -1,6 +1,6 @@
 {
   "run_id": "sprint4-final",
-  "run_timestamp": "2026-04-15T03:20:29.088633+00:00",
+  "run_timestamp": "2026-04-15T05:14:36.952138+00:00",
   "raw_path": "data\\raw\\policy_export_dirty.csv",
   "contract_path": "contracts\\data_contract.yaml",
   "raw_records": 10,
@@ -15,5 +15,6 @@
   "skipped_validate": false,
   "cleaned_csv": "artifacts\\cleaned\\cleaned_sprint4-final.csv",
   "chroma_path": "./chroma_db",
-  "chroma_collection": "day10_kb"
+  "chroma_collection": "day10_kb",
+  "embedding_provider": "text-embedding-3-small"
 }

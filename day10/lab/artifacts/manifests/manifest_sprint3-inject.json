@@ -1,6 +1,6 @@
 {
   "run_id": "sprint3-inject",
-  "run_timestamp": "2026-04-15T03:20:31.455285+00:00",
+  "run_timestamp": "2026-04-15T05:00:39.463945+00:00",
   "raw_path": "data\\raw\\policy_export_inject.csv",
   "contract_path": "contracts\\data_contract.yaml",
   "raw_records": 9,
@@ -15,5 +15,6 @@
   "skipped_validate": true,
   "cleaned_csv": "artifacts\\cleaned\\cleaned_sprint3-inject.csv",
   "chroma_path": "./chroma_db",
-  "chroma_collection": "day10_kb"
+  "chroma_collection": "day10_kb",
+  "embedding_provider": "text-embedding-3-small"
 }

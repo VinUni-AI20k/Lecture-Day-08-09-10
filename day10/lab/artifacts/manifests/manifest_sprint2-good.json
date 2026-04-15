@@ -1,11 +1,11 @@
 {
   "run_id": "sprint2-good",
-  "run_timestamp": "2026-04-15T03:10:46.185300+00:00",
+  "run_timestamp": "2026-04-15T04:34:45.641967+00:00",
   "raw_path": "data\\raw\\policy_export_dirty.csv",
   "contract_path": "contracts\\data_contract.yaml",
   "raw_records": 10,
-  "cleaned_records": 5,
-  "quarantine_records": 5,
+  "cleaned_records": 6,
+  "quarantine_records": 4,
   "latest_raw_exported_at": "2026-04-10T08:00:00",
   "latest_exported_at": "2026-04-10T08:00:00Z",
   "latest_cleaned_exported_at": "2026-04-10T08:00:00Z",
@@ -15,5 +15,6 @@
   "skipped_validate": false,
   "cleaned_csv": "artifacts\\cleaned\\cleaned_sprint2-good.csv",
   "chroma_path": "./chroma_db",
-  "chroma_collection": "day10_kb"
+  "chroma_collection": "day10_kb",
+  "embedding_provider": "text-embedding-3-small"
 }
