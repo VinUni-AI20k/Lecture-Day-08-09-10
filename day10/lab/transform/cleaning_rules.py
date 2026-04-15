@@ -36,6 +36,7 @@ _REASON_DUPLICATE_CHUNK_TEXT = "duplicate_chunk_text"
 _REASON_NON_ISO_EFFECTIVE_DATE_SOURCE = "non_iso_effective_date_source"
 _REASON_MISSING_EXPORTED_AT = "missing_exported_at"
 _REASON_INVALID_EXPORTED_AT_FORMAT = "invalid_exported_at_format"
+_REASON_STALE_REFUND_MIGRATION_MARKER = "stale_refund_migration_marker"
 
 
 def _norm_text(s: str) -> str:
@@ -102,6 +103,12 @@ def _apply_refund_window_fix(text: str, doc_id: str, enabled: bool) -> str:
     return fixed + " [cleaned: stale_refund_window]"
 
 
+def _has_stale_refund_migration_marker(text: str) -> bool:
+    """Detect stale migration markers that should not be published to retrieval."""
+    s = _norm_text(text)
+    return "policy-v3" in s or "bản sync cũ" in s or "ban sync cu" in s
+
+
 def load_raw_csv(path: Path) -> List[Dict[str, str]]:
     rows: List[Dict[str, str]] = []
     with path.open(encoding="utf-8", newline="") as f:
@@ -128,6 +135,7 @@ def clean_rows(
     6) Fix stale refund: policy_refund_v4 chứa '14 ngày làm việc' → 7 ngày.
     7) Quarantine bản ghi có effective_date nguồn không phải ISO (ví dụ DD/MM/YYYY).
     8) Quarantine bản ghi có exported_at thiếu hoặc sai định dạng datetime ISO.
+    9) Quarantine chunk refund chứa marker migration cũ (policy-v3 / sync cũ).
     """
     quarantine: List[Dict[str, Any]] = []
     seen_text: set[str] = set()
@@ -193,6 +201,15 @@ def clean_rows(
 
         if not text:
             quarantine.append(_quarantine_row(raw, _REASON_MISSING_CHUNK_TEXT))
+            continue
+
+        if doc_id == "policy_refund_v4" and _has_stale_refund_migration_marker(text):
+            quarantine.append(
+                _quarantine_row(
+                    raw,
+                    _REASON_STALE_REFUND_MIGRATION_MARKER,
+                )
+            )
             continue
 
         key = _norm_text(text)
