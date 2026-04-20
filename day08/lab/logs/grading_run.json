@@ -1,0 +1,112 @@
+[
+  {
+    "id": "q01",
+    "question": "SLA xử lý ticket P1 là bao lâu?",
+    "answer": "Mock answer for demo",
+    "sources": [
+      "mock_source.pdf"
+    ],
+    "chunks_retrieved": 3,
+    "retrieval_mode": "hybrid",
+    "timestamp": "2026-04-13T17:17:37.716609"
+  },
+  {
+    "id": "q02",
+    "question": "Khách hàng có thể yêu cầu hoàn tiền trong bao nhiêu ngày?",
+    "answer": "Mock answer for demo",
+    "sources": [
+      "mock_source.pdf"
+    ],
+    "chunks_retrieved": 3,
+    "retrieval_mode": "hybrid",
+    "timestamp": "2026-04-13T17:17:37.716682"
+  },
+  {
+    "id": "q03",
+    "question": "Ai phải phê duyệt để cấp quyền Level 3?",
+    "answer": "Mock answer for demo",
+    "sources": [
+      "mock_source.pdf"
+    ],
+    "chunks_retrieved": 3,
+    "retrieval_mode": "hybrid",
+    "timestamp": "2026-04-13T17:17:37.716735"
+  },
+  {
+    "id": "q04",
+    "question": "Sản phẩm kỹ thuật số có được hoàn tiền không?",
+    "answer": "Mock answer for demo",
+    "sources": [
+      "mock_source.pdf"
+    ],
+    "chunks_retrieved": 3,
+    "retrieval_mode": "hybrid",
+    "timestamp": "2026-04-13T17:17:37.716859"
+  },
+  {
+    "id": "q05",
+    "question": "Tài khoản bị khóa sau bao nhiêu lần đăng nhập sai?",
+    "answer": "Mock answer for demo",
+    "sources": [
+      "mock_source.pdf"
+    ],
+    "chunks_retrieved": 3,
+    "retrieval_mode": "hybrid",
+    "timestamp": "2026-04-13T17:17:37.716915"
+  },
+  {
+    "id": "q06",
+    "question": "Escalation trong sự cố P1 diễn ra như thế nào?",
+    "answer": "Mock answer for demo",
+    "sources": [
+      "mock_source.pdf"
+    ],
+    "chunks_retrieved": 3,
+    "retrieval_mode": "hybrid",
+    "timestamp": "2026-04-13T17:17:37.717075"
+  },
+  {
+    "id": "q07",
+    "question": "Approval Matrix để cấp quyền hệ thống là tài liệu nào?",
+    "answer": "Mock answer for demo",
+    "sources": [
+      "mock_source.pdf"
+    ],
+    "chunks_retrieved": 3,
+    "retrieval_mode": "hybrid",
+    "timestamp": "2026-04-13T17:17:37.717134"
+  },
+  {
+    "id": "q08",
+    "question": "Nhân viên được làm remote tối đa mấy ngày mỗi tuần?",
+    "answer": "Mock answer for demo",
+    "sources": [
+      "mock_source.pdf"
+    ],
+    "chunks_retrieved": 3,
+    "retrieval_mode": "hybrid",
+    "timestamp": "2026-04-13T17:17:37.717169"
+  },
+  {
+    "id": "q09",
+    "question": "ERR-403-AUTH là lỗi gì và cách xử lý?",
+    "answer": "Mock answer for demo",
+    "sources": [
+      "mock_source.pdf"
+    ],
+    "chunks_retrieved": 3,
+    "retrieval_mode": "hybrid",
+    "timestamp": "2026-04-13T17:17:37.717202"
+  },
+  {
+    "id": "q10",
+    "question": "Nếu cần hoàn tiền khẩn cấp cho khách hàng VIP, quy trình có khác không?",
+    "answer": "Mock answer for demo",
+    "sources": [
+      "mock_source.pdf"
+    ],
+    "chunks_retrieved": 3,
+    "retrieval_mode": "hybrid",
+    "timestamp": "2026-04-13T17:17:37.717345"
+  }
+]
