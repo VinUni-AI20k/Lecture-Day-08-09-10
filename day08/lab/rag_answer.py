@@ -34,8 +34,8 @@ load_dotenv()
 TOP_K_SEARCH = 10    # Số chunk lấy từ vector store trước rerank (search rộng)
 TOP_K_SELECT = 3     # Số chunk gửi vào prompt sau rerank/select (top-3 sweet spot)
 
-LLM_MODEL = os.getenv("LLM_MODEL", "gpt-4o-mini")
-
+# LLM_MODEL = os.getenv("LLM_MODEL", "gpt-4o-mini")
+LLM_MODEL = os.getenv("LLM_MODEL", "gemini-2.5-flash")
 
 # =============================================================================
 # RETRIEVAL — DENSE (Vector Search)
@@ -76,10 +76,42 @@ def retrieve_dense(query: str, top_k: int = TOP_K_SEARCH) -> List[Dict[str, Any]
         # Lưu ý: distances trong ChromaDB cosine = 1 - similarity
         # Score = 1 - distance
     """
-    raise NotImplementedError(
-        "TODO Sprint 2: Implement retrieve_dense().\n"
-        "Tham khảo comment trong hàm để biết cách query ChromaDB."
+    import chromadb
+    from index import get_embedding, CHROMA_DB_DIR
+
+    client = chromadb.PersistentClient(path=str(CHROMA_DB_DIR))
+    collection = client.get_collection("rag_lab")
+
+    query_embedding = get_embedding(query)
+
+    results = collection.query(
+        query_embeddings=[query_embedding],
+        n_results=top_k,
+        include=["documents", "metadatas", "distances"],
     )
+
+    docs = results.get("documents", [[]])[0]
+    metas = results.get("metadatas", [[]])[0]
+    distances = results.get("distances", [[]])[0]
+
+    retrieved = []
+    for doc, meta, distance in zip(docs, metas, distances):
+        score = 1 - float(distance)  # Chroma cosine distance -> similarity
+        retrieved.append(
+            {
+                "text": doc,
+                "metadata": meta or {},
+                "score": score,
+            }
+        )
+
+    # sort giảm dần theo score để chắc chắn
+    retrieved.sort(key=lambda x: x["score"], reverse=True)
+    return retrieved
+    # raise NotImplementedError(
+    #     "TODO Sprint 2: Implement retrieve_dense().\n"
+    #     "Tham khảo comment trong hàm để biết cách query ChromaDB."
+    # )
 
 
 # =============================================================================
@@ -191,7 +223,12 @@ def rerank(
     """
     # TODO Sprint 3: Implement rerank
     # Tạm thời trả về top_k đầu tiên (không rerank)
-    return candidates[:top_k]
+    from sentence_transformers import CrossEncoder
+    model = CrossEncoder("cross-encoder/ms-marco-MiniLM-L-6-v2")
+    pairs = [[query, chunk["text"]] for chunk in candidates]
+    scores = model.predict(pairs)
+    ranked = sorted(zip(candidates, scores), key=lambda x: x[1], reverse=True)
+    return [chunk for chunk, _ in ranked[:top_k]]
 
 
 # =============================================================================
@@ -274,18 +311,24 @@ def build_grounded_prompt(query: str, context_block: str) -> str:
     - Thêm ngôn ngữ phản hồi (tiếng Việt vs tiếng Anh)
     - Điều chỉnh tone phù hợp với use case (CS helpdesk, IT support)
     """
-    prompt = f"""Answer only from the retrieved context below.
-If the context is insufficient to answer the question, say you do not know and do not make up information.
-Cite the source field (in brackets like [1]) when possible.
-Keep your answer short, clear, and factual.
-Respond in the same language as the question.
+    prompt = f"""
+You are an assistant that answers questions based ONLY on the retrieved context.
+Strict rules:
+1. Use only the information provided in the context.
+2. If the context is insufficient to answer with certainty, respond exactly with: "Không đủ dữ liệu."
+3. Do not make assumptions or fabricate any information.
+4. When providing an answer, include citations using chunk indices such as [1], [2].
+5. When possible, include the corresponding source/section from the cited chunks.
+6. Keep the answer concise, clear, and in the same language as the question.
 
-Question: {query}
+Question:
+{query}
 
 Context:
 {context_block}
 
-Answer:"""
+Answer:
+"""
     return prompt
 
 
@@ -316,10 +359,44 @@ def call_llm(prompt: str) -> str:
 
     Lưu ý: Dùng temperature=0 hoặc thấp để output ổn định cho evaluation.
     """
-    raise NotImplementedError(
-        "TODO Sprint 2: Implement call_llm().\n"
-        "Chọn Option A (OpenAI) hoặc Option B (Gemini) trong TODO comment."
+    from google import genai
+    from google.genai import types
+
+    api_key = os.getenv("GOOGLE_API_KEY")
+    if not api_key:
+        raise ValueError("Thiếu GOOGLE_API_KEY trong file .env")
+
+    client = genai.Client(api_key=api_key)
+
+    response = client.models.generate_content(
+        model=LLM_MODEL,
+        contents=prompt,
+        config=types.GenerateContentConfig(
+            temperature=0,
+            max_output_tokens=512,
+        ),
     )
+
+    text = getattr(response, "text", None)
+    if text and text.strip():
+        return text.strip()
+
+    # fallback nếu response.text rỗng
+    try:
+        candidates = response.candidates or []
+        if candidates:
+            parts = candidates[0].content.parts
+            combined = "".join(getattr(p, "text", "") for p in parts if getattr(p, "text", None))
+            if combined.strip():
+                return combined.strip()
+    except Exception:
+        pass
+
+    return "Không đủ dữ liệu."
+    # raise NotImplementedError(
+    #     "TODO Sprint 2: Implement call_llm().\n"
+    #     "Chọn Option A (OpenAI) hoặc Option B (Gemini) trong TODO comment."
+    # )
 
 
 def rag_answer(
@@ -466,6 +543,7 @@ if __name__ == "__main__":
         "Khách hàng có thể yêu cầu hoàn tiền trong bao nhiêu ngày?",
         "Ai phải phê duyệt để cấp quyền Level 3?",
         "ERR-403-AUTH là lỗi gì?",  # Query không có trong docs → kiểm tra abstain
+        "Tài khoản bị khóa sau bao nhiêu lần đăng nhập sai?"
     ]
 
     print("\n--- Sprint 2: Test Baseline (Dense) ---")
@@ -485,14 +563,14 @@ if __name__ == "__main__":
     # compare_retrieval_strategies("Approval Matrix để cấp quyền là tài liệu nào?")
     # compare_retrieval_strategies("ERR-403-AUTH")
 
-    print("\n\nViệc cần làm Sprint 2:")
-    print("  1. Implement retrieve_dense() — query ChromaDB")
-    print("  2. Implement call_llm() — gọi OpenAI hoặc Gemini")
-    print("  3. Chạy rag_answer() với 3+ test queries")
-    print("  4. Verify: output có citation không? Câu không có docs → abstain không?")
+    # print("\n\nViệc cần làm Sprint 2:")
+    # print("  1. Implement retrieve_dense() — query ChromaDB")
+    # print("  2. Implement call_llm() — gọi OpenAI hoặc Gemini")
+    # print("  3. Chạy rag_answer() với 3+ test queries")
+    # print("  4. Verify: output có citation không? Câu không có docs → abstain không?")
 
-    print("\nViệc cần làm Sprint 3:")
-    print("  1. Chọn 1 trong 3 variants: hybrid, rerank, hoặc query transformation")
-    print("  2. Implement variant đó")
-    print("  3. Chạy compare_retrieval_strategies() để thấy sự khác biệt")
-    print("  4. Ghi lý do chọn biến đó vào docs/tuning-log.md")
+    # print("\nViệc cần làm Sprint 3:")
+    # print("  1. Chọn 1 trong 3 variants: hybrid, rerank, hoặc query transformation")
+    # print("  2. Implement variant đó")
+    # print("  3. Chạy compare_retrieval_strategies() để thấy sự khác biệt")
+    # print("  4. Ghi lý do chọn biến đó vào docs/tuning-log.md")
