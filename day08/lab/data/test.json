@@ -1,0 +1,303 @@
+[
+  {
+    "id": "q01",
+    "question": "SLA xử lý ticket P1 là bao lâu?",
+    "expected_answer": "Ticket P1 có SLA phản hồi ban đầu 15 phút và thời gian xử lý (resolution) là 4 giờ.",
+    "expected_sources": [
+      "support/sla-p1-2026.pdf"
+    ],
+    "difficulty": "easy",
+    "category": "SLA"
+  },
+  {
+    "id": "q02",
+    "question": "Khách hàng có thể yêu cầu hoàn tiền trong bao nhiêu ngày?",
+    "expected_answer": "Khách hàng có thể yêu cầu hoàn tiền trong vòng 7 ngày làm việc kể từ thời điểm xác nhận đơn hàng.",
+    "expected_sources": [
+      "policy/refund-v4.pdf"
+    ],
+    "difficulty": "easy",
+    "category": "Refund"
+  },
+  {
+    "id": "q03",
+    "question": "Ai phải phê duyệt để cấp quyền Level 3?",
+    "expected_answer": "Level 3 (Elevated Access) cần phê duyệt từ Line Manager, IT Admin, và IT Security.",
+    "expected_sources": [
+      "it/access-control-sop.md"
+    ],
+    "difficulty": "medium",
+    "category": "Access Control"
+  },
+  {
+    "id": "q04",
+    "question": "Sản phẩm kỹ thuật số có được hoàn tiền không?",
+    "expected_answer": "Không. Theo chính sách hoàn tiền, sản phẩm thuộc danh mục hàng kỹ thuật số (license key, subscription) là ngoại lệ không được hoàn tiền.",
+    "expected_sources": [
+      "policy/refund-v4.pdf"
+    ],
+    "difficulty": "medium",
+    "category": "Refund"
+  },
+  {
+    "id": "q05",
+    "question": "Tài khoản bị khóa sau bao nhiêu lần đăng nhập sai?",
+    "expected_answer": "Tài khoản bị khóa sau 5 lần đăng nhập sai liên tiếp.",
+    "expected_sources": [
+      "support/helpdesk-faq.md"
+    ],
+    "difficulty": "easy",
+    "category": "IT Helpdesk"
+  },
+  {
+    "id": "q06",
+    "question": "Escalation trong sự cố P1 diễn ra như thế nào?",
+    "expected_answer": "Ticket P1 tự động escalate lên Senior Engineer nếu không có phản hồi trong 10 phút sau khi tạo ticket.",
+    "expected_sources": [
+      "support/sla-p1-2026.pdf"
+    ],
+    "difficulty": "medium",
+    "category": "SLA"
+  },
+  {
+    "id": "q07",
+    "question": "Approval Matrix để cấp quyền hệ thống là tài liệu nào?",
+    "expected_answer": "Tài liệu 'Approval Matrix for System Access' hiện tại có tên mới là 'Access Control SOP' (access-control-sop.md).",
+    "expected_sources": [
+      "it/access-control-sop.md"
+    ],
+    "difficulty": "hard",
+    "category": "Access Control",
+    "note": "Đây là query alias/tên cũ — thử nghiệm hybrid retrieval"
+  },
+  {
+    "id": "q08",
+    "question": "Nhân viên được làm remote tối đa mấy ngày mỗi tuần?",
+    "expected_answer": "Nhân viên sau probation period có thể làm remote tối đa 2 ngày/tuần, với điều kiện được Team Lead phê duyệt.",
+    "expected_sources": [
+      "hr/leave-policy-2026.pdf"
+    ],
+    "difficulty": "easy",
+    "category": "HR Policy"
+  },
+  {
+    "id": "q09",
+    "question": "ERR-403-AUTH là lỗi gì và cách xử lý?",
+    "expected_answer": "Không tìm thấy thông tin về ERR-403-AUTH trong tài liệu hiện có. Đây có thể là lỗi liên quan đến xác thực (authentication), hãy liên hệ IT Helpdesk.",
+    "expected_sources": [],
+    "difficulty": "hard",
+    "category": "Insufficient Context",
+    "note": "Câu hỏi mà không có answer trong docs — kiểm tra khả năng abstain"
+  },
+  {
+    "id": "q10",
+    "question": "Nếu cần hoàn tiền khẩn cấp cho khách hàng VIP, quy trình có khác không?",
+    "expected_answer": "Tài liệu chính sách hoàn tiền không đề cập đến quy trình đặc biệt cho khách hàng VIP. Theo chính sách hiện hành, tất cả yêu cầu hoàn tiền đều theo cùng quy trình tiêu chuẩn trong 3-5 ngày làm việc.",
+    "expected_sources": [
+      "policy/refund-v4.pdf"
+    ],
+    "difficulty": "hard",
+    "category": "Refund",
+    "note": "Câu hỏi thiếu context đặc biệt — kiểm tra grounding khi model không có đủ thông tin"
+  },
+  {
+    "id": "q11",
+    "question": "SLA xử lý ticket P1 là bao lâu?",
+    "expected_answer": "Ticket P1 có SLA phản hồi ban đầu 15 phút và thời gian xử lý (resolution) là 4 giờ.",
+    "expected_sources": [
+      "support/sla-p1-2026.pdf"
+    ],
+    "difficulty": "easy",
+    "category": "SLA"
+  },
+  {
+    "id": "q12",
+    "question": "Nếu ticket P1 không có phản hồi trong 10 phút thì hệ thống xử lý thế nào?",
+    "expected_answer": "Ticket P1 sẽ tự động escalate lên Senior Engineer nếu không có phản hồi trong 10 phút.",
+    "expected_sources": [
+      "support/sla-p1-2026.pdf"
+    ],
+    "difficulty": "medium",
+    "category": "SLA"
+  },
+  {
+    "id": "q13",
+    "question": "Sau khi xử lý xong sự cố P1, phải viết incident report trong bao lâu?",
+    "expected_answer": "Sau khi khắc phục xong, phải viết incident report trong vòng 24 giờ.",
+    "expected_sources": [
+      "support/sla-p1-2026.pdf"
+    ],
+    "difficulty": "easy",
+    "category": "SLA"
+  },
+  {
+    "id": "q14",
+    "question": "Khách hàng có thể yêu cầu hoàn tiền trong bao nhiêu ngày làm việc kể từ lúc xác nhận đơn hàng?",
+    "expected_answer": "Khách hàng có thể yêu cầu hoàn tiền trong vòng 7 ngày làm việc kể từ thời điểm xác nhận đơn hàng.",
+    "expected_sources": [
+      "policy/refund-v4.pdf"
+    ],
+    "difficulty": "easy",
+    "category": "Refund"
+  },
+  {
+    "id": "q15",
+    "question": "Sản phẩm license key hoặc subscription có được hoàn tiền không?",
+    "expected_answer": "Không. Sản phẩm thuộc danh mục hàng kỹ thuật số như license key và subscription là ngoại lệ không được hoàn tiền.",
+    "expected_sources": [
+      "policy/refund-v4.pdf"
+    ],
+    "difficulty": "medium",
+    "category": "Refund"
+  },
+  {
+    "id": "q16",
+    "question": "Đơn hàng đã áp dụng Flash Sale có được hoàn tiền không?",
+    "expected_answer": "Không. Đơn hàng đã áp dụng mã giảm giá đặc biệt theo chương trình khuyến mãi Flash Sale là ngoại lệ không được hoàn tiền.",
+    "expected_sources": [
+      "policy/refund-v4.pdf"
+    ],
+    "difficulty": "medium",
+    "category": "Refund"
+  },
+  {
+    "id": "q17",
+    "question": "Đơn hàng đặt trước ngày 01/02/2026 sẽ theo chính sách nào?",
+    "expected_answer": "Đơn hàng đặt trước ngày có hiệu lực sẽ áp dụng theo chính sách hoàn tiền phiên bản 3.",
+    "expected_sources": [
+      "policy/refund-v4.pdf"
+    ],
+    "difficulty": "hard",
+    "category": "Refund"
+  },
+  {
+    "id": "q18",
+    "question": "Approval Matrix for System Access là tài liệu nào hiện nay?",
+    "expected_answer": "Tài liệu này hiện có tên mới là Access Control SOP, với source là it/access-control-sop.md.",
+    "expected_sources": [
+      "it/access-control-sop.md"
+    ],
+    "difficulty": "medium",
+    "category": "Access Control",
+    "note": "Kiểm tra alias/tên cũ của tài liệu"
+  },
+  {
+    "id": "q19",
+    "question": "Nhân viên phải tạo access request ticket ở đâu và bước nào có IT Security review?",
+    "expected_answer": "Nhân viên tạo Access Request ticket trên Jira project IT-ACCESS. IT Security review ở bước 4 đối với Level 3 và Level 4.",
+    "expected_sources": [
+      "it/access-control-sop.md"
+    ],
+    "difficulty": "medium",
+    "category": "Access Control"
+  },
+  {
+    "id": "q20",
+    "question": "Level 1 đến Level 4 cần ai phê duyệt và mất bao lâu?",
+    "expected_answer": "Level 1 cần Line Manager và mất 1 ngày làm việc. Level 2 cần Line Manager + IT Admin và mất 2 ngày làm việc. Level 3 cần Line Manager + IT Admin + IT Security và mất 3 ngày làm việc. Level 4 cần IT Manager + CISO và mất 5 ngày làm việc, kèm training bắt buộc về security policy.",
+    "expected_sources": [
+      "it/access-control-sop.md"
+    ],
+    "difficulty": "hard",
+    "category": "Access Control"
+  },
+  {
+    "id": "q21",
+    "question": "Khi có sự cố P1, quyền tạm thời tối đa được cấp bao lâu, cần ai phê duyệt, và có phải log không?",
+    "expected_answer": "On-call IT Admin có thể cấp quyền tạm thời tối đa 24 giờ sau khi được Tech Lead phê duyệt bằng lời, và mọi quyền tạm thời phải được ghi log vào hệ thống Security Audit.",
+    "expected_sources": [
+      "it/access-control-sop.md"
+    ],
+    "difficulty": "hard",
+    "category": "Access Control"
+  },
+  {
+    "id": "q22",
+    "question": "Quyền truy cập bị thu hồi trong các trường hợp nghỉ việc, hết hạn contract, và chuyển bộ phận như thế nào?",
+    "expected_answer": "Nghỉ việc: thu hồi ngay trong ngày cuối. Hết hạn contract: thu hồi đúng ngày hết hạn. Chuyển bộ phận: điều chỉnh trong 3 ngày làm việc.",
+    "expected_sources": [
+      "it/access-control-sop.md"
+    ],
+    "difficulty": "medium",
+    "category": "Access Control"
+  },
+  {
+    "id": "q23",
+    "question": "IT Security review access mỗi bao lâu một lần và bất thường phải báo trong bao lâu?",
+    "expected_answer": "IT Security thực hiện access review mỗi 6 tháng, và mọi bất thường phải được báo cáo lên CISO trong vòng 24 giờ.",
+    "expected_sources": [
+      "it/access-control-sop.md"
+    ],
+    "difficulty": "easy",
+    "category": "Access Control"
+  },
+  {
+    "id": "q24",
+    "question": "Nhân viên có 4 năm kinh nghiệm được bao nhiêu ngày annual leave và được carry over tối đa bao nhiêu ngày?",
+    "expected_answer": "Nhân viên từ 3-5 năm kinh nghiệm được 15 ngày annual leave mỗi năm, và có thể chuyển tối đa 5 ngày phép chưa dùng sang năm tiếp theo.",
+    "expected_sources": [
+      "hr/leave-policy-2026.pdf"
+    ],
+    "difficulty": "easy",
+    "category": "HR Policy"
+  },
+  {
+    "id": "q25",
+    "question": "Nghỉ ốm được trả lương bao nhiêu ngày, phải báo trước lúc nào, và nếu nghỉ trên 3 ngày liên tiếp thì cần gì?",
+    "expected_answer": "Nghỉ ốm được trả lương 10 ngày/năm. Phải báo cho Line Manager trước 9:00 sáng ngày nghỉ. Nếu nghỉ trên 3 ngày liên tiếp thì cần giấy tờ y tế từ bệnh viện.",
+    "expected_sources": [
+      "hr/leave-policy-2026.pdf"
+    ],
+    "difficulty": "medium",
+    "category": "HR Policy"
+  },
+  {
+    "id": "q26",
+    "question": "Nhân viên sau probation có thể làm remote tối đa bao nhiêu ngày/tuần, onsite bắt buộc ngày nào, và có yêu cầu gì khi remote?",
+    "expected_answer": "Nhân viên sau probation có thể làm remote tối đa 2 ngày mỗi tuần. Ngày onsite bắt buộc là Thứ 3 và Thứ 5. Khi remote phải bật VPN và bật camera trong các cuộc họp team.",
+    "expected_sources": [
+      "hr/leave-policy-2026.pdf"
+    ],
+    "difficulty": "medium",
+    "category": "HR Policy"
+  },
+  {
+    "id": "q27",
+    "question": "Làm thêm giờ phải được phê duyệt như thế nào và hệ số lương ngày thường, cuối tuần, ngày lễ là bao nhiêu?",
+    "expected_answer": "Làm thêm giờ phải được Line Manager phê duyệt trước bằng văn bản. Hệ số lương là 150% vào ngày thường, 200% vào ngày cuối tuần, và 300% vào ngày lễ.",
+    "expected_sources": [
+      "hr/leave-policy-2026.pdf"
+    ],
+    "difficulty": "medium",
+    "category": "HR Policy"
+  },
+  {
+    "id": "q28",
+    "question": "Quên mật khẩu thì làm gì, và tài khoản bị khóa sau bao nhiêu lần đăng nhập sai liên tiếp?",
+    "expected_answer": "Có thể truy cập trang reset SSO hoặc liên hệ Helpdesk qua ext. 9000. Tài khoản bị khóa sau 5 lần đăng nhập sai liên tiếp.",
+    "expected_sources": [
+      "support/helpdesk-faq.md"
+    ],
+    "difficulty": "easy",
+    "category": "IT Helpdesk"
+  },
+  {
+    "id": "q29",
+    "question": "Công ty dùng VPN nào, mỗi tài khoản được kết nối tối đa bao nhiêu thiết bị, và nếu VPN lỗi liên tục thì làm gì?",
+    "expected_answer": "Công ty dùng Cisco AnyConnect. Mỗi tài khoản được kết nối tối đa 2 thiết bị cùng lúc. Nếu VPN vẫn lỗi sau khi kiểm tra Internet thì tạo ticket P3 kèm log file VPN.",
+    "expected_sources": [
+      "support/helpdesk-faq.md"
+    ],
+    "difficulty": "medium",
+    "category": "IT Helpdesk"
+  },
+  {
+    "id": "q30",
+    "question": "ERR-403-AUTH là lỗi gì và cách xử lý thế nào?",
+    "expected_answer": "Không tìm thấy thông tin về ERR-403-AUTH trong các tài liệu hiện có.",
+    "expected_sources": [],
+    "difficulty": "hard",
+    "category": "Insufficient Context",
+    "note": "Câu hỏi ngoài phạm vi docs, phải abstain"
+  }
+]
