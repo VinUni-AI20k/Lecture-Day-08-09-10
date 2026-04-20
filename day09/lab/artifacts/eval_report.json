@@ -1,0 +1,50 @@
+{
+  "generated_at": "2026-04-14T17:58:09.316005",
+  "day08_single_agent": {
+    "total_questions": 15,
+    "avg_confidence": 0.82,
+    "avg_latency_ms": 1850,
+    "abstain_rate": "13%",
+    "multi_hop_accuracy": "20%"
+  },
+  "day09_multi_agent": {
+    "total_traces": 15,
+    "routing_distribution": {
+      "retrieval_worker": "8/15 (53%)",
+      "policy_tool_worker": "7/15 (46%)"
+    },
+    "avg_confidence": 0.643,
+    "avg_latency_ms": 11542,
+    "mcp_usage_rate": "2/15 (13%)",
+    "hitl_rate": "3/15 (20%)",
+    "top_sources": [
+      [
+        "it_helpdesk_faq.txt",
+        15
+      ],
+      [
+        "policy_refund_v4.txt",
+        12
+      ],
+      [
+        "hr_leave_policy.txt",
+        12
+      ],
+      [
+        "sla_p1_2026.txt",
+        8
+      ],
+      [
+        "access_control_sop.txt",
+        8
+      ]
+    ]
+  },
+  "analysis": {
+    "routing_visibility": "Day 09 có route_reason cho từng câu → dễ debug hơn Day 08",
+    "latency_delta": "Multi-agent trễ hơn do thêm bước supervisor routing (~500-1000ms)",
+    "accuracy_delta": "Multi-agent cải thiện mạnh ở các câu multi-hop nhờ gọi nhiều workers",
+    "debuggability": "Multi-agent: có thể test từng worker độc lập (retrieval, policy, synthesis). Single-agent: không thể tách rời.",
+    "mcp_benefit": "Day 09 có thể gọi external tools (search_kb, ticket_info) qua MCP rất linh hoạt."
+  }
+}

@@ -1,0 +1,122 @@
+{
+  "task": "Nhân viên vừa vào thử việc (trong probation period) muốn làm remote vì lý do cá nhân. Điều kiện là gì?",
+  "route_reason": "task contains retrieval/SLA keyword",
+  "risk_high": false,
+  "needs_tool": false,
+  "hitl_triggered": false,
+  "retrieved_chunks": [
+    {
+      "text": "muộn hơn nhưng phải được Line Manager đồng ý qua tin nhắn trực tiếp. === Phần 3: Chính sách làm thêm giờ === 3.1 Điều kiện làm thêm: Làm thêm giờ phải được Line Manager phê duyệt trước bằng văn bản. 3.2 Hệ số lương làm thêm: - Ngày thường: 150% lương giờ tiêu chuẩn. - Ngày cuối tuần: 200% lương giờ tiêu chuẩn. - Ngày lễ: 300% lương giờ tiêu chuẩn. === Phần 4: Remote work policy === 4.1 Điều kiện remote: - Nhân viên sau probation period có thể làm remote tối đa 2 ngày/tuần. - Team Lead phải phê duyệt lịch remote qua HR Portal. - Ngày onsite bắt buộc: Thứ 3 và Thứ 5 theo lịch team. 4.2 Yêu cầu kỹ thuật khi remote: - Kết nối VPN bắt buộc khi làm việc với hệ thống nội bộ. - Camera bật trong các cuộc họp team. === Phần 5: Liên hệ HR === Email: hr@company.internal Hotline: ext. 2000 HR Portal: https://hr.company.internal Giờ làm việc: Thứ 2 - Thứ 6, 8:30 - 17:30",
+      "source": "hr_leave_policy.txt",
+      "score": 0.6413,
+      "metadata": {
+        "chunk_id": "hr_leave_policy.txt__chunk1",
+        "source": "hr_leave_policy.txt"
+      }
+    },
+    {
+      "text": "tra compliance và cấp quyền. Bước 4: IT Security review với Level 3 và Level 4. Bước 5: Nhân viên nhận thông báo qua email khi quyền được cấp. === Section 4: Escalation khi cần thay đổi quyền hệ thống === Escalation chỉ áp dụng khi cần thay đổi quyền hệ thống ngoài quy trình thông thường. Ví dụ: Khẩn cấp trong sự cố P1, cần cấp quyền tạm thời để fix incident. Quy trình escalation khẩn cấp: 1. On-call IT Admin có thể cấp quyền tạm thời (max 24 giờ) sau khi được Tech Lead phê duyệt bằng lời. 2. Sau 24 giờ, phải có ticket chính thức hoặc quyền bị thu hồi tự động. 3. Mọi quyền tạm thời phải được ghi log vào hệ thống Security Audit. === Section 5: Thu hồi quyền truy cập === Quyền phải được thu hồi trong các trường hợp: - Nhân viên nghỉ việc: Thu hồi ngay trong ngày cuối. - Hết hạn contract: Thu hồi đúng ngày hết hạn. - Chuyển bộ phận: Điều chỉnh trong 3 ngày làm việc. === Section 6: Audit và review định kỳ === IT Security thực hiện access review mỗi 6 tháng. Mọi bất thường phải được báo cáo lên CISO trong vòng 24 giờ. === Section 7: Công cụ liên quan === Ticket system: Jira (project IT-ACCESS) IAM system: Okta Audit log: Splunk Email: it-access@company.internal",
+      "source": "access_control_sop.txt",
+      "score": 0.555,
+      "metadata": {
+        "source": "access_control_sop.txt",
+        "chunk_id": "access_control_sop.txt__chunk1"
+      }
+    },
+    {
+      "text": "chịu trách nhiệm gia hạn license phần mềm? A: IT Procurement team quản lý tất cả license. Nhắc nhở sẽ được gửi 30 ngày trước khi hết hạn. === Section 4: Thiết bị và phần cứng === Q: Laptop mới được cấp sau bao lâu khi vào công ty? A: Laptop được cấp trong ngày onboarding đầu tiên. Nếu có vấn đề, liên hệ HR hoặc IT Admin. Q: Laptop bị hỏng phải báo cáo như thế nào? A: Tạo ticket P2 hoặc P3 tùy mức độ nghiêm trọng. Mang thiết bị đến IT Room (tầng 3) để kiểm tra. === Section 5: Email và lịch === Q: Hộp thư đến đầy, phải làm gì? A: Xóa email cũ hoặc yêu cầu tăng dung lượng qua ticket IT-ACCESS. Dung lượng tiêu chuẩn là 50GB. Q: Tôi không nhận được email từ bên ngoài? A: Kiểm tra thư mục Spam trước. Nếu vẫn không có, tạo ticket P2 kèm địa chỉ email gửi và thời gian gửi. === Section 6: Liên hệ IT Helpdesk === Hotline: ext. 9000 (8:00 - 18:00, Thứ 2 - Thứ 6) Email: helpdesk@company.internal Jira: project IT-SUPPORT Slack: #it-helpdesk Emergency (ngoài giờ): ext. 9999",
+      "source": "it_helpdesk_faq.txt",
+      "score": 0.5491,
+      "metadata": {
+        "source": "it_helpdesk_faq.txt",
+        "chunk_id": "it_helpdesk_faq.txt__chunk1"
+      }
+    },
+    {
+      "text": "2: CS Agent xem xét trong vòng 1 ngày làm việc và xác nhận điều kiện đủ điều kiện. Bước 3: Nếu đủ điều kiện, chuyển yêu cầu sang Finance Team để xử lý hoàn tiền. Bước 4: Finance Team xử lý trong 3-5 ngày làm việc và thông báo kết quả cho khách hàng. === Điều 5: Hình thức hoàn tiền === - Hoàn tiền qua phương thức thanh toán gốc: áp dụng trong 100% trường hợp đủ điều kiện. - Hoàn tiền qua credit nội bộ (store credit): khách hàng có thể chọn nhận store credit thay thế với giá trị 110% so với số tiền hoàn. === Điều 6: Liên hệ và hỗ trợ === Email: cs-refund@company.internal Hotline nội bộ: ext. 1234 Giờ làm việc: Thứ 2 - Thứ 6, 8:00 - 17:30",
+      "source": "policy_refund_v4.txt",
+      "score": 0.5478,
+      "metadata": {
+        "chunk_id": "policy_refund_v4.txt__chunk1",
+        "source": "policy_refund_v4.txt"
+      }
+    },
+    {
+      "text": "CHÍNH SÁCH NGHỈ PHÉP VÀ PHÚC LỢI NHÂN SỰ Source: hr/leave-policy-2026.pdf Department: HR Effective Date: 2026-01-01 Access: internal === Phần 1: Các loại nghỉ phép === 1.1 Nghỉ phép năm (Annual Leave): - Số ngày: 12 ngày/năm cho nhân viên dưới 3 năm kinh nghiệm. - Số ngày: 15 ngày/năm cho nhân viên từ 3-5 năm kinh nghiệm. - Số ngày: 18 ngày/năm cho nhân viên trên 5 năm kinh nghiệm. - Chuyển năm sau: Tối đa 5 ngày phép năm chưa dùng được chuyển sang năm tiếp theo. 1.2 Nghỉ ốm (Sick Leave): - Số ngày: 10 ngày/năm có trả lương. - Yêu cầu: Thông báo cho Line Manager trước 9:00 sáng ngày nghỉ. - Nếu nghỉ trên 3 ngày liên tiếp: Cần giấy tờ y tế từ bệnh viện. 1.3 Nghỉ thai sản: - Nghỉ sinh con: 6 tháng theo quy định Luật Lao động. - Nghỉ nuôi con nhỏ: 1 tiếng/ngày trong 12 tháng đầu sau sinh. 1.4 Nghỉ lễ tết: Theo lịch nghỉ lễ quốc gia do HR công bố hàng năm vào tháng 12. === Phần 2: Quy trình xin nghỉ phép === Bước 1: Nhân viên gửi yêu cầu nghỉ phép qua hệ thống HR Portal (https://hr.company.internal) ít nhất 3 ngày làm việc trước ngày nghỉ. Bước 2: Line Manager phê duyệt hoặc từ chối trong vòng 1 ngày làm việc. Bước 3: Nhân viên nhận thông báo qua email sau khi được phê duyệt. Trường hợp khẩn cấp: Có thể gửi yêu cầu muộn hơn nhưng phải được Line Manager đồng ý qua tin nhắn trực tiếp. === Phần 3: Chính sách làm thêm giờ === 3.1 Điều kiện làm thêm: Làm thêm giờ phải được Line Manager phê duyệt trước bằng văn bản. 3.2 Hệ số lương làm thêm: - Ngày thường:",
+      "source": "hr_leave_policy.txt",
+      "score": 0.5445,
+      "metadata": {
+        "source": "hr_leave_policy.txt",
+        "chunk_id": "hr_leave_policy.txt__chunk0"
+      }
+    }
+  ],
+  "retrieved_sources": [
+    "policy_refund_v4.txt",
+    "access_control_sop.txt",
+    "hr_leave_policy.txt",
+    "it_helpdesk_faq.txt"
+  ],
+  "policy_result": {},
+  "mcp_tools_used": [],
+  "final_answer": "Nhân viên vừa vào thử việc (trong probation period) không đủ điều kiện để làm remote. Chính sách chỉ cho phép nhân viên sau probation period làm remote tối đa 2 ngày/tuần, với sự phê duyệt của Team Lead qua HR Portal [1].",
+  "sources": [
+    "hr_leave_policy.txt"
+  ],
+  "confidence": 0.76,
+  "history": [
+    "[supervisor] received task: Nhân viên vừa vào thử việc (trong probation period) muốn làm remote vì lý do cá ",
+    "[supervisor] route=retrieval_worker reason=task contains retrieval/SLA keyword",
+    "[retrieval_worker] retrieved 5 chunks from ['policy_refund_v4.txt', 'access_control_sop.txt', 'hr_leave_policy.txt', 'it_helpdesk_faq.txt']",
+    "[synthesis_worker] answer_len=221, confidence=0.76, sources=['hr_leave_policy.txt']",
+    "[graph] completed in 13408ms"
+  ],
+  "workers_called": [
+    "retrieval_worker",
+    "synthesis_worker"
+  ],
+  "supervisor_route": "retrieval_worker",
+  "latency_ms": 13408,
+  "run_id": "run_20260414_175733",
+  "worker_io_logs": [
+    {
+      "worker": "retrieval_worker",
+      "input": {
+        "task": "Nhân viên vừa vào thử việc (trong probation period) muốn làm remote vì lý do cá nhân. Điều kiện là gì?",
+        "top_k": 5
+      },
+      "output": {
+        "chunks_count": 5,
+        "sources": [
+          "policy_refund_v4.txt",
+          "access_control_sop.txt",
+          "hr_leave_policy.txt",
+          "it_helpdesk_faq.txt"
+        ]
+      },
+      "error": null
+    },
+    {
+      "worker": "synthesis_worker",
+      "timestamp": "2026-04-14T10:57:44.477957+00:00",
+      "input": {
+        "task": "Nhân viên vừa vào thử việc (trong probation period) muốn làm remote vì lý do cá nhân. Điều kiện là gì?",
+        "chunks_count": 5,
+        "has_policy": false,
+        "exceptions_count": 0
+      },
+      "output": {
+        "answer_length": 221,
+        "sources": [
+          "hr_leave_policy.txt"
+        ],
+        "sources_count": 1,
+        "confidence": 0.76,
+        "abstained": false,
+        "hitl_triggered": false
+      },
+      "error": null
+    }
+  ],
+  "question_id": "q14"
+}

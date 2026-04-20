@@ -18,11 +18,46 @@ A/B Rule (từ slide):
 """
 
 import json
+import os
 import csv
 from pathlib import Path
 from typing import List, Dict, Any, Optional
 from datetime import datetime
+from dotenv import load_dotenv
+from openai import OpenAI
 from rag_answer import rag_answer
+
+load_dotenv()
+
+_openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+_JUDGE_MODEL = "gpt-4o-mini"
+
+_JUDGE_SYSTEM = (
+    "You are a strict RAG evaluation judge. "
+    "Always respond with a single valid JSON object. "
+    "No markdown, no preamble, no explanation outside the JSON."
+)
+
+
+def _llm_judge(user_prompt: str) -> Dict[str, Any]:
+    """
+    Call OpenAI gpt-4o-mini to score a RAG output.
+    Returns parsed JSON dict; falls back to {"score": None, "notes": "<e>"} on failure.
+    """
+    try:
+        response = _openai_client.chat.completions.create(
+            model=_JUDGE_MODEL,
+            temperature=0,
+            max_tokens=150,
+            response_format={"type": "json_object"},
+            messages=[
+                {"role": "system", "content": _JUDGE_SYSTEM},
+                {"role": "user",   "content": user_prompt},
+            ],
+        )
+        return json.loads(response.choices[0].message.content)
+    except Exception as e:
+        return {"score": None, "notes": f"Judge error: {e}"}
 
 # =============================================================================
 # CẤU HÌNH
@@ -43,11 +78,20 @@ BASELINE_CONFIG = {
 # Cấu hình variant (Sprint 3 — điều chỉnh theo lựa chọn của nhóm)
 # TODO Sprint 4: Cập nhật VARIANT_CONFIG theo variant nhóm đã implement
 VARIANT_CONFIG = {
-    "retrieval_mode": "hybrid",   # Hoặc "dense" nếu chỉ đổi rerank
+    "retrieval_mode": "dense",
     "top_k_search": 10,
     "top_k_select": 3,
-    "use_rerank": True,           # Hoặc False nếu variant là hybrid không rerank
-    "label": "variant_hybrid_rerank",
+    "use_rerank": True,
+    "label": "variant_dense_rerank",
+}
+
+# Variant phụ (chỉ đổi 1 biến so với baseline) — dùng cho A/B chặt trong tuning-log
+VARIANT_HYBRID_ONLY = {
+    "retrieval_mode": "hybrid",
+    "top_k_search": 10,
+    "top_k_select": 3,
+    "use_rerank": False,
+    "label": "variant_hybrid_only",
 }
 
 
@@ -88,11 +132,27 @@ def score_faithfulness(
 
     Trả về dict với: score (1-5) và notes (lý do)
     """
-    # TODO Sprint 4: Implement scoring
-    # Tạm thời trả về None (yêu cầu chấm thủ công)
+    context = "\n\n".join(
+        f"[{i+1}] {c.get('text', '').strip()}"
+        for i, c in enumerate(chunks_used)
+    )
+    prompt = (
+        f"TASK: Rate the faithfulness of the answer against the retrieved context.\n\n"
+        f"RETRIEVED CONTEXT:\n{context}\n\n"
+        f"ANSWER:\n{answer}\n\n"
+        "RUBRIC (score 1-5):\n"
+        "5 — Every claim is explicitly supported by the context.\n"
+        "4 — Mostly grounded; at most one uncertain minor detail.\n"
+        "3 — Partially grounded; some claims may rely on model knowledge.\n"
+        "2 — Several claims contradict or are absent from the context.\n"
+        "1 — Answer is largely hallucinated with no grounding.\n\n"
+        "OUTPUT: {\"score\": <int 1-5>, \"notes\": \"<max 20 words stating the main grounding issue>\"}"
+    )
+
+    result = _llm_judge(prompt)
     return {
-        "score": None,
-        "notes": "TODO: Chấm thủ công hoặc implement LLM-as-Judge",
+        "score": result.get("score"),
+        "notes": result.get("notes", ""),
     }
 
 
@@ -113,9 +173,23 @@ def score_answer_relevance(
 
     TODO Sprint 4: Implement tương tự score_faithfulness
     """
+    prompt = (
+        f"TASK: Rate how well the answer addresses the user question.\n\n"
+        f"QUESTION:\n{query}\n\n"
+        f"ANSWER:\n{answer}\n\n"
+        "RUBRIC (score 1-5):\n"
+        "5 — Answer directly and completely addresses the question.\n"
+        "4 — On-topic but missing one minor supporting detail.\n"
+        "3 — Relevant but does not address the core ask.\n"
+        "2 — Partially off-topic or answers a different question.\n"
+        "1 — Completely irrelevant or refuses to answer.\n\n"
+        "OUTPUT: {\"score\": <int 1-5>, \"notes\": \"<max 20 words on why it misses or hits>\"}"
+    )
+
+    result = _llm_judge(prompt)
     return {
-        "score": None,
-        "notes": "TODO: Implement score_answer_relevance",
+        "score": result.get("score"),
+        "notes": result.get("notes", ""),
     }
 
 
@@ -151,7 +225,6 @@ def score_context_recall(
         for c in chunks_used
     }
 
-    # TODO: Kiểm tra matching theo partial path (vì source paths có thể khác format)
     found = 0
     missing = []
     for expected in expected_sources:
@@ -198,9 +271,27 @@ def score_completeness(
          Rate completeness 1-5. Are all key points covered?
          Output: {'score': int, 'missing_points': [str]}"
     """
+    if not expected_answer:
+        return {"score": None, "notes": "No expected_answer provided"}
+
+    prompt = (
+        f"TASK: Rate how completely the model answer covers the expected answer.\n\n"
+        f"QUESTION:\n{query}\n\n"
+        f"EXPECTED ANSWER (ground truth):\n{expected_answer}\n\n"
+        f"MODEL ANSWER:\n{answer}\n\n"
+        "RUBRIC (score 1-5):\n"
+        "5 — All key points from the expected answer are present.\n"
+        "4 — Missing at most one minor detail.\n"
+        "3 — Missing one significant point or condition.\n"
+        "2 — Missing multiple important points.\n"
+        "1 — Covers almost none of the expected content.\n\n"
+        "OUTPUT: {\"score\": <int 1-5>, \"notes\": \"<max 25 words; list the most important missing points>\"}"
+    )
+
+    result = _llm_judge(prompt)
     return {
-        "score": None,
-        "notes": "TODO: Implement score_completeness (so sánh với expected_answer)",
+        "score": result.get("score"),
+        "notes": result.get("notes", ""),
     }
 
 
@@ -487,24 +578,27 @@ if __name__ == "__main__":
         baseline_results = []
 
     # --- Chạy Variant (sau khi Sprint 3 hoàn thành) ---
-    # TODO Sprint 4: Uncomment sau khi implement variant trong rag_answer.py
-    # print("\n--- Chạy Variant ---")
-    # variant_results = run_scorecard(
-    #     config=VARIANT_CONFIG,
-    #     test_questions=test_questions,
-    #     verbose=True,
-    # )
-    # variant_md = generate_scorecard_summary(variant_results, VARIANT_CONFIG["label"])
-    # (RESULTS_DIR / "scorecard_variant.md").write_text(variant_md, encoding="utf-8")
+    print("\n--- Chạy Variant ---")
+    try:
+        variant_results = run_scorecard(
+            config=VARIANT_CONFIG,
+            test_questions=test_questions,
+            verbose=True,
+        )
+        variant_md = generate_scorecard_summary(variant_results, VARIANT_CONFIG["label"])
+        (RESULTS_DIR / "scorecard_variant.md").write_text(variant_md, encoding="utf-8")
+        print(f"\nScorecard variant lưu tại: {RESULTS_DIR / 'scorecard_variant.md'}")
+    except NotImplementedError:
+        print("Pipeline variant chưa implement. Hoàn thành Sprint 3 trước.")
+        variant_results = []
 
     # --- A/B Comparison ---
-    # TODO Sprint 4: Uncomment sau khi có cả baseline và variant
-    # if baseline_results and variant_results:
-    #     compare_ab(
-    #         baseline_results,
-    #         variant_results,
-    #         output_csv="ab_comparison.csv"
-    #     )
+    if baseline_results and variant_results:
+        compare_ab(
+            baseline_results,
+            variant_results,
+            output_csv="ab_comparison.csv"
+        )
 
     print("\n\nViệc cần làm Sprint 4:")
     print("  1. Hoàn thành Sprint 2 + 3 trước")
