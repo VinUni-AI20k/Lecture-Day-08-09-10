@@ -134,15 +134,15 @@ TOOL_SCHEMAS = {
 
 def tool_search_kb(query: str, top_k: int = 3) -> dict:
     """
-    Tìm kiếm Knowledge Base bằng semantic search.
-
-    TODO Sprint 3: Kết nối với ChromaDB thực.
-    Hiện tại: Delegate sang retrieval worker.
+    Tìm kiếm Knowledge Base bằng semantic search qua ChromaDB.
     """
     try:
-        # Tái dùng retrieval logic từ workers/retrieval.py
         import sys
-        sys.path.insert(0, os.path.dirname(__file__))
+        # Ensure the current directory is in the path to find workers
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        if current_dir not in sys.path:
+            sys.path.insert(0, current_dir)
+            
         from workers.retrieval import retrieve_dense
         chunks = retrieve_dense(query, top_k=top_k)
         sources = list({c["source"] for c in chunks})
@@ -152,17 +152,11 @@ def tool_search_kb(query: str, top_k: int = 3) -> dict:
             "total_found": len(chunks),
         }
     except Exception as e:
-        # Fallback: return mock data nếu ChromaDB chưa setup
         return {
-            "chunks": [
-                {
-                    "text": f"[MOCK] Không thể query ChromaDB: {e}. Kết quả giả lập.",
-                    "source": "mock_data",
-                    "score": 0.5,
-                }
-            ],
-            "sources": ["mock_data"],
-            "total_found": 1,
+            "error": f"Failed to search KB: {e}",
+            "chunks": [],
+            "sources": [],
+            "total_found": 0,
         }
 
 

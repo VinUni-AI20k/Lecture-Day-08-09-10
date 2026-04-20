@@ -19,6 +19,9 @@ Gọi độc lập để test:
 import os
 import sys
 from typing import Optional
+from dotenv import load_dotenv
+
+load_dotenv()
 
 WORKER_NAME = "policy_tool_worker"
 
