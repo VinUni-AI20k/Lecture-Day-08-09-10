@@ -19,17 +19,19 @@ A/B Rule (từ slide):
 
 import json
 import csv
+import re # --- THÊM CODE MỚI ---
 from pathlib import Path
 from typing import List, Dict, Any, Optional
 from datetime import datetime
-from rag_answer import rag_answer
+from rag_answer import rag_answer, call_llm # --- THÊM CODE MỚI ---
 
 # =============================================================================
 # CẤU HÌNH
 # =============================================================================
 
 TEST_QUESTIONS_PATH = Path(__file__).parent / "data" / "test_questions.json"
-RESULTS_DIR = Path(__file__).parent / "results"
+TEST_QUESTIONS_PATH_2 = Path(__file__).parent / "data" / "grading_questions.json"
+RESULTS_DIR = Path(__file__).parent / "results_2"
 
 # Cấu hình baseline (Sprint 2)
 BASELINE_CONFIG = {
@@ -42,12 +44,23 @@ BASELINE_CONFIG = {
 
 # Cấu hình variant (Sprint 3 — điều chỉnh theo lựa chọn của nhóm)
 # TODO Sprint 4: Cập nhật VARIANT_CONFIG theo variant nhóm đã implement
+
+# --- CODE CŨ (Đã comment out để giữ nguyên lịch sử) ---
+# VARIANT_CONFIG = {
+#     "retrieval_mode": "hybrid",   # Hoặc "dense" nếu chỉ đổi rerank
+#     "top_k_search": 10,
+#     "top_k_select": 3,
+#     "use_rerank": True,           # Hoặc False nếu variant là hybrid không rerank
+#     "label": "variant_hybrid_rerank",
+# }
+
+# --- CODE MỚI THÊM VÀO (Cập nhật theo Sprint 3 đã làm hybrid) ---
 VARIANT_CONFIG = {
-    "retrieval_mode": "hybrid",   # Hoặc "dense" nếu chỉ đổi rerank
+    "retrieval_mode": "hybrid",
     "top_k_search": 10,
     "top_k_select": 3,
-    "use_rerank": True,           # Hoặc False nếu variant là hybrid không rerank
-    "label": "variant_hybrid_rerank",
+    "use_rerank": False,
+    "label": "variant_hybrid",
 }
 
 
@@ -55,6 +68,26 @@ VARIANT_CONFIG = {
 # SCORING FUNCTIONS
 # 4 metrics từ slide: Faithfulness, Answer Relevance, Context Recall, Completeness
 # =============================================================================
+
+# --- CODE MỚI THÊM VÀO: Helper xử lý JSON từ LLM ---
+def parse_llm_json(response_str: str) -> Dict:
+    """
+    Parse JSON an toàn từ output LLM (kể cả khi bị bọc text, markdown, lỗi format)
+    """
+    try:
+        # Remove markdown fences
+        cleaned = re.sub(r'```json|```', '', response_str, flags=re.IGNORECASE).strip()
+
+        # Tìm JSON object đầu tiên
+        match = re.search(r"\{.*\}", cleaned, re.DOTALL)
+        if match:
+            return json.loads(match.group())
+
+        return {"score": 1, "reason": "Không tìm thấy JSON hợp lệ"}
+    except Exception as e:
+        return {"score": 1, "reason": f"Lỗi parse JSON: {str(e)}"}
+# ---------------------------------------------------
+
 
 def score_faithfulness(
     answer: str,
@@ -90,10 +123,42 @@ def score_faithfulness(
     """
     # TODO Sprint 4: Implement scoring
     # Tạm thời trả về None (yêu cầu chấm thủ công)
-    return {
-        "score": None,
-        "notes": "TODO: Chấm thủ công hoặc implement LLM-as-Judge",
-    }
+    
+    # --- CODE CŨ (Đã comment out) ---
+    # return {
+    #     "score": None,
+    #     "notes": "TODO: Chấm thủ công hoặc implement LLM-as-Judge",
+    # }
+    
+    # --- CODE MỚI THÊM VÀO (LLM-as-a-Judge) ---
+    if "Không đủ dữ liệu" in answer:
+        if not chunks_used:
+            return {"score": 5, "notes": "Abstain đúng (không có. context)"}
+        else:
+            return {"score": 3, "notes": "Abstain nhưng có context → retrieval có thể lỗi"}
+
+    context_str = "\n".join([c.get("text", "") for c in chunks_used])
+    
+    prompt = f"""You are an objective evaluator. Evaluate whether the Answer is completely faithful and grounded in the Context.
+Context: {context_str}
+Answer: {answer}
+
+Scoring Rubric (1-5):
+5: The answer is fully supported by the context. No external facts are added.
+3: The answer is mostly supported, but contains minor external facts or slight exaggerations.
+1: The answer contains significant hallucinations not found in the context.
+
+Respond in JSON format: {{"reason": "<your reasoning>", "score": <int>}}"""
+    
+    try:
+        try:
+            result_str = call_llm(prompt, json_mode=True)
+        except:
+            result_str = call_llm(prompt, json_mode=False)
+        parsed = parse_llm_json(result_str)
+        return {"score": parsed.get("score", 1), "notes": parsed.get("reason", "")}
+    except Exception as e:
+        return {"score": 1, "notes": f"Lỗi gọi LLM Evaluator: {str(e)}"}
 
 
 def score_answer_relevance(
@@ -113,10 +178,34 @@ def score_answer_relevance(
 
     TODO Sprint 4: Implement tương tự score_faithfulness
     """
-    return {
-        "score": None,
-        "notes": "TODO: Implement score_answer_relevance",
-    }
+    # --- CODE CŨ (Đã comment out) ---
+    # return {
+    #     "score": None,
+    #     "notes": "TODO: Implement score_answer_relevance",
+    # }
+    
+    # --- CODE MỚI THÊM VÀO (LLM-as-a-Judge) ---
+    prompt = f"""You are an objective evaluator. Evaluate how relevant the Answer is to the User Query.
+Query: {query}
+Answer: {answer}
+
+Scoring Rubric (1-5):
+5: Directly and fully answers the query.
+3: Partially answers the query or includes unnecessary tangents.
+1: Completely irrelevant or dodges the question.
+Note: If the answer is "Không đủ dữ liệu" for a query that genuinely lacks context, score it as 5.
+
+Respond in JSON format: {{"reason": "<your reasoning>", "score": <int>}}"""
+
+    try:
+        try:
+            result_str = call_llm(prompt, json_mode=True)
+        except:
+            result_str = call_llm(prompt, json_mode=False)
+        parsed = parse_llm_json(result_str)
+        return {"score": parsed.get("score", 1), "notes": parsed.get("reason", "")}
+    except Exception as e:
+        return {"score": 1, "notes": f"Lỗi gọi LLM Evaluator: {str(e)}"}
 
 
 def score_context_recall(
@@ -154,16 +243,32 @@ def score_context_recall(
     # TODO: Kiểm tra matching theo partial path (vì source paths có thể khác format)
     found = 0
     missing = []
+    def normalize_source(name: str) -> str:
+        return name.split("/")[-1].lower().replace(".pdf", "").replace(".md", "").strip()
+
+    retrieved_norm = [normalize_source(r) for r in retrieved_sources]
+
+    found = 0
+    missing = []
+
     for expected in expected_sources:
-        # Kiểm tra partial match (tên file)
-        expected_name = expected.split("/")[-1].replace(".pdf", "").replace(".md", "")
-        matched = any(expected_name.lower() in r.lower() for r in retrieved_sources)
+        expected_norm = normalize_source(expected)
+
+        matched = any(expected_norm == r or expected_norm in r for r in retrieved_norm)
+
+        if matched:
+            found += 1
+        else:
+            missing.append(expected)
         if matched:
             found += 1
         else:
             missing.append(expected)
 
     recall = found / len(expected_sources) if expected_sources else 0
+
+# Clamp để tránh >1
+    recall = min(recall, 1.0)
 
     return {
         "score": round(recall * 5),  # Convert to 1-5 scale
@@ -198,10 +303,37 @@ def score_completeness(
          Rate completeness 1-5. Are all key points covered?
          Output: {'score': int, 'missing_points': [str]}"
     """
-    return {
-        "score": None,
-        "notes": "TODO: Implement score_completeness (so sánh với expected_answer)",
-    }
+    # --- CODE CŨ (Đã comment out) ---
+    # return {
+    #     "score": None,
+    #     "notes": "TODO: Implement score_completeness (so sánh với expected_answer)",
+    # }
+    
+    # --- CODE MỚI THÊM VÀO (LLM-as-a-Judge) ---
+    if not expected_answer:
+        return {"score": 5, "notes": "Không có expected answer để so sánh"}
+        
+    prompt = f"""You are an objective evaluator. Compare the Answer against the Expected Answer.
+Query: {query}
+Expected Answer: {expected_answer}
+Actual Answer: {answer}
+
+Scoring Rubric (1-5):
+5: Contains all key information present in the expected answer.
+3: Missing some important details.
+1: Completely misses the core point.
+
+Respond in JSON format: {{"reason": "<your reasoning>", "score": <int>}}"""
+
+    try:
+        try:
+            result_str = call_llm(prompt, json_mode=True)
+        except:
+            result_str = call_llm(prompt, json_mode=False)
+        parsed = parse_llm_json(result_str)
+        return {"score": parsed.get("score", 1), "notes": parsed.get("reason", "")}
+    except Exception as e:
+        return {"score": 1, "notes": f"Lỗi gọi LLM Evaluator: {str(e)}"}
 
 
 # =============================================================================
@@ -234,7 +366,7 @@ def run_scorecard(
     4. In bảng kết quả
     """
     if test_questions is None:
-        with open(TEST_QUESTIONS_PATH, "r", encoding="utf-8") as f:
+        with open(TEST_QUESTIONS_PATH_2, "r", encoding="utf-8") as f:
             test_questions = json.load(f)
 
     results = []
@@ -306,11 +438,14 @@ def run_scorecard(
 
     # Tính averages (bỏ qua None)
     for metric in ["faithfulness", "relevance", "context_recall", "completeness"]:
-        scores = [r[metric] for r in results if r[metric] is not None]
+        scores = [r[metric] for r in results if isinstance(r[metric], (int, float))]
         avg = sum(scores) / len(scores) if scores else None
-        print(f"\nAverage {metric}: {avg:.2f}" if avg else f"\nAverage {metric}: N/A (chưa chấm)")
+        if avg is not None:
+            print(f"\nAverage {metric}: {avg:.2f}")
+        else:
+            print(f"\nAverage {metric}: N/A")
 
-    return results
+    return results   # ✅ Đưa ra ngoài vòng for
 
 
 # =============================================================================
@@ -354,7 +489,7 @@ def compare_ab(
 
         b_avg = sum(b_scores) / len(b_scores) if b_scores else None
         v_avg = sum(v_scores) / len(v_scores) if v_scores else None
-        delta = (v_avg - b_avg) if (b_avg and v_avg) else None
+        delta = (v_avg - b_avg) if (b_avg is not None and v_avg is not None) else None
 
         b_str = f"{b_avg:.2f}" if b_avg else "N/A"
         v_str = f"{v_avg:.2f}" if v_avg else "N/A"
@@ -411,7 +546,7 @@ def generate_scorecard_summary(results: List[Dict], label: str) -> str:
     metrics = ["faithfulness", "relevance", "context_recall", "completeness"]
     averages = {}
     for metric in metrics:
-        scores = [r[metric] for r in results if r[metric] is not None]
+        scores = [r.get(metric) for r in results if r and r.get(metric) is not None]
         averages[metric] = sum(scores) / len(scores) if scores else None
 
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M")
@@ -450,9 +585,9 @@ if __name__ == "__main__":
     print("=" * 60)
 
     # Kiểm tra test questions
-    print(f"\nLoading test questions từ: {TEST_QUESTIONS_PATH}")
+    print(f"\nLoading test questions từ: {TEST_QUESTIONS_PATH_2}")
     try:
-        with open(TEST_QUESTIONS_PATH, "r", encoding="utf-8") as f:
+        with open(TEST_QUESTIONS_PATH_2, "r", encoding="utf-8") as f:
             test_questions = json.load(f)
         print(f"Tìm thấy {len(test_questions)} câu hỏi")
 
@@ -497,6 +632,17 @@ if __name__ == "__main__":
     # variant_md = generate_scorecard_summary(variant_results, VARIANT_CONFIG["label"])
     # (RESULTS_DIR / "scorecard_variant.md").write_text(variant_md, encoding="utf-8")
 
+    # --- CODE MỚI THÊM VÀO (Uncomment và chạy) ---
+    print("\n--- Chạy Variant ---")
+    variant_results = run_scorecard(
+        config=VARIANT_CONFIG,
+        test_questions=test_questions,
+        verbose=True,
+    )
+    variant_md = generate_scorecard_summary(variant_results, VARIANT_CONFIG["label"])
+    (RESULTS_DIR / "scorecard_variant.md").write_text(variant_md, encoding="utf-8")
+
+
     # --- A/B Comparison ---
     # TODO Sprint 4: Uncomment sau khi có cả baseline và variant
     # if baseline_results and variant_results:
@@ -505,6 +651,15 @@ if __name__ == "__main__":
     #         variant_results,
     #         output_csv="ab_comparison.csv"
     #     )
+
+    # --- CODE MỚI THÊM VÀO (Uncomment và chạy) ---
+    if baseline_results and variant_results:
+        compare_ab(
+            baseline_results,
+            variant_results,
+            output_csv="ab_comparison.csv"
+        )
+
 
     print("\n\nViệc cần làm Sprint 4:")
     print("  1. Hoàn thành Sprint 2 + 3 trước")

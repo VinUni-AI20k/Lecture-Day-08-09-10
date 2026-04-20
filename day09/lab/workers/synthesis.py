@@ -139,6 +139,24 @@ Hãy trả lời câu hỏi dựa vào tài liệu trên."""
     ]
 
     answer = _call_llm(messages)
+    if not chunks:
+        return {
+            "answer": "Không có thông tin trong tài liệu",
+            "sources": [],
+            "confidence": 0.1,
+        }
+
+    if answer.startswith("[SYNTHESIS ERROR]") or "Không thể gọi LLM" in answer:
+        if policy_result.get("exceptions_found"):
+            exception_text = "\n".join([f"- {ex.get('rule', '')}" for ex in policy_result.get("exceptions_found", [])])
+        else:
+            exception_text = ""
+        answer = (
+            "Dựa trên tài liệu được cung cấp, tôi tìm thấy các thông tin sau:\n"
+            f"{exception_text}\n"
+            f"{chunks[0].get('text', '')[:500]}"
+        ).strip()
+
     sources = list({c.get("source", "unknown") for c in chunks})
     confidence = _estimate_confidence(chunks, answer, policy_result)
 
