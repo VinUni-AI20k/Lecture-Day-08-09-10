@@ -1,0 +1,210 @@
+[
+  {
+    "id": "gq01",
+    "question": "SLA xử lý ticket P1 đã thay đổi như thế nào so với phiên bản trước?",
+    "expected_answer": "Phiên bản hiện tại (v2026.1, có hiệu lực từ 2026-01-15) đã cập nhật SLA P1 resolution từ 6 giờ xuống còn 4 giờ. Phiên bản trước (v2025.3) không thay đổi SLA này.",
+    "expected_sources": [
+      "support/sla-p1-2026.pdf"
+    ],
+    "category": "SLA",
+    "difficulty": "hard",
+    "answer": "SLA xử lý ticket P1 đã thay đổi từ 6 giờ xuống 4 giờ trong phiên bản mới nhất (v2026.1) so với phiên bản trước đó (v2025.3) [1].",
+    "sources": [
+      "support/sla-p1-2026.pdf"
+    ],
+    "chunks_retrieved": 3,
+    "retrieval_mode": "dense",
+    "use_rerank": false,
+    "status": "success",
+    "error": null,
+    "timestamp": "2026-04-13T17:41:55.077901"
+  },
+  {
+    "id": "gq02",
+    "question": "Khi làm việc remote, tôi phải dùng VPN và được kết nối trên tối đa bao nhiêu thiết bị?",
+    "expected_answer": "Khi làm việc remote và truy cập hệ thống nội bộ, VPN là bắt buộc (theo HR Leave Policy). Phần mềm VPN là Cisco AnyConnect và mỗi tài khoản được kết nối VPN trên tối đa 2 thiết bị cùng lúc (theo IT Helpdesk FAQ).",
+    "expected_sources": [
+      "hr/leave-policy-2026.pdf",
+      "support/helpdesk-faq.md"
+    ],
+    "category": "Cross-Document",
+    "difficulty": "hard",
+    "answer": "Bạn có thể kết nối VPN trên tối đa 2 thiết bị cùng lúc [1].",
+    "sources": [
+      "support/helpdesk-faq.md",
+      "hr/leave-policy-2026.pdf"
+    ],
+    "chunks_retrieved": 3,
+    "retrieval_mode": "dense",
+    "use_rerank": false,
+    "status": "success",
+    "error": null,
+    "timestamp": "2026-04-13T17:42:08.971043"
+  },
+  {
+    "id": "gq03",
+    "question": "Đơn hàng mua trong chương trình Flash Sale và đã kích hoạt sản phẩm có được hoàn tiền không?",
+    "expected_answer": "Không được hoàn tiền. Đơn hàng rơi vào hai ngoại lệ cùng lúc: (1) đơn hàng áp dụng mã giảm giá chương trình Flash Sale và (2) sản phẩm đã được kích hoạt — cả hai đều thuộc danh sách ngoại lệ không được hoàn tiền theo Điều 3 của chính sách.",
+    "expected_sources": [
+      "policy/refund-v4.pdf"
+    ],
+    "category": "Refund",
+    "difficulty": "hard",
+    "answer": "Không, đơn hàng mua trong chương trình Flash Sale và đã kích hoạt sản phẩm sẽ không được hoàn tiền. Điều này nằm trong ngoại lệ không được hoàn tiền cho các sản phẩm đã áp dụng mã giảm giá đặc biệt và đã được kích hoạt hoặc đăng ký tài khoản [1].",
+    "sources": [
+      "policy/refund-v4.pdf"
+    ],
+    "chunks_retrieved": 3,
+    "retrieval_mode": "dense",
+    "use_rerank": false,
+    "status": "success",
+    "error": null,
+    "timestamp": "2026-04-13T17:42:10.304728"
+  },
+  {
+    "id": "gq04",
+    "question": "Nếu chọn nhận store credit thay vì hoàn tiền, tôi được bao nhiêu phần trăm so với số tiền gốc?",
+    "expected_answer": "Khách hàng có thể chọn nhận store credit (credit nội bộ) thay thế với giá trị 110% so với số tiền hoàn gốc. Đây là tùy chọn, không phải bắt buộc.",
+    "expected_sources": [
+      "policy/refund-v4.pdf"
+    ],
+    "category": "Refund",
+    "difficulty": "medium",
+    "answer": "Nếu bạn chọn nhận store credit thay vì hoàn tiền, bạn sẽ nhận được giá trị 110% so với số tiền gốc [1].",
+    "sources": [
+      "policy/refund-v4.pdf",
+      "hr/leave-policy-2026.pdf"
+    ],
+    "chunks_retrieved": 3,
+    "retrieval_mode": "dense",
+    "use_rerank": false,
+    "status": "success",
+    "error": null,
+    "timestamp": "2026-04-13T17:42:11.894660"
+  },
+  {
+    "id": "gq05",
+    "question": "Contractor từ bên ngoài công ty có thể được cấp quyền Admin Access không? Nếu có, cần bao nhiêu ngày và có yêu cầu đặc biệt gì?",
+    "expected_answer": "Có. Theo Access Control SOP, quy trình áp dụng cho tất cả nhân viên, contractor và third-party vendor. Admin Access (Level 4) cần phê duyệt từ IT Manager và CISO, thời gian xử lý 5 ngày làm việc, và có yêu cầu thêm: training bắt buộc về security policy.",
+    "expected_sources": [
+      "it/access-control-sop.md"
+    ],
+    "category": "Access Control",
+    "difficulty": "hard",
+    "answer": "Not enough data to answer.",
+    "sources": [
+      "policy/refund-v4.pdf",
+      "hr/leave-policy-2026.pdf",
+      "it/access-control-sop.md"
+    ],
+    "chunks_retrieved": 3,
+    "retrieval_mode": "dense",
+    "use_rerank": false,
+    "status": "success",
+    "error": null,
+    "timestamp": "2026-04-13T17:42:13.165298"
+  },
+  {
+    "id": "gq06",
+    "question": "Lúc 2 giờ sáng xảy ra sự cố P1, on-call engineer cần cấp quyền tạm thời cho một engineer xử lý incident. Quy trình cụ thể như thế nào và quyền này tồn tại bao lâu?",
+    "expected_answer": "On-call IT Admin có thể cấp quyền tạm thời (tối đa 24 giờ) sau khi được Tech Lead phê duyệt bằng lời. Sau 24 giờ, phải có ticket chính thức hoặc quyền bị thu hồi tự động. Mọi quyền tạm thời phải được ghi log vào hệ thống Security Audit. Liên hệ on-call qua hotline ext. 9999 (24/7) theo SLA P1.",
+    "expected_sources": [
+      "it/access-control-sop.md",
+      "support/sla-p1-2026.pdf"
+    ],
+    "category": "Cross-Document",
+    "difficulty": "hard",
+    "answer": "Quy trình cấp quyền tạm thời cho engineer trong sự cố P1 như sau: \n\n1. On-call IT Admin có thể cấp quyền tạm thời (tối đa 24 giờ) sau khi được Tech Lead phê duyệt bằng lời.\n2. Sau 24 giờ, phải có ticket chính thức hoặc quyền sẽ bị thu hồi tự động.\n3. Mọi quyền tạm thời phải được ghi log vào hệ thống Security Audit [2]. \n\nQuyền này tồn tại tối đa 24 giờ [2].",
+    "sources": [
+      "support/sla-p1-2026.pdf",
+      "it/access-control-sop.md"
+    ],
+    "chunks_retrieved": 3,
+    "retrieval_mode": "dense",
+    "use_rerank": false,
+    "status": "success",
+    "error": null,
+    "timestamp": "2026-04-13T17:42:14.138260"
+  },
+  {
+    "id": "gq07",
+    "question": "Công ty sẽ phạt bao nhiêu nếu team IT vi phạm cam kết SLA P1?",
+    "expected_answer": "Tài liệu hiện có không quy định mức phạt hay hình thức xử lý khi vi phạm SLA P1. Tài liệu sla-p1-2026.pdf chỉ mô tả quy trình xử lý và SLA target, không có điều khoản về penalty.",
+    "expected_sources": [],
+    "category": "Insufficient Context",
+    "difficulty": "medium",
+    "answer": "Not enough data to answer.",
+    "sources": [
+      "support/sla-p1-2026.pdf",
+      "policy/refund-v4.pdf"
+    ],
+    "chunks_retrieved": 3,
+    "retrieval_mode": "dense",
+    "use_rerank": false,
+    "status": "success",
+    "error": null,
+    "timestamp": "2026-04-13T17:42:16.350084"
+  },
+  {
+    "id": "gq08",
+    "question": "Nhân viên phải báo trước bao nhiêu ngày để xin nghỉ phép năm? Con số này có giống với số ngày cần giấy tờ khi nghỉ ốm không?",
+    "expected_answer": "Nghỉ phép năm cần báo trước ít nhất 3 ngày làm việc qua HR Portal. Nghỉ ốm cũng liên quan đến mốc 3 ngày: nếu nghỉ TRÊN 3 ngày liên tiếp thì cần giấy tờ y tế từ bệnh viện. Hai con số '3 ngày' này áp dụng cho hai tình huống khác nhau.",
+    "expected_sources": [
+      "hr/leave-policy-2026.pdf"
+    ],
+    "category": "HR Policy",
+    "difficulty": "hard",
+    "answer": "Nhân viên phải báo trước ít nhất 3 ngày làm việc để xin nghỉ phép năm [2]. Số ngày cần giấy tờ khi nghỉ ốm là nếu nghỉ trên 3 ngày liên tiếp, cần giấy tờ y tế từ bệnh viện [1]. Do đó, con số này không giống nhau.",
+    "sources": [
+      "hr/leave-policy-2026.pdf",
+      "it/access-control-sop.md"
+    ],
+    "chunks_retrieved": 3,
+    "retrieval_mode": "dense",
+    "use_rerank": false,
+    "status": "success",
+    "error": null,
+    "timestamp": "2026-04-13T17:42:17.459770"
+  },
+  {
+    "id": "gq09",
+    "question": "Mật khẩu tài khoản công ty cần đổi định kỳ không? Nếu có, hệ thống sẽ nhắc nhở trước bao nhiêu ngày và đổi qua đâu?",
+    "expected_answer": "Có. Mật khẩu phải được thay đổi mỗi 90 ngày. Hệ thống sẽ nhắc nhở 7 ngày trước khi hết hạn. Để đổi mật khẩu, truy cập https://sso.company.internal/reset hoặc liên hệ Helpdesk qua ext. 9000.",
+    "expected_sources": [
+      "support/helpdesk-faq.md"
+    ],
+    "category": "IT Helpdesk",
+    "difficulty": "medium",
+    "answer": "Có, mật khẩu phải được thay đổi mỗi 90 ngày. Hệ thống sẽ nhắc nhở 7 ngày trước khi hết hạn [1].",
+    "sources": [
+      "support/helpdesk-faq.md",
+      "it/access-control-sop.md"
+    ],
+    "chunks_retrieved": 3,
+    "retrieval_mode": "dense",
+    "use_rerank": false,
+    "status": "success",
+    "error": null,
+    "timestamp": "2026-04-13T17:42:19.609083"
+  },
+  {
+    "id": "gq10",
+    "question": "Chính sách hoàn tiền hiện tại áp dụng cho đơn hàng đặt trước ngày 01/02/2026 không?",
+    "expected_answer": "Không. Chính sách hoàn tiền phiên bản 4 có hiệu lực từ ngày 01/02/2026 và chỉ áp dụng cho các đơn hàng được đặt kể từ ngày đó. Các đơn hàng đặt trước ngày này sẽ áp dụng theo chính sách hoàn tiền phiên bản 3.",
+    "expected_sources": [
+      "policy/refund-v4.pdf"
+    ],
+    "category": "Refund",
+    "difficulty": "hard",
+    "answer": "Chính sách hoàn tiền hiện tại chỉ áp dụng cho các đơn hàng được đặt từ ngày 01/02/2026. Các đơn hàng đặt trước ngày này sẽ áp dụng theo chính sách hoàn tiền phiên bản 3 [1].",
+    "sources": [
+      "policy/refund-v4.pdf"
+    ],
+    "chunks_retrieved": 3,
+    "retrieval_mode": "dense",
+    "use_rerank": false,
+    "status": "success",
+    "error": null,
+    "timestamp": "2026-04-13T17:42:20.957331"
+  }
+]
