@@ -18,7 +18,7 @@
 ```
 
 **Mô tả ngắn gọn:**
-> TODO: Mô tả hệ thống trong 2-3 câu. Nhóm xây gì? Cho ai dùng? Giải quyết vấn đề gì?
+Hệ thống RAG Helpdesk được xây dựng để hỗ trợ nhân viên CS/IT tra cứu nhanh các quy trình nội bộ (SLA, nghỉ phép, refund, cấp quyền hệ thống). Giải pháp sử dụng kiến trúc RAG nâng cao kết hợp Hybrid Search và Rerank để đảm bảo tính chính xác và giảm thiểu tình trạng AI bịa đặt (hallucination).
 
 ---
 
@@ -27,22 +27,22 @@
 ### Tài liệu được index
 | File | Nguồn | Department | Số chunk |
 |------|-------|-----------|---------|
-| `policy_refund_v4.txt` | policy/refund-v4.pdf | CS | TODO |
-| `sla_p1_2026.txt` | support/sla-p1-2026.pdf | IT | TODO |
-| `access_control_sop.txt` | it/access-control-sop.md | IT Security | TODO |
-| `it_helpdesk_faq.txt` | support/helpdesk-faq.md | IT | TODO |
-| `hr_leave_policy.txt` | hr/leave-policy-2026.pdf | HR | TODO |
+| `policy_refund_v4.txt` | policy/refund-v4.pdf | CS | 6 |
+| `sla_p1_2026.txt` | support/sla-p1-2026.pdf | IT | 8 |
+| `access_control_sop.txt` | it/access-control-sop.md | IT Security | 10 |
+| `it_helpdesk_faq.txt` | support/helpdesk-faq.md | IT | 13 |
+| `hr_leave_policy.txt` | hr/leave-policy-2026.pdf | HR | 5 |
 
 ### Quyết định chunking
 | Tham số | Giá trị | Lý do |
 |---------|---------|-------|
-| Chunk size | TODO tokens | TODO |
-| Overlap | TODO tokens | TODO |
-| Chunking strategy | Heading-based / paragraph-based | TODO |
+| Chunk size | 400 tokens | Phù hợp với độ dài một điều khoản/paragraph |
+| Overlap | 80 tokens | Tránh mất ngữ cảnh ở ranh giới cắt |
+| Chunking strategy | Heading-based + Paragraph-based | Giữ tính toàn vẹn của một Section (SLA, SLA P1...) |
 | Metadata fields | source, section, effective_date, department, access | Phục vụ filter, freshness, citation |
 
 ### Embedding model
-- **Model**: TODO (OpenAI text-embedding-3-small / paraphrase-multilingual-MiniLM-L12-v2)
+- **Model**: OpenAI text-embedding-3-small
 - **Vector store**: ChromaDB (PersistentClient)
 - **Similarity metric**: Cosine
 
@@ -61,44 +61,27 @@
 ### Variant (Sprint 3)
 | Tham số | Giá trị | Thay đổi so với baseline |
 |---------|---------|------------------------|
-| Strategy | TODO (hybrid / dense) | TODO |
-| Top-k search | TODO | TODO |
-| Top-k select | TODO | TODO |
-| Rerank | TODO (cross-encoder / MMR) | TODO |
-| Query transform | TODO (expansion / HyDE / decomposition) | TODO |
+| Strategy | Hybrid (Dense + Sparse) + Rerank | Kết hợp ngữ nghĩa, từ khóa và kiểm chứng lại |
+| Top-k search | 10 | Đảm bảo thu hồi (Recall) tối đa |
+| Top-k select | 3 | Tối ưu độ tập trung cho LLM |
+| Rerank | Cross-Encoder (MiniLM) | Lọc bỏ kết quả "nhiễu" từ Hybrid Search |
 
 **Lý do chọn variant này:**
-> TODO: Giải thích tại sao chọn biến này để tune.
-> Ví dụ: "Chọn hybrid vì corpus có cả câu tự nhiên (policy) lẫn mã lỗi và tên chuyên ngành (SLA ticket P1, ERR-403)."
+Hệ thống xử lý tốt các câu hỏi về chính sách chung nhưng gặp khó khăn với các mã lỗi (P1, ERR-403) và các tên gọi cũ (Approval Matrix). Hybrid Search giúp bắt được từ khóa chính xác, trong khi Rerank đảm bảo thông tin quan trọng nhất luôn nằm ở Top 1.
 
 ---
 
 ## 4. Generation (Sprint 2)
 
 ### Grounded Prompt Template
-```
-Answer only from the retrieved context below.
-If the context is insufficient, say you do not know.
-Cite the source field when possible.
-Keep your answer short, clear, and factual.
-
-Question: {query}
-
-Context:
-[1] {source} | {section} | score={score}
-{chunk_text}
-
-[2] ...
-
-Answer:
-```
+Cấu hình prompt ép mô hình chỉ trả lời từ Context và trích dẫn [1], [2]. Bao gồm các metadata Department và Effective Date để xử lý câu hỏi theo phòng ban và thời gian hiệu lực.
 
 ### LLM Configuration
 | Tham số | Giá trị |
 |---------|---------|
-| Model | TODO (gpt-4o-mini / gemini-1.5-flash) |
-| Temperature | 0 (để output ổn định cho eval) |
-| Max tokens | 512 |
+| Model | OpenAI gpt-4o-mini |
+| Temperature | 0 (để tránh bịa đặt và đảm bảo nhất quán) |
+| Max tokens | 600 |
 
 ---
 

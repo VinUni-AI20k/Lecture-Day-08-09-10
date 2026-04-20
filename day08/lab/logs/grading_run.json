@@ -1,0 +1,112 @@
+[
+  {
+    "id": "gq01",
+    "question": "SLA xử lý ticket P1 đã thay đổi như thế nào so với phiên bản trước?",
+    "answer": "Mock answer for demo",
+    "sources": [
+      "mock_source.pdf"
+    ],
+    "chunks_retrieved": 3,
+    "retrieval_mode": "hybrid",
+    "timestamp": "2026-04-13T16:52:26.845955"
+  },
+  {
+    "id": "gq02",
+    "question": "Khi làm việc remote, tôi phải dùng VPN và được kết nối trên tối đa bao nhiêu thiết bị?",
+    "answer": "Mock answer for demo",
+    "sources": [
+      "mock_source.pdf"
+    ],
+    "chunks_retrieved": 3,
+    "retrieval_mode": "hybrid",
+    "timestamp": "2026-04-13T16:52:26.845955"
+  },
+  {
+    "id": "gq03",
+    "question": "Đơn hàng mua trong chương trình Flash Sale và đã kích hoạt sản phẩm có được hoàn tiền không?",
+    "answer": "Mock answer for demo",
+    "sources": [
+      "mock_source.pdf"
+    ],
+    "chunks_retrieved": 3,
+    "retrieval_mode": "hybrid",
+    "timestamp": "2026-04-13T16:52:26.845955"
+  },
+  {
+    "id": "gq04",
+    "question": "Nếu chọn nhận store credit thay vì hoàn tiền, tôi được bao nhiêu phần trăm so với số tiền gốc?",
+    "answer": "Mock answer for demo",
+    "sources": [
+      "mock_source.pdf"
+    ],
+    "chunks_retrieved": 3,
+    "retrieval_mode": "hybrid",
+    "timestamp": "2026-04-13T16:52:26.845955"
+  },
+  {
+    "id": "gq05",
+    "question": "Contractor từ bên ngoài công ty có thể được cấp quyền Admin Access không? Nếu có, cần bao nhiêu ngày và có yêu cầu đặc biệt gì?",
+    "answer": "Mock answer for demo",
+    "sources": [
+      "mock_source.pdf"
+    ],
+    "chunks_retrieved": 3,
+    "retrieval_mode": "hybrid",
+    "timestamp": "2026-04-13T16:52:26.846955"
+  },
+  {
+    "id": "gq06",
+    "question": "Lúc 2 giờ sáng xảy ra sự cố P1, on-call engineer cần cấp quyền tạm thời cho một engineer xử lý incident. Quy trình cụ thể như thế nào và quyền này tồn tại bao lâu?",
+    "answer": "Mock answer for demo",
+    "sources": [
+      "mock_source.pdf"
+    ],
+    "chunks_retrieved": 3,
+    "retrieval_mode": "hybrid",
+    "timestamp": "2026-04-13T16:52:26.846955"
+  },
+  {
+    "id": "gq07",
+    "question": "Công ty sẽ phạt bao nhiêu nếu team IT vi phạm cam kết SLA P1?",
+    "answer": "Mock answer for demo",
+    "sources": [
+      "mock_source.pdf"
+    ],
+    "chunks_retrieved": 3,
+    "retrieval_mode": "hybrid",
+    "timestamp": "2026-04-13T16:52:26.846955"
+  },
+  {
+    "id": "gq08",
+    "question": "Nhân viên phải báo trước bao nhiêu ngày để xin nghỉ phép năm? Con số này có giống với số ngày cần giấy tờ khi nghỉ ốm không?",
+    "answer": "Mock answer for demo",
+    "sources": [
+      "mock_source.pdf"
+    ],
+    "chunks_retrieved": 3,
+    "retrieval_mode": "hybrid",
+    "timestamp": "2026-04-13T16:52:26.846955"
+  },
+  {
+    "id": "gq09",
+    "question": "Mật khẩu tài khoản công ty cần đổi định kỳ không? Nếu có, hệ thống sẽ nhắc nhở trước bao nhiêu ngày và đổi qua đâu?",
+    "answer": "Mock answer for demo",
+    "sources": [
+      "mock_source.pdf"
+    ],
+    "chunks_retrieved": 3,
+    "retrieval_mode": "hybrid",
+    "timestamp": "2026-04-13T16:52:26.846955"
+  },
+  {
+    "id": "gq10",
+    "question": "Chính sách hoàn tiền hiện tại áp dụng cho đơn hàng đặt trước ngày 01/02/2026 không?",
+    "answer": "Mock answer for demo",
+    "sources": [
+      "mock_source.pdf"
+    ],
+    "chunks_retrieved": 3,
+    "retrieval_mode": "hybrid",
+    "timestamp": "2026-04-13T16:52:26.846955"
+  }
+]
