@@ -97,28 +97,50 @@ def supervisor_node(state: AgentState) -> AgentState:
     # - mã lỗi không rõ (ERR-XXX), không đủ context → human_review
     # - còn lại → retrieval_worker
 
+
     route = "retrieval_worker"         # TODO: thay bằng logic thực
-    route_reason = "default route"    # TODO: thay bằng lý do thực
+    route_reason = "Không có từ khóa đặc biệt → mặc định retrieval_worker"    # TODO: thay bằng lý do thực
     needs_tool = False
     risk_high = False
 
-    # Ví dụ routing cơ bản — nhóm phát triển thêm:
-    policy_keywords = ["hoàn tiền", "refund", "flash sale", "license", "cấp quyền", "access", "level 3"]
-    risk_keywords = ["emergency", "khẩn cấp", "2am", "không rõ", "err-"]
+    policy_keywords = [
+        "nghỉ phép", "annual leave", "nghỉ ốm", "thai sản", "làm thêm", "remote", "hr portal",
+        "hoàn tiền", "refund", "store credit", "flash sale", "mở seal", "kỹ thuật số",
+        "cấp quyền", "access", "level 1", "level 2", "level 3", "level 4", "thu hồi quyền", "emergency"
+    ]
+    
+    it_support_keywords = [
+        "p1", "p2", "p3", "p4", "sla", "incident", "workaround", "resolution", "on-call",
+        "mật khẩu", "password", "sso", "vpn", "cisco", "laptop", "license", "hộp thư", "spam", "bị khóa", "reset"
+    ]
+    
+    risk_keywords = [
+        "err-", "không rõ"
+    ]
 
-    if any(kw in task for kw in policy_keywords):
+    # Priority 1: Human review nếu có dấu hiệu mã lỗi hoặc thiếu context
+    if any(kw in task for kw in risk_keywords):
+        route = "human_review"
+        route_reason = "Task chứa yếu tố khẩn cấp/ngoại lệ/mã lỗi lạ → điều hướng human review"
+        risk_high = True
+
+    # Priority 2: Nếu có từ khóa liên quan IT support, ưu tiên retrieval để lấy evidence
+    elif any(kw in task for kw in it_support_keywords):
+        route = "retrieval_worker"
+        route_reason = f"Task hỏi về hệ thống IT/SLA → ưu tiên retrieval_worker để lấy evidence"
+        needs_tool = False
+
+    # Priority 3: Nếu có từ khóa liên quan đến risk cao, flag để supervisor cân nhắc HITL
+    elif any(kw in task for kw in policy_keywords):
         route = "policy_tool_worker"
-        route_reason = f"task contains policy/access keyword"
+        route_reason = "Task liên quan đến chính sách/điều khoản → điều hướng policy_tool_worker"
         needs_tool = True
 
-    if any(kw in task for kw in risk_keywords):
-        risk_high = True
-        route_reason += " | risk_high flagged"
+    # Default: retrieval_worker
+    else:
+        route = "retrieval_worker"
+        route_reason = "Không có từ khóa đặc biệt → mặc định retrieval_worker"
 
-    # Human review override
-    if risk_high and "err-" in task:
-        route = "human_review"
-        route_reason = "unknown error code + risk_high → human review"
 
     state["supervisor_route"] = route
     state["route_reason"] = route_reason
