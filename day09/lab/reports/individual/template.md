@@ -7,12 +7,20 @@
 
 ---
 
-> **Lưu ý quan trọng:**
-> - Viết ở ngôi **"tôi"**, gắn với chi tiết thật của phần bạn làm
-> - Phải có **bằng chứng cụ thể**: tên file, đoạn code, kết quả trace, hoặc commit
-> - Nội dung phân tích phải khác hoàn toàn với các thành viên trong nhóm
-> - Deadline: Được commit **sau 18:00** (xem SCORING.md)
-> - Lưu file với tên: `reports/individual/[ten_ban].md` (VD: `nguyen_van_a.md`)
+> **Lưu ý quan trọng (để tránh mất điểm cá nhân):**
+> - Viết ở ngôi **"tôi"**, gắn với chi tiết thật của phần bạn làm.
+> - Mỗi phần phải có **bằng chứng cụ thể**: file, function, trace id hoặc commit.
+> - Nội dung phân tích phải khác hoàn toàn với thành viên khác.
+> - Deadline: được commit sau 18:00 (xem `SCORING.md`).
+> - Lưu file với tên: `reports/individual/[ten_ban].md` (VD: `nguyen_van_a.md`).
+
+## Checklist bắt buộc trước khi nộp
+
+- [ ] Có nêu rõ file/function tôi trực tiếp làm.
+- [ ] Có ít nhất 1 quyết định kỹ thuật + trade-off.
+- [ ] Có ít nhất 1 bug fix thực tế + before/after evidence.
+- [ ] Có đề cập mối liên hệ phần tôi làm với output nhóm.
+- [ ] Không có claim nào trái với code/trace hiện có.
 
 ---
 
@@ -24,6 +32,7 @@
 **Module/file tôi chịu trách nhiệm:**
 - File chính: `___________________`
 - Functions tôi implement: `___________________`
+- Contract/trace fields tôi đụng tới: `___________________`
 
 **Cách công việc của tôi kết nối với phần của thành viên khác:**
 
@@ -31,7 +40,9 @@ _________________
 
 **Bằng chứng (commit hash, file có comment tên bạn, v.v.):**
 
-_________________
+- Commit: `___________________`
+- File liên quan: `___________________`
+- Trace id/run id liên quan: `___________________`
 
 ---
 
@@ -65,6 +76,10 @@ _________________
 [PASTE ĐOẠN CODE HOẶC TRACE RELEVANT VÀO ĐÂY]
 ```
 
+**Liên kết sang file/trace thật (bắt buộc điền):**
+- File code: `___________________`
+- Trace file/id: `___________________`
+
 ---
 
 ## 3. Tôi đã sửa một lỗi gì? (150–200 từ)
@@ -89,7 +104,9 @@ _________________
 **Bằng chứng trước/sau:**
 > Dán trace/log/output trước khi sửa và sau khi sửa.
 
-_________________
+- Trước khi sửa: `___________________`
+- Sau khi sửa: `___________________`
+- File đã sửa: `___________________`
 
 ---
 
@@ -124,6 +141,12 @@ _________________
 _________________
 
 ---
+
+## Self-check chống 0/40
+
+- [ ] Tôi giải thích được rõ phần mình khai báo khi bị hỏi trực tiếp.
+- [ ] Claim trong báo cáo khớp `workers_called`, `route_reason`, `mcp_tools_used` (nếu có).
+- [ ] Không copy câu chữ/ý chính từ báo cáo cá nhân thành viên khác.
 
 *Lưu file này với tên: `reports/individual/[ten_ban].md`*  
 *Ví dụ: `reports/individual/nguyen_van_a.md`*

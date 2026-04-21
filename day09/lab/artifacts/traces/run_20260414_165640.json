@@ -1,0 +1,106 @@
+{
+  "task": "Ticket P1 không được phản hồi sau 10 phút. Hệ thống tự động làm gì?",
+  "route_reason": "task contains retrieval keyword (P1/SLA/ticket/escalation)",
+  "risk_high": false,
+  "needs_tool": false,
+  "hitl_triggered": false,
+  "retrieved_chunks": [
+    {
+      "text": "Ticket P1:\n- Phản hồi ban đầu (first response): 15 phút kể từ khi ticket được tạo.\n- Xử lý và khắc phục (resolution): 4 giờ.\n- Escalation: Tự động escalate lên Senior Engineer nếu không có phản hồi trong 10 phút.\n- Thông báo stakeholder: Ngay khi nhận ticket, update mỗi 30 phút cho đến khi resolve.\n\nTicket P2:\n- Phản hồi ban đầu: 2 giờ.\n- Xử lý và khắc phục: 1 ngày làm việc.\n- Escalation: Tự động escalate sau 90 phút không có phản hồi.\n\nTicket P3:\n- Phản hồi ban đầu: 1 ngày làm việc.\n- Xử lý và khắc phục: 5 ngày làm việc.\n\nTicket P4:\n- Phản hồi ban đầu: 3 ngày làm việc.\n- Xử lý và khắc phục: Theo sprint cycle (thông thường 2-4 tuần).",
+      "source": "support/sla-p1-2026.pdf",
+      "score": 0.7773,
+      "metadata": {
+        "department": "IT",
+        "effective_date": "2026-01-15",
+        "source": "support/sla-p1-2026.pdf",
+        "access": "internal",
+        "section": "Phần 2: SLA theo mức độ ưu tiên"
+      }
+    },
+    {
+      "text": "Ticket system: Jira (project IT-SUPPORT)\nSlack channel: #incident-p1, #incident-p2\nPagerDuty: Tự động nhắn on-call khi P1 ticket mới\nHotline on-call: ext. 9999 (24/7)",
+      "source": "support/sla-p1-2026.pdf",
+      "score": 0.6897,
+      "metadata": {
+        "section": "Phần 4: Công cụ và kênh liên lạc",
+        "access": "internal",
+        "effective_date": "2026-01-15",
+        "department": "IT",
+        "source": "support/sla-p1-2026.pdf"
+      }
+    },
+    {
+      "text": "Bước 1: Khách hàng gửi yêu cầu qua hệ thống ticket nội bộ với category \"Refund Request\".\nBước 2: CS Agent xem xét trong vòng 1 ngày làm việc và xác nhận điều kiện đủ điều kiện.\nBước 3: Nếu đủ điều kiện, chuyển yêu cầu sang Finance Team để xử lý hoàn tiền.\nBước 4: Finance Team xử lý trong 3-5 ngày làm việc và thông báo kết quả cho khách hàng.",
+      "source": "policy/refund-v4.pdf",
+      "score": 0.6645,
+      "metadata": {
+        "source": "policy/refund-v4.pdf",
+        "section": "Điều 4: Quy trình xử lý yêu cầu hoàn tiền",
+        "access": "internal",
+        "effective_date": "2026-02-01",
+        "department": "CS"
+      }
+    }
+  ],
+  "retrieved_sources": [
+    "support/sla-p1-2026.pdf",
+    "policy/refund-v4.pdf"
+  ],
+  "policy_result": {},
+  "mcp_tools_used": [],
+  "final_answer": "Trả lời tóm tắt cho câu hỏi: Ticket P1 không được phản hồi sau 10 phút. Hệ thống tự động làm gì?\n- [1] Ticket P1: - Phản hồi ban đầu (first response): 15 phút kể từ khi ticket được tạo. - Xử lý và khắc phục (resolution): 4 giờ. - Escalation: Tự động escalate lên Senior Engineer nếu không có phản hồi trong 10 phút. - Thông [support/sla-p1-2026.pdf]\n- [2] Ticket system: Jira (project IT-SUPPORT) Slack channel: #incident-p1, #incident-p2 PagerDuty: Tự động nhắn on-call khi P1 ticket mới Hotline on-call: ext. 9999 (24/7) [support/sla-p1-2026.pdf]",
+  "sources": [
+    "support/sla-p1-2026.pdf",
+    "policy/refund-v4.pdf"
+  ],
+  "confidence": 0.71,
+  "history": [
+    "[supervisor] received task: Ticket P1 không được phản hồi sau 10 phút. Hệ thống tự động làm gì?",
+    "[supervisor] route=retrieval_worker reason=task contains retrieval keyword (P1/SLA/ticket/escalation)",
+    "[retrieval_worker] retrieved 3 chunks from ['support/sla-p1-2026.pdf', 'policy/refund-v4.pdf']",
+    "[synthesis_worker] answer generated, confidence=0.71, sources=['support/sla-p1-2026.pdf', 'policy/refund-v4.pdf']",
+    "[graph] completed in 2887ms"
+  ],
+  "workers_called": [
+    "retrieval_worker",
+    "synthesis_worker"
+  ],
+  "supervisor_route": "retrieval_worker",
+  "latency_ms": 2887,
+  "run_id": "run_20260414_165640",
+  "worker_io_logs": [
+    {
+      "worker": "retrieval_worker",
+      "input": {
+        "task": "Ticket P1 không được phản hồi sau 10 phút. Hệ thống tự động làm gì?",
+        "top_k": 3
+      },
+      "output": {
+        "chunks_count": 3,
+        "sources": [
+          "support/sla-p1-2026.pdf",
+          "policy/refund-v4.pdf"
+        ]
+      },
+      "error": null
+    },
+    {
+      "worker": "synthesis_worker",
+      "input": {
+        "task": "Ticket P1 không được phản hồi sau 10 phút. Hệ thống tự động làm gì?",
+        "chunks_count": 3,
+        "has_policy": false
+      },
+      "output": {
+        "answer_length": 548,
+        "sources": [
+          "support/sla-p1-2026.pdf",
+          "policy/refund-v4.pdf"
+        ],
+        "confidence": 0.71
+      },
+      "error": null
+    }
+  ],
+  "question_id": "q06"
+}

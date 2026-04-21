@@ -1,121 +1,107 @@
 # Routing Decisions Log — Lab Day 09
 
-**Nhóm:** ___________  
-**Ngày:** ___________
+**Nhóm:** 04 
+**Ngày:** 2026-04-14
 
-> **Hướng dẫn:** Ghi lại ít nhất **3 quyết định routing** thực tế từ trace của nhóm.
-> Không ghi giả định — phải từ trace thật (`artifacts/traces/`).
-> 
-> Mỗi entry phải có: task đầu vào → worker được chọn → route_reason → kết quả thực tế.
+## Mục tiêu tài liệu
 
----
+- Ghi ít nhất 3 quyết định routing từ trace thật trong `artifacts/traces/` hoặc `artifacts/grading_run.jsonl`.
+- Mỗi quyết định phải đủ 4 ý: `task` -> `supervisor_route` -> `route_reason` -> `kết quả`.
+- Bám đúng code hiện tại trong `graph.py` (rule-based route + worker thật).
+
+## Cách trích evidence nhanh
+
+1. Chọn 3-5 câu đại diện từ run gần nhất.
+2. Copy nguyên văn các field sau từ trace:
+   - `task` hoặc `question`
+   - `supervisor_route`
+   - `route_reason`
+   - `workers_called`
+   - `mcp_tools_used`
+   - `confidence`
+3. Đánh giá routing đúng/sai theo mục tiêu câu hỏi, không theo cảm tính.
 
 ## Routing Decision #1
 
-**Task đầu vào:**
-> _________________
+**Trace file / id:** `artifacts/traces/run_20260414_165615.json`  
+**Task đầu vào:** `SLA xử lý ticket P1 là bao lâu?`  
+**Supervisor route:** `retrieval_worker`  
+**Route reason (raw):** `task contains retrieval keyword (P1/SLA/ticket/escalation)`
 
-**Worker được chọn:** `___________________`  
-**Route reason (từ trace):** `___________________`  
-**MCP tools được gọi:** _________________  
-**Workers called sequence:** _________________
+**Execution evidence**
+- workers_called: `["retrieval_worker", "synthesis_worker"]`
+- mcp_tools_used: `[]`
+- confidence: `0.76`
+- final_answer (rút gọn): `Ticket P1 phản hồi 15 phút, xử lý 4 giờ, có citation nguồn SLA.`
 
-**Kết quả thực tế:**
-- final_answer (ngắn): _________________
-- confidence: _________________
-- Correct routing? Yes / No
-
-**Nhận xét:** _(Routing này đúng hay sai? Nếu sai, nguyên nhân là gì?)_
-
-_________________
-
----
+**Đánh giá**
+- Correct routing? `Yes`
+- Lý do: câu hỏi SLA/P1 đúng domain retrieval.
+- Nếu sai, sửa ở đâu trong `graph.py`: `supervisor_node()` (không cần sửa cho case này).
 
 ## Routing Decision #2
 
-**Task đầu vào:**
-> _________________
+**Trace file / id:** `artifacts/traces/run_20260414_165651.json`  
+**Task đầu vào:** `Store credit khi hoàn tiền có giá trị bao nhiêu so với tiền gốc?`  
+**Supervisor route:** `policy_tool_worker`  
+**Route reason (raw):** `task contains policy/access keyword -> policy_tool_worker + MCP allowed`
 
-**Worker được chọn:** `___________________`  
-**Route reason (từ trace):** `___________________`  
-**MCP tools được gọi:** _________________  
-**Workers called sequence:** _________________
+**Execution evidence**
+- workers_called: `["policy_tool_worker", "synthesis_worker"]`
+- mcp_tools_used: `["search_kb"]`
+- confidence: `0.75`
+- final_answer (rút gọn): `Store credit = 110% giá trị hoàn tiền, có citation policy/refund-v4.pdf.`
 
-**Kết quả thực tế:**
-- final_answer (ngắn): _________________
-- confidence: _________________
-- Correct routing? Yes / No
-
-**Nhận xét:**
-
-_________________
-
----
+**Đánh giá**
+- Correct routing? `Yes`
+- Lý do: câu policy hoàn tiền nên route sang policy worker + MCP là hợp lý.
+- Nếu sai, sửa ở đâu trong `graph.py`: không sai route; cải thiện thêm ở policy rules/synthesis formatting.
 
 ## Routing Decision #3
 
-**Task đầu vào:**
-> _________________
+**Trace file / id:** `artifacts/traces/run_20260414_165705.json`  
+**Task đầu vào:** `Ticket P1 lúc 2am... cấp Level 2 access... notify stakeholders...`  
+**Supervisor route:** `retrieval_worker`  
+**Route reason (raw):** `task contains retrieval keyword (P1/SLA/ticket/escalation) | risk_high flagged`
 
-**Worker được chọn:** `___________________`  
-**Route reason (từ trace):** `___________________`  
-**MCP tools được gọi:** _________________  
-**Workers called sequence:** _________________
+**Execution evidence**
+- workers_called: `["retrieval_worker", "synthesis_worker"]`
+- mcp_tools_used: `[]`
+- confidence: `0.77`
+- final_answer (rút gọn): `Có cả quy trình emergency access và notify stakeholders theo SLA, cite 2 nguồn.`
 
-**Kết quả thực tế:**
-- final_answer (ngắn): _________________
-- confidence: _________________
-- Correct routing? Yes / No
+**Đánh giá**
+- Correct routing? `Yes (thực dụng)`
+- Lý do: retrieval đã trả đủ chunks từ cả `it/access-control-sop.md` và `support/sla-p1-2026.pdf`.
+- Nếu sai, sửa ở đâu trong `graph.py`: có thể tối ưu thêm multi-hop chain, nhưng hiện tại đã trả đủ evidence.
 
-**Nhận xét:**
+## Routing Decision #4 (bonus cho gq09 hoặc case khó)
 
-_________________
+**Trace file / id:** `artifacts/traces/run_20260414_165705.json`  
+**Task đầu vào:** `q15 multi-hop (P1 + access level + emergency + notify)`  
+**Supervisor route:** `retrieval_worker`  
+**Route reason (raw):** `...retrieval keyword... | risk_high flagged`
 
----
+**Vì sao case này khó?**  
+Do câu hỏi yêu cầu đồng thời 2 domain (SLA + access control) và cần trả đầy đủ theo timeline. Case này kiểm tra khả năng retrieve multi-source + synthesis không bỏ sót ý.
 
-## Routing Decision #4 (tuỳ chọn — bonus)
+## Tổng kết định lượng
 
-**Task đầu vào:**
-> _________________
+| Worker | Số câu được route | Tỉ lệ |
+|---|---:|---:|
+| retrieval_worker | 10 | 66% |
+| policy_tool_worker | 5 | 33% |
+| human_review | 0 | 0% |
 
-**Worker được chọn:** `___________________`  
-**Route reason:** `___________________`
+| Chỉ số | Giá trị |
+|---|---|
+| Câu route đúng (ước lượng thủ công) | 13 / 15 |
+| Câu route sai/partial (ước lượng thủ công) | 2 |
+| Câu có `route_reason` hữu ích để debug | 15 / 15 |
+| Câu trigger HITL (`hitl_triggered=true`) | 1 |
 
-**Nhận xét: Đây là trường hợp routing khó nhất trong lab. Tại sao?**
+## Lesson learned cho vòng sau
 
-_________________
-
----
-
-## Tổng kết
-
-### Routing Distribution
-
-| Worker | Số câu được route | % tổng |
-|--------|------------------|--------|
-| retrieval_worker | ___ | ___% |
-| policy_tool_worker | ___ | ___% |
-| human_review | ___ | ___% |
-
-### Routing Accuracy
-
-> Trong số X câu nhóm đã chạy, bao nhiêu câu supervisor route đúng?
-
-- Câu route đúng: ___ / ___
-- Câu route sai (đã sửa bằng cách nào?): ___
-- Câu trigger HITL: ___
-
-### Lesson Learned về Routing
-
-> Quyết định kỹ thuật quan trọng nhất nhóm đưa ra về routing logic là gì?  
-> (VD: dùng keyword matching vs LLM classifier, threshold confidence cho HITL, v.v.)
-
-1. ___________________
-2. ___________________
-
-### Route Reason Quality
-
-> Nhìn lại các `route_reason` trong trace — chúng có đủ thông tin để debug không?  
-> Nếu chưa, nhóm sẽ cải tiến format route_reason thế nào?
-
-_________________
+1. Quy tắc route SLA/P1 -> retrieval giữ lại vì đơn giản, dễ debug.
+2. Quy tắc cho multi-hop cần nâng cấp để gọi cả policy_tool + retrieval theo chain.
+3. `route_reason` nên thêm `matched_keywords=[...]` để audit rõ hơn.

@@ -1,0 +1,108 @@
+{
+  "task": "ERR-403-AUTH là lỗi gì và cách xử lý?",
+  "route_reason": "unknown error code + risk_high -> human_review | human approved -> retrieval",
+  "risk_high": true,
+  "needs_tool": false,
+  "hitl_triggered": true,
+  "retrieved_chunks": [
+    {
+      "text": "Q: Tôi quên mật khẩu, phải làm gì?\nA: Truy cập https://sso.company.internal/reset hoặc liên hệ Helpdesk qua ext. 9000. Mật khẩu mới sẽ được gửi qua email công ty trong vòng 5 phút.\n\nQ: Tài khoản bị khóa sau bao nhiêu lần đăng nhập sai?\nA: Tài khoản bị khóa sau 5 lần đăng nhập sai liên tiếp. Để mở khóa, liên hệ IT Helpdesk hoặc tự reset qua portal SSO.\n\nQ: Mật khẩu cần thay đổi định kỳ không?\nA: Có. Mật khẩu phải được thay đổi mỗi 90 ngày. Hệ thống sẽ nhắc nhở 7 ngày trước khi hết hạn.",
+      "source": "support/helpdesk-faq.md",
+      "score": 0.6456,
+      "metadata": {
+        "access": "internal",
+        "department": "IT",
+        "effective_date": "2026-01-20",
+        "section": "Section 1: Tài khoản và mật khẩu",
+        "source": "support/helpdesk-faq.md"
+      }
+    },
+    {
+      "text": "P1 — CRITICAL (Khẩn cấp):\nĐịnh nghĩa: Sự cố ảnh hưởng toàn bộ hệ thống production, không có workaround.\nVí dụ: Database sập, API gateway down, toàn bộ người dùng không thể đăng nhập.\n\nP2 — HIGH (Nghiêm trọng):\nĐịnh nghĩa: Sự cố ảnh hưởng một phần hệ thống, có workaround tạm thời.\nVí dụ: Một số tính năng không hoạt động, ảnh hưởng một nhóm người dùng.\n\nP3 — MEDIUM (Trung bình):\nĐịnh nghĩa: Lỗi ảnh hưởng không đáng kể, người dùng vẫn làm việc được.\n\nP4 — LOW (Thấp):\nĐịnh nghĩa: Yêu cầu cải tiến, gợi ý, hoặc lỗi giao diện nhỏ.",
+      "source": "support/sla-p1-2026.pdf",
+      "score": 0.6313,
+      "metadata": {
+        "department": "IT",
+        "effective_date": "2026-01-15",
+        "access": "internal",
+        "section": "Phần 1: Định nghĩa mức độ ưu tiên",
+        "source": "support/sla-p1-2026.pdf"
+      }
+    },
+    {
+      "text": "Q: Hộp thư đến đầy, phải làm gì?\nA: Xóa email cũ hoặc yêu cầu tăng dung lượng qua ticket IT-ACCESS. Dung lượng tiêu chuẩn là 50GB.\n\nQ: Tôi không nhận được email từ bên ngoài?\nA: Kiểm tra thư mục Spam trước. Nếu vẫn không có, tạo ticket P2 kèm địa chỉ email gửi và thời gian gửi.",
+      "source": "support/helpdesk-faq.md",
+      "score": 0.6289,
+      "metadata": {
+        "source": "support/helpdesk-faq.md",
+        "section": "Section 5: Email và lịch",
+        "department": "IT",
+        "access": "internal",
+        "effective_date": "2026-01-20"
+      }
+    }
+  ],
+  "retrieved_sources": [
+    "support/helpdesk-faq.md",
+    "support/sla-p1-2026.pdf"
+  ],
+  "policy_result": {},
+  "mcp_tools_used": [],
+  "final_answer": "Trả lời tóm tắt cho câu hỏi: ERR-403-AUTH là lỗi gì và cách xử lý?\n- [1] Q: Tôi quên mật khẩu, phải làm gì? A: Truy cập https://sso.company.internal/reset hoặc liên hệ Helpdesk qua ext. 9000. Mật khẩu mới sẽ được gửi qua email công ty trong vòng 5 phút.  Q: Tài khoản bị khóa sau bao nhiêu lần [support/helpdesk-faq.md]\n- [2] P1 — CRITICAL (Khẩn cấp): Định nghĩa: Sự cố ảnh hưởng toàn bộ hệ thống production, không có workaround. Ví dụ: Database sập, API gateway down, toàn bộ người dùng không thể đăng nhập.  P2 — HIGH (Nghiêm trọng): Định nghĩa [support/sla-p1-2026.pdf]",
+  "sources": [
+    "support/helpdesk-faq.md",
+    "support/sla-p1-2026.pdf"
+  ],
+  "confidence": 0.64,
+  "history": [
+    "[supervisor] received task: ERR-403-AUTH là lỗi gì và cách xử lý?",
+    "[supervisor] route=human_review reason=unknown error code + risk_high -> human_review",
+    "[human_review] HITL triggered; auto-approve in lab mode",
+    "[retrieval_worker] retrieved 3 chunks from ['support/helpdesk-faq.md', 'support/sla-p1-2026.pdf']",
+    "[synthesis_worker] answer generated, confidence=0.64, sources=['support/helpdesk-faq.md', 'support/sla-p1-2026.pdf']",
+    "[graph] completed in 2823ms"
+  ],
+  "workers_called": [
+    "human_review",
+    "retrieval_worker",
+    "synthesis_worker"
+  ],
+  "supervisor_route": "retrieval_worker",
+  "latency_ms": 2823,
+  "run_id": "run_20260414_165649",
+  "worker_io_logs": [
+    {
+      "worker": "retrieval_worker",
+      "input": {
+        "task": "ERR-403-AUTH là lỗi gì và cách xử lý?",
+        "top_k": 3
+      },
+      "output": {
+        "chunks_count": 3,
+        "sources": [
+          "support/helpdesk-faq.md",
+          "support/sla-p1-2026.pdf"
+        ]
+      },
+      "error": null
+    },
+    {
+      "worker": "synthesis_worker",
+      "input": {
+        "task": "ERR-403-AUTH là lỗi gì và cách xử lý?",
+        "chunks_count": 3,
+        "has_policy": false
+      },
+      "output": {
+        "answer_length": 572,
+        "sources": [
+          "support/helpdesk-faq.md",
+          "support/sla-p1-2026.pdf"
+        ],
+        "confidence": 0.64
+      },
+      "error": null
+    }
+  ],
+  "question_id": "q09"
+}

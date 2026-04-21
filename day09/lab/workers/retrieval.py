@@ -17,6 +17,9 @@ Gọi độc lập để test:
 
 import os
 import sys
+from pathlib import Path
+
+from dotenv import load_dotenv
 
 # ─────────────────────────────────────────────
 # Worker Contract (xem contracts/worker_contracts.yaml)
@@ -27,38 +30,85 @@ import sys
 WORKER_NAME = "retrieval_worker"
 DEFAULT_TOP_K = 3
 
+load_dotenv()
+
 
 def _get_embedding_fn():
     """
     Trả về embedding function.
-    TODO Sprint 1: Implement dùng OpenAI hoặc Sentence Transformers.
+    Ưu tiên dùng cùng provider/model với scripts/build_index.py (Vertex AI).
     """
-    # Option A: Sentence Transformers (offline, không cần API key)
+    # Option A: Vertex AI text-multilingual-embedding-002 (khớp build_index.py)
+    try:
+        import vertexai
+        from vertexai.language_models import TextEmbeddingModel
+
+        creds_file = os.getenv("GOOGLE_APPLICATION_CREDENTIALS", "")
+        if creds_file:
+            creds_path = Path(__file__).parent.parent / creds_file
+            if creds_path.exists():
+                os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = str(creds_path)
+
+        project = os.getenv("VERTEX_PROJECT") or os.getenv("GOOGLE_CLOUD_PROJECT", "vinai053")
+        location = os.getenv("VERTEX_LOCATION") or os.getenv("GOOGLE_CLOUD_LOCATION", "us-central1")
+        model_name = os.getenv("VERTEX_EMBEDDING_MODEL", "text-multilingual-embedding-002")
+
+        if project:
+            vertexai.init(project=project, location=location)
+            model = TextEmbeddingModel.from_pretrained(model_name)
+            print(f"[retrieval] embedding provider=vertex model={model_name}")
+
+            def embed(text: str) -> list:
+                return model.get_embeddings([text])[0].values
+
+            return embed
+    except Exception as e:
+        print(f"⚠️  Vertex embedding unavailable: {e}")
+
+    # Option B: OpenAI
+    openai_key = os.getenv("OPENAI_API_KEY")
+    if openai_key:
+        try:
+            from openai import OpenAI
+            client = OpenAI(api_key=openai_key)
+            print("[retrieval] embedding provider=openai model=text-embedding-3-small")
+
+            def embed(text: str) -> list:
+                resp = client.embeddings.create(input=text, model="text-embedding-3-small")
+                return resp.data[0].embedding
+
+            return embed
+        except ImportError:
+            pass
+
+    # Option C: Sentence Transformers (offline)
     try:
         from sentence_transformers import SentenceTransformer
+
         model = SentenceTransformer("all-MiniLM-L6-v2")
+        print("[retrieval] embedding provider=sentence-transformers model=all-MiniLM-L6-v2")
+
         def embed(text: str) -> list:
             return model.encode([text])[0].tolist()
+
         return embed
-    except ImportError:
+    except Exception:
         pass
 
-    # Option B: OpenAI (cần API key)
-    try:
-        from openai import OpenAI
-        client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-        def embed(text: str) -> list:
-            resp = client.embeddings.create(input=text, model="text-embedding-3-small")
-            return resp.data[0].embedding
-        return embed
-    except ImportError:
-        pass
+    # Option D: deterministic pseudo-embedding cho test (không cần API key)
+    import hashlib
 
-    # Fallback: random embeddings cho test (KHÔNG dùng production)
-    import random
     def embed(text: str) -> list:
-        return [random.random() for _ in range(384)]
-    print("⚠️  WARNING: Using random embeddings (test only). Install sentence-transformers.")
+        digest = hashlib.sha256(text.encode("utf-8")).digest()
+        # tạo vector ổn định 384 chiều từ hash
+        values = []
+        seed = digest
+        while len(values) < 384:
+            seed = hashlib.sha256(seed).digest()
+            values.extend([(b / 255.0) for b in seed])
+        return values[:384]
+
+    print("⚠️  WARNING: Using deterministic fallback embeddings (test mode).")
     return embed
 
 
@@ -184,6 +234,8 @@ def run(state: dict) -> dict:
 # ─────────────────────────────────────────────
 
 if __name__ == "__main__":
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     print("=" * 50)
     print("Retrieval Worker — Standalone Test")
     print("=" * 50)
@@ -195,7 +247,7 @@ if __name__ == "__main__":
     ]
 
     for query in test_queries:
-        print(f"\n▶ Query: {query}")
+        print(f"\n> Query: {query}")
         result = run({"task": query})
         chunks = result.get("retrieved_chunks", [])
         print(f"  Retrieved: {len(chunks)} chunks")
@@ -203,4 +255,4 @@ if __name__ == "__main__":
             print(f"    [{c['score']:.3f}] {c['source']}: {c['text'][:80]}...")
         print(f"  Sources: {result.get('retrieved_sources', [])}")
 
-    print("\n✅ retrieval_worker test done.")
+    print("\n[OK] retrieval_worker test done.")

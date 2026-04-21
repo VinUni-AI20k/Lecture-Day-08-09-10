@@ -1,0 +1,116 @@
+{
+  "task": "Tài khoản bị khóa sau bao nhiêu lần đăng nhập sai?",
+  "route_reason": "default route",
+  "risk_high": false,
+  "needs_tool": false,
+  "hitl_triggered": false,
+  "retrieved_chunks": [
+    {
+      "text": "Q: Tôi quên mật khẩu, phải làm gì?\nA: Truy cập https://sso.company.internal/reset hoặc liên hệ Helpdesk qua ext. 9000. Mật khẩu mới sẽ được gửi qua email công ty trong vòng 5 phút.\n\nQ: Tài khoản bị khóa sau bao nhiêu lần đăng nhập sai?\nA: Tài khoản bị khóa sau 5 lần đăng nhập sai liên tiếp. Để mở khóa, liên hệ IT Helpdesk hoặc tự reset qua portal SSO.\n\nQ: Mật khẩu cần thay đổi định kỳ không?\nA: Có. Mật khẩu phải được thay đổi mỗi 90 ngày. Hệ thống sẽ nhắc nhở 7 ngày trước khi hết hạn.",
+      "source": "support/helpdesk-faq.md",
+      "score": 0.016393442622950817,
+      "metadata": {
+        "department": "IT",
+        "effective_date": "2026-01-20",
+        "access": "internal",
+        "source": "support/helpdesk-faq.md",
+        "section": "Section 1: Tài khoản và mật khẩu"
+      },
+      "dense_rrf_score": 0.009836065573770491,
+      "sparse_rrf_score": 0.006557377049180328
+    },
+    {
+      "text": "P1 — CRITICAL (Khẩn cấp):\nĐịnh nghĩa: Sự cố ảnh hưởng toàn bộ hệ thống production, không có workaround.\nVí dụ: Database sập, API gateway down, toàn bộ người dùng không thể đăng nhập.\n\nP2 — HIGH (Nghiêm trọng):\nĐịnh nghĩa: Sự cố ảnh hưởng một phần hệ thống, có workaround tạm thời.\nVí dụ: Một số tính năng không hoạt động, ảnh hưởng một nhóm người dùng.\n\nP3 — MEDIUM (Trung bình):\nĐịnh nghĩa: Lỗi ảnh hưởng không đáng kể, người dùng vẫn làm việc được.\n\nP4 — LOW (Thấp):\nĐịnh nghĩa: Yêu cầu cải tiến, gợi ý, hoặc lỗi giao diện nhỏ.",
+      "source": "support/sla-p1-2026.pdf",
+      "score": 0.00967741935483871,
+      "metadata": {
+        "source": "support/sla-p1-2026.pdf",
+        "effective_date": "2026-01-15",
+        "department": "IT",
+        "section": "Phần 1: Định nghĩa mức độ ưu tiên",
+        "access": "internal"
+      },
+      "dense_rrf_score": 0.00967741935483871,
+      "sparse_rrf_score": 0.0
+    },
+    {
+      "text": "IT Security thực hiện access review mỗi 6 tháng.\nMọi bất thường phải được báo cáo lên CISO trong vòng 24 giờ.",
+      "source": "it/access-control-sop.md",
+      "score": 0.009523809523809523,
+      "metadata": {
+        "access": "internal",
+        "section": "Section 6: Audit và review định kỳ",
+        "effective_date": "2026-01-01",
+        "source": "it/access-control-sop.md",
+        "department": "IT Security"
+      },
+      "dense_rrf_score": 0.009523809523809523,
+      "sparse_rrf_score": 0.0
+    }
+  ],
+  "retrieved_sources": [
+    "support/helpdesk-faq.md",
+    "support/sla-p1-2026.pdf",
+    "it/access-control-sop.md"
+  ],
+  "policy_result": {},
+  "mcp_tools_used": [],
+  "final_answer": "Tài khoản bị khóa sau 5 lần đăng nhập sai liên tiếp. Để mở khóa, bạn có thể liên hệ IT Helpdesk hoặc tự reset qua portal SSO [1].",
+  "sources": [
+    "support/helpdesk-faq.md",
+    "support/sla-p1-2026.pdf",
+    "it/access-control-sop.md"
+  ],
+  "confidence": 0.72,
+  "history": [
+    "[supervisor] received task: Tài khoản bị khóa sau bao nhiêu lần đăng nhập sai?",
+    "[supervisor] route=retrieval_worker reason=default route",
+    "[retrieval_worker] retrieved 3 chunks from ['support/helpdesk-faq.md', 'support/sla-p1-2026.pdf', 'it/access-control-sop.md']",
+    "[synthesis_worker] answer generated, confidence=0.72, sources=['support/helpdesk-faq.md', 'support/sla-p1-2026.pdf', 'it/access-control-sop.md']",
+    "[graph] completed in 5696ms"
+  ],
+  "workers_called": [
+    "retrieval_worker",
+    "synthesis_worker"
+  ],
+  "supervisor_route": "retrieval_worker",
+  "latency_ms": 5696,
+  "run_id": "run_20260414_151130",
+  "worker_io_logs": [
+    {
+      "worker": "retrieval_worker",
+      "input": {
+        "task": "Tài khoản bị khóa sau bao nhiêu lần đăng nhập sai?",
+        "top_k": 3
+      },
+      "output": {
+        "chunks_count": 3,
+        "sources": [
+          "support/helpdesk-faq.md",
+          "support/sla-p1-2026.pdf",
+          "it/access-control-sop.md"
+        ]
+      },
+      "error": null
+    },
+    {
+      "worker": "synthesis_worker",
+      "input": {
+        "task": "Tài khoản bị khóa sau bao nhiêu lần đăng nhập sai?",
+        "chunks_count": 3,
+        "has_policy": false
+      },
+      "output": {
+        "answer_length": 129,
+        "sources": [
+          "support/helpdesk-faq.md",
+          "support/sla-p1-2026.pdf",
+          "it/access-control-sop.md"
+        ],
+        "confidence": 0.72
+      },
+      "error": null
+    }
+  ],
+  "question_id": "q04"
+}

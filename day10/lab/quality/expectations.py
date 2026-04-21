@@ -112,5 +112,49 @@ def run_expectations(cleaned_rows: List[Dict[str, Any]]) -> Tuple[List[Expectati
         )
     )
 
+    # E7: warn if any chunk_text exceeds 2000 chars — may indicate a parse/merge error upstream
+    # (e.g. two sections accidentally concatenated, or OCR dumping an entire page as one chunk).
+    # severity=warn: pipeline continues but flags for review.
+    # metric_impact: inject a row with chunk_text > 2000 chars → E7 FAIL (warn) appears in log.
+    oversized = [r for r in cleaned_rows if len((r.get("chunk_text") or "")) > 2000]
+    results.append(
+        ExpectationResult(
+            "chunk_max_length_2000",
+            len(oversized) == 0,
+            "warn",
+            f"oversized_chunks={len(oversized)}",
+        )
+    )
+
+    # E8: halt if any unknown doc_id survived cleaning — second-line defence after Rule 1.
+    # Should never happen in a clean run; fires only if cleaning_rules is bypassed or
+    # ALLOWED_DOC_IDS diverges from the contract.
+    # metric_impact: pass --skip-validate + inject unknown doc_id row → E8 FAIL (halt) in log.
+    from transform.cleaning_rules import ALLOWED_DOC_IDS  # noqa: PLC0415
+    unknown_doc = [r for r in cleaned_rows if (r.get("doc_id") or "") not in ALLOWED_DOC_IDS]
+    results.append(
+        ExpectationResult(
+            "all_doc_ids_in_allowlist",
+            len(unknown_doc) == 0,
+            "halt",
+            f"unknown_doc_count={len(unknown_doc)}",
+        )
+    )
+
+    # E9: warn if any cleaned row has an empty exported_at field.
+    # An empty exported_at means freshness_check cannot compute age accurately for that row —
+    # the pipeline still publishes it, but the freshness SLI is blind to its source timestamp.
+    # severity=warn: publish proceeds; flag for backlog review so the source export is fixed.
+    # metric_impact: inject a row with exported_at="" that passes all other rules → E9 FAIL (warn) in log.
+    missing_exported = [r for r in cleaned_rows if not (r.get("exported_at") or "").strip()]
+    results.append(
+        ExpectationResult(
+            "exported_at_not_empty",
+            len(missing_exported) == 0,
+            "warn",
+            f"missing_exported_at={len(missing_exported)}",
+        )
+    )
+
     halt = any(not r.passed and r.severity == "halt" for r in results)
     return results, halt

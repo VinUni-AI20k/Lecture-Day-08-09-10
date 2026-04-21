@@ -29,9 +29,8 @@ Chạy thử:
 """
 
 import os
-import json
+import sys
 from datetime import datetime
-from typing import Any, Dict, List, Optional
 
 
 # ─────────────────────────────────────────────
@@ -307,6 +306,11 @@ def dispatch_tool(tool_name: str, tool_input: dict) -> dict:
     Returns:
         Tool output dict, hoặc error dict nếu thất bại
     """
+    if not isinstance(tool_input, dict):
+        return {
+            "error": f"Invalid input for tool '{tool_name}': tool_input must be a dict"
+        }
+
     if tool_name not in TOOL_REGISTRY:
         return {
             "error": f"Tool '{tool_name}' không tồn tại. Available: {list(TOOL_REGISTRY.keys())}"
@@ -332,6 +336,8 @@ def dispatch_tool(tool_name: str, tool_input: dict) -> dict:
 # ─────────────────────────────────────────────
 
 if __name__ == "__main__":
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     print("=" * 60)
     print("MCP Server — Tool Discovery & Test")
     print("=" * 60)
