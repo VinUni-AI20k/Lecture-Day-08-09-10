@@ -1,0 +1,198 @@
+{
+  "task": "Khách hàng có thể yêu cầu hoàn tiền trong bao nhiêu ngày?",
+  "route_reason": "Task liên quan đến chính sách/điều khoản → điều hướng policy_tool_worker | có thể cần MCP search_kb/get_ticket_info nếu context nội bộ chưa đủ",
+  "risk_high": false,
+  "needs_tool": true,
+  "hitl_triggered": true,
+  "retrieved_chunks": [
+    {
+      "text": "Level 1 — Read Only:\nÁp dụng cho: Tất cả nhân viên mới trong 30 ngày đầu.\nPhê duyệt: Line Manager.\nThời gian xử lý: 1 ngày làm việc.\n\nLevel 2 — Standard Access:\nÁp dụng cho: Nhân viên chính thức đã qua thử việc.\nPhê duyệt: Line Manager + IT Admin.\nThời gian xử lý: 2 ngày làm việc.\n\nLevel 3 — Elevated Access:\nÁp dụng cho: Team Lead, Senior Engineer, Manager.\nPhê duyệt: Line Manager + IT Admin + IT Security.\nThời gian xử lý: 3 ngày làm việc.\n\nLevel 4 — Admin Access:\nÁp dụng cho: DevOps, SRE, IT Admin.\nPhê duyệt: IT Manager + CISO.\nThời gian xử lý: 5 ngày làm việc.\nYêu cầu thêm: Training bắt buộc về security policy.",
+      "source": "it/access-control-sop.md",
+      "score": 0.0931,
+      "metadata": {
+        "section": "Section 2: Phân cấp quyền truy cập",
+        "effective_date": "2026-01-01",
+        "access": "internal",
+        "department": "IT Security",
+        "source": "it/access-control-sop.md"
+      }
+    },
+    {
+      "text": "Q: Tôi quên mật khẩu, phải làm gì?\nA: Truy cập https://sso.company.internal/reset hoặc liên hệ Helpdesk qua ext. 9000. Mật khẩu mới sẽ được gửi qua email công ty trong vòng 5 phút.\n\nQ: Tài khoản bị khóa sau bao nhiêu lần đăng nhập sai?\nA: Tài khoản bị khóa sau 5 lần đăng nhập sai liên tiếp. Để mở khóa, liên hệ IT Helpdesk hoặc tự reset qua portal SSO.\n\nQ: Mật khẩu cần thay đổi định kỳ không?\nA: Có. Mật khẩu phải được thay đổi mỗi 90 ngày. Hệ thống sẽ nhắc nhở 7 ngày trước khi hết hạn.",
+      "source": "support/helpdesk-faq.md",
+      "score": 0.077,
+      "metadata": {
+        "section": "Section 1: Tài khoản và mật khẩu",
+        "source": "support/helpdesk-faq.md",
+        "department": "IT",
+        "effective_date": "2026-01-20",
+        "access": "internal"
+      }
+    },
+    {
+      "text": "Email: hr@company.internal\nHotline: ext. 2000\nHR Portal: https://hr.company.internal\nGiờ làm việc: Thứ 2 - Thứ 6, 8:30 - 17:30",
+      "source": "hr/leave-policy-2026.pdf",
+      "score": 0.0756,
+      "metadata": {
+        "section": "Phần 5: Liên hệ HR",
+        "source": "hr/leave-policy-2026.pdf",
+        "access": "internal",
+        "department": "HR",
+        "effective_date": "2026-01-01"
+      }
+    }
+  ],
+  "retrieved_sources": [],
+  "policy_result": {
+    "policy_applies": true,
+    "policy_name": "refund_policy_v4",
+    "exceptions_found": [],
+    "source": [
+      "support/helpdesk-faq.md",
+      "it/access-control-sop.md",
+      "hr/leave-policy-2026.pdf"
+    ],
+    "policy_version_note": "",
+    "explanation": "Analyzed via rule-based policy check. (LLM analysis skipped: 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-2.5-flash\\nPlease retry in 51.918216904s.', 'status': 'RESOURCE_EXHAUSTED', 'details': [{'@type': 'type.googleapis.com/google.rpc.Help', 'links': [{'description': 'Learn more about Gemini API quotas', 'url': 'https://ai.google.dev/gemini-api/docs/rate-limits'}]}, {'@type': 'type.googleapis.com/google.rpc.QuotaFailure', 'violations': [{'quotaMetric': 'generativelanguage.googleapis.com/generate_content_free_tier_requests', 'quotaId': 'GenerateRequestsPerDayPerProjectPerModel-FreeTier', 'quotaDimensions': {'location': 'global', 'model': 'gemini-2.5-flash'}, 'quotaValue': '20'}]}, {'@type': 'type.googleapis.com/google.rpc.RetryInfo', 'retryDelay': '51s'}]}})"
+  },
+  "mcp_tools_used": [
+    {
+      "tool": "search_kb",
+      "input": {
+        "query": "Khách hàng có thể yêu cầu hoàn tiền trong bao nhiêu ngày?",
+        "top_k": 3
+      },
+      "output": {
+        "chunks": [
+          {
+            "text": "Level 1 — Read Only:\nÁp dụng cho: Tất cả nhân viên mới trong 30 ngày đầu.\nPhê duyệt: Line Manager.\nThời gian xử lý: 1 ngày làm việc.\n\nLevel 2 — Standard Access:\nÁp dụng cho: Nhân viên chính thức đã qua thử việc.\nPhê duyệt: Line Manager + IT Admin.\nThời gian xử lý: 2 ngày làm việc.\n\nLevel 3 — Elevated Access:\nÁp dụng cho: Team Lead, Senior Engineer, Manager.\nPhê duyệt: Line Manager + IT Admin + IT Security.\nThời gian xử lý: 3 ngày làm việc.\n\nLevel 4 — Admin Access:\nÁp dụng cho: DevOps, SRE, IT Admin.\nPhê duyệt: IT Manager + CISO.\nThời gian xử lý: 5 ngày làm việc.\nYêu cầu thêm: Training bắt buộc về security policy.",
+            "source": "it/access-control-sop.md",
+            "score": 0.0931,
+            "metadata": {
+              "section": "Section 2: Phân cấp quyền truy cập",
+              "effective_date": "2026-01-01",
+              "access": "internal",
+              "department": "IT Security",
+              "source": "it/access-control-sop.md"
+            }
+          },
+          {
+            "text": "Q: Tôi quên mật khẩu, phải làm gì?\nA: Truy cập https://sso.company.internal/reset hoặc liên hệ Helpdesk qua ext. 9000. Mật khẩu mới sẽ được gửi qua email công ty trong vòng 5 phút.\n\nQ: Tài khoản bị khóa sau bao nhiêu lần đăng nhập sai?\nA: Tài khoản bị khóa sau 5 lần đăng nhập sai liên tiếp. Để mở khóa, liên hệ IT Helpdesk hoặc tự reset qua portal SSO.\n\nQ: Mật khẩu cần thay đổi định kỳ không?\nA: Có. Mật khẩu phải được thay đổi mỗi 90 ngày. Hệ thống sẽ nhắc nhở 7 ngày trước khi hết hạn.",
+            "source": "support/helpdesk-faq.md",
+            "score": 0.077,
+            "metadata": {
+              "section": "Section 1: Tài khoản và mật khẩu",
+              "source": "support/helpdesk-faq.md",
+              "department": "IT",
+              "effective_date": "2026-01-20",
+              "access": "internal"
+            }
+          },
+          {
+            "text": "Email: hr@company.internal\nHotline: ext. 2000\nHR Portal: https://hr.company.internal\nGiờ làm việc: Thứ 2 - Thứ 6, 8:30 - 17:30",
+            "source": "hr/leave-policy-2026.pdf",
+            "score": 0.0756,
+            "metadata": {
+              "section": "Phần 5: Liên hệ HR",
+              "source": "hr/leave-policy-2026.pdf",
+              "access": "internal",
+              "department": "HR",
+              "effective_date": "2026-01-01"
+            }
+          }
+        ],
+        "sources": [
+          "support/helpdesk-faq.md",
+          "it/access-control-sop.md",
+          "hr/leave-policy-2026.pdf"
+        ],
+        "total_found": 3
+      },
+      "error": null,
+      "timestamp": "2026-04-14T18:23:05.365168"
+    }
+  ],
+  "mcp_tool_called": true,
+  "mcp_result": [
+    {
+      "tool": "search_kb",
+      "input": {
+        "query": "Khách hàng có thể yêu cầu hoàn tiền trong bao nhiêu ngày?",
+        "top_k": 3
+      },
+      "output": {
+        "chunks": [
+          {
+            "text": "Level 1 — Read Only:\nÁp dụng cho: Tất cả nhân viên mới trong 30 ngày đầu.\nPhê duyệt: Line Manager.\nThời gian xử lý: 1 ngày làm việc.\n\nLevel 2 — Standard Access:\nÁp dụng cho: Nhân viên chính thức đã qua thử việc.\nPhê duyệt: Line Manager + IT Admin.\nThời gian xử lý: 2 ngày làm việc.\n\nLevel 3 — Elevated Access:\nÁp dụng cho: Team Lead, Senior Engineer, Manager.\nPhê duyệt: Line Manager + IT Admin + IT Security.\nThời gian xử lý: 3 ngày làm việc.\n\nLevel 4 — Admin Access:\nÁp dụng cho: DevOps, SRE, IT Admin.\nPhê duyệt: IT Manager + CISO.\nThời gian xử lý: 5 ngày làm việc.\nYêu cầu thêm: Training bắt buộc về security policy.",
+            "source": "it/access-control-sop.md",
+            "score": 0.0931,
+            "metadata": {
+              "section": "Section 2: Phân cấp quyền truy cập",
+              "effective_date": "2026-01-01",
+              "access": "internal",
+              "department": "IT Security",
+              "source": "it/access-control-sop.md"
+            }
+          },
+          {
+            "text": "Q: Tôi quên mật khẩu, phải làm gì?\nA: Truy cập https://sso.company.internal/reset hoặc liên hệ Helpdesk qua ext. 9000. Mật khẩu mới sẽ được gửi qua email công ty trong vòng 5 phút.\n\nQ: Tài khoản bị khóa sau bao nhiêu lần đăng nhập sai?\nA: Tài khoản bị khóa sau 5 lần đăng nhập sai liên tiếp. Để mở khóa, liên hệ IT Helpdesk hoặc tự reset qua portal SSO.\n\nQ: Mật khẩu cần thay đổi định kỳ không?\nA: Có. Mật khẩu phải được thay đổi mỗi 90 ngày. Hệ thống sẽ nhắc nhở 7 ngày trước khi hết hạn.",
+            "source": "support/helpdesk-faq.md",
+            "score": 0.077,
+            "metadata": {
+              "section": "Section 1: Tài khoản và mật khẩu",
+              "source": "support/helpdesk-faq.md",
+              "department": "IT",
+              "effective_date": "2026-01-20",
+              "access": "internal"
+            }
+          },
+          {
+            "text": "Email: hr@company.internal\nHotline: ext. 2000\nHR Portal: https://hr.company.internal\nGiờ làm việc: Thứ 2 - Thứ 6, 8:30 - 17:30",
+            "source": "hr/leave-policy-2026.pdf",
+            "score": 0.0756,
+            "metadata": {
+              "section": "Phần 5: Liên hệ HR",
+              "source": "hr/leave-policy-2026.pdf",
+              "access": "internal",
+              "department": "HR",
+              "effective_date": "2026-01-01"
+            }
+          }
+        ],
+        "sources": [
+          "support/helpdesk-faq.md",
+          "it/access-control-sop.md",
+          "hr/leave-policy-2026.pdf"
+        ],
+        "total_found": 3
+      },
+      "error": null,
+      "timestamp": "2026-04-14T18:23:05.365168"
+    }
+  ],
+  "final_answer": "Thông tin trong tài liệu nội bộ:\n- Level 1 — Read Only: Áp dụng cho: Tất cả nhân viên mới trong 30 ngày đầu. Phê duyệt: Line Manager. Thời gian xử lý: 1 ngày làm việc.  Level 2 — Standard Access: Áp dụng cho: Nhân viên chính thức đã qua thử việc. Phê duyệt: Line Manager + IT... [it/access-control-sop.md]\n- Q: Tôi quên mật khẩu, phải làm gì? A: Truy cập https://sso.company.internal/reset hoặc liên hệ Helpdesk qua ext. 9000. Mật khẩu mới sẽ được gửi qua email công ty trong vòng 5 phút.  Q: Tài khoản bị khóa sau bao nhiêu lần đăng nhập sai? A: T... [support/helpdesk-faq.md]",
+  "sources": [
+    "support/helpdesk-faq.md",
+    "it/access-control-sop.md",
+    "hr/leave-policy-2026.pdf"
+  ],
+  "confidence": 0.1,
+  "history": [
+    "[supervisor] received task: Khách hàng có thể yêu cầu hoàn tiền trong bao nhiêu ngày?",
+    "[supervisor] route=policy_tool_worker reason=Task liên quan đến chính sách/điều khoản → điều hướng policy_tool_worker | có thể cần MCP search_kb/get_ticket_info nếu context nội bộ chưa đủ",
+    "[policy_tool_worker] called MCP search_kb",
+    "[policy_tool_worker] policy_applies=True, exceptions=0",
+    "[synthesis_worker] answer generated, confidence=0.1, sources=['support/helpdesk-faq.md', 'it/access-control-sop.md', 'hr/leave-policy-2026.pdf']",
+    "[synthesis_worker] low confidence detected → hitl_triggered=True",
+    "[graph] completed in 2630ms"
+  ],
+  "workers_called": [
+    "policy_tool_worker",
+    "synthesis_worker"
+  ],
+  "supervisor_route": "policy_tool_worker",
+  "latency_ms": 2630,
+  "run_id": "run_20260414_182305",
+  "timestamp": "2026-04-14T18:23:07.956697",
+  "question_id": "q02"
+}

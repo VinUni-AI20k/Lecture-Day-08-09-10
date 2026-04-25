@@ -1,0 +1,198 @@
+{
+  "task": "Nhân viên được làm remote tối đa mấy ngày mỗi tuần?",
+  "route_reason": "Task liên quan đến chính sách/điều khoản → điều hướng policy_tool_worker | có thể cần MCP search_kb/get_ticket_info nếu context nội bộ chưa đủ",
+  "risk_high": false,
+  "needs_tool": true,
+  "hitl_triggered": true,
+  "retrieved_chunks": [
+    {
+      "text": "Hotline: ext. 9000 (8:00 - 18:00, Thứ 2 - Thứ 6)\nEmail: helpdesk@company.internal\nJira: project IT-SUPPORT\nSlack: #it-helpdesk\nEmergency (ngoài giờ): ext. 9999",
+      "source": "support/helpdesk-faq.md",
+      "score": 0.2356,
+      "metadata": {
+        "access": "internal",
+        "department": "IT",
+        "effective_date": "2026-01-20",
+        "source": "support/helpdesk-faq.md",
+        "section": "Section 6: Liên hệ IT Helpdesk"
+      }
+    },
+    {
+      "text": "Email: cs-refund@company.internal\nHotline nội bộ: ext. 1234\nGiờ làm việc: Thứ 2 - Thứ 6, 8:00 - 17:30",
+      "source": "policy/refund-v4.pdf",
+      "score": 0.2229,
+      "metadata": {
+        "section": "Điều 6: Liên hệ và hỗ trợ",
+        "access": "internal",
+        "department": "CS",
+        "source": "policy/refund-v4.pdf",
+        "effective_date": "2026-02-01"
+      }
+    },
+    {
+      "text": "Email: hr@company.internal\nHotline: ext. 2000\nHR Portal: https://hr.company.internal\nGiờ làm việc: Thứ 2 - Thứ 6, 8:30 - 17:30",
+      "source": "hr/leave-policy-2026.pdf",
+      "score": 0.2205,
+      "metadata": {
+        "section": "Phần 5: Liên hệ HR",
+        "source": "hr/leave-policy-2026.pdf",
+        "department": "HR",
+        "access": "internal",
+        "effective_date": "2026-01-01"
+      }
+    }
+  ],
+  "retrieved_sources": [],
+  "policy_result": {
+    "policy_applies": true,
+    "policy_name": "refund_policy_v4",
+    "exceptions_found": [],
+    "source": [
+      "support/helpdesk-faq.md",
+      "policy/refund-v4.pdf",
+      "hr/leave-policy-2026.pdf"
+    ],
+    "policy_version_note": "",
+    "explanation": "Analyzed via rule-based policy check. (LLM analysis skipped: 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-2.5-flash\\nPlease retry in 45.405978767s.', 'status': 'RESOURCE_EXHAUSTED', 'details': [{'@type': 'type.googleapis.com/google.rpc.Help', 'links': [{'description': 'Learn more about Gemini API quotas', 'url': 'https://ai.google.dev/gemini-api/docs/rate-limits'}]}, {'@type': 'type.googleapis.com/google.rpc.QuotaFailure', 'violations': [{'quotaMetric': 'generativelanguage.googleapis.com/generate_content_free_tier_requests', 'quotaId': 'GenerateRequestsPerDayPerProjectPerModel-FreeTier', 'quotaDimensions': {'location': 'global', 'model': 'gemini-2.5-flash'}, 'quotaValue': '20'}]}, {'@type': 'type.googleapis.com/google.rpc.RetryInfo', 'retryDelay': '45s'}]}})"
+  },
+  "mcp_tools_used": [
+    {
+      "tool": "search_kb",
+      "input": {
+        "query": "Nhân viên được làm remote tối đa mấy ngày mỗi tuần?",
+        "top_k": 3
+      },
+      "output": {
+        "chunks": [
+          {
+            "text": "Hotline: ext. 9000 (8:00 - 18:00, Thứ 2 - Thứ 6)\nEmail: helpdesk@company.internal\nJira: project IT-SUPPORT\nSlack: #it-helpdesk\nEmergency (ngoài giờ): ext. 9999",
+            "source": "support/helpdesk-faq.md",
+            "score": 0.2356,
+            "metadata": {
+              "access": "internal",
+              "department": "IT",
+              "effective_date": "2026-01-20",
+              "source": "support/helpdesk-faq.md",
+              "section": "Section 6: Liên hệ IT Helpdesk"
+            }
+          },
+          {
+            "text": "Email: cs-refund@company.internal\nHotline nội bộ: ext. 1234\nGiờ làm việc: Thứ 2 - Thứ 6, 8:00 - 17:30",
+            "source": "policy/refund-v4.pdf",
+            "score": 0.2229,
+            "metadata": {
+              "section": "Điều 6: Liên hệ và hỗ trợ",
+              "access": "internal",
+              "department": "CS",
+              "source": "policy/refund-v4.pdf",
+              "effective_date": "2026-02-01"
+            }
+          },
+          {
+            "text": "Email: hr@company.internal\nHotline: ext. 2000\nHR Portal: https://hr.company.internal\nGiờ làm việc: Thứ 2 - Thứ 6, 8:30 - 17:30",
+            "source": "hr/leave-policy-2026.pdf",
+            "score": 0.2205,
+            "metadata": {
+              "section": "Phần 5: Liên hệ HR",
+              "source": "hr/leave-policy-2026.pdf",
+              "department": "HR",
+              "access": "internal",
+              "effective_date": "2026-01-01"
+            }
+          }
+        ],
+        "sources": [
+          "support/helpdesk-faq.md",
+          "policy/refund-v4.pdf",
+          "hr/leave-policy-2026.pdf"
+        ],
+        "total_found": 3
+      },
+      "error": null,
+      "timestamp": "2026-04-14T18:23:11.936660"
+    }
+  ],
+  "mcp_tool_called": true,
+  "mcp_result": [
+    {
+      "tool": "search_kb",
+      "input": {
+        "query": "Nhân viên được làm remote tối đa mấy ngày mỗi tuần?",
+        "top_k": 3
+      },
+      "output": {
+        "chunks": [
+          {
+            "text": "Hotline: ext. 9000 (8:00 - 18:00, Thứ 2 - Thứ 6)\nEmail: helpdesk@company.internal\nJira: project IT-SUPPORT\nSlack: #it-helpdesk\nEmergency (ngoài giờ): ext. 9999",
+            "source": "support/helpdesk-faq.md",
+            "score": 0.2356,
+            "metadata": {
+              "access": "internal",
+              "department": "IT",
+              "effective_date": "2026-01-20",
+              "source": "support/helpdesk-faq.md",
+              "section": "Section 6: Liên hệ IT Helpdesk"
+            }
+          },
+          {
+            "text": "Email: cs-refund@company.internal\nHotline nội bộ: ext. 1234\nGiờ làm việc: Thứ 2 - Thứ 6, 8:00 - 17:30",
+            "source": "policy/refund-v4.pdf",
+            "score": 0.2229,
+            "metadata": {
+              "section": "Điều 6: Liên hệ và hỗ trợ",
+              "access": "internal",
+              "department": "CS",
+              "source": "policy/refund-v4.pdf",
+              "effective_date": "2026-02-01"
+            }
+          },
+          {
+            "text": "Email: hr@company.internal\nHotline: ext. 2000\nHR Portal: https://hr.company.internal\nGiờ làm việc: Thứ 2 - Thứ 6, 8:30 - 17:30",
+            "source": "hr/leave-policy-2026.pdf",
+            "score": 0.2205,
+            "metadata": {
+              "section": "Phần 5: Liên hệ HR",
+              "source": "hr/leave-policy-2026.pdf",
+              "department": "HR",
+              "access": "internal",
+              "effective_date": "2026-01-01"
+            }
+          }
+        ],
+        "sources": [
+          "support/helpdesk-faq.md",
+          "policy/refund-v4.pdf",
+          "hr/leave-policy-2026.pdf"
+        ],
+        "total_found": 3
+      },
+      "error": null,
+      "timestamp": "2026-04-14T18:23:11.936660"
+    }
+  ],
+  "final_answer": "Thông tin trong tài liệu nội bộ:\n- Hotline: ext. 9000 (8:00 - 18:00, Thứ 2 - Thứ 6) Email: helpdesk@company.internal Jira: project IT-SUPPORT Slack: #it-helpdesk Emergency (ngoài giờ): ext. 9999 [support/helpdesk-faq.md]\n- Email: cs-refund@company.internal Hotline nội bộ: ext. 1234 Giờ làm việc: Thứ 2 - Thứ 6, 8:00 - 17:30 [policy/refund-v4.pdf]",
+  "sources": [
+    "support/helpdesk-faq.md",
+    "policy/refund-v4.pdf",
+    "hr/leave-policy-2026.pdf"
+  ],
+  "confidence": 0.23,
+  "history": [
+    "[supervisor] received task: Nhân viên được làm remote tối đa mấy ngày mỗi tuần?",
+    "[supervisor] route=policy_tool_worker reason=Task liên quan đến chính sách/điều khoản → điều hướng policy_tool_worker | có thể cần MCP search_kb/get_ticket_info nếu context nội bộ chưa đủ",
+    "[policy_tool_worker] called MCP search_kb",
+    "[policy_tool_worker] policy_applies=True, exceptions=0",
+    "[synthesis_worker] answer generated, confidence=0.23, sources=['support/helpdesk-faq.md', 'policy/refund-v4.pdf', 'hr/leave-policy-2026.pdf']",
+    "[synthesis_worker] low confidence detected → hitl_triggered=True",
+    "[graph] completed in 2533ms"
+  ],
+  "workers_called": [
+    "policy_tool_worker",
+    "synthesis_worker"
+  ],
+  "supervisor_route": "policy_tool_worker",
+  "latency_ms": 2533,
+  "run_id": "run_20260414_182311",
+  "timestamp": "2026-04-14T18:23:14.435063",
+  "question_id": "q05"
+}

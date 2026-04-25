@@ -139,6 +139,13 @@ def tool_search_kb(query: str, top_k: int = 3) -> dict:
     TODO Sprint 3: Kết nối với ChromaDB thực.
     Hiện tại: Delegate sang retrieval worker.
     """
+    if not query or not str(query).strip():
+        return {
+            "chunks": [],
+            "sources": [],
+            "total_found": 0,
+        }
+
     try:
         # Tái dùng retrieval logic từ workers/retrieval.py
         import sys
@@ -314,6 +321,8 @@ def dispatch_tool(tool_name: str, tool_input: dict) -> dict:
 
     tool_fn = TOOL_REGISTRY[tool_name]
     try:
+        if not isinstance(tool_input, dict):
+            return {"error": f"Invalid input for tool '{tool_name}': input must be a dict"}
         result = tool_fn(**tool_input)
         return result
     except TypeError as e:
