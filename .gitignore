@@ -2,6 +2,24 @@
 *.swp
 *~
 
+# Environment
+*.env
+
+# IDE
+.vscode/
+.idea/
+.omx/
+.venv/
+.kiro
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+*.hypothesis
+# OS
+.DS_Store
+
 # Grading questions — không public trước 17:00
 day08/lab/data/grading_questions.json
 day09/lab/data/grading_questions.json
