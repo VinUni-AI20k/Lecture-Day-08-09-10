@@ -83,6 +83,22 @@ retrieval_worker:
       type: array
       required: true
       description: "Unique list of source filenames"
+    retrieval_diagnostics:
+      type: object
+      required: true
+      description: "Diagnostics để debug retrieval quality"
+      properties:
+        embedding_backend: string
+        query_original: string
+        query_normalized: string
+        top_k: integer
+        score_threshold: float
+        chunks_count: integer
+        score_max: float
+        score_min: float
+        retrieval_methods: array
+        retrieval_latency_ms: integer
+        insufficient_evidence: boolean
     worker_io_logs:
       type: array
       required: true
@@ -96,8 +112,8 @@ retrieval_worker:
     - "Score phải là float trong khoảng [0, 1]"
     - "Stateless: không đọc hoặc ghi state ngoài những gì được khai báo ở trên"
   actual_implementation:
-    status: "TODO Sprint 2"  # Update to "done" khi xong
-    notes: ""
+    status: "done"
+    notes: "Hybrid retrieval (dense+lexical), dynamic top_k, score threshold, rerank, diagnostics."
 
 # ─────────────────────────────────────────────
 # Policy Tool Worker
